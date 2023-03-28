@@ -53,11 +53,16 @@ import PlutusTx.Prelude qualified as Pl
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.Hedgehog (testPropertyNamed)
 
+import Spec.Balancing qualified as Balancing
+
 main :: IO ()
-main = defaultMain tests
+main = defaultMain $ testGroup "all-tests"
+    [ tests
+    , Balancing.tests
+    ]
 
 tests :: TestTree
-tests = testGroup "all tests"
+tests = testGroup "plutus-tx-constraints"
     [ testPropertyNamed "missing value spent"
         "missingValueSpentProp" missingValueSpentProp
     , testPropertyNamed "mustPayToPubKeyAddress should create output addresses with stake pub key hash"
@@ -236,8 +241,8 @@ prepFromTxConstraints txCons = runExcept $ flip evalStateT (OC.initialState def)
 txOutRef :: Integer -> Ledger.TxOutRef
 txOutRef = Ledger.TxOutRef (Ledger.TxId "")
 
-stakePaymentPubKeyHash :: C.TxOut C.CtxTx C.BabbageEra -> Maybe StakingCredential
-stakePaymentPubKeyHash (C.TxOut addr _ _ _) = Ledger.cardanoStakingCredential addr
+stakePaymentPubKeyHash :: TxOut -> Maybe StakingCredential
+stakePaymentPubKeyHash (TxOut (C.TxOut addr _ _ _)) = Ledger.cardanoStakingCredential addr
 
 data UnitTest
 instance Scripts.ValidatorTypes UnitTest

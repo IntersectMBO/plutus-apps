@@ -234,7 +234,6 @@ test-suite plutus-contract-test
 
   hs-source-dirs:     test
   other-modules:
-    Spec.Balancing
     Spec.Contract
     Spec.Contract.Error
     Spec.Contract.Tx.Constraints.MustIncludeDatum

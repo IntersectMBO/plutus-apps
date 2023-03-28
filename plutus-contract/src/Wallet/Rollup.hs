@@ -24,11 +24,11 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Ledger (Block, Blockchain, OnChainTx (..), TxIn (TxIn), TxOut, ValidationPhase (..), consumableInputs,
                onChainTxIsValid, outputsProduced, txInRef, txOutRefId, txOutRefIdx, txOutValue, unOnChain)
+import Ledger.Index (genesisTxIn)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI (fromCardanoValue)
 import Ledger.Tx.CardanoAPI.Internal (fromCardanoTxIn)
 import Plutus.V1.Ledger.Value (Value)
-import Wallet.Emulator.MultiAgent (genesisTxIn)
 import Wallet.Rollup.Types
 
 ------------------------------------------------------------

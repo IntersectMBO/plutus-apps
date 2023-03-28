@@ -30,6 +30,7 @@ import Ouroboros.Consensus.Shelley.Eras qualified as Ledger
 
 import Control.Lens qualified as L
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Default (def)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import GHC.Generics (Generic)
@@ -296,3 +297,25 @@ lookupStakeValidator txScripts = (fmap . fmap) StakeValidator . lookupScript txS
 
 pubKeyTxInput :: TxOutRef -> TxInput
 pubKeyTxInput outRef = TxInput outRef TxConsumePublicKeyAddress
+
+emptyTxBodyContent :: C.TxBodyContent C.BuildTx C.BabbageEra
+emptyTxBodyContent = C.TxBodyContent
+   { txIns = []
+   , txInsCollateral = C.TxInsCollateralNone
+   , txMintValue = C.TxMintNone
+   , txFee = C.TxFeeExplicit C.TxFeesExplicitInBabbageEra 0
+   , txOuts = []
+   , txProtocolParams = C.BuildTxWith $ Just $ C.fromLedgerPParams C.ShelleyBasedEraBabbage def
+   , txInsReference = C.TxInsReferenceNone
+   , txTotalCollateral = C.TxTotalCollateralNone
+   , txReturnCollateral = C.TxReturnCollateralNone
+   , txValidityRange = ( C.TxValidityNoLowerBound
+                       , C.TxValidityNoUpperBound C.ValidityNoUpperBoundInBabbageEra)
+   , txScriptValidity = C.TxScriptValidityNone
+   , txExtraKeyWits = C.TxExtraKeyWitnessesNone
+   , txMetadata = C.TxMetadataNone
+   , txAuxScripts = C.TxAuxScriptsNone
+   , txWithdrawals = C.TxWithdrawalsNone
+   , txCertificates = C.TxCertificatesNone
+   , txUpdateProposal = C.TxUpdateProposalNone
+   }

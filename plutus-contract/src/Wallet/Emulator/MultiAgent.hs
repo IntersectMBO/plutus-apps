@@ -20,7 +20,7 @@ module Wallet.Emulator.MultiAgent where
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
 import Cardano.Node.Emulator.Chain qualified as Chain
-import Cardano.Node.Emulator.Generators (alwaysSucceedPolicy, alwaysSucceedPolicyId, emptyTxBodyContent, signAll)
+import Cardano.Node.Emulator.Generators (alwaysSucceedPolicy, alwaysSucceedPolicyId, signAll)
 import Cardano.Node.Emulator.Params (Params (..))
 import Control.Lens (AReview, Getter, Lens', Prism', anon, at, folded, makeLenses, prism', reversed, review, to, unto,
                      view, (&), (.~), (^.), (^..))
@@ -294,11 +294,6 @@ to be an Ada-only output. To make sure we always have an Ada-only output availab
 we create 10 Ada-only outputs per wallet here.
 -}
 
--- | cardano-ledger validation rules require the presence of inputs and
--- we have to provide a stub TxIn for the genesis transaction.
-genesisTxIn :: C.TxIn
-genesisTxIn = C.TxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53" (C.TxIx 40214)
-
 -- | Initialise the emulator state with a single pending transaction that
 --   creates the initial distribution of funds to public key addresses.
 emulatorStateInitialDist :: Params -> Map PaymentPubKeyHash C.Value -> Either ToCardanoError EmulatorState
@@ -315,14 +310,14 @@ emulatorStateInitialDist params mp = do
                            <*> pure C.zeroExecutionUnits
     let
         txBodyContent = emptyTxBodyContent
-           { C.txIns = [ (genesisTxIn, C.BuildTxWith (C.KeyWitness C.KeyWitnessForSpending)) ]
-           , C.txInsCollateral = C.TxInsCollateral C.CollateralInBabbageEra [genesisTxIn]
+           { C.txIns = [ (Index.genesisTxIn, C.BuildTxWith (C.KeyWitness C.KeyWitnessForSpending)) ]
+           , C.txInsCollateral = C.TxInsCollateral C.CollateralInBabbageEra [Index.genesisTxIn]
            , C.txMintValue = C.TxMintValue C.MultiAssetInBabbageEra (fold $ Map.map CardanoAPI.noAdaValue mp)
                               (C.BuildTxWith (Map.singleton alwaysSucceedPolicyId mintWitness))
            , C.txOuts = Tx.getTxOut <$> concat outs
            , C.txValidityRange = validityRange
            }
-    txBody <- either (error . ("Can't create TxBody" <>) . show) pure $ C.makeTransactionBody txBodyContent
+    txBody <- either (error . ("emulatorStateInitialDist: Can't create TxBody: " <>) . show) pure $ C.makeTransactionBody txBodyContent
     let cTx = signAll $ CardanoEmulatorEraTx $ C.Tx txBody []
     pure $ emulatorStatePool [cTx]
     where

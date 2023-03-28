@@ -90,6 +90,7 @@ test-suite plutus-tx-constraints-test
   hs-source-dirs:     test
   default-language:   Haskell2010
   default-extensions: ImportQualifiedPost
+  other-modules:      Spec.Balancing
 
   --------------------
   -- Local components
@@ -122,4 +123,5 @@ test-suite plutus-tx-constraints-test
     , mtl
     , tasty
     , tasty-hedgehog
+    , tasty-hunit
     , template-haskell

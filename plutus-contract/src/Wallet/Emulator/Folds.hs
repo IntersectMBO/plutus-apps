@@ -51,7 +51,7 @@ module Wallet.Emulator.Folds (
 
 import Cardano.Api qualified as C
 import Cardano.Node.Emulator.Chain (ChainEvent (SlotAdd, TxnValidate, TxnValidationFail), _TxnValidate,
-                                    _TxnValidationFail)
+                                    _TxnValidationFail, chainEventOnChainTx)
 import Control.Applicative ((<|>))
 import Control.Foldl (Fold (Fold), FoldM (FoldM))
 import Control.Foldl qualified as L
@@ -63,6 +63,7 @@ import Data.Aeson qualified as JSON
 import Data.Foldable (toList)
 import Data.Map qualified as Map
 import Data.Maybe (mapMaybe)
+import Data.Monoid (Endo (..))
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Ledger (Block, CardanoAddress, OnChainTx (Invalid, Valid), TxId)
@@ -243,10 +244,7 @@ utxoAtAddress addr =
     preMapMaybe (preview (eteEvent . chainEvent))
     $ Fold (flip step) (AM.addAddress addr mempty) (view (AM.fundsAt addr))
     where
-        step = \case
-            TxnValidate _ txn _                  -> AM.updateAddresses (Valid txn)
-            TxnValidationFail Phase2 _ txn _ _ _ -> AM.updateAddresses (Invalid txn)
-            _                                    -> id
+        step = alaf Endo foldMap AM.updateAddresses . chainEventOnChainTx
 
 -- | The total value of unspent outputs at an address
 valueAtAddress :: CardanoAddress -> EmulatorEventFold C.Value

@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE NumericUnderscores  #-}
+{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 -- | An index of unspent transaction outputs, and some functions for validating
@@ -33,6 +34,8 @@ module Ledger.Index(
     maxMinAdaTxOut,
     pubKeyTxIns,
     scriptTxIns,
+    createGenesisTransaction,
+    genesisTxIn,
     PV1.ExBudget(..),
     PV1.ExCPU(..),
     PV1.ExMemory(..),
@@ -47,10 +50,11 @@ import Cardano.Ledger.Babbage qualified as Babbage
 import Cardano.Ledger.Babbage.PParams qualified as Babbage
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Shelley.API qualified as C.Ledger
-import Control.Lens (Fold, folding, (&), (.~))
+import Control.Lens (Fold, folding, (&), (.~), (<&>))
 import Control.Monad.Except (MonadError (..))
 import Data.Foldable (foldl')
 import Data.Map qualified as Map
+import Ledger.Address (CardanoAddress)
 import Ledger.Blockchain
 import Ledger.Index.Internal
 import Ledger.Orphans ()
@@ -59,7 +63,7 @@ import Ledger.Tx (CardanoTx (..), ToCardanoError, TxIn (TxIn, txInType),
                   updateUtxoCollateral)
 import Ledger.Tx.CardanoAPI (toCardanoTxOutValue)
 import Ledger.Tx.Internal qualified as Tx
-import Ledger.Value.CardanoAPI (lovelaceToValue)
+import Ledger.Value.CardanoAPI (Value, lovelaceToValue)
 import Plutus.Script.Utils.Ada (Ada)
 import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.V1.Ledger.Api qualified as PV1
@@ -212,3 +216,20 @@ maxMinAdaTxOut = Ada.lovelaceOf 18_516_834
 -- the Cardano blockchain.
 maxFee :: Ada
 maxFee = Ada.lovelaceOf 1_000_000
+
+-- | cardano-ledger validation rules require the presence of inputs and
+-- we have to provide a stub TxIn for the genesis transaction.
+genesisTxIn :: C.TxIn
+genesisTxIn = C.TxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53" (C.TxIx 40214)
+
+createGenesisTransaction :: Map.Map CardanoAddress Value -> CardanoTx
+createGenesisTransaction vals =
+    let
+        txBodyContent = Tx.emptyTxBodyContent
+           { C.txIns = [ (genesisTxIn, C.BuildTxWith (C.KeyWitness C.KeyWitnessForSpending)) ]
+           , C.txOuts = Map.toList vals <&> \(changeAddr, v) ->
+                C.TxOut changeAddr (toCardanoTxOutValue v) C.TxOutDatumNone C.Api.ReferenceScriptNone
+           }
+        txBody = either (error . ("createGenesisTransaction: Can't create TxBody: " <>) . show) id $ C.makeTransactionBody txBodyContent
+    in CardanoEmulatorEraTx $ C.Tx txBody []
+
