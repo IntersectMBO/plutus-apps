@@ -53,7 +53,7 @@ genBlocks = fmap fromMockBlock <$> genMockchain
 newChainIndexIndexers :: IO ChainIndexIndexersMVar
 newChainIndexIndexers = do
     indexers <- ChainIndexIndexers
-        <$> Utxo.open ":memory:" (Utxo.Depth 10)
+        <$> Utxo.open ":memory:" (Utxo.Depth 10) False -- do not perfrom SQLite vacuum, see: https://www.sqlite.org/lang_vacuum.html
     boxChainIndexIndexers indexers
 
 getUtxoEvents :: MonadIO m => ChainIndexIndexersMVar -> m [StorableEvent UtxoHandle]

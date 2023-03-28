@@ -89,7 +89,7 @@ tests = testGroup "Spec.Marconi.ChainIndex.Indexers.Utxo"
           propJsonRoundtripUtxoRow
 
     , testPropertyNamed
-          "marconi-chain-index-utxo getUtxoEvent should get the same event from the Block as the event generator"
+          "marconi-chain-index-utxo getUtxoEvents should get the same event from the Block as the event generator"
           "propGetUtxoEventFromBlock"
           propGetUtxoEventFromBlock
 
@@ -110,14 +110,16 @@ tests = testGroup "Spec.Marconi.ChainIndex.Indexers.Utxo"
 -- Note:        We expect this test to fail in this branch.
 allqueryUtxosShouldBeUnspent :: Property
 allqueryUtxosShouldBeUnspent = property $ do
-  events <- forAll genShelleyEraUtxoEvents
+  events <- forAll genShelleyEraUtxoEvents -- we need to use shelley era addresses only to allow for point (4)
   let numOfEvents = length events
-  -- We choose the `depth` such that we can prove the boundery condtion, see point (3).
+  -- We choose the `depth` such that we can prove the boundery condtions, see point (3).
   -- this will ensure we have adequate coverage where events are in both, in-memory store and SQLite store
   depth <- forAll $ Gen.int (Range.constantFrom (numOfEvents - 1) 1 (numOfEvents + 1))
   Hedgehog.classify "Query both in-memory and storage " $ depth < numOfEvents
   Hedgehog.classify "Query in-memory only" $ depth > numOfEvents
 
+  -- It is crtical that we perform NO vacuum.
+  -- With depth at such small numbers, the likelyhood of SQLite vaccume is almost certain in
   indexer <- liftIO (Utxo.open ":memory:" (Utxo.Depth depth) False >>= Storable.insertMany events )
   let
     addressQueries :: [StorableQuery Utxo.UtxoHandle] -- we want to query for all addresses
@@ -157,9 +159,9 @@ propRoundTripEventsToRowConversion  = property $ do
       . concatMap g
       $ events
     f :: C.SlotNo -> IO (Set C.TxIn)
-    f sn  = pure $ fromMaybe Set.empty (Data.Map.lookup sn txInsMap)
+    f sn = pure $ fromMaybe Set.empty (Data.Map.lookup sn txInsMap)
     g :: StorableEvent Utxo.UtxoHandle -> [(C.SlotNo, Set C.TxIn)]
-    g (Utxo.UtxoEvent _ ins (C.ChainPoint sn _)) = [ (sn, ins)]
+    g (Utxo.UtxoEvent _ ins (C.ChainPoint sn _)) = [(sn, ins)]
     g _                                          = []
 
     postGenesisEvents = filter (\e -> C.ChainPointAtGenesis /= Utxo.ueChainPoint e) events
@@ -169,11 +171,10 @@ propRoundTripEventsToRowConversion  = property $ do
   Set.fromList computedEvent === Set.fromList postGenesisEvents
   Set.fromList computedEvent === Set.fromList events
 
-{-|
-  Insert Utxo events in storage, and retreive the events
-  Note:
-  we are intetested in testing the in-memory storage only for this test.
--}
+-- | Insert Utxo events in storage, and retreive the events
+--   Note:
+--   we are intetested in testing the in-memory storage only for this test.
+
 propSaveToAndRetrieveFromUtxoInMemoryStore :: Property
 propSaveToAndRetrieveFromUtxoInMemoryStore = property $ do
   events <- forAll UtxoGen.genUtxoEvents
@@ -184,13 +185,11 @@ propSaveToAndRetrieveFromUtxoInMemoryStore = property $ do
      >>= liftIO . Storable.getEvents
   Set.fromList storedEvents === Set.fromList events
 
-{-|
-  Insert Utxo events in storage, and retrieve the events
-  The property we're checking here is:
-    - retreived at least one unspent utxo
-    - only retreive unspent utxo's
-    - test `spent` filtering at the boundry of in-memory & disk storage
--}
+-- | Insert Utxo events in storage, and retrieve the events
+--   The property we're checking here is:
+--    - retreived at least one unspent utxo
+--    - only retreive unspent utxo's
+--    - test `spent` filtering at the boundry of in-memory & disk storage
 propSaveAndRetrieveUtxoEvents :: Property
 propSaveAndRetrieveUtxoEvents = property $ do
   -- events <- forAll genUtxoEvents'' -- TODO
@@ -367,9 +366,8 @@ propJsonRoundtripUtxoRow = property $ do
     let utxoRows = concatMap Utxo.eventToRows utxoEvents
     forM_ utxoRows $ \utxoRow -> Hedgehog.tripping utxoRow Aeson.encode Aeson.decode
 
--- -- getUtxoEven should compute the same event as the event generator
+-- getUtxoEvens should compute the same event as the event generator
 -- This test should prove the getUtxoEvent is correctly computing Unspent Transactions
---
 propGetUtxoEventFromBlock :: Property
 propGetUtxoEventFromBlock = property $ do
   utxoEventsWithTxs <- forAll UtxoGen.genUtxoEventsWithTxs

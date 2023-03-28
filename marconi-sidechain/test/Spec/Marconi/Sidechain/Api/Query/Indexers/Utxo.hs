@@ -84,20 +84,20 @@ initRpcTestEnv = do
                     (queryUtxoFromRpcServer s)
   pure (mkRpcEnv env, f)
 
-depth :: Utxo.Depth
-depth = Utxo.Depth 200
-
 -- | Insert events, and perform the callback
 -- Note, the in-memory DB provides the isolation we need per property test as the memory cache
 -- is owned and visible only o the process that opened the connection
 mocUtxoWorker
-  :: (AddressUtxoIndexer.UtxoIndexer -> IO ())
-  -> [Utxo.StorableEvent Utxo.UtxoHandle]
+  :: (AddressUtxoIndexer.UtxoIndexer -> IO ()) -- ^  callback to be refreshed
+  -> [Utxo.StorableEvent Utxo.UtxoHandle] -- ^  events to store
   -> IO ()
-mocUtxoWorker callback events  =
-  Utxo.open ":memory:" depth False >>= Storable.insertMany events >>= callback
+mocUtxoWorker callback events =
+  let depth :: Utxo.Depth
+      depth = Utxo.Depth (1 + length events) -- use in-memory store
+  in
+    Utxo.open ":memory:" depth False >>= Storable.insertMany events >>= callback
 
--- | generate some Utxo events, store them and fetch the Unspent Utxos, and make sure JSON conversion is idempotent
+-- | generate some Utxo events, store and fetch the Utxos, then make sure JSON conversion is idempotent
 
 queryTargetAddressTest :: Property
 queryTargetAddressTest = property $ do

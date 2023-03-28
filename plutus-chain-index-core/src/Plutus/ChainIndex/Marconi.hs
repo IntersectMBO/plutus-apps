@@ -26,6 +26,7 @@ import Control.Monad.Freer.State qualified as Eff (State, get, put, runState)
 import Control.Monad.Freer.TH (makeEffect)
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Data.Foldable (foldl')
+import Data.Map (elems)
 import Data.Set qualified as Set
 import Ledger.Address (CardanoAddress)
 import Ledger.Tx (CardanoTx (CardanoTx))
@@ -138,7 +139,7 @@ getUtxoEvents
   -> C.ChainPoint
   -> StorableEvent UtxoHandle -- ^ UtxoEvents are stored in storage after conversion to UtxoRow
 getUtxoEvents txs cp =
-  let utxosFromCardanoTx (CardanoTx c _) = getUtxos Nothing c
+  let utxosFromCardanoTx (CardanoTx c _) = elems $ getUtxos Nothing c
       inputsFromCardanoTx (CardanoTx c _) = getInputs c
       utxos = Set.fromList $ concatMap utxosFromCardanoTx txs
       ins = foldl' Set.union Set.empty $ inputsFromCardanoTx <$> txs

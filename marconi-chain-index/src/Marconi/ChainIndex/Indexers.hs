@@ -144,7 +144,8 @@ utxoWorker_
   -> FilePath
   -> IO (IO (), MVar Utxo.UtxoIndexer)
 utxoWorker_ callback depth maybeTargetAddresses Coordinator{_barrier} ch path = do
-  ix <- Utxo.open path depth True -- open SQLite with depth=depth and perform SQLite vacuum
+  ix <- Utxo.open path depth False -- open SQLite with depth=depth and DONOT perform SQLite vacuum
+  -- TODO consider adding a CLI param to allow user to perfomr Vaccum or not.
   mIndexer <- newMVar ix
   pure (loop mIndexer, mIndexer)
   where

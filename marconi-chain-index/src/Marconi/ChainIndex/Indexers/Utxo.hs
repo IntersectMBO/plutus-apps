@@ -107,10 +107,7 @@ $(makeLenses ''Utxo)
 
 instance Ord Utxo where
   compare (Utxo addr txid txix _ _ _ _ _) (Utxo addr' txid' txix' _ _ _ _ _) =
-    let cmp = addr `compare` addr'
-    in
-      if cmp == EQ then compare (C.TxIn txid txix) (C.TxIn txid' txix')
-      else  cmp
+     compare (addr, C.TxIn txid txix) (addr', C.TxIn txid' txix')
 
 instance FromJSON Utxo where
     parseJSON (Object v) =
@@ -175,7 +172,6 @@ eventIsBefore (C.ChainPoint slot' _) (UtxoEvent _ _ (C.ChainPoint slot _)) =  sl
 eventIsBefore _ _                                                          = False
 
 -- | mappend, combine Unspent utxoEvents:
---
 instance Semigroup (StorableEvent UtxoHandle) where
   (UtxoEvent us is cp) <> (UtxoEvent us' is' cp') =
     UtxoEvent utxos txins (max cp cp')
@@ -184,9 +180,8 @@ instance Semigroup (StorableEvent UtxoHandle) where
       toTxIn u = C.TxIn (u ^.txId) (u ^. txIx)
       txins = Set.union is is'
       utxos
-        = foldl' (\a c -> if toTxIn c `Set.notMember` txins then Set.insert c a;else a) Set.empty
-        . Set.union us
-        $ us'
+        = foldl' (\a c -> if toTxIn c `Set.notMember` txins then Set.insert c a; else a) Set.empty
+        $ Set.union us us'
 
 instance Monoid (StorableEvent UtxoHandle) where
   mempty = UtxoEvent mempty mempty C.ChainPointAtGenesis
@@ -205,8 +200,10 @@ instance Semigroup TxOutBalance where
     tobL <> tobR =
         TxOutBalance
             { _tobUnspent = _tobUnspent tobR
-                         <> (_tobUnspent tobL `Set.difference` _tobSpent tobR)
-            , _tobSpent = _tobSpent tobL <> _tobSpent tobR
+                            <> (_tobUnspent tobL `Set.difference` _tobSpent tobR)
+            , _tobSpent   = _tobSpent tobL
+                            <>   (_tobSpent tobR `Set.difference` _tobUnspent tobL)
+
             }
 
 instance Monoid TxOutBalance where
@@ -224,10 +221,8 @@ data Spent = Spent
 $(makeLenses ''Spent)
 
 instance Ord Spent where
-  compare spent spent' =
-      case  (spent ^. sTxId) `compare` (spent' ^. sTxId) of
-        EQ  -> (spent ^. sTxIx) `compare` (spent' ^. sTxIx)
-        neq -> neq
+  compare s s' =
+    compare (s ^. sTxId, s ^. sTxIx) (s' ^. sTxId, s' ^. sTxIx)
 
 instance HasPoint (StorableEvent UtxoHandle) C.ChainPoint where
   getPoint (UtxoEvent _ _ cp) = cp
@@ -275,7 +270,7 @@ instance ToRow Spent where
 open
   :: FilePath   -- ^ sqlite file path
   -> Depth      -- ^ The Depth parameter k, the larger K, the more RAM the indexer uses
-  -> Bool       -- ^ weather to perform vacuum
+  -> Bool       -- ^ whether to perform vacuum
   -> IO UtxoIndexer
 open dbPath (Depth k) isToVacuume = do
   c <- SQL.open dbPath
@@ -356,10 +351,10 @@ instance Buffered UtxoHandle where
                 txIx, slotNo, blockHash
               ) VALUES
               (?, ?, ?, ?)|] spents)))
-    -- We want to perform vacuum about once every 100 * buffer ((k + 1) * 2)
+    -- We want to perform vacuum about once every 100
     when (toVacuume h) $ do
       rndCheck <- createSystemRandom >>= uniformR (1 :: Int, 100)
-      when (rndCheck == 42) $ do
+      when (rndCheck == 42) $
         SQL.execute_ c [r|DELETE FROM
                             unspent_transactions
                           WHERE
@@ -370,9 +365,7 @@ instance Buffered UtxoHandle where
                                 unspent_transactions
                                 JOIN spent ON unspent_transactions.txId = spent.txId
                                 AND unspent_transactions.txIx = spent.txIx
-                            )|]  -- remove all spent
-
-        SQL.execute_ c "VACUUM"
+                            )|] >> SQL.execute_ c "VACUUM" -- remove Spent and release space, see https://www.sqlite.org/lang_vacuum.html
     pure h
 
   getStoredEvents :: UtxoHandle -> StorableMonad UtxoHandle [StorableEvent UtxoHandle]
