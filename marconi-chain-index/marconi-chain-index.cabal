@@ -53,7 +53,7 @@ library
     Marconi.ChainIndex.Indexers
     Marconi.ChainIndex.Indexers.AddressDatum
     Marconi.ChainIndex.Indexers.Datum
-    Marconi.ChainIndex.Indexers.EpochStakepoolSize
+    Marconi.ChainIndex.Indexers.EpochState
     Marconi.ChainIndex.Indexers.MintBurn
     Marconi.ChainIndex.Indexers.ScriptTx
     Marconi.ChainIndex.Indexers.Utxo
@@ -268,7 +268,7 @@ test-suite marconi-chain-index-test
     Spec.Marconi.ChainIndex.Indexers.AddressDatum.AddressDatumIndexEvent
     Spec.Marconi.ChainIndex.Indexers.AddressDatum.Generators
     Spec.Marconi.ChainIndex.Indexers.AddressDatum.Utils
-    Spec.Marconi.ChainIndex.Indexers.EpochStakepoolSize
+    Spec.Marconi.ChainIndex.Indexers.EpochState
     Spec.Marconi.ChainIndex.Indexers.MintBurn
     Spec.Marconi.ChainIndex.Indexers.ScriptTx
     Spec.Marconi.ChainIndex.Indexers.Utxo

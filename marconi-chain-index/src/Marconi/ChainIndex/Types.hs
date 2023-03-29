@@ -21,7 +21,7 @@ module Marconi.ChainIndex.Types
        addressDatumDbName,
        datumDbName,
        scriptTxDbName,
-       epochStakepoolSizeDbName,
+       epochStateDbName,
        mintBurnDbName
        ) where
 
@@ -65,8 +65,8 @@ datumDbName = "datum.db"
 scriptTxDbName :: FilePath
 scriptTxDbName = "scripttx.db"
 
-epochStakepoolSizeDbName :: FilePath
-epochStakepoolSizeDbName = "epochstakepool.db"
+epochStateDbName :: FilePath
+epochStateDbName = "epochstate.db"
 
 mintBurnDbName :: FilePath
 mintBurnDbName = "mintburn.db"

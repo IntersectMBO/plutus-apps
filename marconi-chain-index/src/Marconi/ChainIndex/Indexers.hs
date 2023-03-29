@@ -40,8 +40,8 @@ import Marconi.ChainIndex.Indexers.AddressDatum (AddressDatumDepth (AddressDatum
 import Marconi.ChainIndex.Indexers.AddressDatum qualified as AddressDatum
 import Marconi.ChainIndex.Indexers.Datum (DatumIndex)
 import Marconi.ChainIndex.Indexers.Datum qualified as Datum
-import Marconi.ChainIndex.Indexers.EpochStakepoolSize (EpochSPDHandle, EpochSPDIndex)
-import Marconi.ChainIndex.Indexers.EpochStakepoolSize qualified as EpochSPD
+import Marconi.ChainIndex.Indexers.EpochState (EpochStateHandle, EpochStateIndex)
+import Marconi.ChainIndex.Indexers.EpochState qualified as EpochState
 import Marconi.ChainIndex.Indexers.MintBurn qualified as MintBurn
 import Marconi.ChainIndex.Indexers.ScriptTx qualified as ScriptTx
 import Marconi.ChainIndex.Indexers.Utxo qualified as Utxo
@@ -52,7 +52,6 @@ import Marconi.ChainIndex.Node.Client.GenesisConfig (NetworkConfigFile (NetworkC
 import Marconi.ChainIndex.Types (TargetAddresses)
 import Marconi.Core.Index.VSplit qualified as Ix
 import Marconi.Core.Storable qualified as Storable
-import Ouroboros.Consensus.Config qualified as O
 import Ouroboros.Consensus.Ledger.Abstract qualified as O
 import Ouroboros.Consensus.Ledger.Extended qualified as O
 import Ouroboros.Consensus.Node qualified as O
@@ -261,36 +260,37 @@ scriptTxWorker onInsert coordinator path = do
   void . forkIO $ loop
   readMVar ix >>= Storable.resumeFromStorage . view Storable.handle
 
--- * Epoch stakepool size indexer
+-- * Epoch state indexer
 
-epochStakepoolSizeWorker_
+epochStateWorker_
   :: FilePath
-  -> ((Storable.State EpochSPDHandle, Storable.StorableEvent EpochSPDHandle) -> IO ())
+  -> ((Storable.State EpochStateHandle, Storable.StorableEvent EpochStateHandle) -> IO ())
   -> Word64 -- Security param
   -> Coordinator
   -> TChan (ChainSyncEvent (BlockInMode CardanoMode))
   -> FilePath
-  -> IO (IO b, MVar EpochSPDIndex)
-epochStakepoolSizeWorker_
+  -> IO (IO b, MVar EpochStateIndex)
+epochStateWorker_
         nodeConfigPath
         onInsert
         securityParam
         Coordinator{_barrier}
         ch
         dbPath = do
-    let ledgerStateDir = takeDirectory dbPath </> "ledgerStates"
-    createDirectoryIfMissing False ledgerStateDir
-    indexerMVar <- newMVar =<< EpochSPD.open dbPath ledgerStateDir securityParam
-
     nodeConfigE <- runExceptT $ readNetworkConfig (NetworkConfigFile nodeConfigPath)
     nodeConfig <- either (error . show) pure nodeConfigE
     genesisConfigE <- runExceptT $ readCardanoGenesisConfig nodeConfig
     genesisConfig <- either (error . show . renderGenesisConfigError) pure genesisConfigE
 
-    let initialLedgerState = O.ledgerState $ initExtLedgerStateVar genesisConfig
-        hfLedgerConfig = O.topLevelConfigLedger $ O.pInfoConfig (mkProtocolInfoCardano genesisConfig)
+    let initialLedgerState = initExtLedgerStateVar genesisConfig
+        topLevelConfig = O.pInfoConfig (mkProtocolInfoCardano genesisConfig)
+        hfLedgerConfig = O.ExtLedgerCfg topLevelConfig
 
-        loop currentLedgerState currentEpochNo previousEpochNo = do
+    let ledgerStateDir = takeDirectory dbPath </> "ledgerStates"
+    createDirectoryIfMissing False ledgerStateDir
+    indexerMVar <- newMVar =<< EpochState.open topLevelConfig dbPath ledgerStateDir securityParam
+
+    let loop currentLedgerState currentEpochNo previousEpochNo = do
             signalQSemN _barrier 1
             chainSyncEvent <- atomically $ readTChan ch
 
@@ -300,7 +300,7 @@ epochStakepoolSizeWorker_
                   -- immutable, we only store it right at the beginning of a new epoch.
                   let isFirstEventOfEpoch = currentEpochNo > previousEpochNo
                   let storableEvent =
-                          EpochSPD.toStorableEvent
+                          EpochState.toStorableEvent
                             currentLedgerState
                             slotNo
                             bh
@@ -330,26 +330,26 @@ epochStakepoolSizeWorker_
                   -- For that to work, we need to be sure that any volatile LedgerState are stored
                   -- on disk. For immutable LedgerStates, they are only stored on disk at the first
                   -- slot of an epoch.
-                  EpochSPD.LedgerStateAtPointResult maybeLedgerState <-
-                      Storable.query Storable.QEverything newIndex (EpochSPD.LedgerStateAtPointQuery cp)
+                  EpochState.LedgerStateAtPointResult maybeLedgerState <-
+                      Storable.query Storable.QEverything newIndex (EpochState.LedgerStateAtPointQuery cp)
                   case maybeLedgerState of
                     Nothing ->
-                        error "Could not find LedgerState from which to rollback from in EpochSPD indexer. Should not happen!"
+                        error "Could not find LedgerState from which to rollback from in EpochState indexer. Should not happen!"
                     Just ledgerState ->
                         pure (newIndex, ledgerState)
 
-            loop newLedgerState (EpochSPD.getEpochNo newLedgerState) currentEpochNo
+            loop newLedgerState (EpochState.getEpochNo newLedgerState) currentEpochNo
 
-    pure (loop initialLedgerState (EpochSPD.getEpochNo initialLedgerState) Nothing, indexerMVar)
+    pure (loop initialLedgerState (EpochState.getEpochNo initialLedgerState) Nothing, indexerMVar)
 
-epochStakepoolSizeWorker
+epochStateWorker
     :: FilePath
-    -> ((Storable.State EpochSPDHandle, Storable.StorableEvent EpochSPDHandle) -> IO ())
+    -> ((Storable.State EpochStateHandle, Storable.StorableEvent EpochStateHandle) -> IO ())
     -> Worker
-epochStakepoolSizeWorker nodeConfigPath onInsert coordinator path = do
+epochStateWorker nodeConfigPath onInsert coordinator path = do
   workerChannel <- atomically . dupTChan $ _channel coordinator
   (loop, ix) <-
-      epochStakepoolSizeWorker_
+      epochStateWorker_
         nodeConfigPath
         onInsert
         2160

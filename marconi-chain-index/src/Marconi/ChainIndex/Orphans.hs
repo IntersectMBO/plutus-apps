@@ -1,6 +1,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE OverloadedStrings  #-}
+
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Marconi.ChainIndex.Orphans where
@@ -8,6 +9,7 @@ module Marconi.ChainIndex.Orphans where
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
 import Cardano.Binary qualified as CBOR
+import Cardano.Ledger.Shelley.API qualified as Ledger
 import Codec.CBOR.Read qualified as CBOR
 import Codec.Serialise (Serialise (decode, encode))
 import Data.Aeson (FromJSON, ToJSON)
@@ -199,8 +201,18 @@ instance SQL.ToField (O.LedgerState (O.CardanoBlock O.StandardCrypto)) where
 
 instance SQL.FromField (O.LedgerState (O.CardanoBlock O.StandardCrypto)) where
   fromField f = SQL.fromField f >>= either
-    (const $ SQL.returnError SQL.ConversionFailed f "Cannot deserialise LedgerState.")
+    (const $ SQL.returnError SQL.ConversionFailed f "Cannot deserialise ExtLedgerState.")
     (pure . snd) . CBOR.deserialiseFromBytes decodeLedgerState
+
+-- * Ledger.Nonce
+
+instance SQL.ToField Ledger.Nonce where
+  toField = SQL.SQLBlob . CBOR.toStrictByteString . CBOR.toCBOR
+
+instance SQL.FromField Ledger.Nonce where
+  fromField f = SQL.fromField f >>= either
+    (const $ SQL.returnError SQL.ConversionFailed f "Cannot deserialise Ledger.Nonce.")
+    (pure . snd) . CBOR.deserialiseFromBytes CBOR.fromCBOR
 
 -- * ToField/FromField
 

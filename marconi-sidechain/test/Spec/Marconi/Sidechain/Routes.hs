@@ -17,7 +17,7 @@ import Gen.Marconi.ChainIndex.Types qualified as Gen
 import Hedgehog (Property, forAll, property, tripping)
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-import Marconi.ChainIndex.Indexers.EpochStakepoolSize (EpochSPDRow (EpochSPDRow))
+import Marconi.ChainIndex.Indexers.EpochState (EpochSDDRow (EpochSDDRow))
 import Marconi.ChainIndex.Indexers.MintBurn (TxMintRow (TxMintRow))
 import Marconi.ChainIndex.Indexers.Utxo (Utxo (Utxo), UtxoRow (UtxoRow))
 import Marconi.Sidechain.Api.Routes (AddressUtxoResult (AddressUtxoResult),
@@ -81,15 +81,15 @@ propJSONRountripCurrentSyncedPointResult = property $ do
 
 propJSONRountripEpochStakePoolDelegationResult :: Property
 propJSONRountripEpochStakePoolDelegationResult = property $ do
-    spds <- fmap EpochStakePoolDelegationResult $ forAll $ Gen.list (Range.linear 1 10) $ do
-        EpochSPDRow
+    sdds <- fmap EpochStakePoolDelegationResult $ forAll $ Gen.list (Range.linear 1 10) $ do
+        EpochSDDRow
             <$> Gen.genEpochNo
             <*> Gen.genPoolId
             <*> CGen.genLovelace
             <*> Gen.genSlotNo
             <*> Gen.genHashBlockHeader
             <*> Gen.genBlockNo
-    tripping spds Aeson.encode Aeson.decode
+    tripping sdds Aeson.encode Aeson.decode
 
 goldenCurrentChainPointGenesisResult :: IO ByteString
 goldenCurrentChainPointGenesisResult = do
@@ -247,8 +247,8 @@ goldenEpochStakePoolDelegationResult = do
         epochNo = C.EpochNo 6
         blockNo = C.BlockNo 64903
 
-    let spds = fmap (\poolId -> EpochSPDRow epochNo poolId lovelace slotNo blockHeaderHash blockNo) poolIds
-        result = EpochStakePoolDelegationResult spds
+    let sdds = fmap (\poolId -> EpochSDDRow epochNo poolId lovelace slotNo blockHeaderHash blockNo) poolIds
+        result = EpochStakePoolDelegationResult sdds
     pure $ Aeson.encodePretty result
 
 goldenEpochNonceResult :: IO ByteString

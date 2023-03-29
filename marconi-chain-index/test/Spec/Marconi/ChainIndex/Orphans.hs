@@ -92,6 +92,12 @@ tests = testGroup "Spec.Marconi.ChainIndex.Orphans"
               "C.PoolId"
               "propSQLFieldRoundtripPoolId"
               propSQLFieldRoundtripPoolId
+
+        -- TODO Activate once we update to the latest node version
+        -- , testPropertyNamed
+        --       "Ledger.Nonce"
+        --       "propSQLFieldRoundtripNonce"
+        --       propSQLFieldRoundtripNonce
         ]
 
   , testGroup "ToJSON/FromJSON rountrip"
@@ -192,3 +198,7 @@ propSQLFieldRoundtripPoolId = property $ do
     p <- forAll Gen.genPoolId
     tripping p SQL.toField (\sqlData -> SQL.fromField $ SQL.Field sqlData 0)
 
+-- propSQLFieldRoundtripNonce :: Property
+-- propSQLFieldRoundtripNonce = property $ do
+--     p <- forAll (arbitrary :: Gen Ledger.Nonce)
+--     tripping p SQL.toField (\sqlData -> SQL.fromField $ SQL.Field sqlData 0)

@@ -20,7 +20,7 @@ import Cardano.Api qualified as C
 import Control.Concurrent.STM.TMVar (TMVar)
 import Control.Exception (Exception)
 import Control.Lens (makeLenses)
-import Marconi.ChainIndex.Indexers.EpochStakepoolSize (EpochSPDHandle)
+import Marconi.ChainIndex.Indexers.EpochState (EpochStateHandle)
 import Marconi.ChainIndex.Indexers.Utxo (UtxoHandle)
 import Marconi.ChainIndex.Types as Export (TargetAddresses)
 import Marconi.Core.Storable (State)
@@ -47,7 +47,7 @@ data SidechainEnv = SidechainEnv
 data SidechainIndexers = SidechainIndexers
     { _sidechainAddressUtxoIndexer              :: !AddressUtxoIndexerEnv
     -- ^ For query thread to access in-memory utxos
-    , _sidechainEpochStakePoolDelegationIndexer :: !EpochSPDIndexerEnv
+    , _sidechainEpochStakePoolDelegationIndexer :: !EpochStateIndexerEnv
     -- ^ For query thread to access in-memory epoch stake pool delegation
     }
 
@@ -56,8 +56,8 @@ data AddressUtxoIndexerEnv = AddressUtxoIndexerEnv
     , _addressUtxoIndexerEnvIndexer         :: !(TMVar (State UtxoHandle))
     }
 
-newtype EpochSPDIndexerEnv = EpochSPDIndexerEnv
-    { _epochSpdIndexerEnvIndexer         :: TMVar (State EpochSPDHandle)
+newtype EpochStateIndexerEnv = EpochStateIndexerEnv
+    { _epochStateIndexerEnvIndexer         :: TMVar (State EpochStateHandle)
     }
 
 data QueryExceptions
@@ -69,4 +69,4 @@ data QueryExceptions
 makeLenses ''SidechainEnv
 makeLenses ''SidechainIndexers
 makeLenses ''AddressUtxoIndexerEnv
-makeLenses ''EpochSPDIndexerEnv
+makeLenses ''EpochStateIndexerEnv

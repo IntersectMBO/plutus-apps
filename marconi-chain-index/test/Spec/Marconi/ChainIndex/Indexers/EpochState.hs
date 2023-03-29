@@ -3,7 +3,7 @@
 {-# LANGUAGE TupleSections      #-}
 {-# LANGUAGE TypeApplications   #-}
 
-module Spec.Marconi.ChainIndex.Indexers.EpochStakepoolSize (tests) where
+module Spec.Marconi.ChainIndex.Indexers.EpochState (tests) where
 
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
@@ -27,7 +27,7 @@ import Hedgehog qualified as H
 import Hedgehog.Extras.Test qualified as HE
 import Helpers qualified as TN
 import Marconi.ChainIndex.Indexers qualified as Indexers
-import Marconi.ChainIndex.Indexers.EpochStakepoolSize qualified as EpochStakepoolSize
+import Marconi.ChainIndex.Indexers.EpochState qualified as EpochState
 import Marconi.Core.Storable qualified as Storable
 import Prettyprinter (Pretty (pretty), defaultLayoutOptions, layoutPretty, (<+>))
 import Prettyprinter.Render.Text (renderStrict)
@@ -40,7 +40,7 @@ import Test.Tasty.Hedgehog (testPropertyNamed)
 import Testnet.Cardano qualified as TN
 
 tests :: TestTree
-tests = testGroup "EpochStakepoolSize"
+tests = testGroup "EpochState"
   [ testPropertyNamed "prop_epoch_stakepool_size" "test" test
   ]
 
@@ -127,7 +127,7 @@ test = H.integration . HE.runFinallies . TN.workspace "chairman" $ \tempAbsPath 
   coordinator <- liftIO $ Indexers.initialCoordinator 1
   ch <- liftIO $ STM.atomically . STM.dupTChan $ Indexers._channel coordinator
   let dbPath = tempAbsPath </> "epoch_stakepool_sizes.db"
-  (loop, _indexerMVar) <- liftIO $ Indexers.epochStakepoolSizeWorker_
+  (loop, _indexerMVar) <- liftIO $ Indexers.epochStateWorker_
       (TN.configurationFile runtime)
       (STM.writeChan indexedTxs)
       10
@@ -155,10 +155,10 @@ test = H.integration . HE.runFinallies . TN.workspace "chairman" $ \tempAbsPath 
   found <- liftIO IO.newEmptyMVar
   liftIO $ (IO.link =<<) $ IO.async $ forever $ do
       (_, event) <- IO.readChan indexedTxs
-      case Map.lookup poolVKey (EpochStakepoolSize.epochSPDEventSPD event) of
+      case Map.lookup poolVKey (EpochState.epochStateEventSDD event) of
           Just lovelace ->
               when (lovelace == totalStakedLovelace) $
-                  IO.putMVar found (EpochStakepoolSize.epochSPDEventEpochNo event) -- Event found!
+                  IO.putMVar found (EpochState.epochStateEventEpochNo event) -- Event found!
           Nothing       ->
               return ()
 
@@ -167,12 +167,12 @@ test = H.integration . HE.runFinallies . TN.workspace "chairman" $ \tempAbsPath 
 
   -- Let's find it in the database as well
   indexer <- liftIO $ STM.readMVar _indexerMVar
-  queryResult <- liftIO $ Storable.query Storable.QEverything indexer (EpochStakepoolSize.SPDByEpochNoQuery epochNo)
+  queryResult <- liftIO $ Storable.query Storable.QEverything indexer (EpochState.SDDByEpochNoQuery epochNo)
   case queryResult of
-      EpochStakepoolSize.SPDByEpochNoResult stakeMap ->
+      EpochState.SDDByEpochNoResult stakeMap ->
           let actualTotalStakedLovelace =
-                  fmap EpochStakepoolSize.epochSPDRowLovelace
-                       (List.find (\epochSpdRow -> EpochStakepoolSize.epochSPDRowPoolId epochSpdRow == poolVKey) stakeMap)
+                  fmap EpochState.epochSDDRowLovelace
+                       (List.find (\epochSddRow -> EpochState.epochSDDRowPoolId epochSddRow == poolVKey) stakeMap)
            in H.assert $ actualTotalStakedLovelace == Just totalStakedLovelace
       _otherResult -> fail "Wrong response from the given query"
 

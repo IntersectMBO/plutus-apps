@@ -11,7 +11,7 @@ import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), Value (Object), object
 import Data.Text (Text)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
-import Marconi.ChainIndex.Indexers.EpochStakepoolSize qualified as EpochSPD
+import Marconi.ChainIndex.Indexers.EpochState qualified as EpochState
 import Marconi.ChainIndex.Indexers.MintBurn qualified as MpsTx
 import Marconi.ChainIndex.Indexers.Utxo qualified as Utxo
 import Network.JsonRpc.Types (JsonRpc, RawJsonRpc)
@@ -124,7 +124,7 @@ newtype MintingPolicyHashTxResult =
     deriving (Eq, Ord, Show, Generic, ToJSON, FromJSON)
 
 newtype EpochStakePoolDelegationResult =
-    EpochStakePoolDelegationResult [EpochSPD.EpochSPDRow]
+    EpochStakePoolDelegationResult [EpochState.EpochSDDRow]
     deriving (Eq, Ord, Show, Generic, ToJSON, FromJSON)
 
 newtype EpochNonceResult =
