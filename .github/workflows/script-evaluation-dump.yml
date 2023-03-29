@@ -18,35 +18,37 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3.3.0
-        with: 
+        with:
           ref: zliu41/dump-1.35.4
 
       - name: Quick Install Nix
-        uses: nixbuild/nix-quick-install-action@v22 
-        with: 
+        uses: nixbuild/nix-quick-install-action@v22
+        with:
+          # 2.14.1 seems to have issues, see https://github.com/nixbuild/nix-quick-install-action/issues/29
+          nix_version: '2.13.3'
           nix_conf: |
             experimental-features = nix-command flakes
-            accept-flake-config = true 
+            accept-flake-config = true
 
       - name: Create Dump
         run: |
           nix-shell --run "./scripts/create-dump.sh" \
             --option trusted-public-keys "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= loony-tools:pr9m4BkM/5/eSTZlkQyRt57Jz7OMBxNSUiMC4FkcNfk=" \
-            --option substituters "https://cache.iog.io https://cache.iog.io https://cache.zw3rk.com" 
+            --option substituters "https://cache.iog.io https://cache.iog.io https://cache.zw3rk.com"
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: us-east-1
           AWS_ENDPOINT_URL: https://s3.devx.iog.io
-          NODE_DIR: ../mainnet 
+          NODE_DIR: ../mainnet
           S3_DUMP_DIR: s3://plutus/mainnet-script-dump-1-35-4/
-          LOCAL_DUMP_DIR: ../mainnet-script-dump 
+          LOCAL_DUMP_DIR: ../mainnet-script-dump
 
       - name: Upload Dump
         run: |
           nix-shell --run "./scripts/upload-event-dump.sh ../mainnet-script-dump/*" \
             --option trusted-public-keys "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= loony-tools:pr9m4BkM/5/eSTZlkQyRt57Jz7OMBxNSUiMC4FkcNfk=" \
-            --option substituters "https://cache.iog.io https://cache.iog.io https://cache.zw3rk.com" 
+            --option substituters "https://cache.iog.io https://cache.iog.io https://cache.zw3rk.com"
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
