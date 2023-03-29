@@ -329,15 +329,15 @@ instance RI.Buffered MintBurnHandle where
     sqliteInsert sqlCon (map coerce $ toList events)
     pure h
 
-  getStoredEvents (MintBurnHandle sqlCon k) =
-    map MintBurnEvent . fromRows <$> SQL.query sqlCon query (SQL.Only k)
+  getStoredEvents (MintBurnHandle sqlCon k) = do
+    fmap MintBurnEvent . fromRows <$> SQL.query sqlCon query (SQL.Only k)
     where
       query =
-        " SELECT slotNo, blockHeaderHash, txId, policyId, assetName, quantity  \
+        " SELECT slotNo, blockHeaderHash, txId, policyId, assetName, quantity, \
         \        redeemerIx, redeemerData                                      \
         \   FROM minting_policy_events                                         \
         \  WHERE slotNo >= (SELECT MAX(slotNo) - ? FROM minting_policy_events) \
-        \  ORDER BY slotNo, txId                                               "
+        \  ORDER BY slotNo DESC, txId                                          "
 
 instance RI.Resumable MintBurnHandle where
   resumeFromStorage h = do
