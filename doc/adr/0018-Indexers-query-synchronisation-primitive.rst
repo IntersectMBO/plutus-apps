@@ -1,6 +1,6 @@
 .. hearing_hysterical_screams:
 
-ADR 18: Hearing hysterical screams
+ADR 18: Indexers query synchronisation primitive
 ==================================
 
 Date: 2023-03-08
