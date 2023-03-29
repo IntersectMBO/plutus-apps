@@ -4,20 +4,25 @@
 
 module Spec.Marconi.Sidechain.Api.Query.Indexers.Utxo (tests) where
 
-import Cardano.Api qualified as C
 import Control.Concurrent.STM (atomically)
 import Control.Lens.Operators ((^.))
 import Control.Monad.IO.Class (liftIO)
 import Data.Aeson qualified as Aeson
-import Data.Foldable (fold)
 import Data.Maybe (mapMaybe)
 import Data.Proxy (Proxy (Proxy))
-import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (unpack)
 import Data.Traversable (for)
-import Gen.Marconi.ChainIndex.Indexers.Utxo (genShelleyEraUtxoEvents, genUtxoEvents)
-import Hedgehog (Property, forAll, property, (===))
+import Network.HTTP.Client (defaultManagerSettings, newManager)
+import Network.JsonRpc.Client.Types ()
+import Network.JsonRpc.Types (JsonRpcResponse (Result))
+import Network.Wai.Handler.Warp qualified as Warp
+import Servant.API ((:<|>) ((:<|>)))
+import Servant.Client (BaseUrl (BaseUrl), ClientEnv, HasClient (Client), Scheme (Http), client, hoistClient,
+                       mkClientEnv, runClientM)
+
+import Cardano.Api qualified as C
+import Gen.Marconi.ChainIndex.Indexers.Utxo (genShelleyEraUtxoEvents)
 import Helpers (addressAnyToShelley)
 import Marconi.ChainIndex.Indexers.Utxo qualified as Utxo
 import Marconi.Core.Storable qualified as Storable
@@ -27,21 +32,17 @@ import Marconi.Sidechain.Api.Query.Indexers.Utxo qualified as UIQ
 import Marconi.Sidechain.Api.Routes (AddressUtxoResult (AddressUtxoResult), JsonRpcAPI)
 import Marconi.Sidechain.Api.Types (SidechainEnv, sidechainAddressUtxoIndexer, sidechainEnvIndexers)
 import Marconi.Sidechain.Bootstrap (initializeSidechainEnv)
-import Network.HTTP.Client (defaultManagerSettings, newManager)
-import Network.JsonRpc.Client.Types ()
-import Network.JsonRpc.Types (JsonRpcResponse (Result))
-import Network.Wai.Handler.Warp qualified as Warp
-import Servant.API ((:<|>) ((:<|>)))
-import Servant.Client (BaseUrl (BaseUrl), ClientEnv, HasClient (Client), Scheme (Http), client, hoistClient,
-                       mkClientEnv, runClientM)
+
+import Hedgehog (Property, forAll, property, (===))
+import Hedgehog qualified
 import Test.Tasty (TestTree, testGroup, withResource)
 import Test.Tasty.Hedgehog (testPropertyNamed)
 
 tests :: TestTree
 tests = testGroup "marconi-sidechain-utxo query Api Specs"
     [ testPropertyNamed
-        "marconi-sidechain-utxo query-target-addresses"
-        "Spec. Insert events and query for utxo's with address in the generated ShelleyEra targetAddresses"
+        "marconi-sidechain-utxo, Insert events and query for utxo's with address in the generated ShelleyEra targetAddresses"
+        "queryTargetAddressTest"
         queryTargetAddressTest
 
     , utxoJsonRpcTestTree
@@ -83,23 +84,24 @@ initRpcTestEnv = do
                     (queryUtxoFromRpcServer s)
   pure (mkRpcEnv env, f)
 
-depth :: Utxo.Depth
-depth = Utxo.Depth 5
-
 -- | Insert events, and perform the callback
 -- Note, the in-memory DB provides the isolation we need per property test as the memory cache
 -- is owned and visible only o the process that opened the connection
 mocUtxoWorker
-  :: (AddressUtxoIndexer.UtxoIndexer -> IO ())
-  -> [Utxo.StorableEvent Utxo.UtxoHandle]
+  :: (AddressUtxoIndexer.UtxoIndexer -> IO ()) -- ^  callback to be refreshed
+  -> [Utxo.StorableEvent Utxo.UtxoHandle] -- ^  events to store
   -> IO ()
-mocUtxoWorker callback events  =
-  Utxo.open ":memory:" depth >>= Storable.insertMany events >>= callback
+mocUtxoWorker callback events =
+  let depth :: Utxo.Depth
+      depth = Utxo.Depth (1 + length events) -- use in-memory store
+  in
+    Utxo.open ":memory:" depth False >>= Storable.insertMany events >>= callback
 
--- | generate some Utxo events, store them and fetch them.
+-- | generate some Utxo events, store and fetch the Utxos, then make sure JSON conversion is idempotent
+
 queryTargetAddressTest :: Property
 queryTargetAddressTest = property $ do
-  events <- forAll genUtxoEvents
+  events <- forAll genShelleyEraUtxoEvents
   env <- liftIO $ initializeSidechainEnv Nothing Nothing
   let
     callback :: Utxo.UtxoIndexer -> IO ()
@@ -116,14 +118,12 @@ queryTargetAddressTest = property $ do
     . concatMap (Set.toList . Utxo.ueUtxos)
     $ events
 
-  let rows = Utxo.eventsToRows $ fold events
+  let numOfFetched = length fetchedRows
+  Hedgehog.classify "Retrieved Utxos are greater than or Equal to 5" $ numOfFetched >= 5
+  Hedgehog.classify "Retrieved Utxos are greater than 1" $ numOfFetched > 1
 
-  -- We compare the serialized result because that is how the 'UIQ.findByAddress' sends the result.
-  -- TODO BROKEN.
-  -- fmap Aeson.encode fetchedRows === fmap Aeson.encode rows
-  -- To remove once the assert above is fixed
-  fmap Aeson.encode fetchedRows === fmap Aeson.encode fetchedRows
-  fmap Aeson.encode rows === fmap Aeson.encode rows
+  Hedgehog.assert (not . null $ fetchedRows)
+  (Set.fromList . mapMaybe (Aeson.decode .  Aeson.encode ) $ fetchedRows) === Set.fromList fetchedRows
 
 -- | Create http JSON-RPC client function to test RPC route and handlers
 queryUtxoFromRpcServer
@@ -158,9 +158,10 @@ propUtxoEventInsertionAndJsonRpcQueryRoundTrip action = property $ do
         $ events
   rpcResponses <- liftIO $ for qAddresses rpcClient
   let
-    inserted :: Set Utxo.UtxoRow = Set.fromList . concatMap Utxo.eventsToRows $ events
-    fetched :: Set Utxo.UtxoRow =  Set.fromList . concatMap fromQueryResult $ rpcResponses
-  fetched === inserted
+    fetched :: [Utxo.UtxoRow] = concatMap fromQueryResult rpcResponses
+
+  Hedgehog.assert (not . null $ fetched)
+  (Set.fromList . mapMaybe (Aeson.decode .  Aeson.encode ) $ fetched) === Set.fromList fetched
 
 hoistClientApi :: Proxy JsonRpcAPI
 hoistClientApi = Proxy

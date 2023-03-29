@@ -138,13 +138,14 @@ datumWorker Coordinator{_barrier, _channel} path = do
 utxoWorker_
   :: (Utxo.UtxoIndexer -> IO ())  -- ^ callback function used in the queryApi thread, needs to be non-blocking
   -> Utxo.Depth
-  -> Maybe TargetAddresses                       -- ^ Target addresses to filter for
+  -> Maybe TargetAddresses        -- ^ Target addresses to filter for
   -> Coordinator
   -> TChan (ChainSyncEvent (BlockInMode CardanoMode))
   -> FilePath
   -> IO (IO (), MVar Utxo.UtxoIndexer)
 utxoWorker_ callback depth maybeTargetAddresses Coordinator{_barrier} ch path = do
-  ix <- Utxo.open path depth
+  ix <- Utxo.open path depth False -- open SQLite with depth=depth and DONOT perform SQLite vacuum
+  -- TODO consider adding a CLI param to allow user to perfomr Vaccum or not.
   mIndexer <- newMVar ix
   pure (loop mIndexer, mIndexer)
   where
@@ -154,8 +155,8 @@ utxoWorker_ callback depth maybeTargetAddresses Coordinator{_barrier} ch path = 
       readMVar index >>= callback -- refresh the query STM/CPS with new storage pointers/counters state
       event <- atomically . readTChan $ ch
       case event of
-        RollForward (BlockInMode (Block (BlockHeader slotNo hsh _) txs) _) _ct -> do
-            let utxoEvents = Utxo.getUtxoEvents maybeTargetAddresses txs (C.ChainPoint slotNo hsh)
+        RollForward (BlockInMode block _) _ct -> do
+            let utxoEvents = Utxo.getUtxoEventsFromBlock maybeTargetAddresses block
             modifyMVar_ index (Storable.insert utxoEvents)
             loop index
 
@@ -164,8 +165,8 @@ utxoWorker_ callback depth maybeTargetAddresses Coordinator{_barrier} ch path = 
           loop index
 
 utxoWorker
-  :: (Utxo.UtxoIndexer -> IO ())  -- ^ CPS function used in the queryApi thread, needs to be non-blocking
-  -> Maybe TargetAddresses                       -- ^ Target addresses to filter for
+  :: (Utxo.UtxoIndexer -> IO ())  -- ^ callback function used in the queryApi thread
+  -> Maybe TargetAddresses        -- ^ Target addresses to filter for
   -> Worker
 utxoWorker callback maybeTargetAddresses coordinator path = do
   workerChannel <- atomically . dupTChan $ _channel coordinator

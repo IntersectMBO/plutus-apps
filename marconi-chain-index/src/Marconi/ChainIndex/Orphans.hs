@@ -137,6 +137,9 @@ mapLeft _ (Right v) = Right v
 instance ToJSON C.ScriptData where
     toJSON v = Aeson.String $ Text.decodeLatin1 $ Base16.encode $ C.serialiseToCBOR v
 
+instance SQL.FromRow Int where
+  fromRow = SQL.field
+
 -- * C.TxIn
 
 instance SQL.ToRow C.TxIn where
