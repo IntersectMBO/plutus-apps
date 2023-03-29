@@ -1,10 +1,10 @@
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards   #-}
 
 module Spec.Marconi.ChainIndex.Indexers.Utxo.UtxoIndex (tests) where
 
-import Cardano.Api qualified as C
 import Control.Lens (each, filtered, folded, toListOf, (%~), (&), (^.))
 import Control.Monad (forM, forM_, void)
 import Control.Monad.IO.Class (liftIO)
@@ -18,10 +18,12 @@ import Data.Maybe (fromMaybe, isJust, isNothing, mapMaybe)
 import Data.Set (Set)
 import Data.Set qualified as Set
 
+import Cardano.Api qualified as C
+import Gen.Cardano.Api.Typed qualified as CGen
 import Gen.Marconi.ChainIndex.Indexers.Utxo (genShelleyEraUtxoEvents, genUtxoEvents)
 import Gen.Marconi.ChainIndex.Indexers.Utxo qualified as UtxoGen
 import Gen.Marconi.ChainIndex.Mockchain (MockBlock (mockBlockChainPoint, mockBlockTxs))
-import Gen.Marconi.ChainIndex.Types (genChainPoints)
+import Gen.Marconi.ChainIndex.Types (genChainPoint, genChainPoints)
 import Helpers (addressAnyToShelley)
 import Marconi.ChainIndex.Indexers.Utxo (StorableEvent (ueInputs, ueUtxos), StorableQuery (LastSyncPoint),
                                          StorableResult (LastSyncPointResult))
@@ -43,6 +45,16 @@ tests = testGroup "Spec.Marconi.ChainIndex.Indexers.Utxo"
         "All queried UTXOs by address should be unspent."
         "allqueryUtxosShouldBeUnspent"
         allqueryUtxosShouldBeUnspent
+
+      , testPropertyNamed
+        "Collateral that was produced in a transaction should be returned."
+        "propTxOutWhenPhase2ValidationFails"
+        propTxOutWhenPhase2ValidationFails
+
+      , testPropertyNamed
+        "Collateral TxIn should be indexed only, When Phase-2 validation fails."
+        "propTxInWhenPhase2ValidationFails"
+        propTxInWhenPhase2ValidationFails
 
       , testPropertyNamed
         "When there are target addresses, we should store only events at those addresses."
@@ -176,6 +188,53 @@ allqueryUtxosShouldBeUnspent = property $ do
   Hedgehog.assert
     $ all (== True)
     [u `notElem` txInsFromGeneratedEvents| u <- txinsFromRetrievedUtsoRows]
+
+-- | The property verifies that we
+--    * process/store all TxIns for valid transactions
+--    * use the collateral TxIns for transactions that fail phase-2 validation
+propTxInWhenPhase2ValidationFails :: Property
+propTxInWhenPhase2ValidationFails = property $ do
+  C.AnyCardanoEra (era :: C.CardanoEra era) <- forAll $
+    Gen.enum (C.AnyCardanoEra C.AlonzoEra) maxBound
+  tx@(C.Tx (C.TxBody txBodyContent@C.TxBodyContent {..})_) <- forAll $ CGen.genTx era
+  cp <- forAll genChainPoint
+  let event :: StorableEvent Utxo.UtxoHandle = Utxo.getUtxoEvents Nothing [tx] cp
+      computedTxins :: Set C.TxIn = Set.fromList . fmap (\(Utxo.Spent txid txix _ _) -> C.TxIn txid txix) . Utxo.getSpentFrom $ event
+      expectedTxins :: Set C.TxIn = Set.fromList $ fmap fst txIns
+
+  case txScriptValidity of
+    -- this is the same as script is valid, see https://github.com/input-output-hk/cardano-node/pull/4569
+    C.TxScriptValidityNone    ->
+      computedTxins === expectedTxins
+    (C.TxScriptValidity _ C.ScriptValid ) ->
+      expectedTxins === computedTxins -- transaction is valid, all input should be balanced and indexes
+    (C.TxScriptValidity _ C.ScriptInvalid ) -> do
+      case txInsCollateral of
+        C.TxInsCollateralNone -> Hedgehog.assert $ null computedTxins
+        C.TxInsCollateral _ txinsC_ ->
+          Hedgehog.footnoteShow txReturnCollateral >> Set.fromList txinsC_ === computedTxins
+
+      -- we should only return txOut collateral
+      let computedTxOuts = Utxo.getTxOutFromTxBodyContent txBodyContent
+      case txReturnCollateral of
+        C.TxReturnCollateralNone -> Hedgehog.assert $ not . null $ computedTxOuts
+        C.TxReturnCollateral _ txout ->
+          Hedgehog.footnoteShow txReturnCollateral >> (Hedgehog.assert $ txout `elem` computedTxOuts)
+
+-- | The property verifes that we
+--    * when there is no failure in phase-2 validation, collateral is returned
+
+propTxOutWhenPhase2ValidationFails :: Property
+propTxOutWhenPhase2ValidationFails = property $ do
+
+  C.AnyCardanoEra (era :: C.CardanoEra era) <- forAll $
+    Gen.enum (C.AnyCardanoEra C.AlonzoEra) maxBound
+  (C.Tx (C.TxBody txBodyContent@C.TxBodyContent {..}) _) <- forAll $ CGen.genTx era
+  let computedTxOuts = Utxo.getTxOutFromTxBodyContent txBodyContent
+  case txReturnCollateral of
+    C.TxReturnCollateralNone -> Hedgehog.assert $ not . null $ computedTxOuts
+    C.TxReturnCollateral _ txout ->
+      Hedgehog.footnoteShow txReturnCollateral >> (Hedgehog.assert $ txout `elem` computedTxOuts)
 
 -- | Round trip UtxoEvents to UtxoRow conversion
 -- The purpose of this test is to show that there is a isomorphism between `UtxoRow` and UtxoEvent.
