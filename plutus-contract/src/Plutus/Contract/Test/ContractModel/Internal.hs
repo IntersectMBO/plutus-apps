@@ -43,6 +43,7 @@ module Plutus.Contract.Test.ContractModel.Internal
   ) where
 
 import Cardano.Node.Emulator.Chain
+import Cardano.Node.Emulator.MTL.Test (chainStateToChainIndex)
 import Cardano.Node.Emulator.Params
 import Control.DeepSeq
 import Control.Monad.Freer.Reader (Reader, ask, runReader)
@@ -176,64 +177,6 @@ instance HasChainIndex (EmulatorTraceWithInstances state) where
   getChainIndex = do
     nid <- pNetworkId <$> EmulatorControl.getParams
     chainStateToChainIndex nid <$> EmulatorControl.chainState
-    -- Note, we don't store the genesis transaction in the index but put it in the before state
-    -- instead to avoid showing that as a balance change in the models.
-    where chainStateToChainIndex nid cs =
-            ChainIndex { -- The Backwards order
-                         transactions = fst $ foldr addBlock ([], beforeState)
-                                                             ( reverse
-                                                             . drop 1
-                                                             . reverse
-                                                             . _chainNewestFirst
-                                                             $ cs)
-                       , networkId = nid
-                       }
-            where beforeState = CM.ChainState { slot = 0
-                                              , utxo = makeUTxOs
-                                                     $ Index.initialise (take 1 $ reverse (_chainNewestFirst cs))
-                                              }
-                  addBlock block (txs, state) =
-                    ( txs ++ [ TxInState ((\(CardanoEmulatorEraTx tx) -> tx) . unOnChain $ tx)
-                                         state
-                                         (onChainTxIsValid tx)
-                             | tx <- block ]
-                    , updateState block state )
-
-                  updateState :: [OnChainTx] -> CM.ChainState -> CM.ChainState
-                  updateState block state =
-                    CM.ChainState{ slot = slot state + 1
-                                 , utxo = foldr addTx (utxo state) block
-                                 }
-
-                  addTx :: OnChainTx -> CardanoAPI.UTxO CM.Era -> CardanoAPI.UTxO CM.Era
-                  addTx tx (CardanoAPI.UTxO utxos) =
-                      CardanoAPI.UTxO $ outputs <> Map.withoutKeys utxos consumed
-                    where
-                      consumed :: Set CardanoAPI.TxIn
-                      consumed = Set.fromList $ map mkTxIn $ consumableInputs tx
-
-                      CardanoAPI.UTxO outputs = makeUTxOs $ UtxoIndex $ outputsProduced tx
-
-          mkTxIn :: TxIn -> CardanoAPI.TxIn
-          mkTxIn = mkRef . txInRef
-
-          makeUTxOs :: UtxoIndex -> CardanoAPI.UTxO CM.Era
-          makeUTxOs (UtxoIndex i) = CardanoAPI.UTxO $ Map.fromList [ (mkRef ref, mkTxOut utxo)
-                                                                   | (ref, utxo) <- Map.toList i ]
-
-          mkRef :: TxOutRef -> CardanoAPI.TxIn
-          mkRef (TxOutRef (TxId bs) ix) = CardanoAPI.TxIn
-                                            (CardanoAPI.TxId $ makeTheHash bs)
-                                            (CardanoAPI.TxIx $ fromIntegral ix)
-
-          mkTxOut :: TxOut -> CardanoAPI.TxOut CardanoAPI.CtxUTxO Era
-          mkTxOut (TxOut o) = CardanoAPI.toCtxUTxOTxOut o
-
-makeTheHash :: Crypto.HashAlgorithm crypto => Builtins.BuiltinByteString -> Crypto.Hash crypto stuff
-makeTheHash bs =
-  case Crypto.hashFromBytes $ Builtins.fromBuiltin bs of
-    Nothing   -> error "Bad hash!"
-    Just hash -> hash
 
 -- | `delay n` delays emulator execution by `n` slots
 delay :: Integer -> RunMonad (SpecificationEmulatorTrace state) ()
