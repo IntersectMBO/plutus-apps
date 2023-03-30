@@ -6,6 +6,8 @@ module Spec.Marconi.Sidechain.Routes (tests) where
 
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
+import Cardano.Crypto.Hash.Class qualified as Crypto
+import Cardano.Ledger.Shelley.API qualified as Ledger
 import Control.Monad (forM)
 import Data.Aeson qualified as Aeson
 import Data.Aeson.Encode.Pretty qualified as Aeson
@@ -17,11 +19,12 @@ import Gen.Marconi.ChainIndex.Types qualified as Gen
 import Hedgehog (Property, forAll, property, tripping)
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-import Marconi.ChainIndex.Indexers.EpochState (EpochSDDRow (EpochSDDRow))
+import Marconi.ChainIndex.Indexers.EpochState (EpochNonceRow (EpochNonceRow), EpochSDDRow (EpochSDDRow))
 import Marconi.ChainIndex.Indexers.MintBurn (TxMintRow (TxMintRow))
 import Marconi.ChainIndex.Indexers.Utxo (Utxo (Utxo), UtxoRow (UtxoRow))
 import Marconi.Sidechain.Api.Routes (AddressUtxoResult (AddressUtxoResult),
                                      CurrentSyncedPointResult (CurrentSyncedPointResult),
+                                     EpochNonceResult (EpochNonceResult),
                                      EpochStakePoolDelegationResult (EpochStakePoolDelegationResult),
                                      MintingPolicyHashTxResult (MintingPolicyHashTxResult))
 import Test.Tasty (TestTree, testGroup)
@@ -252,4 +255,24 @@ goldenEpochStakePoolDelegationResult = do
     pure $ Aeson.encodePretty result
 
 goldenEpochNonceResult :: IO ByteString
-goldenEpochNonceResult = pure ""
+goldenEpochNonceResult = do
+    let blockHeaderHashRawBytes = "fdd5eb1b1e9fc278a08aef2f6c0fe9b576efd76966cc552d8c5a59271dc01604"
+    blockHeaderHash <-
+        either
+            (error . show)
+            pure
+            $ C.deserialiseFromRawBytesHex (C.AsHash (C.proxyToAsType $ Proxy @C.BlockHeader)) blockHeaderHashRawBytes
+
+    let nonce = Ledger.Nonce
+              $ Crypto.castHash
+              $ Crypto.hashWith id "162d29c4e1cf6b8a84f2d692e67a3ac6bc7851bc3e6e4afe64d15778bed8bd86"
+
+    let result = EpochNonceResult
+               $ Just
+               $ EpochNonceRow
+                    (C.EpochNo 4)
+                    nonce
+                    (C.SlotNo 518400)
+                    blockHeaderHash
+                    (C.BlockNo 21645)
+    pure $ Aeson.encodePretty result

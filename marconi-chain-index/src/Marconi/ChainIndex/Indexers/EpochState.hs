@@ -315,7 +315,7 @@ instance FromJSON EpochNonceRow where
     parseJSON (Object v) =
         EpochNonceRow
             <$> (C.EpochNo <$> v .: "epochNo")
-            <*> v .: "nonce"
+            <*> (Ledger.Nonce <$> v .: "nonce")
             <*> (C.SlotNo <$> v .: "slotNo")
             <*> v .: "blockHeaderHash"
             <*> (C.BlockNo <$> v .: "blockNo")
@@ -327,9 +327,11 @@ instance ToJSON EpochNonceRow where
                         (C.SlotNo slotNo)
                         blockHeaderHash
                         (C.BlockNo blockNo)) =
-      object
+      let nonceValue = case nonce of Ledger.NeutralNonce -> Nothing
+                                     Ledger.Nonce n      -> Just n
+       in object
         [ "epochNo" .= epochNo
-        , "nonce" .= nonce
+        , "nonce" .= nonceValue
         , "slotNo" .= slotNo
         , "blockHeaderHash" .= blockHeaderHash
         , "blockNo" .= blockNo

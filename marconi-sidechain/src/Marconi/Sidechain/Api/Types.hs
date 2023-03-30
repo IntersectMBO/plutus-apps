@@ -45,10 +45,10 @@ data SidechainEnv = SidechainEnv
 
 -- | Should contain all the indexers required by Sidechain.
 data SidechainIndexers = SidechainIndexers
-    { _sidechainAddressUtxoIndexer              :: !AddressUtxoIndexerEnv
+    { _sidechainAddressUtxoIndexer :: !AddressUtxoIndexerEnv
     -- ^ For query thread to access in-memory utxos
-    , _sidechainEpochStakePoolDelegationIndexer :: !EpochStateIndexerEnv
-    -- ^ For query thread to access in-memory epoch stake pool delegation
+    , _sidechainEpochStateIndexer  :: !EpochStateIndexerEnv
+    -- ^ For query thread to access in-memory epoch state data
     }
 
 data AddressUtxoIndexerEnv = AddressUtxoIndexerEnv

@@ -128,5 +128,5 @@ newtype EpochStakePoolDelegationResult =
     deriving (Eq, Ord, Show, Generic, ToJSON, FromJSON)
 
 newtype EpochNonceResult =
-    EpochNonceResult String
+    EpochNonceResult (Maybe EpochState.EpochNonceRow)
     deriving (Eq, Ord, Show, Generic, ToJSON, FromJSON)
