@@ -328,8 +328,7 @@ instance Buffered UtxoHandle where
          (unless
           (null rows)
           (SQL.executeMany c
-            [r|INSERT
-               OR REPLACE INTO unspent_transactions (
+            [r|INSERT INTO unspent_transactions (
                  address,
                  txId,
                  txIx,
@@ -345,8 +344,7 @@ instance Buffered UtxoHandle where
          (unless
           (null spents)
           (SQL.executeMany c
-           [r|INSERT
-              OR REPLACE INTO spent (
+           [r|INSERT INTO spent (
                 txId,
                 txIx, slotNo, blockHash
               ) VALUES
