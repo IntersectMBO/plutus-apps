@@ -36,9 +36,8 @@ import Data.Functor.Identity (Identity, runIdentity)
 import Data.List (foldl', isPrefixOf, scanl')
 import Data.Maybe (fromJust, isJust, isNothing, mapMaybe, maybeToList)
 import Test.QuickCheck.Monadic (assert, monadic, run)
-import Test.Tasty.QuickCheck (Arbitrary (arbitrary, shrink), CoArbitrary, Fun, Gen, Property, applyFun2,
-                              arbitrarySizedIntegral, chooseInt, cover, forAll, frequency, resize, shrinkNothing, sized,
-                              (==>))
+import Test.Tasty.QuickCheck (Arbitrary (arbitrary, shrink), CoArbitrary, Fun, Gen, Property, applyFun2, chooseInt,
+                              cover, forAll, frequency, resize, shrinkNothing, sized, (==>))
 
 {- | Laws
   Constructors: new, insert, rewind
@@ -364,32 +363,36 @@ instance ( CoArbitrary a
 
 instance ( CoArbitrary a
          , CoArbitrary e
+         , Show a
+         , Show e
          , Arbitrary a
          , Arbitrary e
          , Arbitrary n ) => Arbitrary (GrammarBuilder a e n) where
   arbitrary = sized $ \n -> do
     depth <- frequency [ (05, pure 1)                       -- overfill
-                       , (40, chooseInt (2, n + 2))         -- about filled
-                       , (40, chooseInt (n + 2, n * 2 + 2)) -- not filled
+                       , (40, chooseInt (2, abs n + 2))         -- about filled
+                       , (40, chooseInt (abs n + 2, abs n * 2 + 2)) -- not filled
                        ]
     f     <- arbitrary
     acc   <- arbitrary
-    let ix = new f depth acc
-    complexity <- arbitrarySizedIntegral
+    b     <- arbitrary
+    let ix = insert b $ new f depth acc
+    complexity <- chooseInt(0, 40)
     generateGrammarIndex complexity ix
   shrink = shrinkNothing
 
-generateGrammarIndex :: Arbitrary e => Int -> Index a e n -> Gen (GrammarBuilder a e n)
-generateGrammarIndex 0 ix = pure $ GrammarBuilder ix
-generateGrammarIndex n ix = do
-  b      <- arbitrary
-  -- This should be correct by construction (the incorrect cases are not very
-  -- interesting).
-  d      <- chooseInt (1, ixDepth . fromJust $ view ix)
-  nextIx <- frequency [ (80, pure            $ insert b ix)
-                      , (20, pure            $ rewind d ix)
-                      ]
-  generateGrammarIndex (n - 1) nextIx
+generateGrammarIndex :: (Arbitrary e, Show a, Show e) => Int -> Index a e n -> Gen (GrammarBuilder a e n)
+generateGrammarIndex n ix
+  | n <= 0    = pure $ GrammarBuilder ix
+  | otherwise = do
+    b      <- arbitrary
+    -- This should be correct by construction (the incorrect cases are not very
+    -- interesting).
+    d      <- chooseInt (0, (ixSize  . fromJust $ view ix) - 1)
+    nextIx <- frequency [ (80, pure            $ insert b ix)
+                        , (20, pure            $ rewind d ix)
+                        ]
+    generateGrammarIndex (n - 1) nextIx
 
 instance Arbitrary a => Arbitrary (IndexView a) where
   arbitrary = sized $ \n -> do
