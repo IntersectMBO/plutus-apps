@@ -34,7 +34,6 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Text qualified as TS
-import Data.Word (Word64)
 import Marconi.ChainIndex.Indexers.AddressDatum (AddressDatumDepth (AddressDatumDepth), AddressDatumHandle,
                                                  AddressDatumIndex)
 import Marconi.ChainIndex.Indexers.AddressDatum qualified as AddressDatum
@@ -50,6 +49,7 @@ import Marconi.ChainIndex.Node.Client.GenesisConfig (NetworkConfigFile (NetworkC
                                                      mkProtocolInfoCardano, readCardanoGenesisConfig, readNetworkConfig,
                                                      renderGenesisConfigError)
 import Marconi.ChainIndex.Types (TargetAddresses)
+import Marconi.ChainIndex.Utils qualified as Utils
 import Marconi.Core.Index.VSplit qualified as Ix
 import Marconi.Core.Storable qualified as Storable
 import Ouroboros.Consensus.Ledger.Abstract qualified as O
@@ -110,11 +110,11 @@ initialCoordinator indexerCount =
 -- The points should/could provide shared access to the indexers themselves. The result
 -- is a list of points (rather than just one) since it offers more resume possibilities
 -- to the node (in the unlikely case there were some rollbacks during downtime).
-type Worker = Coordinator -> FilePath -> IO [Storable.StorablePoint ScriptTx.ScriptTxHandle]
+type Worker = Int -> Coordinator -> FilePath -> IO [Storable.StorablePoint ScriptTx.ScriptTxHandle]
 
 datumWorker :: Worker
-datumWorker Coordinator{_barrier, _channel} path = do
-  ix <- Datum.open path (Datum.Depth 2160)
+datumWorker securityParam Coordinator{_barrier, _channel} path = do
+  ix <- Datum.open path (Datum.Depth securityParam)
   workerChannel <- atomically . dupTChan $ _channel
   void . forkIO $ innerLoop workerChannel ix
   pure [ChainPointAtGenesis]
@@ -167,9 +167,9 @@ utxoWorker
   :: (Utxo.UtxoIndexer -> IO ())  -- ^ callback function used in the queryApi thread
   -> Maybe TargetAddresses        -- ^ Target addresses to filter for
   -> Worker
-utxoWorker callback maybeTargetAddresses coordinator path = do
+utxoWorker callback maybeTargetAddresses securityParam coordinator path = do
   workerChannel <- atomically . dupTChan $ _channel coordinator
-  (loop, ix) <- utxoWorker_ callback (Utxo.Depth 2160) maybeTargetAddresses coordinator workerChannel path
+  (loop, ix) <- utxoWorker_ callback (Utxo.Depth securityParam) maybeTargetAddresses coordinator workerChannel path
   void . forkIO $ loop
   readMVar ix >>= Storable.resumeFromStorage . view Storable.handle
 
@@ -177,13 +177,13 @@ addressDatumWorker
   :: (Storable.StorableEvent AddressDatumHandle -> IO [()])
   -> Maybe TargetAddresses
   -> Worker
-addressDatumWorker onInsert targetAddresses coordinator path = do
+addressDatumWorker onInsert targetAddresses securityParam coordinator path = do
   workerChannel <- atomically . dupTChan $ _channel coordinator
   (loop, ix) <-
       addressDatumWorker_
         onInsert
         targetAddresses
-        (AddressDatumDepth 2160)
+        (AddressDatumDepth securityParam)
         coordinator
         workerChannel
         path
@@ -254,9 +254,9 @@ scriptTxWorker_ onInsert depth Coordinator{_barrier} ch path = do
 scriptTxWorker
   :: (Storable.StorableEvent ScriptTx.ScriptTxHandle -> IO [()])
   -> Worker
-scriptTxWorker onInsert coordinator path = do
+scriptTxWorker onInsert securityParam coordinator path = do
   workerChannel <- atomically . dupTChan $ _channel coordinator
-  (loop, ix) <- scriptTxWorker_ onInsert (ScriptTx.Depth 2160) coordinator workerChannel path
+  (loop, ix) <- scriptTxWorker_ onInsert (ScriptTx.Depth securityParam) coordinator workerChannel path
   void . forkIO $ loop
   readMVar ix >>= Storable.resumeFromStorage . view Storable.handle
 
@@ -265,7 +265,7 @@ scriptTxWorker onInsert coordinator path = do
 epochStateWorker_
   :: FilePath
   -> ((Storable.State EpochStateHandle, Storable.StorableEvent EpochStateHandle) -> IO ())
-  -> Word64 -- Security param
+  -> Int -- Security param
   -> Coordinator
   -> TChan (ChainSyncEvent (BlockInMode CardanoMode))
   -> FilePath
@@ -346,13 +346,13 @@ epochStateWorker
     :: FilePath
     -> ((Storable.State EpochStateHandle, Storable.StorableEvent EpochStateHandle) -> IO ())
     -> Worker
-epochStateWorker nodeConfigPath onInsert coordinator path = do
+epochStateWorker nodeConfigPath onInsert securityParam coordinator path = do
   workerChannel <- atomically . dupTChan $ _channel coordinator
   (loop, ix) <-
       epochStateWorker_
         nodeConfigPath
         onInsert
-        2160
+        securityParam
         coordinator
         workerChannel
         path
@@ -368,8 +368,8 @@ mintBurnWorker_
   -> TChan (ChainSyncEvent (BlockInMode CardanoMode))
   -> FilePath
   -> IO (IO b, MVar MintBurn.MintBurnIndexer)
-mintBurnWorker_ bufferSize onInsert Coordinator{_barrier} ch dbPath = do
-  indexerMVar <- newMVar =<< MintBurn.open dbPath bufferSize
+mintBurnWorker_ securityParam onInsert Coordinator{_barrier} ch dbPath = do
+  indexerMVar <- newMVar =<< MintBurn.open dbPath securityParam
   let
     loop = forever $ do
       signalQSemN _barrier 1
@@ -385,18 +385,19 @@ mintBurnWorker_ bufferSize onInsert Coordinator{_barrier} ch dbPath = do
   pure (loop, indexerMVar)
 
 mintBurnWorker :: (MintBurn.TxMintEvent -> IO ()) -> Worker
-mintBurnWorker onInsert coordinator path = do
+mintBurnWorker onInsert securityParam coordinator path = do
   workerChannel <- atomically . dupTChan $ _channel coordinator
-  (loop, ix) <- mintBurnWorker_ 2160 onInsert coordinator workerChannel path
+  (loop, ix) <- mintBurnWorker_ securityParam onInsert coordinator workerChannel path
   void $ forkIO loop
   readMVar ix >>= Storable.resumeFromStorage . view Storable.handle
 
 initializeIndexers
-  :: [(Worker, FilePath)]
+  :: Int
+  -> [(Worker, FilePath)]
   -> IO ([ChainPoint], Coordinator)
-initializeIndexers indexers = do
+initializeIndexers securtyParam indexers = do
   coordinator <- initialCoordinator $ length indexers
-  startingPoints <- mapM (\(ix, fp) -> ix coordinator fp) indexers
+  startingPoints <- mapM (\(ix, fp) -> ix securtyParam coordinator fp) indexers
   -- We want to use the set of points that are common to all indexers
   -- giving priority to recent ones.
   pure ( foldl1' intersect startingPoints
@@ -429,7 +430,8 @@ runIndexers
   -> [(Worker, Maybe FilePath)]
   -> IO ()
 runIndexers socketPath networkId cliChainPoint traceName list = do
-  (returnedCp, coordinator) <- initializeIndexers $ mapMaybe sequenceA list
+  securityParam <- Utils.querySecurityParam networkId socketPath
+  (returnedCp, coordinator) <- initializeIndexers securityParam $ mapMaybe sequenceA list
 
   -- If the user specifies the chain point then use that,
   -- otherwise use what the indexers provide.
