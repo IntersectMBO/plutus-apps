@@ -37,3 +37,6 @@ for old_checkpoint_file in "${old_checkpoint_files[@]}"
 do
   rm "$old_checkpoint_file"
 done
+
+# sync local checkpoint files to S3
+aws --endpoint-url "$AWS_ENDPOINT_URL" s3 sync "$CHECKPOINT_DIR" "$S3_CHECKPOINT_DIR" --delete

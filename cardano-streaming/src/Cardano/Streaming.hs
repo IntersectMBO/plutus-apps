@@ -18,6 +18,7 @@ module Cardano.Streaming
   , foldLedgerStateEvents
   , getEnvAndInitialLedgerStateHistory
   , CS.ignoreRollbacks
+  , singletonLedgerStateHistory
   )
 where
 
