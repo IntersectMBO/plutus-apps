@@ -20,9 +20,9 @@ tests :: TestTree
 tests = testGroup "Marconi"
   [ Orphans.tests
   , Indexers.Utxo.tests
-  , Indexers.ScriptTx.tests
-  , Indexers.AddressDatum.tests
   , Indexers.MintBurn.tests
+  , Indexers.AddressDatum.tests
+  , Indexers.ScriptTx.tests
   , CLI.tests
   -- TODO Enable when test environemnt is reconfigured
   -- , EpochStakepoolSize.tests

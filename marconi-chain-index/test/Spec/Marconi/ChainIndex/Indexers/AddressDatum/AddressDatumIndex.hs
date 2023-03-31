@@ -27,6 +27,7 @@ import Marconi.ChainIndex.Indexers.AddressDatum (AddressDatumDepth (AddressDatum
                                                  StorableQuery (AddressDatumQuery, AddressDatumQuery, AllAddressesQuery),
                                                  StorableResult (AddressDatumResult, AllAddressesResult))
 import Marconi.ChainIndex.Indexers.AddressDatum qualified as AddressDatum
+import Marconi.ChainIndex.TestLib.StorableProperties qualified as StorableProperties
 import Marconi.Core.Storable qualified as Storable
 import Spec.Marconi.ChainIndex.Indexers.AddressDatum.Utils (addressInEraToAddressAny)
 import Test.Tasty (TestTree, localOption, testGroup)
@@ -77,6 +78,10 @@ tests = localOption (HedgehogTestLimit $ Just 200) $
           "The points that indexer can be resumed from should return at least non-genesis point when some data was indexed on disk"
           "propResumingShouldReturnAtLeastOneNonGenesisPointIfStoredOnDisk"
           propResumingShouldReturnAtLeastOneNonGenesisPointIfStoredOnDisk
+    , testPropertyNamed
+          "The points that indexer can be resumed from should be sorted in descending order"
+          "propResumablePointsShouldBeSortedInDescOrder"
+          propResumablePointsShouldBeSortedInDescOrder
     ]
 
 -- | The property verifies that the addresses in those generated events are all queryable from the
@@ -316,17 +321,13 @@ propRewindingWithOldSlotShouldBringIndexInPreviousState = property $ do
 -- 'C.ChainPointAtGenesis' point.
 --
 -- TODO: ChainPointAtGenesis should always be returned by default. Don't need this property test.
---
--- TODO: Add a property test which makes sure that the points are ordered.
 propResumingShouldReturnAtLeastTheGenesisPoint :: Property
 propResumingShouldReturnAtLeastTheGenesisPoint = property $ do
     cps <- forAll $ genChainPoints 1 5
     events <- forAll $ forM (init cps) genAddressDatumStorableEvent
-    initialIndex <- liftIO $ AddressDatum.open ":memory:" (AddressDatumDepth 1)
-    finalIndex <- liftIO $ Storable.insertMany events initialIndex
-
-    resumablePoints <- liftIO $ Storable.resumeFromStorage $ finalIndex ^. Storable.handle
-    Hedgehog.assert $ List.elem C.ChainPointAtGenesis resumablePoints
+    indexer <- liftIO $ AddressDatum.open ":memory:" (AddressDatumDepth 1)
+           >>= Storable.insertMany events
+    StorableProperties.propResumingShouldReturnAtLeastTheGenesisPoint indexer
 
 -- | The property verifies that the 'Storable.resumeFromStorage' call returns at least a point which
 -- is not 'C.ChainPointAtGenesis' when some events are inserted on disk.
@@ -340,6 +341,18 @@ propResumingShouldReturnAtLeastOneNonGenesisPointIfStoredOnDisk = property $ do
 
     resumablePoints <- liftIO $ Storable.resumeFromStorage $ finalIndex ^. Storable.handle
     Hedgehog.assert $ length resumablePoints >= 2
+
+-- | The property verifies that the 'Storable.resumeFromStorage' call returns a sorted list of chain
+-- points in descending order.
+propResumablePointsShouldBeSortedInDescOrder :: Property
+propResumablePointsShouldBeSortedInDescOrder = property $ do
+    cps <- forAll $ genChainPoints 1 5
+    events <- forAll $ forM cps genAddressDatumStorableEvent
+    indexer <-
+        liftIO $ AddressDatum.open ":memory:" (AddressDatumDepth 1)
+               >>= Storable.insertMany events
+               >>= Storable.insert (AddressDatum.toAddressDatumIndexEvent Nothing [] (last cps))
+    StorableProperties.propResumablePointsShouldBeSortedInDescOrder indexer
 
 genAddressDatumStorableEvent :: C.ChainPoint -> Gen (Storable.StorableEvent AddressDatumHandle)
 genAddressDatumStorableEvent cp = do
