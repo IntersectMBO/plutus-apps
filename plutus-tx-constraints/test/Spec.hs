@@ -53,12 +53,14 @@ import PlutusTx.Prelude qualified as Pl
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.Hedgehog (testPropertyNamed)
 
+import Game qualified as Game
 import Spec.Balancing qualified as Balancing
 
 main :: IO ()
 main = defaultMain $ testGroup "all-tests"
     [ tests
     , Balancing.tests
+    , Game.tests
     ]
 
 tests :: TestTree

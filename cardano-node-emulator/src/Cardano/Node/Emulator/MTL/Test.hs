@@ -15,6 +15,8 @@ module Cardano.Node.Emulator.MTL.Test (
   , propRunActions_
   , propRunActions
   , propRunActionsWithOptions
+  -- * Other exports
+  , chainStateToChainIndex
 ) where
 
 import Control.Lens (use, (^.))
@@ -144,8 +146,8 @@ propRunActionsWithOptions initialDist params predicate actions =
               case (res, predicate finalState lg) of
                 (Left err, _) -> return $ counterexample (renderLogs lg ++ "\n" ++ show err)
                                         $ property False
-                (Right prop, Just msg) -> return $ counterexample (renderLogs lg ++ "\n" ++ show msg) prop
-                (Right prop, Nothing) -> return prop
+                (Right prop, Just msg) -> return $ counterexample (renderLogs lg ++ "\n" ++ msg) prop
+                (Right prop, Nothing) -> return $ counterexample (renderLogs lg) prop
 
         balanceChangePredicate :: ContractModelResult state -> Property
         balanceChangePredicate result =

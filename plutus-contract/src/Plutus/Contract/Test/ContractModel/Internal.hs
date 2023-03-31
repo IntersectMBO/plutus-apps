@@ -49,8 +49,6 @@ import Control.DeepSeq
 import Control.Monad.Freer.Reader (Reader, ask, runReader)
 import Control.Monad.Freer.State (State, get, modify, runState)
 import Control.Monad.Writer as Writer (WriterT (..), runWriterT)
-import Ledger.Blockchain
-import Ledger.Tx
 import Plutus.Trace.Effects.Waiting (Waiting)
 import Plutus.Trace.Emulator (initialChainState, waitUntilSlot)
 import Plutus.Trace.Emulator.Types (ContractHandle (..), ContractInstanceTag, UserThreadMsg (..))
@@ -71,8 +69,6 @@ import GHC.Generics
 import Cardano.Api (AssetId, SlotNo (..))
 import Cardano.Api qualified as CardanoAPI
 import Cardano.Api.Shelley (ProtocolParameters)
-import Cardano.Crypto.Hash.Class qualified as Crypto
-import Cardano.Node.Emulator.Params ()
 import Ledger.Address
 import Ledger.Index as Index
 import Ledger.Scripts
