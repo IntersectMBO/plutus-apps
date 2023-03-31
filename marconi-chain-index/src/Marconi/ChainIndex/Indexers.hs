@@ -395,9 +395,9 @@ initializeIndexers
   :: Int
   -> [(Worker, FilePath)]
   -> IO ([ChainPoint], Coordinator)
-initializeIndexers securtyParam indexers = do
+initializeIndexers securityParam indexers = do
   coordinator <- initialCoordinator $ length indexers
-  startingPoints <- mapM (\(ix, fp) -> ix securtyParam coordinator fp) indexers
+  startingPoints <- mapM (\(ix, fp) -> ix securityParam coordinator fp) indexers
   -- We want to use the set of points that are common to all indexers
   -- giving priority to recent ones.
   pure ( foldl1' intersect startingPoints
