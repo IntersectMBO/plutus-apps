@@ -14,7 +14,7 @@ module Plutus.ChainIndex.Api
   , FullAPI
   , IsUtxoResponse(..)
   , SwaggerAPI
-  , UtxoAtAddressRequest(..)
+  , UtxoByAddressRequest(..)
   , UtxosResponse(..)
   , UtxoWithCurrencyRequest(..)
   , swagger
@@ -115,13 +115,13 @@ deriving instance OpenApi.ToSchema a => OpenApi.ToSchema (Page a)
 --     }
 --   }
 -- }
-data UtxoAtAddressRequest = UtxoAtAddressRequest
+data UtxoByAddressRequest = UtxoByAddressRequest
     { pageQuery :: Maybe (PageQuery TxOutRef)
     , address   :: CardanoAddress
     }
     deriving (Show, Eq, Generic, FromJSON, ToJSON, OpenApi.ToSchema)
 
--- | See the comment on 'UtxoAtAddressRequest'.
+-- | See the comment on 'UtxoByAddressRequest'.
 --
 -- The difference is using @currency@ field instead of @credential@.
 -- {
@@ -198,7 +198,7 @@ type API
     :<|> "unspent-tx-out" :> Description "Get a unspent transaction output from its reference." :> ReqBody '[JSON] TxOutRef :> Post '[JSON] DecoratedTxOut
     :<|> "tx" :> Description "Get a transaction from its id." :> ReqBody '[JSON] TxId :> Post '[JSON] ChainIndexTx
     :<|> "is-utxo" :> Description "Check if the reference is an UTxO." :> ReqBody '[JSON] TxOutRef :> Post '[JSON] IsUtxoResponse
-    :<|> "utxo-at-address" :> Description "Get all UTxOs at an address." :> ReqBody '[JSON] UtxoAtAddressRequest :> Post '[JSON] UtxosResponse
+    :<|> "utxo-at-address" :> Description "Get all UTxOs at an address." :> ReqBody '[JSON] UtxoByAddressRequest :> Post '[JSON] UtxosResponse
     :<|> "unspent-txouts-at-address" :> Description "Get all unspent transaction output at an address." :> ReqBody '[JSON] QueryAtAddressRequest :> Post '[JSON] (QueryResponse [(TxOutRef, DecoratedTxOut)])
     :<|> "datums-at-address" :> Description "Get all Datums at an address." :> ReqBody '[JSON] QueryAtAddressRequest :> Post '[JSON] (QueryResponse [Datum])
     :<|> "utxo-with-currency" :> Description "Get all UTxOs with a currency." :> ReqBody '[JSON] UtxoWithCurrencyRequest :> Post '[JSON] UtxosResponse

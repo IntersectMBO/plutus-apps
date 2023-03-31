@@ -30,8 +30,8 @@ import Data.Map (elems)
 import Data.Set qualified as Set
 import Ledger.Address (CardanoAddress)
 import Ledger.Tx (CardanoTx (CardanoTx))
-import Marconi.ChainIndex.Indexers.Utxo (StorableEvent (UtxoEvent), StorableQuery (UtxoAddress), UtxoHandle, getInputs,
-                                         getUtxoResult, getUtxos, txId, txIx, urUtxo)
+import Marconi.ChainIndex.Indexers.Utxo (StorableEvent (UtxoEvent), StorableQuery (UtxoByAddress), UtxoHandle,
+                                         getInputs, getUtxoResult, getUtxos, txId, txIx, urUtxo)
 import Marconi.Core.Storable (HasPoint, QueryInterval (QEverything), Queryable, State, StorableMonad, StorablePoint,
                               StorableResult, insertMany, query)
 import Plutus.ChainIndex.Api (UtxosResponse (UtxosResponse))
@@ -131,7 +131,7 @@ getUtxoSetAtAddress pageQuery addrInEra = let
            . Set.fromList
            . fmap (views urUtxo toTxOutRef)
            . getUtxoResult
-           <$> queryIndexer (UtxoAddress addr)
+           <$> queryIndexer (UtxoByAddress addr Nothing)
 
 
 getUtxoEvents

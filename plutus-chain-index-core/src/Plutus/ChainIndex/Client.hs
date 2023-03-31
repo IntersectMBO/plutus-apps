@@ -37,7 +37,7 @@ import Ledger.Tx (DecoratedTxOut, TxOutRef, Versioned)
 import Network.HTTP.Types.Status (Status (..))
 import Plutus.ChainIndex.Api (API, IsUtxoResponse, QueryAtAddressRequest (QueryAtAddressRequest), QueryResponse,
                               TxoAtAddressRequest (TxoAtAddressRequest), TxosResponse,
-                              UtxoAtAddressRequest (UtxoAtAddressRequest),
+                              UtxoByAddressRequest (UtxoByAddressRequest),
                               UtxoWithCurrencyRequest (UtxoWithCurrencyRequest), UtxosResponse)
 import Plutus.ChainIndex.Effects (ChainIndexQueryEffect (..))
 import Plutus.ChainIndex.Tx (ChainIndexTx)
@@ -62,7 +62,7 @@ getTxOut :: TxOutRef -> ClientM DecoratedTxOut
 getTx :: TxId -> ClientM ChainIndexTx
 getUnspentTxOut :: TxOutRef -> ClientM DecoratedTxOut
 getIsUtxo :: TxOutRef -> ClientM IsUtxoResponse
-getUtxoSetAtAddress :: UtxoAtAddressRequest -> ClientM UtxosResponse
+getUtxoSetAtAddress :: UtxoByAddressRequest -> ClientM UtxosResponse
 getUnspentTxOutsAtAddress :: QueryAtAddressRequest -> ClientM (QueryResponse [(TxOutRef, DecoratedTxOut)])
 getDatumsAtAddress :: QueryAtAddressRequest -> ClientM (QueryResponse [Datum])
 getUtxoSetWithCurrency :: UtxoWithCurrencyRequest -> ClientM UtxosResponse
@@ -123,7 +123,7 @@ handleChainIndexClient event = do
         TxOutFromRef r                -> runClientMaybe (getTxOut r)
         UnspentTxOutFromRef r         -> runClientMaybe (getUnspentTxOut r)
         UtxoSetMembership r           -> runClient (getIsUtxo r)
-        UtxoSetAtAddress pq a         -> runClient (getUtxoSetAtAddress $ UtxoAtAddressRequest (Just pq) a)
+        UtxoSetAtAddress pq a         -> runClient (getUtxoSetAtAddress $ UtxoByAddressRequest (Just pq) a)
         UnspentTxOutSetAtAddress pq a -> runClient (getUnspentTxOutsAtAddress $ QueryAtAddressRequest (Just pq) a)
         DatumsAtAddress pq a          -> runClient (getDatumsAtAddress $ QueryAtAddressRequest (Just pq) a)
         UtxoSetWithCurrency pq a      -> runClient (getUtxoSetWithCurrency $ UtxoWithCurrencyRequest (Just pq) a)

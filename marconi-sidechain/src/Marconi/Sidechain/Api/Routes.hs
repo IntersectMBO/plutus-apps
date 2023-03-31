@@ -7,7 +7,8 @@
 module Marconi.Sidechain.Api.Routes where
 
 import Cardano.Api qualified as C
-import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), Value (Object), object, (.:), (.=))
+import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), Value (Object), object, (.:), (.:?), (.=))
+import Data.Maybe (catMaybes)
 import Data.Text (Text)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
@@ -32,7 +33,7 @@ type JsonRpcAPI = "json-rpc" :> RawJsonRpc RpcAPI
 type RpcAPI = RpcEchoMethod
          :<|> RpcTargetAddressesMethod
          :<|> RpcCurrentSyncedPointMethod
-         :<|> RpcAddressUtxoMethod
+         :<|> RpcPastAddressUtxoMethod
          :<|> RpcMintingPolicyHashTxMethod
          :<|> RpcEpochStakePoolDelegationMethod
          :<|> RpcEpochNonceMethod
@@ -47,9 +48,9 @@ type RpcCurrentSyncedPointMethod =
             String
             CurrentSyncedPointResult
 
-type RpcAddressUtxoMethod =
+type RpcPastAddressUtxoMethod =
     JsonRpc "getUtxoFromAddress"
-            String
+            TxOutAtQuery
             String
             AddressUtxoResult
 
@@ -130,3 +131,21 @@ newtype EpochStakePoolDelegationResult =
 newtype EpochNonceResult =
     EpochNonceResult (Maybe EpochState.EpochNonceRow)
     deriving (Eq, Ord, Show, Generic, ToJSON, FromJSON)
+
+data TxOutAtQuery
+    = TxOutAtQuery
+    { queryAddress :: !String
+    , querySlot    :: !(Maybe Word64)
+    } deriving Show
+
+instance FromJSON TxOutAtQuery where
+
+    parseJSON (Object v) = TxOutAtQuery <$> (v .: "address")  <*> (v .:? "slotNo")
+    parseJSON _          = mempty
+
+instance ToJSON TxOutAtQuery where
+    toJSON q =
+        object $ catMaybes
+           [ Just ("address" .= queryAddress q)
+           , ("slotNo" .=) <$> querySlot q
+           ]

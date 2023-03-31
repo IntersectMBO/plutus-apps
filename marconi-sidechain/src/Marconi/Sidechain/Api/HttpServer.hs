@@ -18,7 +18,8 @@ import Data.Word (Word64)
 import Marconi.Sidechain.Api.Query.Indexers.EpochState qualified as EpochState
 import Marconi.Sidechain.Api.Query.Indexers.Utxo qualified as Q.Utxo
 import Marconi.Sidechain.Api.Routes (API, AddressUtxoResult, CurrentSyncedPointResult, EpochNonceResult,
-                                     EpochStakePoolDelegationResult, JsonRpcAPI, MintingPolicyHashTxResult, RestAPI)
+                                     EpochStakePoolDelegationResult, JsonRpcAPI, MintingPolicyHashTxResult, RestAPI,
+                                     TxOutAtQuery (queryAddress, querySlot))
 import Marconi.Sidechain.Api.Types (QueryExceptions, SidechainEnv, sidechainAddressUtxoIndexer,
                                     sidechainEnvHttpSettings, sidechainEnvIndexers)
 import Network.JsonRpc.Server.Types ()
@@ -102,13 +103,14 @@ getCurrentSyncedPointHandler env _ = liftIO $
 -- | Handler for retrieving UTXOs by Address
 getAddressUtxoHandler
     :: SidechainEnv -- ^ Utxo Environment to access Utxo Storage running on the marconi thread
-    -> String -- ^ Bech32 addressCredential
+    -> TxOutAtQuery -- ^ Bech32 addressCredential and a slotNumber
     -> Handler (Either (JsonRpcErr String) AddressUtxoResult)
-getAddressUtxoHandler env address = liftIO $
-    first toRpcErr
-    <$> Q.Utxo.findByBech32Address
+getAddressUtxoHandler env query = liftIO $
+    first toRpcErr <$> do
+        Q.Utxo.findByBech32AddressAtSlot
             (env ^. sidechainEnvIndexers . sidechainAddressUtxoIndexer)
-            (pack address)
+            (pack $ queryAddress query)
+            (querySlot query)
 
 -- | Handler for retrieving Txs by Minting Policy Hash.
 getMintingPolicyHashTxHandler

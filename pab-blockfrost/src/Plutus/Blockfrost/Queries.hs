@@ -11,7 +11,7 @@ module Plutus.Blockfrost.Queries (
     , getTxOutBlockfrost
     , getUnspentTxOutBlockfrost
     , getIsUtxoBlockfrost
-    , getUtxoAtAddressBlockfrost
+    , getUtxoByAddressBlockfrost
     , getUnspentAtAddressBlockfrost
     , getDatumsAtAddressBlockfrost
     , getTxoAtAddressBlockfrost
@@ -72,8 +72,8 @@ getIsUtxoBlockfrost ref = do
     isUtxo <- checkIsUtxo ref
     return (tip, isUtxo)
 
-getUtxoAtAddressBlockfrost :: MonadBlockfrost m => PageQuery a -> Address -> m (Block, [AddressUtxo])
-getUtxoAtAddressBlockfrost _ addr = do
+getUtxoByAddressBlockfrost :: MonadBlockfrost m => PageQuery a -> Address -> m (Block, [AddressUtxo])
+getUtxoByAddressBlockfrost _ addr = do
     tip <- getTipBlockfrost
     utxos <- allPages (wrapperPaged getAddressUtxos' addr)
     return (tip, utxos)

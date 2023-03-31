@@ -70,9 +70,9 @@ tests = testGroup "Spec.Marconi.ChainIndex.Indexers.Utxo"
         propSaveAndRetrieveUtxoEvents
 
     , testPropertyNamed
-        "Save and retrieve events by address and query interval from storage test."
-        "propUtxoQueryByAddressAndQueryInterval"
-        propUtxoQueryByAddressAndQueryInterval
+        "Save and retrieve events by address and slot number from storage test."
+        "propUtxoQueryByAddressAndSlot"
+        propUtxoQueryByAddressAndSlot
 
     , testPropertyNamed
           "The points the indexer can be resumed from should return at least the genesis point"
@@ -147,7 +147,7 @@ allqueryUtxosShouldBeUnspent = property $ do
     addressQueries :: [StorableQuery Utxo.UtxoHandle] -- we want to query for all addresses
     addressQueries
       = List.nub
-      . fmap (Utxo.UtxoAddress . Utxo._address)
+      . fmap (flip Utxo.UtxoByAddress Nothing . Utxo._address)
       . concatMap (Set.toList . Utxo.ueUtxos)
       $ events
   results <- liftIO . traverse (Storable.query Storable.QEverything indexer) $ addressQueries
@@ -222,7 +222,7 @@ propSaveAndRetrieveUtxoEvents = property $ do
              >>= liftIO . Storable.insertMany events
   let
     qs :: [StorableQuery Utxo.UtxoHandle]
-    qs = List.nub . fmap (Utxo.UtxoAddress . Utxo._address) . concatMap (Set.toList . Utxo.ueUtxos) $ events
+    qs = List.nub . fmap (flip Utxo.UtxoByAddress Nothing . Utxo._address) . concatMap (Set.toList . Utxo.ueUtxos) $ events
   results <- liftIO . traverse (Storable.query Storable.QEverything indexer) $ qs
   let getResult = \case
           Utxo.UtxoResult rs         -> rs
@@ -245,13 +245,13 @@ propSaveAndRetrieveUtxoEvents = property $ do
     [u `notElem` fromEventsTxIns| u <- fromStorageTxIns]
 
 
--- Insert Utxo events in storage, and retreive the events by address and query interval
+-- Insert Utxo events in storage, and retreive the events by address and slot
 -- Note: The property we are checking is:
 --   - Insert many events with at various chainPoints
 --   - Fetch for all the evenent addresses in the ChainPoint interval [lowChainPoint, highChainPoint]
 --   - There should not be any results with ChainPoint > highChainPoint
-propUtxoQueryByAddressAndQueryInterval :: Property
-propUtxoQueryByAddressAndQueryInterval = property $ do
+propUtxoQueryByAddressAndSlot :: Property
+propUtxoQueryByAddressAndSlot = property $ do
   highSlotNo <- forAll $ Gen.integral $ Range.constantFrom 7 5 20
   chainPoints :: [C.ChainPoint]  <- forAll $ genChainPoints 2 highSlotNo
   events::[StorableEvent Utxo.UtxoHandle] <- forAll $ forM chainPoints genEventWithShelleyAddressAtChainPoint <&> concat
@@ -259,28 +259,24 @@ propUtxoQueryByAddressAndQueryInterval = property $ do
   depth <- forAll $ Gen.int (Range.constantFrom (numOfEvents - 1) 1 (numOfEvents + 1))
   indexer <- liftIO $ Utxo.open ":memory:" (Utxo.Depth depth) False -- don't vacuum sqlite
              >>= liftIO . Storable.insertMany events
-  let _start :: C.ChainPoint = head chainPoints -- the generator will alwys provide a non empty list
-      _end :: C.ChainPoint = chainPoints !! (length chainPoints `div` 2)
-      qInterval = Storable.QInterval _start _end
+  let _slot = getSlot $ chainPoints !! (length chainPoints `div` 2)
       qAddresses
         = List.nub  -- remove duplicate addresses
-        . fmap (Utxo.UtxoAddress . Utxo._address)
+        . fmap (flip Utxo.UtxoByAddress _slot . Utxo._address)
         . concatMap (Set.toList . Utxo.ueUtxos)
         $ events
-  results <- liftIO . traverse (Storable.query qInterval indexer) $ qAddresses
+  results <- liftIO . traverse (Storable.query Storable.QEverything indexer) $ qAddresses
   let filterResult = \case
           Utxo.UtxoResult rs -> rs
           _other             -> []
       fetchedRows = concatMap filterResult results
       slotNoFromStorage = List.sort . fmap Utxo._urSlotNo $ fetchedRows
-      endIntervalSlotNo = case _end of
-        C.ChainPointAtGenesis -> C.SlotNo 0
-        C.ChainPoint sn _     -> sn
 
   Hedgehog.classify "Query both in-memory and storage " $ depth <= numOfEvents
   Hedgehog.classify "Query in-memory only" $ depth > numOfEvents
 
-  last slotNoFromStorage === endIntervalSlotNo
+  Just (last slotNoFromStorage) === _slot
+
 -- TargetAddresses are the addresses in UTXO that we filter for.
 -- Puporse of this test is to filter out utxos that have a different address than those in the TargetAddress list.
 propComputeEventsAtAddress :: Property
@@ -289,7 +285,7 @@ propComputeEventsAtAddress = property $ do
     let (addresses :: [C.AddressAny]) =
           map Utxo._address $ Set.toList $ Utxo.ueUtxos event
         sameAddressEvents :: [StorableEvent Utxo.UtxoHandle]
-        sameAddressEvents =  Utxo.eventsAtAddress (head addresses) [event]
+        sameAddressEvents =  Utxo.eventsAtAddress (head addresses) Nothing [event]
         targetAddress =  head addresses
         (computedAddresses :: [C.AddressAny])
           = toListOf (folded . Utxo.address)
@@ -448,3 +444,7 @@ propLastChainPointOnRewindedIndexer = property $ do
     Just indexer'' <- liftIO $ Storable.rewind rollbackPoint indexer'
     result <- liftIO $ Storable.query Storable.QEverything indexer'' LastSyncPoint
     result === LastSyncPointResult lastestPointPostRollback
+
+getSlot :: C.ChainPoint -> Maybe C.SlotNo
+getSlot C.ChainPointAtGenesis = Nothing
+getSlot (C.ChainPoint s _)    = Just s
