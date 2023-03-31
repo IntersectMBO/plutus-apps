@@ -16,12 +16,7 @@
 {-# LANGUAGE TypeFamilies               #-}
 
 -- | A guessing game. A simplified version of 'Plutus.Contract.GameStateMachine'
--- not using 'Plutus.Contract.StateMachine' and using `yieldUnbalancedTx' for
--- balancing, signing and submitting transactions.
---
--- Currently, remote wallets (anything other than WBE) can only handles
--- `yieldUnbalancedTx` requests, and not `balanceTx`, `signTx` and `submitTx`
--- requests.
+-- using 'Cardano.Node.Emulator.MTL'.
 module Game (tests) where
 
 import Cardano.Node.Emulator qualified as E
@@ -182,7 +177,7 @@ data LockArgs =
     LockArgs
         { lockArgsGameParam :: GameParam
         -- ^ The parameters for parameterizing the validator.
-        , lockArgsSecret    :: Haskell.String -- SecretArgument Haskell.String
+        , lockArgsSecret    :: Haskell.String
         -- ^ The secret
         , lockArgsValue     :: Value
         -- ^ Value that is locked by the contract initially
@@ -208,9 +203,7 @@ lock wallet LockArgs { lockArgsGameParam, lockArgsSecret, lockArgsValue } = do
 -- | The "guess" contract
 guess :: MonadEmulator m => CardanoAddress -> GuessArgs -> m ()
 guess wallet GuessArgs { guessArgsGameParam, guessArgsSecret } = do
-    -- Wait for script to have a UTxO of a least 1 lovelace
     -- logInfo @Haskell.String "Waiting for script to have a UTxO of at least 1 lovelace"
-    -- utxos <- fundsAtAddressGeq (gameAddress guessArgsGameParam) (C.lovelaceValueOf 1)
     utxos <- utxosAt (gameAddress guessArgsGameParam)
 
     let lookups = Constraints.typedValidatorLookups (gameInstance guessArgsGameParam)
@@ -378,7 +371,7 @@ prop_NoLockedFunds = forAllDL noLockedFunds propRunActions_
 
 tests :: TestTree
 tests =
-    testGroup "game state machine with secret arguments tests"
+    testGroup "game (MTL) tests"
     [
       testProperty "can always get the funds out" $
         withMaxSuccess 10 prop_NoLockedFunds
