@@ -18,7 +18,6 @@ import Data.Maybe (fromMaybe, isJust, isNothing, mapMaybe)
 import Data.Set (Set)
 import Data.Set qualified as Set
 
-import Cardano.Api qualified as C
 import Gen.Marconi.ChainIndex.Indexers.Utxo (genShelleyEraUtxoEvents, genUtxoEvents)
 import Gen.Marconi.ChainIndex.Indexers.Utxo qualified as UtxoGen
 import Gen.Marconi.ChainIndex.Mockchain (MockBlock (mockBlockChainPoint, mockBlockTxs))
@@ -152,7 +151,10 @@ allqueryUtxosShouldBeUnspent = property $ do
       . concatMap (Set.toList . Utxo.ueUtxos)
       $ events
   results <- liftIO . traverse (Storable.query Storable.QEverything indexer) $ addressQueries
-  let retrievedUtxoRows :: [Utxo.UtxoRow] = concatMap (\(Utxo.UtxoResult rs) -> rs ) results
+  let getResult = \case
+          Utxo.UtxoResult rs         -> rs
+          Utxo.LastSyncPointResult _ -> []
+      retrievedUtxoRows :: [Utxo.UtxoRow] = concatMap getResult results
       txinsFromRetrievedUtsoRows :: [C.TxIn]  -- get all the TxIn from quried UtxoRows
         = retrievedUtxoRows & each %~ (\r ->
                                        C.TxIn (r ^. Utxo.urUtxo . Utxo.txId)(r ^. Utxo.urUtxo . Utxo.txIx))
@@ -222,7 +224,10 @@ propSaveAndRetrieveUtxoEvents = property $ do
     qs :: [StorableQuery Utxo.UtxoHandle]
     qs = List.nub . fmap (Utxo.UtxoAddress . Utxo._address) . concatMap (Set.toList . Utxo.ueUtxos) $ events
   results <- liftIO . traverse (Storable.query Storable.QEverything indexer) $ qs
-  let rowsFromStorage :: [Utxo.UtxoRow] = concatMap (\(Utxo.UtxoResult rs) -> rs ) results
+  let getResult = \case
+          Utxo.UtxoResult rs         -> rs
+          Utxo.LastSyncPointResult _ -> []
+      rowsFromStorage :: [Utxo.UtxoRow] = concatMap getResult results
       fromStorageTxIns :: [C.TxIn]
         = rowsFromStorage & each %~ (\r ->
                                        C.TxIn (r ^. Utxo.urUtxo . Utxo.txId)(r ^. Utxo.urUtxo . Utxo.txIx))
