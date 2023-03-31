@@ -1,10 +1,11 @@
+{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Spec.Marconi.ChainIndex.Indexers.Utxo.UtxoIndex (tests) where
 
-import Control.Lens (each, filtered, folded, toListOf)
-import Control.Lens.Operators ((%~), (&), (^.))
+import Cardano.Api qualified as C
+import Control.Lens (each, filtered, folded, toListOf, (%~), (&), (^.))
 import Control.Monad (forM, forM_, void)
 import Control.Monad.IO.Class (liftIO)
 import Data.Aeson qualified as Aeson
@@ -23,11 +24,11 @@ import Gen.Marconi.ChainIndex.Indexers.Utxo qualified as UtxoGen
 import Gen.Marconi.ChainIndex.Mockchain (MockBlock (mockBlockChainPoint, mockBlockTxs))
 import Gen.Marconi.ChainIndex.Types (genChainPoints)
 import Helpers (addressAnyToShelley)
-import Marconi.ChainIndex.Indexers.Utxo (StorableEvent (ueInputs, ueUtxos))
+import Marconi.ChainIndex.Indexers.Utxo (StorableEvent (ueInputs, ueUtxos), StorableQuery (LastSyncPoint),
+                                         StorableResult (LastSyncPointResult))
 import Marconi.ChainIndex.Indexers.Utxo qualified as Utxo
 import Marconi.ChainIndex.TestLib.StorableProperties qualified as StorableProperties
 import Marconi.ChainIndex.Types (TargetAddresses)
-import Marconi.Core.Storable (StorableQuery)
 import Marconi.Core.Storable qualified as Storable
 
 import Hedgehog (Gen, Property, cover, forAll, property, (===))
@@ -99,6 +100,22 @@ tests = testGroup "Spec.Marconi.ChainIndex.Indexers.Utxo"
           "propGetUtxoEventFromBlock"
           propGetUtxoEventFromBlock
 
+    , testGroup "LastSync query"
+        [ testPropertyNamed
+             "Empty indexer latest sync point is ChainPointAtGenesis"
+             "testLastSyncOnFreshIndexer"
+             testLastSyncOnFreshIndexer
+
+        , testPropertyNamed
+             "Querying the latest chain point should return the slot of the last indexed block"
+             "propLastChainPointOnRunningIndexer"
+             propLastChainPointOnRunningIndexer
+
+        , testPropertyNamed
+             "On a rollback, the latest latest sync point is the one we rollback to if the indexer was ahead of it"
+             "propLastChainPointOnRewindedIndexer"
+             propLastChainPointOnRewindedIndexer
+        ]
     ]
 
 -- | The purpose of test is to make sure All Queried Utxo's are unSpent.
@@ -246,7 +263,10 @@ propUtxoQueryByAddressAndQueryInterval = property $ do
         . concatMap (Set.toList . Utxo.ueUtxos)
         $ events
   results <- liftIO . traverse (Storable.query qInterval indexer) $ qAddresses
-  let fetchedRows = concatMap (\(Utxo.UtxoResult rs) -> rs ) results
+  let filterResult = \case
+          Utxo.UtxoResult rs -> rs
+          _other             -> []
+      fetchedRows = concatMap filterResult results
       slotNoFromStorage = List.sort . fmap Utxo._urSlotNo $ fetchedRows
       endIntervalSlotNo = case _end of
         C.ChainPointAtGenesis -> C.SlotNo 0
@@ -256,17 +276,16 @@ propUtxoQueryByAddressAndQueryInterval = property $ do
   Hedgehog.classify "Query in-memory only" $ depth > numOfEvents
 
   last slotNoFromStorage === endIntervalSlotNo
-
 -- TargetAddresses are the addresses in UTXO that we filter for.
 -- Puporse of this test is to filter out utxos that have a different address than those in the TargetAddress list.
 propComputeEventsAtAddress :: Property
 propComputeEventsAtAddress = property $ do
     event <- head <$> forAll UtxoGen.genUtxoEvents
-    let (addresses :: [StorableQuery Utxo.UtxoHandle]) =
-          map (Utxo.UtxoAddress . Utxo._address) $ Set.toList $ Utxo.ueUtxos event
+    let (addresses :: [C.AddressAny]) =
+          map Utxo._address $ Set.toList $ Utxo.ueUtxos event
         sameAddressEvents :: [StorableEvent Utxo.UtxoHandle]
         sameAddressEvents =  Utxo.eventsAtAddress (head addresses) [event]
-        (Utxo.UtxoAddress targetAddress ) =  head addresses
+        targetAddress =  head addresses
         (computedAddresses :: [C.AddressAny])
           = toListOf (folded . Utxo.address)
           . concatMap (Set.toList . Utxo.ueUtxos)
@@ -334,7 +353,7 @@ propResumingShouldReturnAtLeastTheGenesisPoint = property $ do
 propResumingShouldReturnAtLeastOneNonGenesisPointIfStoredOnDisk :: Property
 propResumingShouldReturnAtLeastOneNonGenesisPointIfStoredOnDisk = property $ do
     events <- forAll UtxoGen.genUtxoEvents
-    cover 90 "All UtxoEvents have a least one utxo and one spent txout"
+    cover 90 "All UtxoEvents have at least one utxo and one spent txout"
         $ isJust
         $ List.find (\ue -> not (Set.null (ueUtxos ue)) && not (Set.null (ueInputs ue))) events
     cover 90 "At least one UtxoEvent with at least one utxo"
@@ -393,3 +412,34 @@ propGetUtxoEventFromBlock = property $ do
 genEventWithShelleyAddressAtChainPoint :: C.ChainPoint -> Hedgehog.Gen[Utxo.StorableEvent Utxo.UtxoHandle]
 genEventWithShelleyAddressAtChainPoint cp =
  genShelleyEraUtxoEvents <&> fmap (\e -> e {Utxo.ueChainPoint = cp})
+
+testLastSyncOnFreshIndexer :: Property
+testLastSyncOnFreshIndexer = property $ do
+    indexer <- liftIO $ Utxo.open ":memory:" (Utxo.Depth 50) False
+    result <- liftIO $ Storable.query Storable.QEverything indexer LastSyncPoint
+    result === LastSyncPointResult C.ChainPointAtGenesis
+
+propLastChainPointOnRunningIndexer :: Property
+propLastChainPointOnRunningIndexer = property $ do
+    events <- forAll UtxoGen.genUtxoEvents
+    depth <- forAll $ Gen.int (Range.linear 1 $ length events)
+    indexer <- liftIO $ Utxo.open ":memory:" (Utxo.Depth depth) False
+    indexer' <- liftIO $ Storable.insertMany events indexer
+    result <- liftIO $ Storable.query Storable.QEverything indexer' LastSyncPoint
+    result === LastSyncPointResult (Utxo.ueChainPoint $ last $ init events)
+
+propLastChainPointOnRewindedIndexer :: Property
+propLastChainPointOnRewindedIndexer = property $ do
+    events <- forAll UtxoGen.genUtxoEvents
+    depth <- forAll $ Gen.int (Range.linear 1 $ length events)
+    ix <- forAll $ Gen.int (Range.linear 0 (length events - 1))
+    let rollbackPoint = Utxo.ueChainPoint (events !! ix)
+    let lastestPointPostRollback = if ix == 0
+            then C.ChainPointAtGenesis
+            else Utxo.ueChainPoint (events !! (ix - 1))
+    Hedgehog.annotateShow lastestPointPostRollback
+    indexer <- liftIO $ Utxo.open ":memory:" (Utxo.Depth depth) False
+    indexer' <- liftIO $ Storable.insertMany events indexer
+    Just indexer'' <- liftIO $ Storable.rewind rollbackPoint indexer'
+    result <- liftIO $ Storable.query Storable.QEverything indexer'' LastSyncPoint
+    result === LastSyncPointResult lastestPointPostRollback

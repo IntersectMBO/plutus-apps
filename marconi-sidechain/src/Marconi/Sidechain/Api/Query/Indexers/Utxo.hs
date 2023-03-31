@@ -1,5 +1,6 @@
 module Marconi.Sidechain.Api.Query.Indexers.Utxo
     ( initializeEnv
+    , currentSyncedPoint
     , findByAddress
     , findByBech32Address
     , reportQueryAddresses
@@ -15,15 +16,16 @@ import Control.Concurrent.STM (atomically)
 import Control.Concurrent.STM.TMVar (newEmptyTMVarIO, tryReadTMVar)
 import Control.Lens ((^.))
 import Control.Monad.STM (STM)
-import Data.Functor ((<&>))
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Text (Text, unpack)
 import Marconi.ChainIndex.Indexers.Utxo qualified as Utxo
 import Marconi.ChainIndex.Types (TargetAddresses)
 import Marconi.Core.Storable qualified as Storable
-import Marconi.Sidechain.Api.Routes (AddressUtxoResult (AddressUtxoResult))
-import Marconi.Sidechain.Api.Types (AddressUtxoIndexerEnv (AddressUtxoIndexerEnv), QueryExceptions (QueryError),
-                                    addressUtxoIndexerEnvIndexer, addressUtxoIndexerEnvTargetAddresses)
+import Marconi.Sidechain.Api.Routes (AddressUtxoResult (AddressUtxoResult),
+                                     CurrentSyncedPointResult (CurrentSyncedPointResult))
+import Marconi.Sidechain.Api.Types (AddressUtxoIndexerEnv (AddressUtxoIndexerEnv),
+                                    QueryExceptions (QueryError, UnexpectedQueryResult), addressUtxoIndexerEnvIndexer,
+                                    addressUtxoIndexerEnvTargetAddresses)
 import Marconi.Sidechain.Utils (writeTMVar)
 
 -- | Bootstraps the utxo query environment.
@@ -41,8 +43,26 @@ initializeEnv targetAddresses = do
 findByAddress
     :: AddressUtxoIndexerEnv           -- ^ Query run time environment
     -> C.AddressAny         -- ^ Cardano address to query
-    -> IO [Utxo.UtxoRow]
+    -> IO (Either QueryExceptions [Utxo.UtxoRow])
 findByAddress = withQueryAction
+
+-- | Retrieve the current synced point of the utxo indexer
+currentSyncedPoint
+    :: AddressUtxoIndexerEnv
+       -- ^ Query run time environment
+    -> IO (Either QueryExceptions CurrentSyncedPointResult)
+       -- ^ Wrong result type are unlikely but must be handled
+currentSyncedPoint env = do
+    indexer <- atomically
+        (tryReadTMVar $ env ^. addressUtxoIndexerEnvIndexer)
+    case indexer of
+         Just i -> do
+             res <- Storable.query Storable.QEverything i Utxo.LastSyncPoint
+             case res of
+                  Utxo.LastSyncPointResult cp -> pure $ Right $ CurrentSyncedPointResult cp
+                  _other                      -> pure $ Left $ UnexpectedQueryResult Utxo.LastSyncPoint
+         Nothing -> pure . Right $ CurrentSyncedPointResult C.ChainPointAtGenesis
+
 
 -- | Retrieve Utxos associated with the given address
 -- We return an empty list if no address is not found
@@ -53,10 +73,9 @@ findByBech32Address
 findByBech32Address env addressText =
     let
         f :: Either C.Bech32DecodeError (C.Address C.ShelleyAddr) -> IO (Either QueryExceptions AddressUtxoResult)
-        f (Right address) =
-            (pure . C.toAddressAny $ address)
-                >>= findByAddress env
-                <&> Right . AddressUtxoResult
+        f (Right address) = do
+            res <- findByAddress env (C.toAddressAny address)
+            pure $ fmap AddressUtxoResult res
         f (Left e) = pure . Left
                    $ QueryError (unpack  addressText <> " generated error: " <> show e)
     in
@@ -67,14 +86,17 @@ findByBech32Address env addressText =
 withQueryAction
     :: AddressUtxoIndexerEnv -- ^ Query run time environment
     -> C.AddressAny     -- ^ Cardano address to query
-    -> IO [Utxo.UtxoRow]
+    -> IO (Either QueryExceptions [Utxo.UtxoRow])
 withQueryAction env address =
   (atomically $ tryReadTMVar $ env ^. addressUtxoIndexerEnvIndexer) >>= action
   where
-    action Nothing = pure [] -- may occures at startup before marconi-chain-index gets to update the indexer
+    query = Utxo.UtxoAddress address
+    action Nothing = pure $ Right [] -- may occures at startup before marconi-chain-index gets to update the indexer
     action (Just indexer) = do
-            Utxo.UtxoResult rows <- Storable.query Storable.QEverything indexer (Utxo.UtxoAddress address)
-            pure rows
+            res <- Storable.query Storable.QEverything indexer query
+            pure $ case res of
+                 Utxo.UtxoResult rows -> Right rows
+                 _other               -> Left $ UnexpectedQueryResult query
 
 -- | report target addresses
 -- Used by JSON-RPC
