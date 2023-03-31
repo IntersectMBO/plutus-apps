@@ -34,6 +34,7 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Text qualified as TS
+import Data.Word (Word64)
 import Marconi.ChainIndex.Indexers.AddressDatum (AddressDatumDepth (AddressDatumDepth), AddressDatumHandle,
                                                  AddressDatumIndex)
 import Marconi.ChainIndex.Indexers.AddressDatum qualified as AddressDatum
@@ -110,11 +111,11 @@ initialCoordinator indexerCount =
 -- The points should/could provide shared access to the indexers themselves. The result
 -- is a list of points (rather than just one) since it offers more resume possibilities
 -- to the node (in the unlikely case there were some rollbacks during downtime).
-type Worker = Int -> Coordinator -> FilePath -> IO [Storable.StorablePoint ScriptTx.ScriptTxHandle]
+type Worker = Word64 -> Coordinator -> FilePath -> IO [Storable.StorablePoint ScriptTx.ScriptTxHandle]
 
 datumWorker :: Worker
 datumWorker securityParam Coordinator{_barrier, _channel} path = do
-  ix <- Datum.open path (Datum.Depth securityParam)
+  ix <- Datum.open path (Datum.Depth $ fromEnum securityParam)
   workerChannel <- atomically . dupTChan $ _channel
   void . forkIO $ innerLoop workerChannel ix
   pure [ChainPointAtGenesis]
@@ -169,7 +170,7 @@ utxoWorker
   -> Worker
 utxoWorker callback maybeTargetAddresses securityParam coordinator path = do
   workerChannel <- atomically . dupTChan $ _channel coordinator
-  (loop, ix) <- utxoWorker_ callback (Utxo.Depth securityParam) maybeTargetAddresses coordinator workerChannel path
+  (loop, ix) <- utxoWorker_ callback (Utxo.Depth $ fromEnum securityParam) maybeTargetAddresses coordinator workerChannel path
   void . forkIO $ loop
   readMVar ix >>= Storable.resumeFromStorage . view Storable.handle
 
@@ -183,7 +184,7 @@ addressDatumWorker onInsert targetAddresses securityParam coordinator path = do
       addressDatumWorker_
         onInsert
         targetAddresses
-        (AddressDatumDepth securityParam)
+        (AddressDatumDepth $ fromEnum securityParam)
         coordinator
         workerChannel
         path
@@ -256,7 +257,7 @@ scriptTxWorker
   -> Worker
 scriptTxWorker onInsert securityParam coordinator path = do
   workerChannel <- atomically . dupTChan $ _channel coordinator
-  (loop, ix) <- scriptTxWorker_ onInsert (ScriptTx.Depth securityParam) coordinator workerChannel path
+  (loop, ix) <- scriptTxWorker_ onInsert (ScriptTx.Depth $ fromEnum securityParam) coordinator workerChannel path
   void . forkIO $ loop
   readMVar ix >>= Storable.resumeFromStorage . view Storable.handle
 
@@ -265,7 +266,7 @@ scriptTxWorker onInsert securityParam coordinator path = do
 epochStateWorker_
   :: FilePath
   -> ((Storable.State EpochStateHandle, Storable.StorableEvent EpochStateHandle) -> IO ())
-  -> Int -- Security param
+  -> Word64 -- Security param
   -> Coordinator
   -> TChan (ChainSyncEvent (BlockInMode CardanoMode))
   -> FilePath
@@ -362,7 +363,7 @@ epochStateWorker nodeConfigPath onInsert securityParam coordinator path = do
 -- * Mint/burn indexer
 
 mintBurnWorker_
-  :: Int
+  :: Word64
   -> (MintBurn.TxMintEvent -> IO ())
   -> Coordinator
   -> TChan (ChainSyncEvent (BlockInMode CardanoMode))
@@ -392,7 +393,7 @@ mintBurnWorker onInsert securityParam coordinator path = do
   readMVar ix >>= Storable.resumeFromStorage . view Storable.handle
 
 initializeIndexers
-  :: Int
+  :: Word64
   -> [(Worker, FilePath)]
   -> IO ([ChainPoint], Coordinator)
 initializeIndexers securityParam indexers = do

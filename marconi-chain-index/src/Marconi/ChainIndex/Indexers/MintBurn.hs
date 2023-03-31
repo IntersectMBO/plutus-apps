@@ -280,7 +280,7 @@ groupBySlotAndHash events = events
 
 data MintBurnHandle = MintBurnHandle
   { sqlConnection :: SQL.Connection
-  , securityParam :: Int
+  , securityParam :: Word64
   }
 
 type MintBurnIndexer = RI.State MintBurnHandle
@@ -355,9 +355,9 @@ instance RI.Rewindable MintBurnHandle where
         C.ChainPointAtGenesis ->
           SQL.execute_ sqlCon "DELETE FROM minting_policy_events"
 
-open :: FilePath -> Int -> IO MintBurnIndexer
+open :: FilePath -> Word64 -> IO MintBurnIndexer
 open dbPath bufferSize = do
   c <- SQL.open dbPath
   SQL.execute_ c "PRAGMA journal_mode=WAL"
   sqliteInit c
-  RI.emptyState bufferSize (MintBurnHandle c bufferSize)
+  RI.emptyState (fromEnum bufferSize) (MintBurnHandle c bufferSize)
