@@ -45,6 +45,7 @@ import Data.List.NonEmpty (NonEmpty ((:|)))
 import Data.List.NonEmpty qualified as NE
 import Data.Map qualified as Map
 import Data.Maybe (mapMaybe)
+import Data.Text qualified as Text
 import Data.Word (Word64)
 import Database.SQLite.Simple (NamedParam ((:=)))
 import Database.SQLite.Simple qualified as SQL
@@ -57,29 +58,29 @@ import Ouroboros.Consensus.Shelley.Eras qualified as OEra
 -- * Event
 
 data TxMintEvent = TxMintEvent
-  { txMintEventSlotNo          :: C.SlotNo
-  , txMintEventBlockHeaderHash :: C.Hash C.BlockHeader
-  , txMintEventTxAssets        :: NE.NonEmpty (C.TxId, NE.NonEmpty MintAsset)
+  { txMintEventSlotNo          :: !C.SlotNo
+  , txMintEventBlockHeaderHash :: !(C.Hash C.BlockHeader)
+  , txMintEventTxAssets        :: !(NE.NonEmpty (C.TxId, NE.NonEmpty MintAsset))
   } deriving (Show, Eq, Ord)
 
 data MintAsset = MintAsset
-  { mintAssetPolicyId     :: C.PolicyId
-  , mintAssetAssetName    :: C.AssetName
-  , mintAssetQuantity     :: C.Quantity
-  , mintAssetRedeemerIdx  :: Word64
-  , mintAssetRedeemerData :: C.ScriptData
+  { mintAssetPolicyId     :: !C.PolicyId
+  , mintAssetAssetName    :: !C.AssetName
+  , mintAssetQuantity     :: !C.Quantity
+  , mintAssetRedeemerIdx  :: !Word64
+  , mintAssetRedeemerData :: !C.ScriptData
   } deriving (Show, Eq, Ord)
 
 toUpdate :: C.BlockInMode C.CardanoMode -> Maybe TxMintEvent
 toUpdate (C.BlockInMode (C.Block (C.BlockHeader slotNo blockHeaderHash _blockNo) txs) _) =
   case mapMaybe txMints txs of
     x : xs -> Just $ TxMintEvent slotNo blockHeaderHash (x NE.:| xs)
-    _      -> Nothing
+    []     -> Nothing
 
 txMints :: C.Tx era -> Maybe (C.TxId, NE.NonEmpty MintAsset)
 txMints (C.Tx txb _) = case txbMints txb of
   x : xs -> Just (C.getTxId txb, x NE.:| xs )
-  _      -> Nothing
+  []     -> Nothing
 
 txbMints :: C.TxBody era -> [MintAsset]
 txbMints txb = case txb of
@@ -93,7 +94,7 @@ txbMints txb = case txb of
     C.ShelleyBasedEraBabbage -> do
       (policyId, assetName, quantity, index', redeemer) <- getPolicyData txb $ LB.mint shelleyTx
       pure $ MintAsset policyId assetName quantity index' redeemer
-  _ -> [] -- ByronTxBody is not exported but as it's the only other data constructor then _ matches it.
+  _byronTxBody -> [] -- ByronTxBody is not exported but as it's the only other data constructor then _ matches it.
 
 -- * Helpers
 
@@ -173,7 +174,6 @@ instance ToJSON TxMintRow where
     , "redeemerData" .= redData
     ]
 
-
 sqliteInit :: SQL.Connection -> IO ()
 sqliteInit c = liftIO $ do
   SQL.execute_ c
@@ -236,34 +236,29 @@ fromRows rows =  do
             (row ^. txMintRowRedeemerIdx)
             (row ^. txMintRowRedeemerData)
 
-sqliteSelectByTxIdPolicyId :: SQL.Connection -> (SQL.Query, [NamedParam]) -> C.TxId -> C.PolicyId -> IO [TxMintEvent]
-sqliteSelectByTxIdPolicyId sqlCon (conditions, params) txId policyId =
-  fromRows <$> SQL.queryNamed sqlCon query ([":txId" := txId, ":policyId" := policyId] <> params)
-  where query =
-          " SELECT slotNo, blockHeaderHash, txId, policyId                    \
-          \      , assetName, quantity, redeemerIx, redeemerData              \
-          \   FROM minting_policy_events                                      \
-          \  WHERE txId = :txId AND policyId = :policyId " <> conditions <> " \
-          \  ORDER BY slotNo, txId                                            "
-
-sqliteSelectAll :: SQL.Connection -> (SQL.Query, [NamedParam]) -> IO [TxMintEvent]
-sqliteSelectAll sqlCon (conditions, params) = fromRows <$> SQL.queryNamed sqlCon query params
+queryStoredTxMintEvents
+    :: SQL.Connection
+    -> ([SQL.Query], [NamedParam])
+    -> IO [TxMintEvent]
+queryStoredTxMintEvents sqlCon (conditions, params) =
+  fmap fromRows $ SQL.queryNamed sqlCon (SQL.Query query) params
   where
-    whereClause = if conditions == "" then "" else " WHERE " <> conditions <> " "
+    allConditions = Text.intercalate " AND " $ fmap SQL.fromQuery conditions
+    whereClause = if allConditions == "" then "" else "WHERE " <> allConditions
     query =
-      "   SELECT slotNo, blockHeaderHash, txId, policyId       \
-      \        , assetName, quantity, redeemerIx, redeemerData \
-      \     FROM minting_policy_events                         \
-      \     " <> whereClause <> "                              \
-      \ ORDER BY slotNo, txId                                  "
+          " SELECT slotNo, blockHeaderHash, txId, policyId       \
+          \      , assetName, quantity, redeemerIx, redeemerData \
+          \   FROM minting_policy_events                         \
+          \   " <> whereClause <> "                              \
+          \  ORDER BY slotNo, txId                               "
 
-intervalToWhereClause :: RI.QueryInterval C.ChainPoint -> (SQL.Query, [NamedParam])
+intervalToWhereClause :: RI.QueryInterval C.ChainPoint -> ([SQL.Query], [NamedParam])
 intervalToWhereClause qi = case qi of
-  RI.QEverything -> ("", [])
+  RI.QEverything -> ([], [])
   RI.QInterval from to
-    | Just from' <- slotMaybe from, Just to' <- slotMaybe to -> ("slotNo BETWEEN :fromSlot AND :toSlot" , [":fromSlot" := from', ":toSlot" := to'])
-    | Just to' <- slotMaybe to -> ("slotNo <= :toSlot" , [":toSlot" := to'])
-    | otherwise -> ("FALSE", [])
+    | Just from' <- slotMaybe from, Just to' <- slotMaybe to -> (["slotNo BETWEEN :fromSlot AND :toSlot"] , [":fromSlot" := from', ":toSlot" := to'])
+    | Just to' <- slotMaybe to -> (["slotNo <= :toSlot"] , [":toSlot" := to'])
+    | otherwise -> (["FALSE"], [])
     where
       slotMaybe :: C.ChainPoint -> Maybe C.SlotNo
       slotMaybe = \case
@@ -275,13 +270,13 @@ groupBySlotAndHash events = events
   & sort
   & groupBy (\e1 e2 -> txMintEventSlotNo e1 == txMintEventSlotNo e2 && txMintEventBlockHeaderHash e1 == txMintEventBlockHeaderHash e2)
   & concatMap (\case e : es -> [ TxMintEvent (txMintEventSlotNo e) (txMintEventBlockHeaderHash e) $ txMintEventTxAssets =<< (e :| es) ]
-                     _      -> [])
+                     []     -> [])
 
 -- * Indexer
 
 data MintBurnHandle = MintBurnHandle
-  { sqlConnection :: SQL.Connection
-  , securityParam :: SecurityParam
+  { sqlConnection :: !SQL.Connection
+  , securityParam :: !SecurityParam
   }
 
 type MintBurnIndexer = RI.State MintBurnHandle
@@ -292,35 +287,58 @@ type instance RI.StorableMonad MintBurnHandle = IO
 
 newtype instance RI.StorableEvent MintBurnHandle
   = MintBurnEvent TxMintEvent
+  deriving (Show)
 
 data instance RI.StorableQuery MintBurnHandle
-  = ByTxIdAndPolicyId C.TxId C.PolicyId
-  | Everything
+  = QueryByAssetId C.PolicyId C.AssetName (Maybe C.SlotNo)
+  | QueryAllMintBurn (Maybe C.SlotNo)
+  deriving (Show)
 
 newtype instance RI.StorableResult MintBurnHandle
   = MintBurnResult [TxMintRow]
+  deriving (Show)
 
 instance RI.Queryable MintBurnHandle where
-  queryStorage queryInterval memoryEvents (MintBurnHandle sqlCon _k) query = case query of
-    Everything                      -> toResult <$> sqliteSelectAll sqlCon interval
-    ByTxIdAndPolicyId txId policyId -> toResult <$> sqliteSelectByTxIdPolicyId sqlCon interval txId policyId
-    where
-      toResult storedEvents = MintBurnResult $ do
-        TxMintEvent slotNo blockHeaderHash txAssets <- storedEvents <> map coerce (toList memoryEvents)
-        (txId, mintAssets) <- NE.toList txAssets
-        MintAsset policyId assetName quantity redeemerIx redeemerData <- NE.toList mintAssets
-        pure $
-            TxMintRow
-                slotNo
-                blockHeaderHash
-                txId
-                policyId
-                assetName
-                quantity
-                redeemerIx
-                redeemerData
+  queryStorage queryInterval memoryEvents (MintBurnHandle sqlCon _k) query =
+      case query of
+        QueryAllMintBurn Nothing -> toResult Nothing <$> queryStoredTxMintEvents sqlCon interval
+        QueryAllMintBurn (Just slotNo) -> do
+            let conditions = interval <> (["slotNo <= :slotNo"], [":slotNo" := slotNo])
+            toResult (Just slotNo) <$> queryStoredTxMintEvents sqlCon conditions
+        QueryByAssetId policyId assetName Nothing -> do
+            let conditions = interval
+                          <> ( ["policyId = :policyId AND assetName = :assetName"]
+                             , [":policyId" := policyId, ":assetName" := assetName]
+                             )
+            toResult Nothing <$> queryStoredTxMintEvents sqlCon conditions
+        QueryByAssetId policyId assetName (Just slotNo) -> do
+            let conditions = interval
+                          <> ( ["slotNo <= :slotNo AND policyId = :policyId AND assetName = :assetName"]
+                             , [":slotNo" := slotNo, ":policyId" := policyId, ":assetName" := assetName]
+                             )
+            toResult (Just slotNo) <$> queryStoredTxMintEvents sqlCon conditions
+        where
+          toResult querySlotNo storedEvents = MintBurnResult $ do
+            let memoryEventsList = fmap coerce $ toList memoryEvents
+            let filteredMemoryEvents =
+                    case querySlotNo of
+                      Nothing -> memoryEventsList
+                      Just sn -> filter (\e -> txMintEventSlotNo e <= sn) memoryEventsList
+            TxMintEvent slotNo blockHeaderHash txAssets <- filteredMemoryEvents <> storedEvents
+            (txId, mintAssets) <- NE.toList txAssets
+            MintAsset policyId assetName quantity redeemerIx redeemerData <- NE.toList mintAssets
+            pure $
+                TxMintRow
+                    slotNo
+                    blockHeaderHash
+                    txId
+                    policyId
+                    assetName
+                    quantity
+                    redeemerIx
+                    redeemerData
 
-      interval = intervalToWhereClause queryInterval
+          interval = intervalToWhereClause queryInterval
 
 instance RI.HasPoint (RI.StorableEvent MintBurnHandle) C.ChainPoint where
   getPoint (MintBurnEvent e) = C.ChainPoint (txMintEventSlotNo e) (txMintEventBlockHeaderHash e)
