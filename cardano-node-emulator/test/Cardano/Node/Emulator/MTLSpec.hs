@@ -14,6 +14,7 @@ import Test.Tasty.HUnit (assertFailure, testCase)
 
 import Cardano.Node.Emulator qualified as E
 import Cardano.Node.Emulator.MTL
+import Cardano.Node.Emulator.MTL.Test
 import Ledger.Address (CardanoAddress, PaymentPrivateKey)
 import Ledger.Tx.CardanoAPI (CardanoBuildTx (..))
 import Ledger.Value.CardanoAPI qualified as Value

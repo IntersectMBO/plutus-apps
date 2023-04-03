@@ -33,6 +33,7 @@ library
     Cardano.Node.Emulator.Fee
     Cardano.Node.Emulator.Generators
     Cardano.Node.Emulator.MTL
+    Cardano.Node.Emulator.MTL.Test
     Cardano.Node.Emulator.Params
     Cardano.Node.Emulator.TimeSlot
     Cardano.Node.Emulator.Validation
@@ -51,6 +52,7 @@ library
   build-depends:
     , cardano-api:{cardano-api, gen}  >=1.35
     , cardano-crypto
+    , cardano-crypto-class
     , cardano-ledger-alonzo
     , cardano-ledger-babbage
     , cardano-ledger-core
@@ -62,14 +64,15 @@ library
     , plutus-core                     >=1.0.0
     , plutus-ledger-api               >=1.0.0
     , plutus-tx                       >=1.0.0
+    , quickcheck-contractmodel
 
   ------------------------
   -- Non-IOG dependencies
   ------------------------
   build-depends:
-    , aeson              >=1.5.2
+    , aeson               >=1.5.2
     , array
-    , base               >=4.9     && <5
+    , base                >=4.9     && <5
     , bytestring
     , containers
     , data-default
@@ -79,7 +82,9 @@ library
     , hedgehog
     , lens
     , mtl
-    , prettyprinter      >=1.1.0.1
+    , prettyprinter       >=1.1.0.1
+    , QuickCheck
+    , quickcheck-dynamic
     , serialise
     , strict-containers
     , text

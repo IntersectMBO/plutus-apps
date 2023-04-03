@@ -21,6 +21,7 @@ import Test.Tasty.HUnit (assertFailure, testCase)
 import Cardano.Api qualified as C
 import Cardano.Node.Emulator qualified as E
 import Cardano.Node.Emulator.MTL
+import Cardano.Node.Emulator.MTL.Test
 import Ledger (CardanoAddress, CardanoTx, toPlutusAddress, unitDatum, unitRedeemer)
 import Ledger qualified
 import Ledger.AddressMap qualified as AM

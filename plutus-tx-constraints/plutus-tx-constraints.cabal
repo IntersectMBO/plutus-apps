@@ -90,7 +90,9 @@ test-suite plutus-tx-constraints-test
   hs-source-dirs:     test
   default-language:   Haskell2010
   default-extensions: ImportQualifiedPost
-  other-modules:      Spec.Balancing
+  other-modules:
+    Game
+    Spec.Balancing
 
   --------------------
   -- Local components
@@ -114,14 +116,18 @@ test-suite plutus-tx-constraints-test
   -- Non-IOG dependencies
   ------------------------
   build-depends:
-    , base              >=4.9 && <5
+    , base                      >=4.9 && <5
     , bytestring
     , containers
     , data-default
     , hedgehog
     , lens
     , mtl
+    , QuickCheck
+    , quickcheck-contractmodel
+    , quickcheck-dynamic
     , tasty
     , tasty-hedgehog
     , tasty-hunit
+    , tasty-quickcheck
     , template-haskell

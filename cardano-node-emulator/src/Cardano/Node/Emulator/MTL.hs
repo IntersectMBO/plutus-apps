@@ -9,6 +9,8 @@ module Cardano.Node.Emulator.MTL (
   -- * Updating the blockchain
     queueTx
   , nextSlot
+  , currentSlot
+  , awaitSlot
   -- * Querying the blockchain
   , utxosAt
   , fundsAt
@@ -16,9 +18,6 @@ module Cardano.Node.Emulator.MTL (
   , balanceTx
   , submitUnbalancedTx
   , payToAddress
-  -- * Testing
-  , hasValidatedTransactionCountOfTotal
-  , renderLogs
   -- * Types
   , EmulatorState(EmulatorState)
   , esChainState
@@ -29,10 +28,14 @@ module Cardano.Node.Emulator.MTL (
   , EmulatorM
   , emptyEmulatorState
   , emptyEmulatorStateWithInitialDist
+  , getParams
   -- * Running Eff chain effects in MTL
   , handleChain
 ) where
 
+import Cardano.Api qualified as C
+import Cardano.Api.Shelley qualified as C
+import Cardano.Node.Emulator qualified as E
 import Control.Lens (alaf, makeLenses, view, (%~), (&), (^.))
 import Control.Monad (void)
 import Control.Monad.Error.Class (MonadError, throwError)
@@ -45,20 +48,12 @@ import Control.Monad.Freer.Writer qualified as F (Writer, runWriter, tell)
 import Control.Monad.Identity (Identity)
 import Control.Monad.RWS.Class (MonadRWS, ask, get, put, tell)
 import Control.Monad.RWS.Strict (RWST)
-import Data.Foldable (toList)
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Data.Monoid (Endo (..), Sum (..))
+import Data.Monoid (Endo (..))
 import Data.Sequence (Seq)
-import Data.Text qualified as Text
-import Prettyprinter qualified as Pretty
-import Prettyprinter.Render.Text qualified as Pretty
-
-import Cardano.Api qualified as C
-import Cardano.Api.Shelley qualified as C
-import Cardano.Node.Emulator qualified as E
 import Ledger (CardanoAddress, CardanoTx, DatumFromQuery, DatumHash, DecoratedTxOut, OnChainTx (..),
-               PaymentPrivateKey (..), ToCardanoError, TxOut (..), TxOutRef, UtxoIndex, ValidationErrorInPhase,
+               PaymentPrivateKey (..), Slot, ToCardanoError, TxOut (..), TxOutRef, UtxoIndex, ValidationErrorInPhase,
                mkDecoratedTxOut)
 import Ledger.AddressMap qualified as AM
 import Ledger.Index (UtxoIndex (..), createGenesisTransaction, insertBlock)
@@ -98,6 +93,9 @@ emptyEmulatorStateWithInitialDist initialDist =
     & esChainState . E.index %~ insertBlock [tx]
     & esAddressMap %~ AM.updateAllAddresses tx
 
+getParams :: MonadEmulator m => m E.Params
+getParams = ask
+
 handleChain :: MonadEmulator m => Eff [E.ChainControlEffect, E.ChainEffect] a -> m a
 handleChain eff = do
   params <- ask
@@ -132,6 +130,19 @@ nextSlot :: MonadEmulator m => m ()
 nextSlot = handleChain $ do
   void E.processBlock
   void $ E.modifySlot succ
+
+-- | Get the current slot number of the emulated node.
+currentSlot :: MonadEmulator m => m Slot
+currentSlot = handleChain E.getCurrentSlot
+
+-- | Call `nextSlot` until the current slot number equals or exceeds the given slot number.
+awaitSlot :: MonadEmulator m => Slot -> m ()
+awaitSlot s = do
+  c <- currentSlot
+  if s <= c then pure ()
+  else do
+    nextSlot
+    awaitSlot s
 
 
 -- | Query the unspent transaction outputs at the given address.
@@ -200,22 +211,3 @@ payToAddress (sourceAddr, sourcePrivKey) targetAddr value = do
            { C.txOuts = [C.TxOut targetAddr (toCardanoTxOutValue value) C.TxOutDatumNone C.ReferenceScriptNone]
            }
   getCardanoTxId <$> submitUnbalancedTx mempty sourceAddr buildTx [sourcePrivKey]
-
-
--- | Test the number of validated transactions and the total number of transactions.
--- Returns a failure message if the numbers don't match up.
-hasValidatedTransactionCountOfTotal :: Int -> Int -> Seq E.ChainEvent -> Maybe String
-hasValidatedTransactionCountOfTotal valid total lg =
-  let count = \case
-        E.TxnValidate{}       -> (Sum 1, Sum 0)
-        E.TxnValidationFail{} -> (Sum 0, Sum 1)
-        _                     -> mempty
-      (Sum validCount, Sum invalidCount) = foldMap count lg
-  in
-    if valid /= validCount then Just $ "Unexpected number of valid transactions: " ++ show validCount
-    else if total - valid /= invalidCount then Just $ "Unexpected number of invalid transactions: " ++ show invalidCount
-    else Nothing
-
--- | Render the logs in a format useful for debugging why a test failed.
-renderLogs :: Seq E.ChainEvent -> String
-renderLogs = Text.unpack . Pretty.renderStrict . Pretty.layoutPretty Pretty.defaultLayoutOptions . Pretty.vsep . toList . fmap Pretty.pretty
