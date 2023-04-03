@@ -457,7 +457,7 @@ instance Buffered UtxoHandle where
 -- This function is used to reconstruct the original UtxoEvent
 getTxIns :: SQL.Connection -> C.SlotNo -> IO (Set C.TxIn)
 getTxIns c sn = SQL.query c
-    "SELECT txInTxId, txInTxIx FROM spent WHERE slotNo =?" (SQL.Only (sn :: C.SlotNo))
+    "SELECT txId, txIx FROM spent WHERE slotNo =?" (SQL.Only (sn :: C.SlotNo))
     <&> Set.fromList
 
 -- | Convert UtxoRows to UtxoEvents
@@ -493,8 +493,8 @@ rowsToEvents  fetchTxIn rows
             . fmap mkEvent
             $ rows
 
--- | merge in-memory events with SQL retreived UtxoRows
--- Notes, a peroperty of this merge is to remove all spent utxos from the resulting [UtxoRow]
+-- | merge in-memory events with SQL retrieved UtxoRows
+-- Notes, a property of this merge is to remove all spent utxos from the resulting [UtxoRow]
 mergeInMemoryAndSql
   :: Foldable f
   => f (StorableEvent UtxoHandle)
@@ -506,7 +506,7 @@ mergeInMemoryAndSql events = filter (\u -> C.TxIn (u ^. urUtxo . txId)(u ^. urUt
     txins = foldl' (\a c -> ueInputs c `Set.union` a) Set.empty events
 
 -- | convert utxoEvent to utxoRow
--- Note: No `unspent` computeation is performed
+-- Note: No `unspent` computation is performed
 eventToRows :: StorableEvent UtxoHandle -> [UtxoRow]
 eventToRows (UtxoEvent _ _ C.ChainPointAtGenesis) = []  -- we don't save anyting at genesis.
 eventToRows (UtxoEvent utxos _ (C.ChainPoint sn bhsh)) =
@@ -574,23 +574,24 @@ utxoAtAddressQuery c es eventAtQuery filters params
     = do
     let builtQuery =
             [r|SELECT
-                u.address,
-                u.txId,
-                u.txIx,
-                u.datum,
-                u.datumHash,
-                u.value,
-                u.inlineScript,
-                u.inlineScriptHash,
-                u.slotNo,
-                u.blockHash
+                  u.address,
+                  u.txId,
+                  u.txIx,
+                  u.datum,
+                  u.datumHash,
+                  u.value,
+                  u.inlineScript,
+                  u.inlineScriptHash,
+                  u.slotNo,
+                  u.blockHash
                FROM
-                unspent_transactions u
-                LEFT JOIN spent s ON u.txId = s.txId
-                AND u.txIx = s.txIx
-               WHERE s.txId IS NULL
-                AND s.txIx IS NULL
-                AND |] <> SQL.Query (Text.intercalate " AND " $ SQL.fromQuery <$> filters) <>
+                  unspent_transactions u
+               LEFT JOIN spent s ON u.txId = s.txId
+               AND u.txIx = s.txIx
+               WHERE
+                  s.txId IS NOT NULL
+                  AND s.txIx IS NOT NULL
+               AND |] <> SQL.Query (Text.intercalate " AND " $ SQL.fromQuery <$> filters) <>
             [r| ORDER BY
                 u.slotNo ASC |]
     persistedUtxoRows :: [UtxoRow] <- SQL.queryNamed c builtQuery params
@@ -722,7 +723,12 @@ isAddressInTarget (Just targetAddresses) addr =
       C.AddressShelley addr' -> addr' `elem` targetAddresses
 
 getTxOutFromTxBodyContent :: C.TxBodyContent build era -> [C.TxOut C.CtxTx era]
-getTxOutFromTxBodyContent C.TxBodyContent {..} = txOuts
+getTxOutFromTxBodyContent C.TxBodyContent {..} = case txScriptValidityToScriptValidity  txScriptValidity of
+  C.ScriptValid   -> txOuts -- When transaction is valid, only transaction fee is collected
+  C.ScriptInvalid -> collateral txReturnCollateral -- failed Tx, we collect from collateral and return excess collateral
+  where
+    collateral C.TxReturnCollateralNone       = []
+    collateral (C.TxReturnCollateral _ txout) = [txout]
 
 getUtxosFromTxBody
   :: (C.IsCardanoEra era)
@@ -810,8 +816,13 @@ rmSpent txins = filter (not . isUtxoSpent txins)
     isUtxoSpent txIns u =
         C.TxIn (u ^. txId)(u ^. txIx) `Set.member` txIns
 
-getInputs' :: C.TxBody era -> Set C.TxIn
-getInputs' (C.TxBody C.TxBodyContent
+getInputsFromTx :: C.Tx era -> Set C.TxIn
+getInputsFromTx (C.Tx txbody _) = getInputs txbody
+
+-- | Compute TxIn
+--  If phase-2 validation fails, we only process TxIns associated with collateral
+getInputs :: C.TxBody era -> Set C.TxIn
+getInputs (C.TxBody C.TxBodyContent
                  {..}) =
   let
     inputs = case txScriptValidityToScriptValidity txScriptValidity of
@@ -822,8 +833,6 @@ getInputs' (C.TxBody C.TxBodyContent
   in
     Set.fromList inputs
 
-getInputs :: C.Tx era -> Set C.TxIn
-getInputs (C.Tx txBody _) = getInputs' txBody
 
 -- | Duplicated from cardano-api (not exposed in cardano-api)
 -- This function should be removed when marconi will depend on a cardano-api version that has accepted this PR:
@@ -848,11 +857,11 @@ txOutBalanceFromTxs = foldMap txOutBalanceFromTx
 txOutBalanceFromTx :: C.Tx era -> TxOutBalance
 txOutBalanceFromTx (C.Tx txBody@(C.TxBody txBodyContent) _) =
     let
-        txInputs = Set.fromList $ fst <$> C.txIns txBodyContent
+        txInputs = getInputs txBody -- adjusted txInput after phase-2 validation
         utxoRefs = Set.fromList
                  $ fmap (\(txix, _) -> C.TxIn (C.getTxId txBody) (C.TxIx txix))
                  $ zip [0..]
-                 $ C.txOuts txBodyContent
+                 $ getTxOutFromTxBodyContent txBodyContent
      in TxOutBalance utxoRefs txInputs
 
 convertTxOutToUtxo :: C.TxId -> C.TxIx -> C.TxOut C.CtxTx C.BabbageEra -> Utxo
