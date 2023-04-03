@@ -184,9 +184,19 @@ $ curl -d '{"jsonrpc": "2.0" , "method": "getTargetAddresses" , "params": "", "i
 }
 ```
 
-#### getCurrentSyncedPoint (NOT IMPLEMENTED YET)
+#### getCurrentSyncedPoint
 
 Retrieves the chain point from which the indexers are synced at.
+
+It queries the UTXO indexer and doesn't return the last indexed chainpoint, but the one before.
+The reason is that we want to use this query to find a sync point that is common to all the indexers
+that are under the same coordinator.
+Unfortunately, while the coordinator ensures that all the indexer move at the same speed,
+it can't monitor if the last submitted block was indexed by all the indexers or not.
+
+As a consequence, if the last chainpoint of the utxo indexer can, at most,
+be ahead of one block compared to other indexers.
+Taking the chainpoint before ensure that we have consistent infomation across all the indexers.
 
 **Parameters**: None
 
