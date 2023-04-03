@@ -13,4 +13,4 @@ Reference
 Elsewhere
 ---------
 
-- `Haddock generated documentation <https://playground.plutus.iohkdev.io/doc/haddock/>`_
+- `Haddock generated documentation <https://input-output-hk.github.io/plutus-apps/main/>`_
