@@ -38,7 +38,7 @@ Run `nix develop` to enter the development shell and you will be presented with 
 The main documentation is located https://plutus-apps.readthedocs.io/en/latest/[here].
 
 The generated Haskell API documentation (haddocks) are here:
-<https://playground.plutus.iohkdev.io/doc/haddock>.
+<https://input-output-hk.github.io/plutus-apps/main/>.
 
 
 === Talks
