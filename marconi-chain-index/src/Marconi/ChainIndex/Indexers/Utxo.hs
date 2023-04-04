@@ -41,11 +41,11 @@ import Control.Lens.Combinators (imap)
 import Control.Lens.Operators ((^.))
 import Control.Lens.TH (makeLenses)
 import Control.Monad (unless, when)
-import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), Value (Object), object, (.:), (.=))
+import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), Value (Bool, Object), object, (.:), (.=))
 import Data.Either (fromRight)
 import Data.Foldable (fold, foldl', toList)
 import Data.Functor ((<&>))
-import Data.List (groupBy, sortBy)
+import Data.List (groupBy, sort, sortBy)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Map (Map)
 import Data.Map qualified
@@ -64,6 +64,7 @@ import Text.RawString.QQ (r)
 import Cardano.Api ()
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
+import Data.Ord (Down (Down, getDown))
 import Marconi.ChainIndex.Orphans ()
 import Marconi.ChainIndex.Types (TargetAddresses, TxOut, pattern CurrentEra)
 
@@ -73,6 +74,18 @@ import Marconi.Core.Storable (Buffered (getStoredEvents, persistToStorage), HasP
                               StorablePoint, StorableQuery, StorableResult, emptyState)
 import Marconi.Core.Storable qualified as Storable
 
+{- Note [Last sync chainpoint]
+ -
+ - The 'LastSyncPoint' query doesn't return the last indexed chainpoint, but the one before.
+ - The reason is that we want to use this query to find a sync point that is common to all the indexers
+ - that are under the same coordinator.
+ - Unfortunately, while the coordinator ensures that all the indexer move at the same speed, it can't
+ - monitor if the last submitted block was indexed by all the indexers or not.
+ -
+ - As a consequence, if the last chainpoint of the utxo indexer can, at most, be ahead of one block compared to other
+ - indexers. Taking the chainpoint before ensure that we have consistent infomation across all the indexers.
+ -}
+
 type UtxoIndexer = Storable.State UtxoHandle
 
 data UtxoHandle = UtxoHandle
@@ -81,8 +94,10 @@ data UtxoHandle = UtxoHandle
   , toVacuume     :: !Bool            -- ^ weather to perform SQLite vacuum to release space
   }
 
-newtype instance StorableQuery UtxoHandle =
-  UtxoAddress C.AddressAny deriving (Show, Eq, Ord)
+data instance StorableQuery UtxoHandle
+    = UtxoAddress C.AddressAny
+    | LastSyncPoint
+    deriving (Show, Eq)
 
 type QueryableAddresses = NonEmpty (StorableQuery UtxoHandle)
 
@@ -135,6 +150,12 @@ instance ToJSON Utxo where
     , "inlineScriptHash"  .= scrptHash
     ]
 
+newtype ChainPointRow
+    = ChainPointRow { getChainPoint :: C.ChainPoint }
+    deriving (Show, Eq, Ord, Generic)
+
+$(makeLenses ''ChainPointRow)
+
 data UtxoRow = UtxoRow
   { _urUtxo      :: !Utxo
   , _urSlotNo    :: !C.SlotNo
@@ -158,14 +179,34 @@ instance ToJSON UtxoRow where
     , "blockHeaderHash" .= h
     ]
 
-newtype instance StorableResult UtxoHandle =
-    UtxoResult { getUtxoResult :: [UtxoRow] } deriving Show
+instance FromJSON ChainPointRow where
+    parseJSON (Object v)
+        = fmap ChainPointRow $ C.ChainPoint
+            <$> v .: "slotNo"
+            <*> v .: "blockHeaderHash"
+    parseJSON (Bool False)
+        = pure $ ChainPointRow C.ChainPointAtGenesis
+    parseJSON _ = mempty
+
+instance ToJSON ChainPointRow where
+    toJSON (ChainPointRow (C.ChainPoint s h))
+        = object
+        [ "slotNo" .= s
+        , "blockHeaderHash" .= h
+        ]
+    toJSON (ChainPointRow C.ChainPointAtGenesis)
+        = Bool False
+
+data instance StorableResult UtxoHandle
+    = UtxoResult { getUtxoResult :: ![UtxoRow] }
+    | LastSyncPointResult { getLastSyncPoint :: !C.ChainPoint }
+    deriving (Eq, Show)
 
 data instance StorableEvent UtxoHandle = UtxoEvent
-  { ueUtxos       :: !(Set Utxo)
-  , ueInputs      :: !(Set C.TxIn)
-  , ueChainPoint  :: !C.ChainPoint
-  } deriving (Eq, Ord, Show, Generic)
+    { ueUtxos       :: !(Set Utxo)
+    , ueInputs      :: !(Set C.TxIn)
+    , ueChainPoint  :: !C.ChainPoint
+    } deriving (Eq, Ord, Show, Generic)
 
 eventIsBefore :: C.ChainPoint -> StorableEvent UtxoHandle -> Bool
 eventIsBefore (C.ChainPoint slot' _) (UtxoEvent _ _ (C.ChainPoint slot _)) =  slot <= slot'
@@ -212,17 +253,16 @@ instance Monoid TxOutBalance where
 
 
 data Spent = Spent
-  { _sTxId      :: !C.TxId
-  , _sTxIx      :: !C.TxIx
-  , _sSlotNo    :: !C.SlotNo
-  , _sBlockHash :: !(C.Hash C.BlockHeader)
-  } deriving (Show, Eq)
+    { _sTxId      :: !C.TxId
+    , _sTxIx      :: !C.TxIx
+    , _sSlotNo    :: !C.SlotNo
+    , _sBlockHash :: !(C.Hash C.BlockHeader)
+    } deriving (Show, Eq)
 
 $(makeLenses ''Spent)
 
 instance Ord Spent where
-  compare s s' =
-    compare (s ^. sTxId, s ^. sTxIx) (s' ^. sTxId, s' ^. sTxIx)
+    compare s s' = compare (s ^. sTxId, s ^. sTxIx) (s' ^. sTxId, s' ^. sTxIx)
 
 instance HasPoint (StorableEvent UtxoHandle) C.ChainPoint where
   getPoint (UtxoEvent _ _ cp) = cp
@@ -254,6 +294,9 @@ instance FromRow UtxoRow where
 
 instance FromRow Spent where
   fromRow = Spent <$> field <*> field <*> field <*> field
+
+instance FromRow ChainPointRow where
+  fromRow = fmap ChainPointRow $ C.ChainPoint <$> field <*> field
 
 instance ToRow Spent where
   toRow s =
@@ -478,10 +521,10 @@ eventToRows (UtxoEvent utxos _ (C.ChainPoint sn bhsh)) =
 -- | Filter for events at the given address
 eventsAtAddress
   :: Foldable f
-  => StorableQuery UtxoHandle       -- ^ Address query
+  => C.AddressAny                   -- ^ Address query
   -> f (StorableEvent UtxoHandle)   -- ^ Utxo event
   -> [StorableEvent UtxoHandle]     -- ^ Utxo event at thegiven address
-eventsAtAddress (UtxoAddress addr) = concatMap splitEventAtAddress
+eventsAtAddress addr = concatMap splitEventAtAddress
   where
     splitEventAtAddress :: StorableEvent UtxoHandle -> [StorableEvent UtxoHandle]
     splitEventAtAddress event =
@@ -494,7 +537,7 @@ eventsAtAddress (UtxoAddress addr) = concatMap splitEventAtAddress
 -- | only store rows in the address list.
 addressFilteredRows
   :: Foldable f
-  => StorableQuery UtxoHandle       -- ^ query
+  => C.AddressAny                   -- ^ query
   -> f (StorableEvent UtxoHandle)   -- ^ Utxo Event
   -> [UtxoRow]                      -- ^ Rows at the query
 addressFilteredRows addr = concatMap eventToRows . eventsAtAddress addr . toList
@@ -509,7 +552,7 @@ instance Queryable UtxoHandle where
     -> UtxoHandle
     -> StorableQuery UtxoHandle
     -> IO (StorableResult UtxoHandle)
-  queryStorage qi es (UtxoHandle c _ _) q@(UtxoAddress addr) = do
+  queryStorage qi es (UtxoHandle c _ _) (UtxoAddress addr) = do
     persistedUtxoRows :: [UtxoRow] <- case qi of -- get the unspent transaction from DB
       QEverything -> SQL.query c
           [r|SELECT
@@ -557,18 +600,46 @@ instance Queryable UtxoHandle where
              ORDER BY
                 u.slotNo ASC|] (sn, C.serialiseToRawBytes addr)
       QInterval _ C.ChainPointAtGenesis -> pure []
-    let eventAtQuery :: StorableEvent UtxoHandle = queryBuffer qi q es -- query in-memory and conver to row
+    let eventAtQuery :: StorableEvent UtxoHandle = queryBuffer qi addr es -- query in-memory and conver to row
     pure
       $ UtxoResult
       $ mergeInMemoryAndSql
           es
           (persistedUtxoRows <> eventToRows eventAtQuery)
 
--- | Query memory buffer
+  queryStorage _ es (UtxoHandle c _ _) LastSyncPoint = let
+      queryLastSlot = [r|SELECT u.slotNo, u.blockHash
+                     FROM unspent_transactions u
+                     GROUP BY u.slotNo
+                     ORDER BY u.slotNo DESC
+                     LIMIT ? |]
+      -- We don't send the last event but the one before, to ensure that every indexers reached this point
+      -- It's a hack, which should be removed once we have a proper handling of synchronisation events.
+      --
+      -- See Note [Last sync chainpoint]
+      in case toList es of
+          -- 2+ elements in memory
+          (_:_:_) -> pure . LastSyncPointResult $
+              case fmap getDown $ sort $ Down . ueChainPoint <$> toList es of
+                  _:p:_xs -> p
+                  _other  -> C.ChainPointAtGenesis
+          -- 1 element in memory
+          (_:_) -> do
+              persisted <- SQL.query c queryLastSlot (SQL.Only (1 :: Integer))
+              pure . LastSyncPointResult $ case persisted of
+                  p:_    -> getChainPoint p
+                  _other -> C.ChainPointAtGenesis
+          -- 0 element in memory
+          [] -> do
+              persisted <- SQL.query c queryLastSlot (SQL.Only (2 :: Integer))
+              pure . LastSyncPointResult $ case persisted of
+                  _:p:_xs -> getChainPoint p
+                  _other  -> C.ChainPointAtGenesis
+
 queryBuffer
   :: Foldable f
   => QueryInterval C.ChainPoint
-  -> StorableQuery UtxoHandle             -- ^ Query
+  -> C.AddressAny                         -- ^ Query
   -> f (StorableEvent UtxoHandle)         -- ^ Utxo events
   -> StorableEvent UtxoHandle
 queryBuffer QEverything q      = fold . eventsAtAddress q

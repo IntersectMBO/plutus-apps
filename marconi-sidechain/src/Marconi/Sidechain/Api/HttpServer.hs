@@ -91,10 +91,13 @@ getTargetAddressesQueryHandler env _ =
 -- | Handler for retrieving current synced chain point.
 getCurrentSyncedPointHandler
     :: SidechainEnv -- ^ Utxo Environment to access Utxo Storage running on the marconi thread
-    -> String -- ^ Dummy parameter
+    -> String
+    -- ^ Will always be an empty string as we are ignoring this param, and returning everything
     -> Handler (Either (JsonRpcErr String) CurrentSyncedPointResult)
-getCurrentSyncedPointHandler _ _ =
-    pure $ Left $ JsonRpcErr 1 "Endpoint not implemented yet" Nothing
+getCurrentSyncedPointHandler env _ = liftIO $
+    first toRpcErr
+    <$> Q.Utxo.currentSyncedPoint
+           (env ^. sidechainEnvIndexers . sidechainAddressUtxoIndexer)
 
 -- | Handler for retrieving UTXOs by Address
 getAddressUtxoHandler
