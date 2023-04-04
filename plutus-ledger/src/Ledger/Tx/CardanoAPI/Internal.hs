@@ -47,6 +47,7 @@ module Ledger.Tx.CardanoAPI.Internal(
   , fromCardanoScriptInAnyLang
   , fromCardanoReferenceScript
   , fromCardanoLovelace
+  , fromCardanoSlotNo
   , fromTxScriptValidity
   , toTxScriptValidity
   , scriptDataFromCardanoTxBody

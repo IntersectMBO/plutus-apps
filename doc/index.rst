@@ -61,7 +61,7 @@ for a simple starter project using the Plutus Tools SDK.
 Public Plutus libraries documentation
 ------------------------------------------------
 
-See also the `public Plutus libraries documentation <https://playground.plutus.iohkdev.io/doc/haddock/>`_
+See also the `public Plutus libraries documentation <https://input-output-hk.github.io/plutus-apps/main/>`_
 to access Haddock-generated documentation of all the code, including Plutus Core.
 
 .. toctree::

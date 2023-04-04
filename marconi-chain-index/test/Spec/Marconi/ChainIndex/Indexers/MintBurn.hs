@@ -15,7 +15,7 @@ import Control.Concurrent qualified as IO
 import Control.Concurrent.Async qualified as IO
 import Control.Concurrent.STM qualified as IO
 import Control.Exception (catch)
-import Control.Lens qualified as Lens
+import Control.Lens ((^.))
 import Control.Monad (forM_, unless, void)
 import Control.Monad.IO.Class (liftIO)
 import Data.Aeson qualified as Aeson
@@ -37,6 +37,7 @@ import Helpers qualified as TN
 import Marconi.ChainIndex.Indexers qualified as M
 import Marconi.ChainIndex.Indexers.MintBurn qualified as MintBurn
 import Marconi.ChainIndex.Logging ()
+import Marconi.ChainIndex.TestLib.StorableProperties qualified as StorableProperties
 import Marconi.Core.Storable qualified as RI
 import Prettyprinter (defaultLayoutOptions, layoutPretty, pretty, (<+>))
 import Prettyprinter.Render.Text (renderStrict)
@@ -59,8 +60,17 @@ tests = testGroup "MintBurn"
       "Mint events created and indexed are returned when querying the indexer"
       "queryMintedValues" queryMintedValues
   , testPropertyNamed
-      "Querying a resumed indexer returns only the persisted events"
-      "resume" resume
+      "Querying a recreated indexer should only the persisted events, and not the in-memory events of the initial indexer"
+      "propRecreatingIndexerFromDiskShouldOnlyReturnPersistedEvents "
+      propRecreatingIndexerFromDiskShouldOnlyReturnPersistedEvents
+  , testPropertyNamed
+      "The points the indexer can be resumed from should return at least the genesis point"
+      "propResumingShouldReturnAtLeastTheGenesisPoint"
+      propResumingShouldReturnAtLeastTheGenesisPoint
+  , testPropertyNamed
+      "The points that indexer can be resumed from should be sorted in descending order"
+      "propResumablePointsShouldBeSortedInDescOrder"
+      propResumablePointsShouldBeSortedInDescOrder
   , testPropertyNamed
       "Rewinding to any slot forgets any newer events than that slot"
       "rewind" rewind
@@ -109,8 +119,8 @@ queryMintedValues = H.property $ do
 -- | Insert some events to an indexer, then recreate it from what is
 -- on disk (the in-memory part is lost), then query it and find all
 -- persisted events and none of the in-memory events.
-resume :: Property
-resume = H.property $ do
+propRecreatingIndexerFromDiskShouldOnlyReturnPersistedEvents :: Property
+propRecreatingIndexerFromDiskShouldOnlyReturnPersistedEvents = H.property $ do
   -- Index events that overflow:
   (indexer, events, (bufferSize, _nTx)) <- Gen.genIndexWithEvents ":memory:"
   -- Open a new indexer based off of the old indexers sql connection:
@@ -119,6 +129,20 @@ resume = H.property $ do
   let expected = MintBurn.groupBySlotAndHash $ take (eventsPersisted bufferSize (length events)) events
   -- The test: events that were persisted are exactly those we get from the query.
   equalSet expected (MintBurn.fromRows queryResult)
+
+-- | The property verifies that the 'Storable.resumeFromStorage' call returns at least the
+-- 'C.ChainPointAtGenesis' point.
+propResumingShouldReturnAtLeastTheGenesisPoint :: Property
+propResumingShouldReturnAtLeastTheGenesisPoint = H.property $ do
+    (indexer, _, _) <- Gen.genIndexWithEvents ":memory:"
+    StorableProperties.propResumingShouldReturnAtLeastTheGenesisPoint indexer
+
+-- | The property verifies that the 'Storable.resumeFromStorage' call returns a sorted list of chain
+-- points in descending order.
+propResumablePointsShouldBeSortedInDescOrder :: Property
+propResumablePointsShouldBeSortedInDescOrder = H.property $ do
+    (indexer, _, _) <- Gen.genIndexWithEvents ":memory:"
+    StorableProperties.propResumablePointsShouldBeSortedInDescOrder indexer
 
 -- | Test that rewind (rollback for on-disk events) behaves as
 -- expected: insert events such that buffer overflows, rollback so far
@@ -266,7 +290,7 @@ eventsPersisted bufferSize nEvents = let
 -- :memory: database can be reused.
 mkNewIndexerBasedOnOldDb :: RI.State MintBurn.MintBurnHandle -> IO (RI.State MintBurn.MintBurnHandle)
 mkNewIndexerBasedOnOldDb indexer = let
-    MintBurn.MintBurnHandle sqlCon k = Lens.view RI.handle indexer
+    MintBurn.MintBurnHandle sqlCon k = indexer ^. RI.handle
   in RI.emptyState k (MintBurn.MintBurnHandle sqlCon k)
 
 dummyBlockHeaderHash :: C.Hash C.BlockHeader

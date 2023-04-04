@@ -662,7 +662,7 @@ It's useful to take a look if you're changing any of the documentation.
 Enter the development shell using `nix develop`.
 If you get a segfault, run `GC_DONT_GC=1 nix develop` instead.
 
-Then you can run `serve-docs` to host a local instance at http://0.0.0.0:8002 (Haddock is at http://0.0.0.0:8002/haddock).
+Then you can run `serve-docs` to host a local instance at http://0.0.0.0:8002. This will also build and serve Haddock documentation at http://0.0.0.0:8002/haddock. Alternatively, you can access the hosted version of the Haddock documentation at https://input-output-hk.github.io/plutus-apps/main.
 
 ==== Github Actions
 

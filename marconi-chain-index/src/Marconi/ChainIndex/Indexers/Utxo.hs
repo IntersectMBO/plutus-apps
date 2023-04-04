@@ -354,7 +354,7 @@ instance Buffered UtxoHandle where
     -- We want to perform vacuum about once every 100
     when (toVacuume h) $ do
       rndCheck <- createSystemRandom >>= uniformR (1 :: Int, 100)
-      when (rndCheck == 42) $
+      when (rndCheck == 42) $ do
         SQL.execute_ c [r|DELETE FROM
                             unspent_transactions
                           WHERE
@@ -365,7 +365,9 @@ instance Buffered UtxoHandle where
                                 unspent_transactions
                                 JOIN spent ON unspent_transactions.txId = spent.txId
                                 AND unspent_transactions.txIx = spent.txIx
-                            )|] >> SQL.execute_ c "VACUUM" -- remove Spent and release space, see https://www.sqlite.org/lang_vacuum.html
+                            )|]
+        -- remove Spent and release space, see https://www.sqlite.org/lang_vacuum.html
+        SQL.execute_ c "VACUUM"
     pure h
 
   getStoredEvents :: UtxoHandle -> StorableMonad UtxoHandle [StorableEvent UtxoHandle]
@@ -508,7 +510,7 @@ instance Queryable UtxoHandle where
     -> StorableQuery UtxoHandle
     -> IO (StorableResult UtxoHandle)
   queryStorage qi es (UtxoHandle c _ _) q@(UtxoAddress addr) = do
-    fromSQL :: [UtxoRow] <- case qi of -- get the unspent transaction from DB
+    persistedUtxoRows :: [UtxoRow] <- case qi of -- get the unspent transaction from DB
       QEverything -> SQL.query c
           [r|SELECT
                 u.address,
@@ -560,7 +562,7 @@ instance Queryable UtxoHandle where
       $ UtxoResult
       $ mergeInMemoryAndSql
           es
-          (fromSQL <> eventToRows eventAtQuery)
+          (persistedUtxoRows <> eventToRows eventAtQuery)
 
 -- | Query memory buffer
 queryBuffer
