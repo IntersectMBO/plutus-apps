@@ -329,15 +329,13 @@ open dbPath (Depth k) isToVacuume = do
                       , inlineScript BLOB
                       , inlineScriptHash BLOB
                       , slotNo INT NOT NULL
-                      , blockHash BLOB NOT NULL
-                      , UNIQUE (txId, txIx))|]
+                      , blockHash BLOB NOT NULL)|]
 
   SQL.execute_ c [r|CREATE TABLE IF NOT EXISTS spent
                       ( txId TEXT NOT NULL
                       , txIx INT NOT NULL
                       , slotNo INT NOT NULL
-                      , blockHash BLOB NOT NULL
-                      , UNIQUE (txId, txIx))|]
+                      , blockHash BLOB NOT NULL)|]
 
   SQL.execute_ c [r|CREATE INDEX IF NOT EXISTS
                       spent_slotNo ON spent (slotNo)|]
@@ -371,7 +369,7 @@ instance Buffered UtxoHandle where
           (null rows)
           (SQL.executeMany c
             [r|INSERT
-               OR REPLACE INTO unspent_transactions (
+               INTO unspent_transactions (
                  address,
                  txId,
                  txIx,
@@ -388,7 +386,7 @@ instance Buffered UtxoHandle where
           (null spents)
           (SQL.executeMany c
            [r|INSERT
-              OR REPLACE INTO spent (
+              INTO spent (
                 txId,
                 txIx, slotNo, blockHash
               ) VALUES
@@ -589,8 +587,8 @@ utxoAtAddressQuery c es eventAtQuery filters params
                LEFT JOIN spent s ON u.txId = s.txId
                AND u.txIx = s.txIx
                WHERE
-                  s.txId IS NOT NULL
-                  AND s.txIx IS NOT NULL
+                  s.txId IS NULL
+                  AND s.txIx IS NULL
                AND |] <> SQL.Query (Text.intercalate " AND " $ SQL.fromQuery <$> filters) <>
             [r| ORDER BY
                 u.slotNo ASC |]

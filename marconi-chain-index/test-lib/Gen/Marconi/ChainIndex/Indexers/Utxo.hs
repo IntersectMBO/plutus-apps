@@ -4,6 +4,8 @@ module Gen.Marconi.ChainIndex.Indexers.Utxo
     ( genUtxoEvents
     , genShelleyEraUtxoEvents
     , genUtxoEventsWithTxs
+    , genTx
+    , genTx'
     )
 where
 
@@ -14,7 +16,8 @@ import Data.Map qualified as Map
 import Data.Maybe (mapMaybe)
 import Data.Set qualified as Set
 import Gen.Cardano.Api.Typed qualified as CGen
-import Gen.Marconi.ChainIndex.Mockchain (BlockHeader (BlockHeader), MockBlock (MockBlock), genMockchain)
+import Gen.Marconi.ChainIndex.Mockchain (BlockHeader (BlockHeader), MockBlock (MockBlock), genMockchain,
+                                         genTxBodyContentFromTxinsWihtPhase2Validation)
 import Hedgehog (Gen)
 import Marconi.ChainIndex.Indexers.Utxo (StorableEvent (UtxoEvent), TxOutBalance (TxOutBalance), Utxo, UtxoHandle,
                                          _address, convertTxOutToUtxo, txOutBalanceFromTx)
@@ -87,3 +90,18 @@ genShelleyEraUtxoEvents = do
                                  pure $ utxoAddressOverride a u)
                   pure e {Utxo.ueUtxos=Set.fromList us}
               )
+-- | Generate Cardano TX
+-- This generator may be used phase2-validation test cases
+genTx :: Gen (C.Tx C.BabbageEra)
+genTx = genTx' genTxBodyContentFromTxinsWihtPhase2Validation
+
+-- | Generate Cardano TX
+-- Given a TxBodyContent generator, generate a Cardano TX
+genTx'
+  :: ([C.TxIn] -> Gen (C.TxBodyContent C.BuildTx C.BabbageEra))
+  -> Gen (C.Tx C.BabbageEra)
+genTx' gen = do
+  txIn <- CGen.genTxIn
+  txBodyContent  <- gen [txIn]
+  txBody <- either (fail . show) pure $ C.makeTransactionBody txBodyContent
+  pure $ C.makeSignedTransaction [] txBody

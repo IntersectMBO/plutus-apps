@@ -19,8 +19,7 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 
 import Cardano.Api qualified as C
-import Gen.Cardano.Api.Typed qualified as CGen
-import Gen.Marconi.ChainIndex.Indexers.Utxo (genShelleyEraUtxoEvents, genUtxoEvents)
+import Gen.Marconi.ChainIndex.Indexers.Utxo (genShelleyEraUtxoEvents, genTx, genUtxoEvents)
 import Gen.Marconi.ChainIndex.Indexers.Utxo qualified as UtxoGen
 import Gen.Marconi.ChainIndex.Mockchain (MockBlock (mockBlockChainPoint, mockBlockTxs))
 import Gen.Marconi.ChainIndex.Types (genChainPoint, genChainPoints)
@@ -195,9 +194,7 @@ allqueryUtxosShouldBeUnspent = property $ do
 --    * use the collateral TxOutsTxIns
 propTxInWhenPhase2ValidationFails :: Property
 propTxInWhenPhase2ValidationFails = property $ do
-  C.AnyCardanoEra (era :: C.CardanoEra era) <- forAll $
-    Gen.enum (C.AnyCardanoEra C.AlonzoEra) maxBound
-  tx@(C.Tx (C.TxBody C.TxBodyContent {..})_) <- forAll $ CGen.genTx era
+  tx@(C.Tx (C.TxBody C.TxBodyContent {..})_) <- forAll genTx
   cp <- forAll genChainPoint
   let event :: StorableEvent Utxo.UtxoHandle = Utxo.getUtxoEvents Nothing [tx] cp
       computedTxins :: [C.TxIn]
@@ -232,9 +229,7 @@ propTxInWhenPhase2ValidationFails = property $ do
 --    * failure in phase-2 validation, collateral used
 propTxOutWhenPhase2ValidationFails :: Property
 propTxOutWhenPhase2ValidationFails = property $ do
-  C.AnyCardanoEra (era :: C.CardanoEra era) <- forAll $
-    Gen.enum (C.AnyCardanoEra C.AlonzoEra) maxBound
-  (C.Tx (C.TxBody txBodyContent@C.TxBodyContent {..}) _) <- forAll $ CGen.genTx era
+  (C.Tx (C.TxBody txBodyContent@C.TxBodyContent {..}) _) <- forAll genTx
   let computedTxOuts = Utxo.getTxOutFromTxBodyContent txBodyContent
   case txReturnCollateral of
     C.TxReturnCollateralNone -> Hedgehog.success -- nothing to do here
