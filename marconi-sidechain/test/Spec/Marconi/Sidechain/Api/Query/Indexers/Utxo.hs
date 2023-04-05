@@ -33,7 +33,8 @@ import Marconi.Sidechain.Api.HttpServer (marconiApp)
 import Marconi.Sidechain.Api.Query.Indexers.Utxo qualified as AddressUtxoIndexer
 import Marconi.Sidechain.Api.Query.Indexers.Utxo qualified as UIQ
 import Marconi.Sidechain.Api.Routes (AddressUtxoResult (AddressUtxoResult),
-                                     CurrentSyncedPointResult (CurrentSyncedPointResult), JsonRpcAPI, TxOutAtQuery (TxOutAtQuery))
+                                     CurrentSyncedPointResult (CurrentSyncedPointResult), JsonRpcAPI,
+                                     TxOutAtQuery (TxOutAtQuery))
 import Marconi.Sidechain.Api.Types (SidechainEnv, sidechainAddressUtxoIndexer, sidechainEnvIndexers)
 import Marconi.Sidechain.Bootstrap (initializeSidechainEnv)
 import Test.Tasty (TestTree, testGroup, withResource)

@@ -659,7 +659,7 @@ queryBuffer
   -> Maybe C.SlotNo -- ^ Latest included point
   -> f (StorableEvent UtxoHandle) -- ^ Utxo events
   -> StorableEvent UtxoHandle
-queryBuffer QEverything addr slotNo = fold . eventsAtAddress addr slotNo
+queryBuffer QEverything addr slotNo      = fold . eventsAtAddress addr slotNo
 queryBuffer (QInterval _ cp) addr slotNo = fold . filter (eventIsBefore cp) . eventsAtAddress addr slotNo
 
 instance Rewindable UtxoHandle where
