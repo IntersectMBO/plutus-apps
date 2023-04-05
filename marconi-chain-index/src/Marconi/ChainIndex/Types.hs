@@ -22,11 +22,13 @@ module Marconi.ChainIndex.Types
        datumDbName,
        scriptTxDbName,
        epochStateDbName,
-       mintBurnDbName
+       mintBurnDbName,
+       SecurityParam(SecurityParam)
        ) where
 
 import Cardano.Api qualified as C
 import Data.List.NonEmpty (NonEmpty)
+import Data.Word (Word64)
 
 -- | Typre represents non empty list of Bech32 Shelley compatable addresses
 type TargetAddresses = NonEmpty (C.Address C.ShelleyAddr)
@@ -50,6 +52,9 @@ type TxOutRef = C.TxIn
 
 txOutRef :: C.TxId -> C.TxIx -> C.TxIn
 txOutRef = C.TxIn
+
+newtype SecurityParam = SecurityParam Word64
+  deriving newtype (Eq, Ord, Bounded, Enum, Real, Num, Read, Integral, Show)
 
 -- * Database file names
 

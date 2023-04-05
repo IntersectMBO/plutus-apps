@@ -50,6 +50,7 @@ import Database.SQLite.Simple (NamedParam ((:=)))
 import Database.SQLite.Simple qualified as SQL
 import GHC.Generics (Generic)
 import Marconi.ChainIndex.Orphans ()
+import Marconi.ChainIndex.Types (SecurityParam)
 import Marconi.Core.Storable qualified as RI
 import Ouroboros.Consensus.Shelley.Eras qualified as OEra
 
@@ -280,7 +281,7 @@ groupBySlotAndHash events = events
 
 data MintBurnHandle = MintBurnHandle
   { sqlConnection :: SQL.Connection
-  , securityParam :: Word64
+  , securityParam :: SecurityParam
   }
 
 type MintBurnIndexer = RI.State MintBurnHandle
@@ -355,7 +356,7 @@ instance RI.Rewindable MintBurnHandle where
         C.ChainPointAtGenesis ->
           SQL.execute_ sqlCon "DELETE FROM minting_policy_events"
 
-open :: FilePath -> Word64 -> IO MintBurnIndexer
+open :: FilePath -> SecurityParam -> IO MintBurnIndexer
 open dbPath bufferSize = do
   c <- SQL.open dbPath
   SQL.execute_ c "PRAGMA journal_mode=WAL"

@@ -62,7 +62,6 @@
 module Marconi.ChainIndex.Indexers.EpochState
   ( -- * EpochStateIndex
     EpochStateIndex
-  , EpochStateDepth (..)
   , EpochStateHandle
   , EpochSDDRow (..)
   , EpochNonceRow (..)
@@ -103,10 +102,10 @@ import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
 import Data.Tuple (swap)
 import Data.VMap qualified as VMap
-import Data.Word (Word64)
 import Database.SQLite.Simple qualified as SQL
 import GHC.Generics (Generic)
 import Marconi.ChainIndex.Orphans ()
+import Marconi.ChainIndex.Types (SecurityParam)
 import Marconi.ChainIndex.Utils (isBlockRollbackable)
 import Marconi.Core.Storable (Buffered (persistToStorage), HasPoint (getPoint), QueryInterval, Queryable (queryStorage),
                               Resumable, Rewindable (rewindStorage), State, StorableEvent, StorableMonad, StorablePoint,
@@ -129,7 +128,7 @@ data EpochStateHandle = EpochStateHandle
     { _epochStateHandleTopLevelCfg        :: !(O.TopLevelConfig (O.CardanoBlock O.StandardCrypto))
     , _epochStateHandleConnection         :: !SQL.Connection
     , _epochStateHandleLedgerStateDirPath :: !FilePath
-    , _epochStateHandleSecurityParam      :: !Word64
+    , _epochStateHandleSecurityParam      :: !SecurityParam
     }
 
 type instance StorableMonad EpochStateHandle = IO
@@ -164,8 +163,6 @@ data instance StorableResult EpochStateHandle =
   | LedgerStateAtPointResult (Maybe (O.ExtLedgerState (O.CardanoBlock O.StandardCrypto)))
     deriving (Eq, Show)
 
-newtype EpochStateDepth = EpochStateDepth Word64
-
 type EpochStateIndex = State EpochStateHandle
 
 toStorableEvent
@@ -174,7 +171,7 @@ toStorableEvent
     -> C.Hash C.BlockHeader
     -> C.BlockNo
     -> C.ChainTip
-    -> Word64  -- ^ Security param
+    -> SecurityParam
     -> Bool -- ^ Is the last event of the current epoch
     -> StorableEvent EpochStateHandle
 toStorableEvent extLedgerState slotNo bhh bn chainTip securityParam isFirstEventOfEpoch = do
@@ -648,7 +645,7 @@ open
   -- ^ SQLite database file path
   -> FilePath
   -- ^ Directory from which we will save the various 'LedgerState' as different points in time.
-  -> Word64
+  -> SecurityParam
   -> IO (State EpochStateHandle)
 open topLevelConfig dbPath ledgerStateDirPath securityParam = do
     c <- SQL.open dbPath
