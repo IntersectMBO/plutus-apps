@@ -1,0 +1,52 @@
+* Expose cardano-node's socket to host machine
+
+1. Clone [[https://github.com/input-output-hk/cardano-db-sync/][cardano-db-sync]], change docker-compose.yaml =volumes= section
+   to following:
+   #+begin_src yaml
+   volumes:
+     db-sync-data:
+     postgres:
+     node-db:
+     node-ipc:
+       driver: local
+       driver_opts:
+         o: bind
+         type: none
+         device: ./node-ipc
+   #+end_src
+
+   This exposes the "node-ipc" volume (inside which the socket is) on
+   the host machine's filesystem.
+
+2. Create host folder for the bind mount: =mkdir node-ipc=
+
+3. Run =docker-compose up -d && docker-compose logs -f= to run the containers
+
+4. Change socket owner to yourself: =sudo chmod your-user node-ipc/node.socket= (it's root otherwise)
+
+5. Run any indexer on the socket, which is now in ./node-ipc/node.socket
+
+(The ./node-ipc folder specified in docker-compose.yaml can be any path)
+
+* Expose cardano-node's config (for indexers that need it)
+
+On Linux the path can be found with:
+#+begin_src bash
+mount | grep overlay | awk '{print $3}' | xargs -I{} sudo find {} -path "*mainnet-config.json" -type f
+#+end_src
+
+It can also be saved to a file on host machine with:
+#+begin_src bash
+  CARDANO_NODE_CONTAINER_ID="$(docker ps|grep cardano-node|awk '{print $1}')"
+  docker exec $CARDANO_NODE_CONTAINER_ID cat /opt/cardano/config/mainnet-config.json > ./mainnet-config.json
+#+end_src
+* Access postgres
+
+- database is accessible at localhost port 5432
+- Credentials are in config/secrets
+
+E.g:
+#+begin_src bash
+  PGPASSWORD="$(cat ./config/secrets/postgres_password)" \
+            psql --user postgres --host localhost
+#+end_src
