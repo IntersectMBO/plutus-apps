@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric       #-}
+{-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE NumericUnderscores  #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE QuasiQuotes         #-}
@@ -138,7 +139,11 @@ tests databaseDir indexerTVar = do
                 utxoIndexer
                 (UtxoAddress addressWithMostUtxos)
 
-    noUtxos <- fmap (\(UtxoResult rows) -> length rows) fetchUtxoOfAddressWithMostUtxos
+    let countRows = \case
+            UtxoResult rows -> length rows
+            _other          -> 0
+
+    noUtxos <- fmap countRows fetchUtxoOfAddressWithMostUtxos
     putStrLn
         $ "Address "
        <> Text.unpack (C.serialiseAddress addressWithMostUtxos)
