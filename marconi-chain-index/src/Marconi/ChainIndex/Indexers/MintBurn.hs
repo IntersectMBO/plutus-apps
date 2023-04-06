@@ -291,7 +291,11 @@ newtype instance RI.StorableEvent MintBurnHandle
 
 data instance RI.StorableQuery MintBurnHandle
   = QueryByAssetId C.PolicyId C.AssetName (Maybe C.SlotNo)
+  -- ^ Query all transactions that minted a specific 'AssetId' until an upper bound slot in the
+  -- blockchain. If the upper bound slot is 'Nothing', then we return everything.
   | QueryAllMintBurn (Maybe C.SlotNo)
+  -- ^ Query all transactions that minted 'AssetId's until an upper bound slot in the blockchain. If
+  -- the upper bound slot is 'Nothing', then we return everything.
   deriving (Show)
 
 newtype instance RI.StorableResult MintBurnHandle
@@ -301,22 +305,24 @@ newtype instance RI.StorableResult MintBurnHandle
 instance RI.Queryable MintBurnHandle where
   queryStorage queryInterval memoryEvents (MintBurnHandle sqlCon _k) query =
       case query of
-        QueryAllMintBurn Nothing -> toResult Nothing <$> queryStoredTxMintEvents sqlCon interval
-        QueryAllMintBurn (Just slotNo) -> do
-            let conditions = interval <> (["slotNo <= :slotNo"], [":slotNo" := slotNo])
-            toResult (Just slotNo) <$> queryStoredTxMintEvents sqlCon conditions
-        QueryByAssetId policyId assetName Nothing -> do
-            let conditions = interval
-                          <> ( ["policyId = :policyId AND assetName = :assetName"]
-                             , [":policyId" := policyId, ":assetName" := assetName]
-                             )
-            toResult Nothing <$> queryStoredTxMintEvents sqlCon conditions
-        QueryByAssetId policyId assetName (Just slotNo) -> do
-            let conditions = interval
-                          <> ( ["slotNo <= :slotNo AND policyId = :policyId AND assetName = :assetName"]
-                             , [":slotNo" := slotNo, ":policyId" := policyId, ":assetName" := assetName]
-                             )
-            toResult (Just slotNo) <$> queryStoredTxMintEvents sqlCon conditions
+        QueryAllMintBurn slotNo -> do
+            let slotCondition =
+                    case slotNo of
+                      Nothing -> ([], [])
+                      Just s  -> (["slotNo <= :slotNo"] , [":slotNo" := s])
+                conditions = interval <> slotCondition
+            toResult slotNo <$> queryStoredTxMintEvents sqlCon conditions
+        QueryByAssetId policyId assetName slotNo -> do
+            let slotCondition =
+                    case slotNo of
+                      Nothing -> ([], [])
+                      Just s  -> (["slotNo <= :slotNo"] , [":slotNo" := s])
+            let assetIdConditions =
+                    ( ["policyId = :policyId AND assetName = :assetName"]
+                    , [":policyId" := policyId, ":assetName" := assetName]
+                    )
+                conditions = interval <> assetIdConditions <> slotCondition
+            toResult slotNo <$> queryStoredTxMintEvents sqlCon conditions
         where
           toResult querySlotNo storedEvents = MintBurnResult $ do
             let memoryEventsList = fmap coerce $ toList memoryEvents

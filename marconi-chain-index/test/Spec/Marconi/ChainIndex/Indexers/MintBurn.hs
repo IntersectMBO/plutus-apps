@@ -78,8 +78,8 @@ tests = testGroup "MintBurn"
       propQueryingAllMintBurnAtPointShouldReturnMintsUntilThatPoint
   , testPropertyNamed
       "Querying by AssetId all possible AssetIds at target slot should yield same results as querying everything until that slot"
-      "propQueryingAssetIdsIndividuallyShouldBeSameAsQueryingAllGivenPoint"
-      propQueryingAssetIdsIndividuallyShouldBeSameAsQueryingAllGivenPoint
+      "propQueryingAssetIdsIndividuallyAtPointShouldBeSameAsQueryingAllAtPoint"
+      propQueryingAssetIdsIndividuallyAtPointShouldBeSameAsQueryingAllAtPoint
   , testPropertyNamed
       "Querying all mint burn should be the same as querying all mint burn at latest indexed slot"
       "propQueryingAllMintBurnAtLatestPointShouldBeSameAsAllMintBurnQuery"
@@ -170,8 +170,8 @@ propQueryingAllMintBurnAtPointShouldReturnMintsUntilThatPoint = H.property $ do
   let expectedTxMints = filter (\e -> MintBurn.txMintEventSlotNo e <= slotNo) insertedEvents
   equalSet expectedTxMints (MintBurn.fromRows actualTxMints)
 
-propQueryingAssetIdsIndividuallyShouldBeSameAsQueryingAllGivenPoint :: Property
-propQueryingAssetIdsIndividuallyShouldBeSameAsQueryingAllGivenPoint = H.property $ do
+propQueryingAssetIdsIndividuallyAtPointShouldBeSameAsQueryingAllAtPoint :: Property
+propQueryingAssetIdsIndividuallyAtPointShouldBeSameAsQueryingAllAtPoint = H.property $ do
   (indexer, insertedEvents, _) <- Gen.genIndexWithEvents ":memory:"
   let possibleSlots = Set.toList $ Set.fromList $ fmap MintBurn.txMintEventSlotNo insertedEvents
   slotNo <- if null possibleSlots then pure (C.SlotNo 0) else forAll $ Gen.element possibleSlots
