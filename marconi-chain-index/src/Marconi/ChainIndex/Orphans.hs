@@ -27,6 +27,7 @@ import Database.SQLite.Simple qualified as SQL
 import Database.SQLite.Simple.FromField qualified as SQL
 import Database.SQLite.Simple.Ok qualified as SQL
 import Database.SQLite.Simple.ToField qualified as SQL
+import Marconi.ChainIndex.Types (SecurityParam (SecurityParam))
 import Ouroboros.Consensus.Byron.Ledger qualified as O
 import Ouroboros.Consensus.Cardano.Block qualified as O
 import Ouroboros.Consensus.HardFork.Combinator qualified as O
@@ -276,3 +277,8 @@ decodeLedgerState =
     mary = Comp O.decodeShelleyLedgerState
     alonzo = Comp O.decodeShelleyLedgerState
     babbage = Comp O.decodeShelleyLedgerState
+
+-- * SecurityParam
+
+deriving newtype instance SQL.ToField SecurityParam
+deriving newtype instance SQL.FromField SecurityParam
