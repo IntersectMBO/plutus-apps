@@ -227,7 +227,7 @@ OR
 }
 ```
 
-#### getUtxoFromAddress (NOT IMPLEMENTED YET)
+#### getUtxoFromAddress
 
 Retrieves UTXOs of a given address until a given point in time (measured in slots).
 

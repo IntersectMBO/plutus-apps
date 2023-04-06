@@ -28,7 +28,22 @@ Content-Type: application/json
 {
 "jsonrpc": "2.0"
 , "method": "getUtxoFromAddress"
-, "params": "addr_test1wpzewuy339m9l8ax7gz8g08q2j9478lgntzv9qhmwvy3hwg0cwsaf"
+, "params":
+    { "address": "addr_test1wpzewuy339m9l8ax7gz8g08q2j9478lgntzv9qhmwvy3hwg0cwsaf"
+    }
+, "id": 3
+}
+#
+# lookup for UTXOs up to a given slot, should return result lots of data
+POST http://localhost:3000/json-rpc
+Content-Type: application/json
+{
+"jsonrpc": "2.0"
+, "method": "getUtxoFromAddress"
+, "params":
+    { "address": "addr_test1wpzewuy339m9l8ax7gz8g08q2j9478lgntzv9qhmwvy3hwg0cwsaf"
+    , "slotNo": 10000
+    }
 , "id": 3
 }
 #
