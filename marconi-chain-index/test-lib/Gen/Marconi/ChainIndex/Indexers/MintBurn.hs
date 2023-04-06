@@ -34,6 +34,7 @@ import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import Marconi.ChainIndex.Indexers.MintBurn qualified as MintBurn
 import Marconi.ChainIndex.Logging ()
+import Marconi.ChainIndex.Types (SecurityParam)
 import Marconi.Core.Storable qualified as Storable
 import Plutus.V1.Ledger.Api (MintingPolicy)
 import Plutus.V1.Ledger.Api qualified as PlutusV1
@@ -43,11 +44,11 @@ import PlutusTx qualified
 -- transactions to index, then index them.
 genIndexWithEvents
     :: FilePath
-    -> H.PropertyT IO (MintBurn.MintBurnIndexer, [MintBurn.TxMintEvent], (Int, Int))
+    -> H.PropertyT IO (MintBurn.MintBurnIndexer, [MintBurn.TxMintEvent], (SecurityParam, Int))
 genIndexWithEvents dbPath = do
   (events, (bufferSize, nTx)) <- forAll genMintEvents
   -- Report buffer overflow:
-  let overflow = bufferSize < length events
+  let overflow = fromIntegral bufferSize < length events
   H.classify "No events created at all" $ null events
   H.classify "Buffer doesn't overflow" $ not (null events) && not overflow
   H.classify "Buffer overflows" $ not (null events) && overflow
@@ -59,7 +60,7 @@ genIndexWithEvents dbPath = do
 -- | Generate transactions which have mints inside, then extract
 -- TxMintEvent's from these, then return them with buffer size and
 -- number of transactions.
-genMintEvents :: Gen ([MintBurn.TxMintEvent], (Int, Int))
+genMintEvents :: Gen ([MintBurn.TxMintEvent], (SecurityParam, Int))
 genMintEvents = do
   bufferSize <- Gen.integral (Range.constant 1 10)
   nTx <- Gen.choice                                                   -- Number of events:
@@ -76,7 +77,7 @@ genMintEvents = do
     (Right tx, slotNo) -> pure (tx, slotNo)
     (Left txBodyError, _) -> fail $ "Failed to create a transaction! This shouldn't happen, the generator should be fixed. TxBodyError: " <> show txBodyError
   let events = mapMaybe (\(tx, slotNo) -> MintBurn.TxMintEvent slotNo dummyBlockHeaderHash . pure <$> MintBurn.txMints tx) txAll
-  pure (events, (bufferSize, nTx))
+  pure (events, (fromIntegral bufferSize, nTx))
 
 genTxWithMint
     :: C.TxMintValue C.BuildTx C.AlonzoEra
@@ -170,7 +171,7 @@ commonMintingPolicy = PlutusV1.mkMintingPolicyScript $$(PlutusTx.compile [||\_ _
 mkNewIndexerBasedOnOldDb :: Storable.State MintBurn.MintBurnHandle -> IO (Storable.State MintBurn.MintBurnHandle)
 mkNewIndexerBasedOnOldDb indexer = let
     MintBurn.MintBurnHandle sqlCon k = indexer ^. Storable.handle
-  in Storable.emptyState k (MintBurn.MintBurnHandle sqlCon k)
+  in Storable.emptyState (fromIntegral k) (MintBurn.MintBurnHandle sqlCon k)
 
 dummyBlockHeaderHash :: C.Hash C.BlockHeader
 dummyBlockHeaderHash = fromString "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef" :: C.Hash C.BlockHeader

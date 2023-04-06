@@ -126,7 +126,7 @@ propRecreatingIndexerFromDiskShouldOnlyReturnPersistedEvents = H.property $ do
   -- Open a new indexer based off of the old indexers sql connection:
   indexer' <- liftIO $ mkNewIndexerBasedOnOldDb indexer
   MintBurn.MintBurnResult queryResult <- liftIO $ RI.query RI.QEverything indexer' MintBurn.Everything
-  let expected = MintBurn.groupBySlotAndHash $ take (eventsPersisted bufferSize (length events)) events
+  let expected = MintBurn.groupBySlotAndHash $ take (eventsPersisted (fromIntegral bufferSize) (length events)) events
   -- The test: events that were persisted are exactly those we get from the query.
   equalSet expected (MintBurn.fromRows queryResult)
 
@@ -291,7 +291,7 @@ eventsPersisted bufferSize nEvents = let
 mkNewIndexerBasedOnOldDb :: RI.State MintBurn.MintBurnHandle -> IO (RI.State MintBurn.MintBurnHandle)
 mkNewIndexerBasedOnOldDb indexer = let
     MintBurn.MintBurnHandle sqlCon k = indexer ^. RI.handle
-  in RI.emptyState k (MintBurn.MintBurnHandle sqlCon k)
+  in RI.emptyState (fromIntegral k) (MintBurn.MintBurnHandle sqlCon k)
 
 dummyBlockHeaderHash :: C.Hash C.BlockHeader
 dummyBlockHeaderHash = fromString "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef" :: C.Hash C.BlockHeader
