@@ -3,6 +3,7 @@
 {-# LANGUAGE DerivingStrategies    #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE OverloadedStrings     #-}
@@ -52,7 +53,6 @@ import Data.Map qualified
 import Data.Maybe (mapMaybe)
 import Data.Set (Set)
 import Data.Set qualified as Set
-import Database.SQLite.Simple (Only (Only))
 import Database.SQLite.Simple qualified as SQL
 import Database.SQLite.Simple.FromRow (FromRow (fromRow), field)
 import Database.SQLite.Simple.ToField (ToField (toField))
@@ -68,6 +68,8 @@ import Data.Ord (Down (Down, getDown))
 import Marconi.ChainIndex.Orphans ()
 import Marconi.ChainIndex.Types (TargetAddresses, TxOut, pattern CurrentEra)
 
+import Data.Text qualified as Text
+import Database.SQLite.Simple (NamedParam ((:=)))
 import Marconi.Core.Storable (Buffered (getStoredEvents, persistToStorage), HasPoint,
                               QueryInterval (QEverything, QInterval), Queryable (queryStorage),
                               Resumable (resumeFromStorage), Rewindable (rewindStorage), StorableEvent, StorableMonad,
@@ -95,9 +97,9 @@ data UtxoHandle = UtxoHandle
   }
 
 data instance StorableQuery UtxoHandle
-    = UtxoAddress C.AddressAny
+    = UtxoByAddress C.AddressAny (Maybe C.SlotNo)
     | LastSyncPoint
-    deriving (Show, Eq)
+    deriving (Show, Eq, Ord)
 
 type QueryableAddresses = NonEmpty (StorableQuery UtxoHandle)
 
@@ -521,41 +523,60 @@ eventToRows (UtxoEvent utxos _ (C.ChainPoint sn bhsh)) =
 -- | Filter for events at the given address
 eventsAtAddress
   :: Foldable f
-  => C.AddressAny                   -- ^ Address query
-  -> f (StorableEvent UtxoHandle)   -- ^ Utxo event
-  -> [StorableEvent UtxoHandle]     -- ^ Utxo event at thegiven address
-eventsAtAddress addr = concatMap splitEventAtAddress
-  where
+  => C.AddressAny -- ^ Address query
+  -> Maybe C.SlotNo -- ^ Latest included chainpoint
+  -> f (StorableEvent UtxoHandle) -- ^ Utxo event
+  -> [StorableEvent UtxoHandle] -- ^ Utxo event at thegiven address
+eventsAtAddress addr p = let
+
     splitEventAtAddress :: StorableEvent UtxoHandle -> [StorableEvent UtxoHandle]
     splitEventAtAddress event =
       let
+
+        isBeforeSlot :: C.SlotNo -> C.ChainPoint -> Bool
+        isBeforeSlot s = \case
+            C.ChainPointAtGenesis -> True
+            C.ChainPoint s' _     -> s' <= s
+
+        pointFilter :: Maybe C.SlotNo -> StorableEvent UtxoHandle -> Bool
+        pointFilter ms
+            = maybe
+                (const True)
+                (\s -> isBeforeSlot s . ueChainPoint)
+                ms
+
+        addressFilter :: Utxo -> Bool
+        addressFilter u = (u ^. address) == addr
+
         utxosAtAddress :: Set Utxo
-        utxosAtAddress = Set.filter (\u -> (u ^. address) == addr) . ueUtxos $ event
-      in
-        ([event {ueUtxos = utxosAtAddress} | not (null utxosAtAddress)])
+        utxosAtAddress = Set.filter addressFilter $ ueUtxos event
+
+      in [event {ueUtxos = utxosAtAddress} | not (null utxosAtAddress) && pointFilter p event]
+
+   in concatMap splitEventAtAddress
 
 -- | only store rows in the address list.
 addressFilteredRows
   :: Foldable f
   => C.AddressAny                   -- ^ query
+  -> Maybe C.SlotNo                 -- ^ latest included chainpoint
   -> f (StorableEvent UtxoHandle)   -- ^ Utxo Event
   -> [UtxoRow]                      -- ^ Rows at the query
-addressFilteredRows addr = concatMap eventToRows . eventsAtAddress addr . toList
+addressFilteredRows addr slotNo =
+    concatMap eventToRows . eventsAtAddress addr slotNo . toList
 
--- | Query the data stored in the indexer
--- Quries SQL + buffered data, where buffered data is the data that will be batched to SQL
-instance Queryable UtxoHandle where
-  queryStorage
+utxoAtAddressQuery
     :: Foldable f
-    => QueryInterval C.ChainPoint
+    => SQL.Connection
     -> f (StorableEvent UtxoHandle)
-    -> UtxoHandle
-    -> StorableQuery UtxoHandle
+    -> StorableEvent UtxoHandle
+    -> [SQL.Query] -- ^ the filter part of the query
+    -> [NamedParam]
     -> IO (StorableResult UtxoHandle)
-  queryStorage qi es (UtxoHandle c _ _) (UtxoAddress addr) = do
-    persistedUtxoRows :: [UtxoRow] <- case qi of -- get the unspent transaction from DB
-      QEverything -> SQL.query c
-          [r|SELECT
+utxoAtAddressQuery c es eventAtQuery filters params
+    = do
+    let builtQuery =
+            [r|SELECT
                 u.address,
                 u.txId,
                 u.txIx,
@@ -566,47 +587,40 @@ instance Queryable UtxoHandle where
                 u.inlineScriptHash,
                 u.slotNo,
                 u.blockHash
-             FROM
+               FROM
                 unspent_transactions u
                 LEFT JOIN spent s ON u.txId = s.txId
                 AND u.txIx = s.txIx
-             WHERE
-                u.address = ?
-                AND s.txId IS NULL
+               WHERE s.txId IS NULL
                 AND s.txIx IS NULL
-             ORDER BY
-                u.slotNo ASC|] (Only (C.serialiseToRawBytes addr))
-      QInterval _ (C.ChainPoint sn _) -> SQL.query c
-          [r|SELECT
-                u.address,
-                u.txId,
-                u.txIx,
-                u.datum,
-                u.datumHash,
-                u.value,
-                u.inlineScript,
-                u.inlineScriptHash,
-                u.slotNo,
-                u.blockHash
-             FROM
-                unspent_transactions u
-             LEFT JOIN spent s ON u.txId = s.txId
-             AND u.txIx = s.txIx
-             WHERE
-                u.slotNo <= ?
-                AND  u.address = ?
-                AND s.txId IS NOT NULL
-                AND s.txIx IS NOT NULL
-             ORDER BY
-                u.slotNo ASC|] (sn, C.serialiseToRawBytes addr)
-      QInterval _ C.ChainPointAtGenesis -> pure []
-    let eventAtQuery :: StorableEvent UtxoHandle = queryBuffer qi addr es -- query in-memory and conver to row
+                AND |] <> SQL.Query (Text.intercalate " AND " $ SQL.fromQuery <$> filters) <>
+            [r| ORDER BY
+                u.slotNo ASC |]
+    persistedUtxoRows :: [UtxoRow] <- SQL.queryNamed c builtQuery params
     pure
       $ UtxoResult
       $ mergeInMemoryAndSql
           es
           (persistedUtxoRows <> eventToRows eventAtQuery)
 
+-- | Query the data stored in the indexer
+-- Quries SQL + buffered data, where buffered data is the data that will be batched to SQL
+instance Queryable UtxoHandle where
+  queryStorage
+    :: Foldable f
+    => QueryInterval C.ChainPoint -- ^ It's a legacy parameter, it has no effect on the code and will be removed
+    -> f (StorableEvent UtxoHandle)
+    -> UtxoHandle
+    -> StorableQuery UtxoHandle
+    -> IO (StorableResult UtxoHandle)
+  queryStorage qi es (UtxoHandle c _ _) (UtxoByAddress addr slotNo) = let
+
+    eventAtQuery :: StorableEvent UtxoHandle = queryBuffer qi addr slotNo es -- query in-memory and conver to row
+
+    filters = (["u.address = :address"], [":address" := addr])
+           <> maybe mempty (\sno -> (["u.slotNo <= :slotNo"] , [":slotNo" := sno])) slotNo
+
+    in uncurry (utxoAtAddressQuery c es eventAtQuery) filters
   queryStorage _ es (UtxoHandle c _ _) LastSyncPoint = let
       queryLastSlot = [r|SELECT u.slotNo, u.blockHash
                      FROM unspent_transactions u
@@ -636,14 +650,17 @@ instance Queryable UtxoHandle where
                   _:p:_xs -> getChainPoint p
                   _other  -> C.ChainPointAtGenesis
 
+
+-- | Query memory buffer
 queryBuffer
   :: Foldable f
   => QueryInterval C.ChainPoint
-  -> C.AddressAny                         -- ^ Query
-  -> f (StorableEvent UtxoHandle)         -- ^ Utxo events
+  -> C.AddressAny -- ^ Query
+  -> Maybe C.SlotNo -- ^ Latest included point
+  -> f (StorableEvent UtxoHandle) -- ^ Utxo events
   -> StorableEvent UtxoHandle
-queryBuffer QEverything q      = fold . eventsAtAddress q
-queryBuffer (QInterval _ cp) q = fold . filter (eventIsBefore cp) . eventsAtAddress q
+queryBuffer QEverything addr slotNo      = fold . eventsAtAddress addr slotNo
+queryBuffer (QInterval _ cp) addr slotNo = fold . filter (eventIsBefore cp) . eventsAtAddress addr slotNo
 
 instance Rewindable UtxoHandle where
   rewindStorage :: C.ChainPoint -> UtxoHandle -> IO (Maybe UtxoHandle)
@@ -804,7 +821,7 @@ isAddressInTarget' targetAddresses utxo =
       C.AddressShelley addr' -> addr' `elem` targetAddresses
 
 mkQueryableAddresses :: TargetAddresses -> QueryableAddresses
-mkQueryableAddresses = fmap (UtxoAddress . C.toAddressAny)
+mkQueryableAddresses = fmap (flip UtxoByAddress Nothing . C.toAddressAny)
 
 txOutBalanceFromTxs :: [C.Tx era] -> TxOutBalance
 txOutBalanceFromTxs = foldMap txOutBalanceFromTx

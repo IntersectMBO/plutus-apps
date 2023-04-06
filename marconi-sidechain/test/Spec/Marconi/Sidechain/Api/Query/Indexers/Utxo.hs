@@ -33,7 +33,8 @@ import Marconi.Sidechain.Api.HttpServer (marconiApp)
 import Marconi.Sidechain.Api.Query.Indexers.Utxo qualified as AddressUtxoIndexer
 import Marconi.Sidechain.Api.Query.Indexers.Utxo qualified as UIQ
 import Marconi.Sidechain.Api.Routes (AddressUtxoResult (AddressUtxoResult),
-                                     CurrentSyncedPointResult (CurrentSyncedPointResult), JsonRpcAPI)
+                                     CurrentSyncedPointResult (CurrentSyncedPointResult), JsonRpcAPI,
+                                     TxOutAtQuery (TxOutAtQuery))
 import Marconi.Sidechain.Api.Types (SidechainEnv, sidechainAddressUtxoIndexer, sidechainEnvIndexers)
 import Marconi.Sidechain.Bootstrap (initializeSidechainEnv)
 import Test.Tasty (TestTree, testGroup, withResource)
@@ -127,7 +128,11 @@ queryTargetAddressTest = property $ do
   fetchedRows <-
     liftIO
     . fmap (fmap concat)
-    . traverse (AddressUtxoIndexer.findByAddress $ env ^. sidechainEnvIndexers . sidechainAddressUtxoIndexer)
+    . traverse (\addr ->
+        AddressUtxoIndexer.findByAddress
+            (env ^. sidechainEnvIndexers . sidechainAddressUtxoIndexer)
+            addr
+            Nothing)
     . Set.toList . Set.fromList  -- required to remove the potential duplicate addresses
     . fmap Utxo._address
     . concatMap (Set.toList . Utxo.ueUtxos)
@@ -153,7 +158,7 @@ queryUtxoFromRpcServer address port = do
   -- test will fail if these RPC methods fail.
   void $ rpcEcho "client calling "
   void $ rpcTargets ""
-  rpcUtxos address
+  rpcUtxos $ TxOutAtQuery address Nothing
 
 -- | Create http JSON-RPC client function to test RPC route and handlers
 queryCurrentSyncPointFromRpcServer

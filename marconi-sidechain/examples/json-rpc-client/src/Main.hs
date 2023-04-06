@@ -5,7 +5,7 @@
 module Main where
 
 import Data.Proxy (Proxy (Proxy))
-import Marconi.Sidechain.Api.Routes (JsonRpcAPI)
+import Marconi.Sidechain.Api.Routes (JsonRpcAPI, TxOutAtQuery (TxOutAtQuery))
 import Network.HTTP.Client (defaultManagerSettings, newManager)
 import Network.JsonRpc.Client.Types ()
 import Network.JsonRpc.Types (JsonRpcResponse (Ack, Errors, Result))
@@ -33,7 +33,7 @@ main = do
   -- RPC calls
   msg <- rpcEcho "marconi client calling ???" --  return the echo message
   addresses <- rpcTargets ""                  --  get the targetAddresss
-  utxos <- rpcUtxos bech32Address             --  get utxos for this address
+  utxos <- rpcUtxos $ TxOutAtQuery bech32Address Nothing             --  get utxos for this address
   printResults msg
   printResults addresses
   printResults utxos
