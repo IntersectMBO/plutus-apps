@@ -460,7 +460,7 @@ of :hsobj:`Plutus.Contract.Test.ContractModel.Interface.Action`, so we just add 
    We can't use ``(>=)`` to compare :hsobj:`Plutus.V1.Ledger.Value.Value`; there is no
    ``Ord`` instance. That is because some :hsobj:`Plutus.V1.Ledger.Value.Value` are incomparable,
    such as one Ada and one NFT, which would break our expectations about
-   ``Ord``. That is why we have to compare them using :hsobj:`Plutus.V1.Ledger.Value.geq` instead.
+   ``Ord``. That is why we have to compare them using :hsobj:`Plutus.V1.Ledger.Api.geq` (???) instead.
 
 With this precondition, the failing test we have seen can no longer be
 generated, and will not appear again in our |quickCheck|_ runs.
@@ -1211,7 +1211,7 @@ Here :hsobj:`Plutus.Contract.Test.ContractModel.Interface.assertModel` lets us i
 model state, :hsobj:`Plutus.Contract.Test.ContractModel.Interface.lockedValue` is a function provided by the framework
 that computes the total value held by contracts, and :hsobj:`Plutus.Contract.Test.ContractModel.Interface.symIsZero`
 checks that this is zero. The value is returned here as a
-:hsobj:`Plutus.Contract.Test.ContractModel.Symbolics.SymValue`, but for now it can be thought of just as a normal
+:hsobj:`Test.QuickCheck.ContractModel.Internal.Symbolics.SymValue`, but for now it can be thought of just as a normal
 Plutus :hsobj:`Plutus.V1.Ledger.Value.Value` with an extra type wrapper.
 
 This scenario just tests that the given finishing strategy always
@@ -1681,9 +1681,9 @@ a new field :hsobj:`Plutus.Contracts.Escrow.escrowDeadline`, and so far, our cod
 initialise it. We will generate the deadlines, so that they vary from
 test to test, but there is a slight mismatch to overcome first. In a
 contract model we measure time in *slots*, but the :hsobj:`Plutus.Contracts.Escrow.escrowDeadline`
-field is not a slot number, it is a :hsobj:`Plutus.V1.Ledger.Time.POSIXTime`. So while we shall
+field is not a slot number, it is a :hsobj:`Plutus.V1.Ledger.Time.POSIXTime` (???). So while we shall
 generate the deadline as a slot number (for convenience in the model),
-we must convert it to a :hsobj:`Plutus.V1.Ledger.Time.POSIXTime` before we can pass it to the
+we must convert it to a :hsobj:`Plutus.V1.Ledger.Time.POSIXTime` (???) before we can pass it to the
 contract under test.
 
 To do so, we need to know when slot 0 happens in POSIX time, and how
@@ -1710,7 +1710,7 @@ configuration. Putting all this together, we can add a deadline to our
    If you are familiar with the |Clock.POSIXTime|_ type from
    |Data.Time.Clock.POSIX|_, then beware that *this is not the same
    type*. That type has a resolution of picoseconds, while Plutus uses
-   its own :hsobj:`Plutus.V1.Ledger.Time.POSIXTime` type with a resolution of milliseconds.
+   its own :hsobj:`Plutus.V1.Ledger.Time.POSIXTime` (???) type with a resolution of milliseconds.
 
 .. |Clock.POSIXTime| replace:: ``POSIXTime``
 .. _Clock.POSIXTime: https://hackage.haskell.org/package/time-1.13/docs/Data-Time-Clock-POSIX.html#t:POSIXTime
@@ -2906,7 +2906,7 @@ Now ``prop_Auction`` fails!
 
  .. note::
 
-    The balance change is actually a :hsobj:`Plutus.Contract.Test.ContractModel.Symbolics.SymValue`, not a :hsobj:`Plutus.V1.Ledger.Value.Value`,
+    The balance change is actually a :hsobj:`Test.QuickCheck.ContractModel.Internal.Symbolics.SymValue`, not a :hsobj:`Plutus.V1.Ledger.Value.Value`,
     but as you can see it *contains* a :hsobj:`Plutus.V1.Ledger.Value.Value`, which is all we care
     about right now.
 

@@ -137,7 +137,7 @@ All that's missing now is the code for retrieving the funds, and some glue to pu
 
 In ``unlockFunds`` you use the constraints library to build the spending transaction.
 Here, ``tx`` combines three different constraints.
-:hsobj:`Ledger.Tx.Constraints.collectFromTheScript` takes the script outputs in ``unspentOutputs`` and adds them as input to the transaction, using the unit ``()`` as the redeemer.
+:hsobj:`Ledger.Tx.Constraints.spendUtxosFromTheScript` takes the script outputs in ``unspentOutputs`` and adds them as input to the transaction, using the unit ``()`` as the redeemer.
 The other two constraints use :hsobj:`Ledger.Tx.Constraints.mustPayToAddress` to add payments for the recipients.
 
 Running the app on the Plutus apps emulator
