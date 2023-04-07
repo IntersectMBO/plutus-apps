@@ -28,7 +28,7 @@ import Plutus.Contract.Test (Wallet, mockWalletPaymentPubKeyHash, w1, w2, w3, w4
 import Plutus.Contract.Test.ContractModel qualified as CM
 import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Value qualified as Value
-import Plutus.V1.Ledger.Api.Api (Datum)
+import Plutus.V1.Ledger.Api (Datum)
 
 import Plutus.Contracts.Tutorial.Escrow (EscrowError, EscrowParams (EscrowParams, escrowTargets), EscrowSchema, payEp,
                                          payToPaymentPubKeyTarget, redeemEp, refundEp)
