@@ -32,7 +32,7 @@ jobs:
 
       - name: Create Dump
         run: |
-          nix-shell --run "./scripts/create-dump.sh" \
+          nix develop --command "./scripts/create-dump.sh" \
             --option trusted-public-keys "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= loony-tools:pr9m4BkM/5/eSTZlkQyRt57Jz7OMBxNSUiMC4FkcNfk=" \
             --option substituters "https://cache.iog.io https://cache.iog.io https://cache.zw3rk.com"
         env:
@@ -42,16 +42,6 @@ jobs:
           AWS_ENDPOINT_URL: https://s3.devx.iog.io
           NODE_DIR: ../mainnet
           S3_DUMP_DIR: s3://plutus/mainnet-script-dump-1-35-4/
-          LOCAL_DUMP_DIR: ../mainnet-script-dump
-
-      - name: Upload Dump
-        run: |
-          nix-shell --run "./scripts/upload-event-dump.sh ../mainnet-script-dump/*" \
-            --option trusted-public-keys "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= loony-tools:pr9m4BkM/5/eSTZlkQyRt57Jz7OMBxNSUiMC4FkcNfk=" \
-            --option substituters "https://cache.iog.io https://cache.iog.io https://cache.zw3rk.com"
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: us-east-1
-          AWS_ENDPOINT_URL: https://s3.devx.iog.io
-          S3_DUMP_DIR: s3://plutus/mainnet-script-dump-1-35-4/
+          DUMP_DIR: ../mainnet-script-dump
+          CHECKPOINT_DIR: ../mainnet-script-dump-checkpoint
+          S3_CHECKPOINT_DIR: s3://plutus/mainnet-script-dump-1-35-4-checkpoint/
