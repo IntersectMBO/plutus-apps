@@ -1211,7 +1211,7 @@ Here :hsobj:`Plutus.Contract.Test.ContractModel.Interface.assertModel` lets us i
 model state, :hsobj:`Plutus.Contract.Test.ContractModel.Interface.lockedValue` is a function provided by the framework
 that computes the total value held by contracts, and :hsobj:`Plutus.Contract.Test.ContractModel.Interface.symIsZero`
 checks that this is zero. The value is returned here as a
-:hsobj:`Plutus.Contract.Test.ContractModel.Symbolics.SymValue`, but for now it can be thought of just as a normal
+:hsobj:`Test.QuickCheck.ContractModel.Internal.Symbolics.SymValue`, but for now it can be thought of just as a normal
 Plutus :hsobj:`Plutus.V1.Ledger.Value.Value` with an extra type wrapper.
 
 This scenario just tests that the given finishing strategy always
@@ -2906,7 +2906,7 @@ Now ``prop_Auction`` fails!
 
  .. note::
 
-    The balance change is actually a :hsobj:`Plutus.Contract.Test.ContractModel.Symbolics.SymValue`, not a :hsobj:`Plutus.V1.Ledger.Value.Value`,
+    The balance change is actually a :hsobj:`Test.QuickCheck.ContractModel.Internal.Symbolics.SymValue`, not a :hsobj:`Plutus.V1.Ledger.Value.Value`,
     but as you can see it *contains* a :hsobj:`Plutus.V1.Ledger.Value.Value`, which is all we care
     about right now.
 

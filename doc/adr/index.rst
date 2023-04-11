@@ -47,4 +47,3 @@ The general process for creating an ADR is:
    0015-time-conversion
    0016-cardano-node-emulator
    0017-end-to-end-testing-strategy
-   0018-indexers-query-synchronisation-primitive

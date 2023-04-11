@@ -6,8 +6,14 @@ let
 
   inherit (cell.library.pkgs.haskell-nix) haskellLib;
 
-  toHaddock = haskellLib.collectComponents' "library"
-    (haskellLib.selectProjectPackages cell.library.plutus-apps-project.hsPkgs);
+  hspkgs = cell.library.plutus-apps-project-with-haddock.hsPkgs;
+
+  toHaddock =
+    haskellLib.collectComponents' "library" (
+      haskellLib.selectProjectPackages hspkgs // {
+        inherit (hspkgs) plutus-core plutus-tx plutus-tx-plugin plutus-ledger-api quickcheck-contractmodel;
+      }
+    );
 
 in
 
@@ -24,11 +30,7 @@ cell.library.combine-haddock {
 
       == Handy module entrypoints
 
-        * "PlutusTx": Compiling Haskell to PLC (Plutus Core; on-chain code).
-        * "PlutusTx.Prelude": Haskell prelude replacement compatible with PLC.
         * "Plutus.Contract": Writing Plutus apps (off-chain code).
-        * "Ledger.Constraints": Constructing and validating Plutus
-          transactions. Built on "PlutusTx" and "Plutus.Contract".
         * "Ledger.Typed.Scripts": A type-safe interface for spending and
           producing script outputs. Built on "PlutusTx".
         * "Plutus.Trace.Emulator": Testing Plutus contracts in the emulator.
