@@ -747,7 +747,7 @@ processConstraint = \case
                 refTxOut <- lookupTxOutRef ref
                 case refTxOut ^? decoratedTxOutReferenceScript of
                     Just _ -> do
-                      txIn <- throwLeft ToCardanoError $ C.toCardanoTxIn . Tx.txInputRef . Tx.pubKeyTxInput $ ref
+                      txIn <- throwLeft ToCardanoError $ C.toCardanoTxIn ref
                       unbalancedTx . tx . txInsReference <>= [txIn]
                       throwLeft ToCardanoError
                         $ toCardanoMintWitness red (flip Tx.Versioned PlutusV2 <$> mref) Nothing

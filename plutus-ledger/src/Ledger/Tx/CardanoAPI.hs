@@ -21,7 +21,6 @@ module Ledger.Tx.CardanoAPI(
   , fromCardanoTxInsCollateral
   , fromCardanoTotalCollateral
   , fromCardanoReturnCollateral
-  , toCardanoTxInsCollateral
   , toCardanoTotalCollateral
   , toCardanoReturnCollateral
   , toCardanoDatumWitness
@@ -87,10 +86,6 @@ toCardanoScriptWitness datum redeemer scriptOrRef = (case lang of
 fromCardanoTxInsCollateral :: C.TxInsCollateral era -> [C.TxIn]
 fromCardanoTxInsCollateral C.TxInsCollateralNone       = []
 fromCardanoTxInsCollateral (C.TxInsCollateral _ txIns) = txIns
-
-toCardanoTxInsCollateral :: [P.TxInput] -> Either ToCardanoError (C.TxInsCollateral C.BabbageEra)
-toCardanoTxInsCollateral [] = pure C.TxInsCollateralNone
-toCardanoTxInsCollateral inputs = fmap (C.TxInsCollateral C.CollateralInBabbageEra) (traverse (toCardanoTxIn . P.txInputRef) inputs)
 
 toCardanoDatumWitness :: Maybe PV1.Datum -> C.ScriptDatum C.WitCtxTxIn
 toCardanoDatumWitness = maybe C.InlineScriptDatum (C.ScriptDatumForTxIn . toCardanoScriptData . PV1.getDatum)

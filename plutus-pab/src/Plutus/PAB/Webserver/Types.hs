@@ -34,7 +34,7 @@ import Ledger (Certificate, Datum, POSIXTime (POSIXTime), PaymentPubKeyHash (Pay
 import Ledger.Crypto (PubKey (PubKey), Signature (Signature))
 import Ledger.Index (UtxoIndex)
 import Ledger.Slot (Slot)
-import Ledger.Tx (CardanoTx, TxInput, TxInputType)
+import Ledger.Tx (CardanoTx)
 import Ledger.Tx.CardanoAPI (CardanoBuildTx)
 import Ledger.Tx.Constraints.OffChain (UnbalancedTx)
 import Plutus.Contract.Effects (ActiveEndpoint, ChainIndexQuery, PABReq)
@@ -114,8 +114,6 @@ data ContractReport t =
 deriving newtype instance OpenApi.ToSchema LedgerBytes
 deriving newtype instance OpenApi.ToSchema Signature
 deriving newtype instance OpenApi.ToSchema PubKey
-deriving instance OpenApi.ToSchema TxInputType
-deriving instance OpenApi.ToSchema TxInput
 deriving instance OpenApi.ToSchema Withdrawal
 deriving instance OpenApi.ToSchema Certificate
 deriving anyclass instance OpenApi.ToSchema DereferencedInput

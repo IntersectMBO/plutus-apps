@@ -107,45 +107,6 @@ pubKeyTxIn r = TxIn r (Just ConsumePublicKeyAddress)
 scriptTxIn :: TxOutRef -> Versioned Validator -> Redeemer -> Maybe Datum -> TxIn
 scriptTxIn ref v r d = TxIn ref . Just $ ScriptAddress (Left v) r d
 
--- | The type of a transaction input with hashes.
-data TxInputType =
-      TxScriptAddress !Redeemer !(Either ValidatorHash (Versioned TxOutRef)) !(Maybe DatumHash)
-      -- ^ A transaction input that consumes (with a validator hash) or references (with a txOutRef)
-      -- a script address with the given the redeemer and datum hash.
-    | TxConsumePublicKeyAddress -- ^ A transaction input that consumes a public key address.
-    | TxConsumeSimpleScriptAddress -- ^ Consume a simple script
-    deriving stock (Show, Eq, Ord, Generic)
-    deriving anyclass (ToJSON, FromJSON, Serialise)
-
--- | A transaction input, consisting of a transaction output reference and an input type.
--- Differs with TxIn by: TxIn *maybe* contains *full* data witnesses, TxInput always contains redeemer witness, but datum/validator hashes.
-data TxInput = TxInput {
-    txInputRef  :: !TxOutRef,
-    txInputType :: !TxInputType
-    }
-    deriving stock (Show, Eq, Ord, Generic)
-    deriving anyclass (ToJSON, FromJSON, Serialise)
-
--- same as TxIn
-instance Pretty TxInput where
-    pretty TxInput{txInputRef,txInputType} =
-        let rest =
-                case txInputType of
-                    TxScriptAddress redeemer _ _ ->
-                        pretty redeemer
-                    _ -> mempty
-        in hang 2 $ vsep ["-" <+> pretty txInputRef, rest]
-
--- | The 'TxOutRef' spent by a transaction input.
-inputRef :: L.Lens' TxInput TxOutRef
-inputRef = L.lens txInputRef s where
-    s txi r = txi { txInputRef = r }
-
--- | The type of a transaction input.
-inputType :: L.Lens' TxInput TxInputType
-inputType = L.lens txInputType s where
-    s txi t = txi { txInputType = t }
-
 -- | Stake withdrawal, if applicable the script should be included in txScripts.
 data Withdrawal = Withdrawal
   { withdrawalCredential :: Credential      -- ^ staking credential
@@ -175,31 +136,6 @@ inScripts TxIn{ txInType = t } = case t of
     Just (ScriptAddress (Left v) r d) -> Just (v, r, d)
     _                                 -> Nothing
 
--- | The 'TxOutRef' spent by a transaction input.
-inRef :: L.Lens' TxInput TxOutRef
-inRef = L.lens txInputRef s where
-    s txi r = txi { txInputRef = r }
-
--- | The type of a transaction input.
-inType :: L.Lens' TxInput TxInputType
-inType = L.lens txInputType s where
-    s txi t = txi { txInputType = t }
-
--- | Filter to get only the pubkey inputs.
-pubKeyTxInputs :: L.Fold [TxInput] TxInput
-pubKeyTxInputs = L.folding (filter (\TxInput{ txInputType = t } -> t == TxConsumePublicKeyAddress))
-
--- | Filter to get only the scripts that consume or reference a script address
-scriptTxInputs :: L.Fold [TxInput] TxInput
-scriptTxInputs = (\x -> L.folding x) . filter $ \case
-    TxInput{ txInputType = TxScriptAddress{} } -> True
-    _                                          -> False
-
--- | Filter to get only the scripts that reference a script address
-referenceScriptTxInputs :: L.Fold [TxInput] TxInput
-referenceScriptTxInputs = (\x -> L.folding x) . filter $ \case
-    TxInput{ txInputType = TxScriptAddress _ (Right _) _ } -> True
-    _                                                      -> False
 
 newtype TxOut = TxOut {getTxOut :: C.TxOut C.CtxTx C.BabbageEra}
     deriving stock (Show, Eq, Generic)
@@ -293,9 +229,6 @@ lookupStakeValidator :: ScriptsMap -> StakeValidatorHash -> Maybe (Versioned Sta
 lookupStakeValidator txScripts = (fmap . fmap) StakeValidator . lookupScript txScripts . toScriptHash
     where
         toScriptHash (StakeValidatorHash b) = ScriptHash b
-
-pubKeyTxInput :: TxOutRef -> TxInput
-pubKeyTxInput outRef = TxInput outRef TxConsumePublicKeyAddress
 
 emptyTxBodyContent :: C.TxBodyContent C.BuildTx C.BabbageEra
 emptyTxBodyContent = C.TxBodyContent
