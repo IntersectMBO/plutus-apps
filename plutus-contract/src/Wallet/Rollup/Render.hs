@@ -34,7 +34,7 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
-import Ledger (Address, Blockchain, PaymentPubKey, PaymentPubKeyHash, TxId, TxIn (TxIn), TxInType (..), TxOut,
+import Ledger (Address, Blockchain, PaymentPubKey, PaymentPubKeyHash, TxIn (TxIn), TxInType (..), TxOut,
                TxOutRef (TxOutRef, txOutRefId, txOutRefIdx), txOutValue)
 import Ledger.Crypto (PubKey, PubKeyHash, Signature)
 import Ledger.Scripts (Datum (getDatum), Language, Script, Validator, ValidatorHash (ValidatorHash),
@@ -44,6 +44,7 @@ import Plutus.Script.Utils.Ada (Ada (Lovelace))
 import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Value (CurrencySymbol (CurrencySymbol), TokenName (TokenName), Value)
 import Plutus.Script.Utils.Value qualified as Value
+import Plutus.V2.Ledger.Api (TxId)
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Prelude qualified as PlutusTx
@@ -205,6 +206,8 @@ deriving via RenderPretty String instance Render String
 
 deriving via RenderPretty Integer instance Render Integer
 
+deriving via RenderPretty Word instance Render Word
+
 deriving via RenderPretty Address instance Render Address
 
 deriving via RenderPretty C.Value instance Render C.Value
@@ -232,6 +235,8 @@ instance Render (Digest SHA256) where
     render = render . abbreviate 40 . JSON.encodeSerialise
 
 deriving via RenderPretty TxId instance Render TxId
+
+deriving via RenderPretty C.TxId instance Render C.TxId
 
 instance Render PubKey where
     render pubKey =
@@ -305,6 +310,15 @@ instance Render a => Render (Versioned a) where
 
 instance Render Language where
     render = pure . viaShow
+
+instance Render C.TxIn where
+    render (C.TxIn txId (C.TxIx txIx)) =
+        vsep <$>
+        sequence [heading' "Tx:" txId, heading' "Output #" txIx]
+      where
+        heading' t x = do
+            r <- render x
+            pure $ fill 8 t <> r
 
 instance Render TxOutRef where
     render TxOutRef {txOutRefId, txOutRefIdx} =

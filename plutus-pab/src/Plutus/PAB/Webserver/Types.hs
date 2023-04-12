@@ -42,7 +42,7 @@ import Plutus.PAB.Events.ContractInstanceState (PartiallyDecodedResponse)
 import Plutus.V1.Ledger.Api (DCert, LedgerBytes (LedgerBytes))
 import Prettyprinter (Pretty, pretty, (<+>))
 import Wallet.Emulator.Wallet (Wallet, WalletId (WalletId))
-import Wallet.Rollup.Types (AnnotatedTx, BeneficialOwner, DereferencedInput, SequenceId, TxKey)
+import Wallet.Rollup.Types (AnnotatedTx, BeneficialOwner, DereferencedInput, SequenceId)
 import Wallet.Types (ContractActivityStatus, ContractInstanceId, EndpointDescription)
 
 instance OpenApi.ToSchema TxOut where
@@ -99,6 +99,10 @@ instance OpenApi.ToSchema CardanoBuildTx where
   -- TODO: implement the schema
   declareNamedSchema _ = return $ NamedSchema (Just "CardanoBuildTx") mempty
 
+instance OpenApi.ToSchema UtxoIndex where
+  -- TODO: implement the schema
+  declareNamedSchema _ = return $ NamedSchema (Just "UtxoIndex") mempty
+
 data ContractReport t =
     ContractReport
         { crAvailableContracts   :: [ContractSignatureResponse t]
@@ -114,10 +118,9 @@ deriving instance OpenApi.ToSchema TxInputType
 deriving instance OpenApi.ToSchema TxInput
 deriving instance OpenApi.ToSchema Withdrawal
 deriving instance OpenApi.ToSchema Certificate
-deriving anyclass instance OpenApi.ToSchema UtxoIndex
 deriving anyclass instance OpenApi.ToSchema DereferencedInput
 deriving anyclass instance OpenApi.ToSchema BeneficialOwner
-deriving anyclass instance OpenApi.ToSchema TxKey
+deriving anyclass instance OpenApi.ToSchema C.TxIn
 deriving anyclass instance OpenApi.ToSchema AnnotatedTx
 
 data ChainReport =

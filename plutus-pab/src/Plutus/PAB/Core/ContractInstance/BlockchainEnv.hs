@@ -33,7 +33,8 @@ import Data.Map qualified as Map
 import Data.Maybe (fromMaybe)
 import Data.Monoid (Last (..), Sum (..))
 import Data.Text (Text, unpack)
-import Ledger (Block, Slot (..), TxId (..))
+import Ledger (Block, Slot (..))
+import Ledger.Tx.CardanoAPI (fromCardanoTxIn)
 import Marconi.Core.Index.VSqlite qualified as Ix
 import Plutus.ChainIndex (BlockNumber (..), ChainIndexTx (..), Depth (..), InsertUtxoFailed (..),
                           InsertUtxoSuccess (..), Point (..), ReduceBlockCountResult (..), RollbackFailed (..),
@@ -56,6 +57,7 @@ import Plutus.PAB.Types (Config (Config, dbConfig), DbConfig (..),
                          WebserverConfig (WebserverConfig, enableMarconi), developmentOptions, nodeServerConfig,
                          pabWebserverConfig)
 import Plutus.Trace.Emulator.ContractInstance (IndexedBlock (..), indexBlock)
+import Plutus.V1.Ledger.Api (TxId)
 import System.Random
 
 -- | Connect to the node and write node updates to the blockchain
@@ -136,7 +138,7 @@ updateInstances
     IndexedBlock{ibUtxoSpent, ibUtxoProduced}
     InstanceClientEnv{ceUtxoSpentRequests, ceUtxoProducedRequests} = do
 
-  forM_ (Map.intersectionWith (,) ibUtxoSpent ceUtxoSpentRequests) $ \(onChainTx, requests) ->
+  forM_ (Map.intersectionWith (,) (Map.mapKeys fromCardanoTxIn ibUtxoSpent) ceUtxoSpentRequests) $ \(onChainTx, requests) ->
     traverse (\OpenTxOutSpentRequest{osrSpendingTx} -> STM.tryPutTMVar osrSpendingTx onChainTx) requests
   forM_ (Map.intersectionWith (,) ibUtxoProduced ceUtxoProducedRequests) $ \(txns, requests) ->
     traverse (\OpenTxOutProducedRequest{otxProducingTxns} -> STM.tryPutTMVar otxProducingTxns txns) requests

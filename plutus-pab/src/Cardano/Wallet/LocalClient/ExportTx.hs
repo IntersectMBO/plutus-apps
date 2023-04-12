@@ -34,17 +34,15 @@ import Data.Aeson (FromJSON (parseJSON), Object, ToJSON (toJSON), Value (String)
 import Data.Aeson.Extras qualified as JSON
 import Data.Aeson.Types (Parser, parseFail)
 import Data.Bifunctor (first)
-import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (mapMaybe)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Ledger (DCert, StakingCredential)
 import Ledger qualified as P
-import Ledger.Tx (CardanoTx, TxId (TxId), TxOutRef)
+import Ledger.Tx (CardanoTx, TxOutRef)
 import Ledger.Tx.CardanoAPI (fromPlutusIndex)
 import Ledger.Tx.Constraints (UnbalancedTx (UnbalancedCardanoTx))
-import Plutus.Contract.CardanoAPI qualified as CardanoAPI
 import Plutus.V1.Ledger.Api qualified as Plutus
 import Plutus.V1.Ledger.Scripts (MintingPolicyHash)
 import PlutusTx qualified
@@ -119,7 +117,7 @@ parseSpendingRedeemer :: Value -> Parser ExportTxRedeemer
 parseSpendingRedeemer =
     withObject "Redeemer" $ \o -> do
         inputObj <- o .: "input" :: Parser Object
-        let txOutRefParse = Plutus.TxOutRef <$> (TxId <$> (inputObj .: "id"))
+        let txOutRefParse = Plutus.TxOutRef <$> (Plutus.TxId <$> (inputObj .: "id"))
                                             <*> inputObj .: "index"
         SpendingRedeemer <$> parseRedeemerData o <*> txOutRefParse
 
@@ -228,25 +226,18 @@ export
     -> UnbalancedTx
     -> Either CardanoLedgerError ExportTx
 export params (UnbalancedCardanoTx tx utxos) =
-    let fromCardanoTx ctx = do
-            utxo <- fromPlutusIndex $ P.UtxoIndex utxos
-            makeTransactionBody params utxo ctx
-     in ExportTx
-        <$> fmap (C.makeSignedTransaction []) (fromCardanoTx tx)
-        <*> first Right (mkInputs utxos)
-        <*> pure []
+    let fromCardanoTx ctx =
+            let utxo = fromPlutusIndex utxos
+            in makeTransactionBody params utxo ctx
+    in do
+        tx' <- fromCardanoTx tx
+        pure $ ExportTx (C.makeSignedTransaction [] tx') (mkInputs utxos) []
 
-mkInputs :: Map Plutus.TxOutRef P.TxOut -> Either CardanoAPI.ToCardanoError [ExportTxInput]
-mkInputs = traverse (uncurry toExportTxInput) . Map.toList
+mkInputs :: P.UtxoIndex -> [ExportTxInput]
+mkInputs = map (uncurry toExportTxInput) . Map.toList . C.unUTxO
 
-toExportTxInput :: Plutus.TxOutRef -> P.TxOut -> Either CardanoAPI.ToCardanoError ExportTxInput
-toExportTxInput Plutus.TxOutRef{Plutus.txOutRefId, Plutus.txOutRefIdx} txOut = do
-    let cardanoValue = P.txOutValue txOut
-    let otherQuantities = mapMaybe (\case { (C.AssetId policyId assetName, quantity) -> Just (policyId, assetName, quantity); _ -> Nothing }) $ C.valueToList cardanoValue
-    ExportTxInput
-        <$> CardanoAPI.toCardanoTxId txOutRefId
-        <*> pure (C.TxIx $ fromInteger txOutRefIdx)
-        <*> pure (P.txOutAddress txOut)
-        <*> pure (C.selectLovelace cardanoValue)
-        <*> sequence (CardanoAPI.toCardanoScriptDataHash <$> P.txOutDatumHash txOut)
-        <*> pure otherQuantities
+toExportTxInput :: C.TxIn -> C.TxOut C.CtxUTxO C.BabbageEra -> ExportTxInput
+toExportTxInput (C.TxIn txId txIx) (C.TxOut aie tov tod _) =
+    let value = C.txOutValueToValue tov
+        otherQuantities = mapMaybe (\case { (C.AssetId policyId assetName, quantity) -> Just (policyId, assetName, quantity); _ -> Nothing }) $ C.valueToList value
+    in ExportTxInput txId txIx aie (C.selectLovelace value) (P.cardanoTxOutDatumHash tod) otherQuantities

@@ -53,6 +53,7 @@ import Ledger (Address, PaymentPubKeyHash (unPaymentPubKeyHash), cardanoPubKeyHa
 import Ledger qualified
 import Ledger.AddressMap qualified as AM
 import Ledger.CardanoWallet qualified as CW
+import Ledger.Tx.CardanoAPI (fromCardanoTxId, fromCardanoTxIn)
 import Ledger.Value.CardanoAPI qualified as CardanoAPI
 import Plutus.ChainIndex (Depth (Depth), RollbackState (Committed, TentativelyConfirmed, Unknown),
                           TxOutState (Spent, Unspent), TxValidity (TxValid), chainConstant)
@@ -198,7 +199,7 @@ waitForTxStatusChangeTest = runScenarioWithSecondSlot $ do
   (w1, pk1) <- Simulator.addWallet
   Simulator.waitNSlots 1
   tx <- Simulator.payToPaymentPublicKeyHash w1 pk1 (lovelaceValueOf 100_000_000)
-  txStatus <- Simulator.waitForTxStatusChange (getCardanoTxId tx)
+  txStatus <- Simulator.waitForTxStatusChange (fromCardanoTxId $ getCardanoTxId tx)
   assertEqual "tx should be tentatively confirmed of depth 1"
               (TentativelyConfirmed 1 TxValid ())
               txStatus
@@ -207,7 +208,7 @@ waitForTxStatusChangeTest = runScenarioWithSecondSlot $ do
   -- increment the block number.
   void $ Simulator.payToPaymentPublicKeyHash w1 pk1 (Ada.toValue Ledger.minAdaTxOutEstimated)
   Simulator.waitNSlots 1
-  txStatus' <- Simulator.waitForTxStatusChange (getCardanoTxId tx)
+  txStatus' <- Simulator.waitForTxStatusChange (fromCardanoTxId $ getCardanoTxId tx)
   assertEqual "tx should be tentatively confirmed of depth 2"
               (TentativelyConfirmed 2 TxValid ())
               txStatus'
@@ -218,7 +219,7 @@ waitForTxStatusChangeTest = runScenarioWithSecondSlot $ do
     void $ Simulator.payToPaymentPublicKeyHash w1 pk1 (Ada.toValue Ledger.minAdaTxOutEstimated)
     Simulator.waitNSlots 1
 
-  txStatus'' <- Simulator.waitForTxStatusChange (getCardanoTxId tx)
+  txStatus'' <- Simulator.waitForTxStatusChange (fromCardanoTxId $ getCardanoTxId tx)
   assertEqual "tx should be committed"
               (Committed TxValid ())
               txStatus''
@@ -245,11 +246,11 @@ waitForTxOutStatusChangeTest = runScenarioWithSecondSlot $ do
                 $ fmap snd
                 $ filter (\(txOut, txOutref) -> cardanoPubKeyHash (txOutAddress txOut) == Just (unPaymentPubKeyHash pk2))
                 $ getCardanoTxOutRefs tx
-  txOutStatus1 <- Simulator.waitForTxOutStatusChange txOutRef1
+  txOutStatus1 <- Simulator.waitForTxOutStatusChange (fromCardanoTxIn txOutRef1)
   assertEqual "tx output 1 should be tentatively confirmed of depth 1"
               (TentativelyConfirmed 1 TxValid Unspent)
               txOutStatus1
-  txOutStatus2 <- Simulator.waitForTxOutStatusChange txOutRef2
+  txOutStatus2 <- Simulator.waitForTxOutStatusChange (fromCardanoTxIn txOutRef2)
   assertEqual "tx output 2 should be tentatively confirmed of depth 1"
               (TentativelyConfirmed 1 TxValid Unspent)
               txOutStatus2
@@ -258,11 +259,11 @@ waitForTxOutStatusChangeTest = runScenarioWithSecondSlot $ do
   -- increment the block number.
   tx2 <- Simulator.payToPaymentPublicKeyHash w1 pk1 (Ada.toValue Ledger.minAdaTxOutEstimated)
   Simulator.waitNSlots 1
-  txOutStatus1' <- Simulator.waitForTxOutStatusChange txOutRef1
+  txOutStatus1' <- Simulator.waitForTxOutStatusChange (fromCardanoTxIn txOutRef1)
   assertEqual "tx output 1 should be tentatively confirmed of depth 1"
-              (TentativelyConfirmed 1 TxValid (Spent $ getCardanoTxId tx2))
+              (TentativelyConfirmed 1 TxValid (Spent $ fromCardanoTxId $ getCardanoTxId tx2))
               txOutStatus1'
-  txOutStatus2' <- Simulator.waitForTxOutStatusChange txOutRef2
+  txOutStatus2' <- Simulator.waitForTxOutStatusChange (fromCardanoTxIn txOutRef2)
   assertEqual "tx output 2 should be tentatively confirmed of depth 2"
               (TentativelyConfirmed 2 TxValid Unspent)
               txOutStatus2'
@@ -273,11 +274,11 @@ waitForTxOutStatusChangeTest = runScenarioWithSecondSlot $ do
     void $ Simulator.payToPaymentPublicKeyHash w1 pk1 (Ada.toValue Ledger.minAdaTxOutEstimated)
     Simulator.waitNSlots 1
 
-  txOutStatus1'' <- Simulator.waitForTxOutStatusChange txOutRef1
+  txOutStatus1'' <- Simulator.waitForTxOutStatusChange (fromCardanoTxIn txOutRef1)
   assertEqual "tx output 1 should be committed"
-              (Committed TxValid (Spent $ getCardanoTxId tx2))
+              (Committed TxValid (Spent $ fromCardanoTxId $ getCardanoTxId tx2))
               txOutStatus1''
-  txOutStatus2'' <- Simulator.waitForTxOutStatusChange txOutRef2
+  txOutStatus2'' <- Simulator.waitForTxOutStatusChange (fromCardanoTxIn txOutRef2)
   assertEqual "tx output 2 should be committed"
               (Committed TxValid Unspent)
               txOutStatus2''
@@ -294,7 +295,7 @@ valueAtTest = runScenario $ do
 
     tx <- Simulator.payToPaymentPublicKeyHash defaultWallet mockWalletPubKeyHash payment
     -- Waiting for the tx to be confirmed
-    void $ Core.waitForTxStatusChange $ getCardanoTxId tx
+    void $ Core.waitForTxStatusChange $ fromCardanoTxId $ getCardanoTxId tx
     finalValue <- Core.valueAt defaultWallet
     let difference = initialValue <> inv finalValue
     assertEqual "defaultWallet should make a payment" difference (payment <> (CardanoAPI.fromCardanoValue $ CardanoAPI.lovelaceToValue $ getCardanoTxFee tx))

@@ -51,6 +51,7 @@ import Prelude hiding (not)
 import Wallet.Emulator qualified as EM
 import Wallet.Emulator.Wallet (mockWalletAddress)
 
+import Ledger.Tx.CardanoAPI (fromCardanoTxIn)
 import Ledger.Value.CardanoAPI qualified as CardanoAPI
 import Plutus.ChainIndex.Types (RollbackState (Committed), TxOutState (Spent, Unspent), TxOutStatus, TxStatus,
                                 TxValidity (TxValid))
@@ -220,7 +221,7 @@ tests =
                 tx <- submitTx payment
                 -- There should be 2 utxos. We suppose the first belongs to W2
                 -- and the second one belongs to the wallet calling the contract.
-                let utxo = (fmap snd $ Ledger.getCardanoTxOutRefs tx) !! 1
+                let utxo = fromCardanoTxIn $ (fmap snd $ Ledger.getCardanoTxOutRefs tx) !! 1
                 -- We wait for W1's utxo to change status. It should be of
                 -- status confirmed unspent.
                 s <- awaitTxOutStatusChange utxo
@@ -258,7 +259,7 @@ tests =
                 tx <- submitTxConstraintsWith mempty payment
                 -- There should be 2 utxos. We suppose the first belongs to W2
                 -- and the second one belongs to the wallet calling the contract.
-                let utxo = (fmap snd $ Ledger.getCardanoTxOutRefs tx) !! 1
+                let utxo = fromCardanoTxIn $ (fmap snd $ Ledger.getCardanoTxOutRefs tx) !! 1
                 -- We wait for W1's utxo to change status. It should be of
                 -- status confirmed unspent.
                 s <- awaitTxOutStatusChange utxo

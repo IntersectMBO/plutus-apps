@@ -29,10 +29,10 @@ import Database.SQLite.Simple.FromRow (FromRow (fromRow), field)
 import Database.SQLite.Simple.ToField (ToField (toField))
 import Database.SQLite.Simple.ToRow (ToRow (toRow))
 import GHC.Generics (Generic)
-import Ledger (TxId)
 import Plutus.ChainIndex.Types (BlockNumber (BlockNumber),
                                 TxConfirmedState (TxConfirmedState, blockAdded, timesConfirmed, validity),
                                 TxValidity (TxValid))
+import Plutus.V1.Ledger.Api (TxId)
 
 import Marconi.Core.Index.VSqlite (SqliteIndex)
 import Marconi.Core.Index.VSqlite qualified as Ix

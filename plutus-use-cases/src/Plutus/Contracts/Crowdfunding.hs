@@ -59,6 +59,7 @@ import GHC.Generics (Generic)
 import Ledger (PaymentPubKeyHash (unPaymentPubKeyHash), getCardanoTxId)
 import Ledger qualified
 import Ledger.Interval qualified as Interval
+import Ledger.Tx.CardanoAPI (fromCardanoTxId)
 import Ledger.Tx.Constraints qualified as Constraints
 import Ledger.Tx.Constraints.ValidityInterval qualified as ValidityInterval
 import Ledger.Typed.Scripts qualified as Scripts hiding (validatorHash)
@@ -216,7 +217,7 @@ contribute cmp = endpoint @"contribute" $ \Contribution{contribValue} -> do
     -- collection deadline. If 'utxo' still contains our own contribution
     -- then we can claim a refund.
 
-    let flt Ledger.TxOutRef{txOutRefId} _ = txid Haskell.== txOutRefId
+    let flt Ledger.TxOutRef{txOutRefId} _ = fromCardanoTxId txid Haskell.== txOutRefId
         tx' = Constraints.spendUtxosFromTheScriptFilter flt utxo Refund
                 <> Constraints.mustValidateInTimeRange (refundRange cmp)
                 <> Constraints.mustBeSignedBy contributor

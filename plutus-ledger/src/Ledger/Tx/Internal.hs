@@ -1,14 +1,14 @@
-{-# LANGUAGE DeriveAnyClass    #-}
-{-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE DerivingVia       #-}
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs             #-}
-{-# LANGUAGE LambdaCase        #-}
-{-# LANGUAGE NamedFieldPuns    #-}
-{-# LANGUAGE OverloadedLists   #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE DeriveAnyClass           #-}
+{-# LANGUAGE DeriveGeneric            #-}
+{-# LANGUAGE DerivingVia              #-}
+{-# LANGUAGE DisambiguateRecordFields #-}
+{-# LANGUAGE FlexibleContexts         #-}
+{-# LANGUAGE FlexibleInstances        #-}
+{-# LANGUAGE GADTs                    #-}
+{-# LANGUAGE LambdaCase               #-}
+{-# LANGUAGE NamedFieldPuns           #-}
+{-# LANGUAGE OverloadedLists          #-}
+{-# LANGUAGE OverloadedStrings        #-}
 
 module Ledger.Tx.Internal
     ( module Ledger.Tx.Internal
@@ -35,11 +35,10 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import GHC.Generics (Generic)
 
-import Ledger.Address (CardanoAddress, cardanoPubKeyHash, toPlutusAddress)
+import Ledger.Address (CardanoAddress, cardanoPubKeyHash)
 import Ledger.Contexts.Orphans ()
 import Ledger.Crypto
 import Ledger.DCert.Orphans ()
-import Ledger.Tx.CardanoAPI.Internal (fromCardanoTxOutDatum, fromCardanoTxOutValue)
 import Ledger.Tx.CardanoAPITemp qualified as C
 import Ledger.Tx.Orphans ()
 import Ledger.Tx.Orphans.V2 ()
@@ -48,15 +47,17 @@ import Plutus.Script.Utils.Scripts
 import Plutus.V1.Ledger.Api (Credential, DCert, dataToBuiltinData)
 import Plutus.V1.Ledger.Scripts
 import Plutus.V1.Ledger.Tx hiding (TxIn (..), TxInType (..), TxOut (..), inRef, inScripts, inType, pubKeyTxIn,
-                            pubKeyTxIns, scriptTxIn, scriptTxIns)
-import Plutus.V2.Ledger.Api qualified as PV2
+                            scriptTxIn)
 import PlutusTx.Prelude qualified as PlutusTx
 
 import Prettyprinter (Pretty (..), hang, viaShow, vsep, (<+>))
 
-txOutValue :: TxOut -> C.Value
-txOutValue (TxOut (C.TxOut _aie tov _tod _rs)) =
+cardanoTxOutValue :: C.TxOut ctx era -> C.Value
+cardanoTxOutValue (C.TxOut _aie tov _tod _rs) =
   C.txOutValueToValue tov
+
+txOutValue :: TxOut -> C.Value
+txOutValue = cardanoTxOutValue . getTxOut
 
 outValue :: L.Lens TxOut TxOut C.Value (C.TxOutValue C.BabbageEra)
 outValue = L.lens
@@ -203,6 +204,7 @@ referenceScriptTxInputs = (\x -> L.folding x) . filter $ \case
 newtype TxOut = TxOut {getTxOut :: C.TxOut C.CtxTx C.BabbageEra}
     deriving stock (Show, Eq, Generic)
     deriving anyclass (ToJSON, FromJSON)
+    deriving newtype (Pretty)
 
 instance C.ToCBOR TxOut where
   toCBOR (TxOut txout) = C.toCBOR $ C.toShelleyTxOut C.ShelleyBasedEraBabbage txout
@@ -216,29 +218,17 @@ instance Serialise TxOut where
   encode = C.toCBOR
   decode = C.fromCBOR
 
-instance Pretty TxOut where
-  pretty (TxOut (C.TxOut addr v d rs)) =
-    hang 2 $ vsep $
-      ["-" <+> pretty (fromCardanoTxOutValue v) <+> "addressed to"
-      , pretty (toPlutusAddress addr)
-      ]
-      <> case fromCardanoTxOutDatum d of
-          PV2.NoOutputDatum      -> []
-          PV2.OutputDatum dv     -> ["with inline datum" <+> viaShow dv]
-          PV2.OutputDatumHash dh -> ["with datum hash" <+> pretty dh]
-      <> case rs of
-          C.ReferenceScript _ (C.ScriptInAnyLang _ s) ->
-            ["with reference script hash" <+> viaShow (C.hashScript s)]
-          C.ReferenceScriptNone -> []
-
 toSizedTxOut :: TxOut -> Ledger.Sized (Ledger.TxOut Ledger.StandardBabbage)
 toSizedTxOut = Ledger.mkSized . C.toShelleyTxOut C.ShelleyBasedEraBabbage . getTxOut
+
+toCtxUTxOTxOut :: TxOut -> C.TxOut C.CtxUTxO C.BabbageEra
+toCtxUTxOTxOut = C.toCtxUTxOTxOut . getTxOut
 
 
 type ScriptsMap = Map ScriptHash (Versioned Script)
 type MintingWitnessesMap = Map MintingPolicyHash (Redeemer, Maybe (Versioned TxOutRef))
 
--- | Get a hash from the stored TxOutDatum (either dirctly or by hashing the inlined datum)
+-- | Get a hash from the stored TxOutDatum (either directly or by hashing the inlined datum)
 txOutDatumHash :: TxOut -> Maybe DatumHash
 txOutDatumHash (TxOut (C.TxOut _aie _tov tod _rs)) =
   case tod of
@@ -250,6 +240,15 @@ txOutDatumHash (TxOut (C.TxOut _aie _tov tod _rs)) =
       Just $ datumHash $ Datum $ dataToBuiltinData $ C.toPlutusData scriptData
     C.TxOutDatumInTx _era scriptData ->
       Just $ datumHash $ Datum $ dataToBuiltinData $ C.toPlutusData scriptData
+
+cardanoTxOutDatumHash :: C.TxOutDatum C.CtxUTxO C.BabbageEra -> Maybe (C.Hash C.ScriptData)
+cardanoTxOutDatumHash = \case
+  C.TxOutDatumNone ->
+    Nothing
+  C.TxOutDatumHash _era scriptDataHash ->
+    Just scriptDataHash
+  C.TxOutDatumInline _era scriptData -> Just $ C.hashScriptData scriptData
+
 
 txOutPubKey :: TxOut -> Maybe PubKeyHash
 txOutPubKey (TxOut (C.TxOut aie _ _ _)) = cardanoPubKeyHash aie

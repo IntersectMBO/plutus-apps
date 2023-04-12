@@ -32,7 +32,7 @@ Slot 1: W[2]: Balancing an unbalanced transaction:
                     outputs:
                       - 10000000 lovelace addressed to
                         ScriptCredential: c3387c08305c03856c391b6c1b1bc872331a3a238fbaf72051142264 (no staking credential)
-                        with datum hash 77ab184b7537cd4b1dc3730f6a8a76a3d3aad1642fae9d769aa5dae40be38b51
+                        with datum in tx ScriptDataBytes "\128\164\244[V\184\141\DC19\218#\188L<u\236m2\148<\b\DEL%\v\134\EM<\167"
                     mint: 
                     fee: 0 lovelace
                     validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound (Finite (Slot {getSlot = 20})) False}
@@ -46,15 +46,13 @@ Slot 1: W[2]: Finished balancing:
                 Tx 454b0dec735648cb9923b835b48f4ff8e9e80bf99ad081c2d905d801c6ce3328:
                   {inputs:
                      - d0f5b08cc20688becb8eceba9770a18ea49a49d5df159715b899736bd1d1121d!20
-
                      - d0f5b08cc20688becb8eceba9770a18ea49a49d5df159715b899736bd1d1121d!21
-
                   reference inputs:
                   collateral inputs:
                   outputs:
                     - 10000000 lovelace addressed to
                       ScriptCredential: c3387c08305c03856c391b6c1b1bc872331a3a238fbaf72051142264 (no staking credential)
-                      with datum hash 77ab184b7537cd4b1dc3730f6a8a76a3d3aad1642fae9d769aa5dae40be38b51
+                      with datum in tx ScriptDataBytes "\128\164\244[V\184\141\DC19\218#\188L<u\236m2\148<\b\DEL%\v\134\EM<\167"
                     - 9823763 lovelace addressed to
                       PubKeyCredential: 80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7 (no staking credential)
                   mint: 
@@ -76,7 +74,7 @@ Slot 1: W[3]: Balancing an unbalanced transaction:
                     outputs:
                       - 10000000 lovelace addressed to
                         ScriptCredential: c3387c08305c03856c391b6c1b1bc872331a3a238fbaf72051142264 (no staking credential)
-                        with datum hash 2cc2afd267462229babbc139837611310e4307bd6c7e870049c22fb02c2ad122
+                        with datum in tx ScriptDataBytes ".\n\214\f2\a$\140\236\212}\189\227\215R\224\170\209A\214\184\248\SUB\194\198\236\162|"
                     mint: 
                     fee: 0 lovelace
                     validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound (Finite (Slot {getSlot = 20})) False}
@@ -90,15 +88,13 @@ Slot 1: W[3]: Finished balancing:
                 Tx 2cf42b87d8872ad340b26fb4926eb29b40fffddfeb8745cdd970ea6f51762287:
                   {inputs:
                      - d0f5b08cc20688becb8eceba9770a18ea49a49d5df159715b899736bd1d1121d!0
-
                      - d0f5b08cc20688becb8eceba9770a18ea49a49d5df159715b899736bd1d1121d!1
-
                   reference inputs:
                   collateral inputs:
                   outputs:
                     - 10000000 lovelace addressed to
                       ScriptCredential: c3387c08305c03856c391b6c1b1bc872331a3a238fbaf72051142264 (no staking credential)
-                      with datum hash 2cc2afd267462229babbc139837611310e4307bd6c7e870049c22fb02c2ad122
+                      with datum in tx ScriptDataBytes ".\n\214\f2\a$\140\236\212}\189\227\215R\224\170\209A\214\184\248\SUB\194\198\236\162|"
                     - 9823763 lovelace addressed to
                       PubKeyCredential: 2e0ad60c3207248cecd47dbde3d752e0aad141d6b8f81ac2c6eca27c (no staking credential)
                   mint: 
@@ -120,7 +116,7 @@ Slot 1: W[4]: Balancing an unbalanced transaction:
                     outputs:
                       - 2500000 lovelace addressed to
                         ScriptCredential: c3387c08305c03856c391b6c1b1bc872331a3a238fbaf72051142264 (no staking credential)
-                        with datum hash 63f4305deedb48449f218150b39eceb8d5951aa680e28a414024bc4c04758969
+                        with datum in tx ScriptDataBytes "U}#\192\165\&3\180\210\149\172-\193Kx:~\252);\194>\222\136\166\254\253 ="
                     mint: 
                     fee: 0 lovelace
                     validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound (Finite (Slot {getSlot = 20})) False}
@@ -134,13 +130,12 @@ Slot 1: W[4]: Finished balancing:
                 Tx 4219625e5c8cbb7aac9cd02a8fe6abba627e11289cc9cae55c273aa0b713eee8:
                   {inputs:
                      - d0f5b08cc20688becb8eceba9770a18ea49a49d5df159715b899736bd1d1121d!10
-
                   reference inputs:
                   collateral inputs:
                   outputs:
                     - 2500000 lovelace addressed to
                       ScriptCredential: c3387c08305c03856c391b6c1b1bc872331a3a238fbaf72051142264 (no staking credential)
-                      with datum hash 63f4305deedb48449f218150b39eceb8d5951aa680e28a414024bc4c04758969
+                      with datum in tx ScriptDataBytes "U}#\192\165\&3\180\210\149\172-\193Kx:~\252);\194>\222\136\166\254\253 ="
                     - 7329791 lovelace addressed to
                       PubKeyCredential: 557d23c0a533b4d295ac2dc14b783a7efc293bc23ede88a6fefd203d (no staking credential)
                   mint: 
@@ -163,11 +158,8 @@ Slot 20: W[1]: Balancing an unbalanced transaction:
                    Tx 9088249ae32dbe7e723828c6806f84857068badb79061715ba69234e6fd0b4de:
                      {inputs:
                         - 2cf42b87d8872ad340b26fb4926eb29b40fffddfeb8745cdd970ea6f51762287!0
-
                         - 4219625e5c8cbb7aac9cd02a8fe6abba627e11289cc9cae55c273aa0b713eee8!0
-
                         - 454b0dec735648cb9923b835b48f4ff8e9e80bf99ad081c2d905d801c6ce3328!0
-
                      reference inputs:
                      collateral inputs:
                      outputs:
@@ -206,15 +198,11 @@ Slot 20: W[1]: Finished balancing:
                  Tx 0f1c069771f164f1a8a13e20bf8f6ee125b349c0780b54c7ca899c1a87237263:
                    {inputs:
                       - 2cf42b87d8872ad340b26fb4926eb29b40fffddfeb8745cdd970ea6f51762287!0
-
                       - 4219625e5c8cbb7aac9cd02a8fe6abba627e11289cc9cae55c273aa0b713eee8!0
-
                       - 454b0dec735648cb9923b835b48f4ff8e9e80bf99ad081c2d905d801c6ce3328!0
-
                    reference inputs:
                    collateral inputs:
                      - d0f5b08cc20688becb8eceba9770a18ea49a49d5df159715b899736bd1d1121d!50
-
                    outputs:
                      - 21983335 lovelace addressed to
                        PubKeyCredential: a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2 (no staking credential)

@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds          #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances  #-}
+{-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE TemplateHaskell    #-}
 {-# LANGUAGE TypeFamilies       #-}
 
@@ -211,6 +212,9 @@ instance Arbitrary Slot where
     shrink = genericShrink
 
 instance Arbitrary TxId where
+    arbitrary = pure ""
+
+instance Arbitrary PV2.TxId where
     arbitrary = genericArbitrary
     shrink = genericShrink
 
@@ -331,6 +335,14 @@ instance Arbitrary C.Quantity where
 
 instance Arbitrary C.PolicyId where
     arbitrary = pure $ policyId (Versioned acceptingMintingPolicy PlutusV1)
+
+instance Arbitrary C.TxIn where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary C.TxIx where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
 
 instance (Arbitrary k, Arbitrary v) => Arbitrary (AssocMap.Map k v) where
     arbitrary = AssocMap.fromList <$> arbitrary

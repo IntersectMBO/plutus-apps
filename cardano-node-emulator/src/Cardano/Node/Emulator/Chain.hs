@@ -35,9 +35,9 @@ import Data.Monoid (Ap (Ap))
 import Data.Text (Text)
 import Data.Traversable (for)
 import GHC.Generics (Generic)
-import Ledger (Block, Blockchain, CardanoTx (..), OnChainTx (..), Slot (..), TxId, TxIn (txInRef),
-               getCardanoTxCollateralInputs, getCardanoTxFee, getCardanoTxId, getCardanoTxTotalCollateral,
-               getCardanoTxValidityRange, txOutValue, unOnChain)
+import Ledger (Block, Blockchain, CardanoTx (..), OnChainTx (..), Slot (..), getCardanoTxCollateralInputs,
+               getCardanoTxFee, getCardanoTxId, getCardanoTxTotalCollateral, getCardanoTxValidityRange, txOutValue,
+               unOnChain)
 import Ledger.Index qualified as Index
 import Ledger.Interval qualified as Interval
 import Ledger.Tx.CardanoAPI (fromPlutusIndex)
@@ -47,9 +47,9 @@ import Prettyprinter
 
 -- | Events produced by the blockchain emulator.
 data ChainEvent =
-    TxnValidate TxId CardanoTx [Text]
+    TxnValidate C.TxId CardanoTx [Text]
     -- ^ A transaction has been validated and added to the blockchain.
-    | TxnValidationFail Index.ValidationPhase TxId CardanoTx Index.ValidationError C.Value [Text]
+    | TxnValidationFail Index.ValidationPhase C.TxId CardanoTx Index.ValidationError C.Value [Text]
     -- ^ A transaction failed to validate. The @Value@ indicates the amount of collateral stored in the transaction.
     | SlotAdd Slot
     deriving stock (Eq, Show, Generic)
@@ -181,7 +181,7 @@ getCollateral :: Index.UtxoIndex -> CardanoTx -> C.Value
 getCollateral idx tx = case getCardanoTxTotalCollateral tx of
     Just v -> lovelaceToValue v
     Nothing -> fromRight (lovelaceToValue $ getCardanoTxFee tx) $
-        alaf Ap foldMap (fmap txOutValue . (`Index.lookup` idx) . txInRef) (getCardanoTxCollateralInputs tx)
+        alaf Ap foldMap (fmap txOutValue . (`Index.lookup` idx)) (getCardanoTxCollateralInputs tx)
 
 -- | Check whether the given transaction can be validated in the given slot.
 canValidateNow :: Slot -> CardanoTx -> Bool
@@ -208,7 +208,7 @@ validateEm
 validateEm h txn = do
     ctx@(ValidationCtx idx params) <- S.get
     let
-        cUtxoIndex = either (error . show) id $ fromPlutusIndex idx
+        cUtxoIndex = fromPlutusIndex idx
         e = Validation.validateCardanoTx params h cUtxoIndex txn
         idx' = case e of
             Left (Index.Phase1, _) -> idx

@@ -111,7 +111,7 @@ import Data.Set (Set)
 import Data.Text (Text)
 import Ledger (TxOutRef)
 import Ledger.Address (Address, PaymentPubKeyHash, pubKeyHashAddress)
-import Ledger.Tx (CardanoTx, TxId, decoratedTxOutValue)
+import Ledger.Tx (CardanoTx, decoratedTxOutValue)
 import Ledger.Value.CardanoAPI (fromCardanoValue)
 import Plutus.ChainIndex (ChainIndexQueryEffect, RollbackState (Unknown), TxOutStatus, TxStatus)
 import Plutus.ChainIndex qualified as ChainIndex
@@ -134,6 +134,7 @@ import Plutus.PAB.Timeout qualified as Timeout
 import Plutus.PAB.Types (PABError (ContractInstanceNotFound, InstanceAlreadyStopped, OtherError, WalletError))
 import Plutus.PAB.Webserver.Types (ContractActivationArgs (ContractActivationArgs, caID, caWallet))
 import Plutus.Script.Utils.Value (Value)
+import Plutus.V1.Ledger.Api (TxId)
 import Wallet.API (Slot)
 import Wallet.API qualified as WAPI
 import Wallet.Effects (NodeClientEffect, WalletEffect)

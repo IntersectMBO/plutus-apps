@@ -46,7 +46,7 @@ import Database.Beam.Query (HasSqlEqualityCheck, asc_, desc_, exists_, guard_, i
                             update, (&&.), (/=.), (<-.), (<.), (==.), (>.))
 import Database.Beam.Schema.Tables (zipTables)
 import Database.Beam.Sqlite (Sqlite)
-import Ledger (CardanoAddress, Datum, DatumHash (..), TxId, TxOutRef (..), cardanoAddressCredential)
+import Ledger (CardanoAddress, Datum, DatumHash (..), TxOutRef (..), cardanoAddressCredential)
 import Ledger qualified as L
 import Ledger.Tx.CardanoAPI (fromCardanoValue)
 import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), QueryResponse (QueryResponse),
@@ -66,7 +66,7 @@ import Plutus.ChainIndex.UtxoState qualified as UtxoState
 import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Scripts (datumHash)
 import Plutus.Script.Utils.Value (AssetClass (AssetClass), flattenValue)
-import Plutus.V2.Ledger.Api (Credential (..))
+import Plutus.V2.Ledger.Api (Credential (..), TxId)
 import PlutusTx.Builtins.Internal (emptyByteString)
 
 type ChainIndexState = UtxoIndex TxUtxoBalance
