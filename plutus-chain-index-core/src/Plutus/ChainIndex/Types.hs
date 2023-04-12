@@ -91,8 +91,7 @@ import Data.Set qualified as Set
 import Data.Typeable (Proxy (Proxy), Typeable)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
-import Ledger (CardanoAddress, CardanoTx, Language, SlotRange, TxIn (..), TxInType (..), TxOutRef (..), Versioned,
-               toPlutusAddress)
+import Ledger (CardanoAddress, CardanoTx, Language, SlotRange, TxOutRef (..), Versioned, toPlutusAddress)
 import Ledger.Blockchain (BlockId (..))
 import Ledger.Blockchain qualified as Ledger
 import Ledger.Slot (Slot (Slot))
@@ -196,8 +195,6 @@ deriving instance OpenApi.ToSchema script => OpenApi.ToSchema (Versioned script)
 deriving newtype instance OpenApi.ToSchema TxId
 deriving instance OpenApi.ToSchema ScriptTag
 deriving newtype instance OpenApi.ToSchema Validator
-deriving instance OpenApi.ToSchema TxInType
-deriving instance OpenApi.ToSchema TxIn
 deriving newtype instance OpenApi.ToSchema Slot
 deriving anyclass instance (OpenApi.ToSchema k, OpenApi.ToSchema v) => OpenApi.ToSchema (AssocMap.Map k v)
 deriving anyclass instance OpenApi.ToSchema OutputDatum
@@ -283,7 +280,7 @@ instance OpenApi.ToSchema CardanoTx where
 data ChainIndexTx = ChainIndexTx {
     _citxTxId       :: TxId,
     -- ^ The id of this transaction.
-    _citxInputs     :: [TxIn],
+    _citxInputs     :: [TxOutRef],
     -- ^ The inputs to this transaction.
     _citxOutputs    :: ChainIndexTxOutputs,
     -- ^ The outputs of this transaction, ordered so they can be referenced by index.

@@ -46,11 +46,10 @@ import Ledger.Tx.Orphans.V2 ()
 import Plutus.Script.Utils.Scripts
 import Plutus.V1.Ledger.Api (Credential, DCert, dataToBuiltinData)
 import Plutus.V1.Ledger.Scripts
-import Plutus.V1.Ledger.Tx hiding (TxIn (..), TxInType (..), TxOut (..), inRef, inScripts, inType, pubKeyTxIn,
-                            scriptTxIn)
+import Plutus.V1.Ledger.Tx hiding (TxIn (..), TxInType (..), TxOut (..), inRef, inType, pubKeyTxIn, scriptTxIn)
 import PlutusTx.Prelude qualified as PlutusTx
 
-import Prettyprinter (Pretty (..), hang, viaShow, vsep, (<+>))
+import Prettyprinter (Pretty (..), viaShow)
 
 cardanoTxOutValue :: C.TxOut ctx era -> C.Value
 cardanoTxOutValue (C.TxOut _aie tov _tod _rs) =
@@ -69,43 +68,6 @@ outValue' = L.lens
   (\(TxOut (C.TxOut _aie tov _tod _rs)) -> tov)
   (\(TxOut (C.TxOut aie _ tod rs)) tov -> TxOut (C.TxOut aie tov tod rs))
 
--- | The type of a transaction input.
-data TxInType =
-      ScriptAddress !(Either (Versioned Validator) (Versioned TxOutRef)) !Redeemer !(Maybe Datum)
-      -- ^ A transaction input that consumes (with a validator) or references (with a txOutRef)
-      -- a script address with the given the redeemer and datum.
-      -- Datum is optional if the input refers to a script output which contains an inline datum
-    | ConsumePublicKeyAddress -- ^ A transaction input that consumes a public key address.
-    | ConsumeSimpleScriptAddress -- ^ Consume a simple script
-    deriving stock (Show, Eq, Ord, Generic)
-    deriving anyclass (ToJSON, FromJSON, Serialise)
-
--- | A transaction input, consisting of a transaction output reference and an input type.
-data TxIn = TxIn {
-    txInRef  :: !TxOutRef,
-    txInType :: Maybe TxInType
-    }
-    deriving stock (Show, Eq, Ord, Generic)
-    deriving anyclass (ToJSON, FromJSON, Serialise)
-
-
-instance Pretty TxIn where
-    pretty TxIn{txInRef,txInType} =
-                let rest =
-                        case txInType of
-                            Just (ScriptAddress _ redeemer _) ->
-                                pretty redeemer
-                            _ -> mempty
-                in hang 2 $ vsep ["-" <+> pretty txInRef, rest]
-
--- | A transaction input that spends a "pay to public key" output, given the witness.
-pubKeyTxIn :: TxOutRef -> TxIn
-pubKeyTxIn r = TxIn r (Just ConsumePublicKeyAddress)
-
--- | A transaction input that spends a "pay to script" output, given witnesses.
--- Datum is optional if the input refers to a script output which contains an inline datum
-scriptTxIn :: TxOutRef -> Versioned Validator -> Redeemer -> Maybe Datum -> TxIn
-scriptTxIn ref v r d = TxIn ref . Just $ ScriptAddress (Left v) r d
 
 -- | Stake withdrawal, if applicable the script should be included in txScripts.
 data Withdrawal = Withdrawal
@@ -128,14 +90,6 @@ data Certificate = Certificate
 
 instance Pretty Certificate where
     pretty = viaShow
-
--- | Validator, redeemer, and data scripts of a transaction input that spends a
---   "pay to script" output.
-inScripts :: TxIn -> Maybe (Versioned Validator, Redeemer, Maybe Datum)
-inScripts TxIn{ txInType = t } = case t of
-    Just (ScriptAddress (Left v) r d) -> Just (v, r, d)
-    _                                 -> Nothing
-
 
 newtype TxOut = TxOut {getTxOut :: C.TxOut C.CtxTx C.BabbageEra}
     deriving stock (Show, Eq, Generic)

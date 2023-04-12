@@ -53,7 +53,7 @@ import Hedgehog.Range qualified as Range
 import Ledger.Address (CardanoAddress, PaymentPubKey (PaymentPubKey), pubKeyAddress)
 import Ledger.Interval qualified as Interval
 import Ledger.Slot (Slot (Slot))
-import Ledger.Tx (TxIn (TxIn), TxOutRef (TxOutRef))
+import Ledger.Tx (TxOutRef (TxOutRef))
 import Ledger.Tx.CardanoAPI (toCardanoAddressInEra)
 import Ledger.Value.CardanoAPI (AssetId (AssetId), Lovelace (Lovelace), Value, assetIdValue, lovelaceToValue)
 import Plutus.ChainIndex.Tx (ChainIndexTx (ChainIndexTx), ChainIndexTxOut (..), ChainIndexTxOutputs (..),
@@ -185,7 +185,7 @@ genTx = do
     deleteInputs (Map.fromSet (const txId) $ Set.fromList allInputs)
 
     let tx = ChainIndexTx txId
-            (map (flip TxIn Nothing) allInputs)
+            allInputs
             outputs
             Interval.always
 

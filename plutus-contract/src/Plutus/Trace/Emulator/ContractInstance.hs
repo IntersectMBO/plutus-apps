@@ -54,7 +54,7 @@ import Data.Set qualified as Set
 import Data.Text qualified as T
 import Ledger.Address (CardanoAddress)
 import Ledger.Blockchain (OnChainTx (Invalid, Valid))
-import Ledger.Tx (TxIn (txInRef), getCardanoTxId)
+import Ledger.Tx (getCardanoTxId)
 import Ledger.Tx.CardanoAPI (toCardanoTxIn)
 import Plutus.ChainIndex (ChainIndexQueryEffect, ChainIndexTx (_citxTxId),
                           ChainIndexTxOut (ChainIndexTxOut, citoAddress), RollbackState (Committed),
@@ -346,7 +346,7 @@ updateTxOutStatus txns = do
     -- Check whether the contract instance is waiting for a status change of a
     -- transaction output of any of the new transactions. If that is the case,
     -- call 'addResponse' to sent the response.
-    let getSpentOutputs = map txInRef . view citxInputs
+    let getSpentOutputs = view citxInputs
         txWithTxOutStatus tx = let validity = validityFromChainIndex tx in
              fmap (, Committed validity (Spent (_citxTxId tx))) (getSpentOutputs tx)
           <> fmap (, Committed validity Unspent) (txOutRefs tx)
@@ -533,6 +533,6 @@ indexBlock :: [ChainIndexTx] -> IndexedBlock
 indexBlock = foldMap indexTx where
   indexTx otx =
     IndexedBlock
-      { ibUtxoSpent = Map.fromSet (const otx) $ Set.fromList $ either (error . show) id $ traverse (toCardanoTxIn . txInRef) $ view citxInputs otx
+      { ibUtxoSpent = Map.fromSet (const otx) $ Set.fromList $ either (error . show) id $ traverse toCardanoTxIn $ view citxInputs otx
       , ibUtxoProduced = Map.fromListWith (<>) $ txOuts otx >>= (\ChainIndexTxOut{citoAddress} -> [(citoAddress, otx :| [])])
       }

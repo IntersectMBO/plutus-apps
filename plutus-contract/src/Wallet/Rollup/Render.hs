@@ -34,7 +34,7 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
-import Ledger (Address, Blockchain, PaymentPubKey, PaymentPubKeyHash, TxIn (TxIn), TxInType (..), TxOut,
+import Ledger (Address, Blockchain, PaymentPubKey, PaymentPubKeyHash, TxOut,
                TxOutRef (TxOutRef, txOutRefId, txOutRefIdx), txOutValue)
 import Ledger.Crypto (PubKey, PubKeyHash, Signature)
 import Ledger.Scripts (Datum (getDatum), Language, Script, Validator, ValidatorHash (ValidatorHash),
@@ -291,16 +291,6 @@ instance Render DereferencedInput where
         vsep <$>
         sequence
             [render refersTo, pure "Source:", indent 2 <$> render originalInput]
-
-instance Render TxIn where
-    render (TxIn txInRef (Just txInType)) =
-        vsep <$> sequence [render txInRef, render txInType]
-    render (TxIn txInRef Nothing) = render txInRef
-
-instance Render TxInType where
-    render (ScriptAddress validator _ _) = render validator
-    render ConsumePublicKeyAddress       = pure mempty
-    render ConsumeSimpleScriptAddress    = pure mempty
 
 instance Render a => Render (Versioned a) where
     render (Versioned a lang) = do

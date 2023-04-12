@@ -18,7 +18,6 @@ import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import Ledger (Slot (Slot))
 import Ledger.Interval qualified as Interval
-import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI (CardanoBuildTx (CardanoBuildTx), CardanoTx (CardanoTx))
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
 import Ledger.Tx.CardanoAPISpec qualified
@@ -121,7 +120,7 @@ byteStringJson jsonString value =
 txInOrdInstanceEquivalenceTest :: Property
 txInOrdInstanceEquivalenceTest = property $ do
     txIns <- sort <$> forAll (Gen.list (Range.singleton 10) genTxIn)
-    let toPlutus = map ((`Tx.TxIn` Nothing) . CardanoAPI.fromCardanoTxIn)
+    let toPlutus = map CardanoAPI.fromCardanoTxIn
     let plutusTxIns = sort $ toPlutus txIns
     Hedgehog.assert $ toPlutus txIns == plutusTxIns
 

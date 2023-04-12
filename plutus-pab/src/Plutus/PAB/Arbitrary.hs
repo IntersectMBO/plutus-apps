@@ -27,7 +27,7 @@ import Ledger.Crypto (PubKey, Signature)
 import Ledger.Interval (Extended, Interval, LowerBound, UpperBound)
 import Ledger.Scripts (Language (..), Versioned (..))
 import Ledger.Slot (Slot)
-import Ledger.Tx (Certificate, RedeemerPtr, ScriptTag, TxId, TxIn, TxInType, TxOutRef, Withdrawal)
+import Ledger.Tx (Certificate, RedeemerPtr, ScriptTag, TxId, TxOutRef, Withdrawal)
 import Ledger.Tx.CardanoAPI (ToCardanoError, toCardanoAddressInEra, toCardanoTxOut)
 import Ledger.Tx.Constraints (MkTxError)
 import Ledger.Value.CardanoAPI (policyId)
@@ -108,10 +108,6 @@ instance Arbitrary ToCardanoError where
     arbitrary = genericArbitrary
     shrink = genericShrink
 
-instance Arbitrary TxIn where
-    arbitrary = genericArbitrary
-    shrink = genericShrink
-
 instance Arbitrary PV2.OutputDatum where
     arbitrary = genericArbitrary
     shrink = genericShrink
@@ -121,10 +117,6 @@ instance Arbitrary TxOut where
     shrink = pure
 
 instance Arbitrary TxOutRef where
-    arbitrary = genericArbitrary
-    shrink = genericShrink
-
-instance Arbitrary TxInType where
     arbitrary = genericArbitrary
     shrink = genericShrink
 

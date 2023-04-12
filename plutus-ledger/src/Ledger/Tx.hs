@@ -19,6 +19,8 @@
 module Ledger.Tx
     ( module Export
     , C.TxId(..)
+    , C.TxIn(..)
+    , C.TxIx(..)
     -- * DecoratedTxOut
     , DecoratedTxOut(..)
     , toTxOut
@@ -112,8 +114,8 @@ import Prettyprinter (Pretty (pretty), braces, colon, hang, nest, viaShow, vsep,
 -- for re-export
 import Ledger.Index.Internal (UtxoIndex)
 import Ledger.Tx.Internal as Export
-import Plutus.V1.Ledger.Tx as Export hiding (TxId (..), TxIn (..), TxInType (..), TxOut (..), inRef, inScripts, inType,
-                                      outAddress, outValue, pubKeyTxIn, scriptTxIn, txOutPubKey)
+import Plutus.V1.Ledger.Tx as Export hiding (TxId (..), TxIn (..), TxInType (..), TxOut (..), inRef, inType, outAddress,
+                                      outValue, pubKeyTxIn, scriptTxIn, txOutPubKey)
 import Plutus.V1.Ledger.Value (Value)
 
 
