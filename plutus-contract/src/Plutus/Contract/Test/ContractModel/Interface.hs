@@ -77,6 +77,7 @@ module Plutus.Contract.Test.ContractModel.Interface
     , DL
     , action
     , waitUntilDL
+    , observeChain
     , QCCM.anyAction
     , QCCM.anyActions
     , QCCM.anyActions_
@@ -477,6 +478,14 @@ waitUntilDL = QCCM.waitUntilDL . toSlotNo
 
 assertModel :: String -> (QCCM.ModelState state -> Bool) -> DL state ()
 assertModel s p = QCCM.assertModel s (p . fmap coerce)
+
+-- IMPORTANT NOTE: the first argument needs to be unique among calls to `observeChain`
+-- as it is a proxy for the predicate.
+observeChain :: ContractModel state
+             => String
+             -> ((QCCM.SymToken -> CardanoAPI.AssetId) -> QCCM.ChainState -> Bool)
+             -> DL state ()
+observeChain s p = QCCM.observe s p
 
 type Actions state = QCCM.Actions (CMI.WithInstances (WrappedState state))
 

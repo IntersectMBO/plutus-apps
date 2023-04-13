@@ -116,7 +116,7 @@ test-suite plutus-tx-constraints-test
   -- Non-IOG dependencies
   ------------------------
   build-depends:
-    , base                      >=4.9 && <5
+    , base                      >=4.9     && <5
     , bytestring
     , containers
     , data-default
@@ -124,7 +124,7 @@ test-suite plutus-tx-constraints-test
     , lens
     , mtl
     , QuickCheck
-    , quickcheck-contractmodel
+    , quickcheck-contractmodel  >=0.1.3.0
     , quickcheck-dynamic
     , tasty
     , tasty-hedgehog
