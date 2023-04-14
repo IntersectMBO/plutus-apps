@@ -55,7 +55,7 @@ import Data.Text qualified as T
 import Ledger.Address (CardanoAddress)
 import Ledger.Blockchain (OnChainTx (Invalid, Valid))
 import Ledger.Tx (getCardanoTxId)
-import Ledger.Tx.CardanoAPI (toCardanoTxIn)
+import Ledger.Tx.CardanoAPI (fromCardanoTxIn, toCardanoTxIn)
 import Plutus.ChainIndex (ChainIndexQueryEffect, ChainIndexTx (_citxTxId),
                           ChainIndexTxOut (ChainIndexTxOut, citoAddress), RollbackState (Committed),
                           TxOutState (Spent, Unspent), TxValidity (TxInvalid, TxValid), citxInputs, fromOnChainTx,
@@ -350,10 +350,10 @@ updateTxOutStatus txns = do
         txWithTxOutStatus tx = let validity = validityFromChainIndex tx in
              fmap (, Committed validity (Spent (_citxTxId tx))) (getSpentOutputs tx)
           <> fmap (, Committed validity Unspent) (txOutRefs tx)
-        statusMap = Map.fromList $ either (error . show) id $ traverse (\(ref, a) -> (, a) <$> toCardanoTxIn ref) $ foldMap txWithTxOutStatus txns
+        statusMap = Map.fromList $ foldMap txWithTxOutStatus txns
     hks <- mapMaybe (traverse (preview E._AwaitTxOutStatusChangeReq)) <$> getHooks @w @s @e
     let mpReq Request{rqID, itID, rqRequest=txOutRef} =
-            case Map.lookup txOutRef statusMap of
+            case Map.lookup (fromCardanoTxIn txOutRef) statusMap of
                 Nothing        -> Nothing
                 Just newStatus ->
                     Just Response { rspRqID=rqID
@@ -533,6 +533,7 @@ indexBlock :: [ChainIndexTx] -> IndexedBlock
 indexBlock = foldMap indexTx where
   indexTx otx =
     IndexedBlock
-      { ibUtxoSpent = Map.fromSet (const otx) $ Set.fromList $ either (error . show) id $ traverse toCardanoTxIn $ view citxInputs otx
+      { ibUtxoSpent = Map.fromSet (const otx) $ Set.fromList $ either (error . ("Plutus.Trace.Emulator.ContractInstance.indexBlock: " ++) . show) id $
+            traverse toCardanoTxIn $ view citxInputs otx
       , ibUtxoProduced = Map.fromListWith (<>) $ txOuts otx >>= (\ChainIndexTxOut{citoAddress} -> [(citoAddress, otx :| [])])
       }
