@@ -18,7 +18,7 @@ import Data.Default (def)
 import Gen.Marconi.ChainIndex.Mockchain (MockBlock (MockBlock), genMockchain)
 import Hedgehog (Gen)
 import Hedgehog qualified
-import Ledger (TxIn)
+import Ledger.Tx (TxOutRef)
 import Marconi.ChainIndex.Indexers.Utxo (StorableEvent (..), UtxoHandle)
 import Marconi.ChainIndex.Indexers.Utxo qualified as Utxo
 import Marconi.Core.Storable qualified as Storable
@@ -64,7 +64,7 @@ allTxOuts :: ChainSyncBlock -> [ChainIndexTxOut]
 allTxOuts =
     toListOf (to blockTxs . folded . _1 . citxOutputs . chainIndexTxOutputs)
 
-allTxIns :: ChainSyncBlock -> [TxIn]
+allTxIns :: ChainSyncBlock -> [TxOutRef]
 allTxIns =
     toListOf (to blockTxs . folded . _1 . citxInputs . folded)
 

@@ -21,7 +21,6 @@ module Ledger.Tx.CardanoAPI(
   , fromCardanoTxInsCollateral
   , fromCardanoTotalCollateral
   , fromCardanoReturnCollateral
-  , toCardanoTxInsCollateral
   , toCardanoTotalCollateral
   , toCardanoReturnCollateral
   , toCardanoDatumWitness
@@ -45,9 +44,6 @@ import Cardano.Ledger.Babbage.TxBody (TxBody (TxBody, reqSignerHashes))
 import Cardano.Ledger.BaseTypes (mkTxIxPartial)
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Shelley.API qualified as C.Ledger
-import Data.Bifunctor (Bifunctor (..))
-import Data.Bitraversable (bitraverse)
-import Data.Map qualified as Map
 import Ledger.Address qualified as P
 import Ledger.Index.Internal qualified as P
 import Ledger.Scripts qualified as P
@@ -87,13 +83,9 @@ toCardanoScriptWitness datum redeemer scriptOrRef = (case lang of
   where
     lang = either P.version P.version scriptOrRef
 
-fromCardanoTxInsCollateral :: C.TxInsCollateral era -> [P.TxIn]
+fromCardanoTxInsCollateral :: C.TxInsCollateral era -> [C.TxIn]
 fromCardanoTxInsCollateral C.TxInsCollateralNone       = []
-fromCardanoTxInsCollateral (C.TxInsCollateral _ txIns) = map (P.pubKeyTxIn . fromCardanoTxIn) txIns
-
-toCardanoTxInsCollateral :: [P.TxInput] -> Either ToCardanoError (C.TxInsCollateral C.BabbageEra)
-toCardanoTxInsCollateral [] = pure C.TxInsCollateralNone
-toCardanoTxInsCollateral inputs = fmap (C.TxInsCollateral C.CollateralInBabbageEra) (traverse (toCardanoTxIn . P.txInputRef) inputs)
+fromCardanoTxInsCollateral (C.TxInsCollateral _ txIns) = txIns
 
 toCardanoDatumWitness :: Maybe PV1.Datum -> C.ScriptDatum C.WitCtxTxIn
 toCardanoDatumWitness = maybe C.InlineScriptDatum (C.ScriptDatumForTxIn . toCardanoScriptData . PV1.getDatum)
@@ -147,9 +139,8 @@ getRequiredSigners :: C.Tx C.BabbageEra -> [P.PaymentPubKeyHash]
 getRequiredSigners (C.ShelleyTx _ (ValidatedTx TxBody { reqSignerHashes = rsq } _ _ _)) =
   foldMap (pure . P.PaymentPubKeyHash . P.toPlutusPubKeyHash . C.PaymentKeyHash . C.Ledger.coerceKeyRole) rsq
 
-fromPlutusIndex :: P.UtxoIndex -> Either (Either P.ValidationErrorInPhase ToCardanoError) (C.Ledger.UTxO (Babbage.BabbageEra StandardCrypto))
-fromPlutusIndex (P.UtxoIndex m) =
-  first Right $ C.Ledger.UTxO . Map.fromList <$> traverse (bitraverse fromPlutusTxOutRef (pure . fromPlutusTxOut)) (Map.toList m)
+fromPlutusIndex :: P.UtxoIndex -> C.Ledger.UTxO (Babbage.BabbageEra StandardCrypto)
+fromPlutusIndex = C.toLedgerUTxO C.ShelleyBasedEraBabbage
 
 fromPlutusTxOutRef :: P.TxOutRef -> Either ToCardanoError (C.Ledger.TxIn StandardCrypto)
 fromPlutusTxOutRef (P.TxOutRef txId i) = C.Ledger.TxIn <$> fromPlutusTxId txId <*> pure (mkTxIxPartial i)
@@ -158,4 +149,4 @@ fromPlutusTxId :: PV1.TxId -> Either ToCardanoError (C.Ledger.TxId StandardCrypt
 fromPlutusTxId = fmap C.toShelleyTxId . toCardanoTxId
 
 fromPlutusTxOut :: P.TxOut -> Babbage.TxOut (Babbage.BabbageEra StandardCrypto)
-fromPlutusTxOut = C.toShelleyTxOut C.ShelleyBasedEraBabbage . C.toCtxUTxOTxOut . P.getTxOut
+fromPlutusTxOut = C.toShelleyTxOut C.ShelleyBasedEraBabbage . P.toCtxUTxOTxOut

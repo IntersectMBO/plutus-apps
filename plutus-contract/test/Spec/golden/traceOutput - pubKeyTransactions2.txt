@@ -43,25 +43,15 @@
                        Tx a86d1ed2c668b7fb623b2a7ccddb4a0b43c5b4b1dd9bc1524558d44708402d95:
                          {inputs:
                             - d0f5b08cc20688becb8eceba9770a18ea49a49d5df159715b899736bd1d1121d!50
-
                             - d0f5b08cc20688becb8eceba9770a18ea49a49d5df159715b899736bd1d1121d!51
-
                             - d0f5b08cc20688becb8eceba9770a18ea49a49d5df159715b899736bd1d1121d!52
-
                             - d0f5b08cc20688becb8eceba9770a18ea49a49d5df159715b899736bd1d1121d!53
-
                             - d0f5b08cc20688becb8eceba9770a18ea49a49d5df159715b899736bd1d1121d!54
-
                             - d0f5b08cc20688becb8eceba9770a18ea49a49d5df159715b899736bd1d1121d!55
-
                             - d0f5b08cc20688becb8eceba9770a18ea49a49d5df159715b899736bd1d1121d!56
-
                             - d0f5b08cc20688becb8eceba9770a18ea49a49d5df159715b899736bd1d1121d!57
-
                             - d0f5b08cc20688becb8eceba9770a18ea49a49d5df159715b899736bd1d1121d!58
-
                             - d0f5b08cc20688becb8eceba9770a18ea49a49d5df159715b899736bd1d1121d!59
-
                          reference inputs:
                          collateral inputs:
                          outputs:
@@ -111,13 +101,9 @@
                        Tx 431fc62490514f82a44ee2d5d5388d11280679c4e992f6efdd87fea6039fb34a:
                          {inputs:
                             - a86d1ed2c668b7fb623b2a7ccddb4a0b43c5b4b1dd9bc1524558d44708402d95!0
-
                             - d0f5b08cc20688becb8eceba9770a18ea49a49d5df159715b899736bd1d1121d!20
-
                             - d0f5b08cc20688becb8eceba9770a18ea49a49d5df159715b899736bd1d1121d!21
-
                             - d0f5b08cc20688becb8eceba9770a18ea49a49d5df159715b899736bd1d1121d!22
-
                          reference inputs:
                          collateral inputs:
                          outputs:
@@ -167,9 +153,7 @@
                        Tx a67c4a462aca7a7701284dccc4ca4c6ea3b576925d0849c7c18185d151a7f183:
                          {inputs:
                             - 431fc62490514f82a44ee2d5d5388d11280679c4e992f6efdd87fea6039fb34a!0
-
                             - d0f5b08cc20688becb8eceba9770a18ea49a49d5df159715b899736bd1d1121d!0
-
                          reference inputs:
                          collateral inputs:
                          outputs:
@@ -219,7 +203,6 @@
                        Tx 0d0eb440266851eda465f3304382bc18053b57369d260d95f48217cd9ed7770e:
                          {inputs:
                             - a67c4a462aca7a7701284dccc4ca4c6ea3b576925d0849c7c18185d151a7f183!0
-
                          reference inputs:
                          collateral inputs:
                          outputs:

@@ -27,7 +27,7 @@ import Cardano.Api qualified as C
 import Cardano.Node.Emulator.Chain (ChainState (_index))
 import Cardano.Node.Emulator.Fee qualified as Fee
 import Cardano.Node.Emulator.Params (Params (..))
-import Control.Lens (makeLenses, makePrisms, view)
+import Control.Lens (makeLenses, makePrisms)
 import Control.Monad (foldM, (<=<))
 import Control.Monad.Freer (Eff, Member, Members, interpret, type (~>))
 import Control.Monad.Freer.Error (Error, runError, throwError)
@@ -41,17 +41,16 @@ import Data.Bifunctor (first)
 import Data.ByteArray.Encoding (Base (Base16), convertFromBase, convertToBase)
 import Data.ByteString (ByteString)
 import Data.Data (Data)
-import Data.Default (Default (def))
 import Data.Foldable (find, foldl')
 import Data.List.NonEmpty (NonEmpty)
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Map qualified as Map
-import Data.Maybe (catMaybes, fromMaybe)
+import Data.Maybe (fromMaybe)
 import Data.String (IsString (fromString))
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as T
 import GHC.Generics (Generic)
-import Ledger (CardanoTx, DecoratedTxOut, PubKeyHash, TxOutRef, UtxoIndex (..))
+import Ledger (CardanoTx, PubKeyHash, UtxoIndex)
 import Ledger qualified
 import Ledger.Address (CardanoAddress, PaymentPrivateKey (..), PaymentPubKey, PaymentPubKeyHash (PaymentPubKeyHash),
                        cardanoAddressCredential)
@@ -63,9 +62,8 @@ import Ledger.Tx.CardanoAPI (fromCardanoValue, getRequiredSigners)
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
 import Ledger.Tx.Constraints.OffChain (UnbalancedTx)
 import Ledger.Tx.Constraints.OffChain qualified as U
-import Plutus.ChainIndex (PageQuery)
 import Plutus.ChainIndex qualified as ChainIndex
-import Plutus.ChainIndex.Api (UtxosResponse (page))
+import Plutus.ChainIndex.Api (collectQueryResponse)
 import Plutus.ChainIndex.Emulator (ChainIndexEmulatorState, ChainIndexQueryEffect)
 import Plutus.Contract.Checkpoint (CheckpointLogMsg)
 import Plutus.V1.Ledger.Api (ValidatorHash, Value)
@@ -277,8 +275,14 @@ handleWallet = \case
         logInfo $ SigningTx txCTx
         handleAddSignature txCTx
 
-    totalFundsH :: (Member (State WalletState) effs, Member ChainIndexQueryEffect effs) => Eff effs Value
-    totalFundsH = fromCardanoValue . foldMap (view Ledger.decoratedTxOutValue) <$> (get >>= ownOutputs)
+    totalFundsH ::
+        ( Member (State WalletState) effs
+        , Member ChainIndexQueryEffect effs
+        , Member (Error WalletAPIError) effs
+        , Member NodeClientEffect effs
+        )
+        => Eff effs Value
+    totalFundsH = fromCardanoValue . foldMap Tx.cardanoTxOutValue . C.unUTxO <$> ownOutputs
 
     yieldUnbalancedTxH ::
         ( Member (Error WalletAPIError) effs
@@ -305,16 +309,15 @@ handleBalance ::
     => UnbalancedTx
     -> Eff effs CardanoTx
 handleBalance utx = do
-    params@Params { pNetworkId } <- getClientParams
-    utxo <- get >>= ownOutputs
-    mappedUtxo <- either (throwError . WAPI.ToCardanoError) pure $ traverse (Tx.toTxOut pNetworkId) utxo
+    params <- getClientParams
+    utxo <- ownOutputs
     let unbalancedBodyContent = U.unBalancedCardanoBuildTx utx
     ownAddr <- gets ownAddress
     cTx <- Fee.makeAutoBalancedTransactionWithUtxoProvider
         params
-        (UtxoIndex $ U.unBalancedTxUtxoIndex utx)
+        (U.unBalancedTxUtxoIndex utx)
         ownAddr
-        (handleBalancingError utx . Fee.utxoProviderFromWalletOutputs (UtxoIndex mappedUtxo) unbalancedBodyContent)
+        (handleBalancingError utx . Fee.utxoProviderFromWalletOutputs utxo unbalancedBodyContent)
         (handleError utx . Left)
         unbalancedBodyContent
     pure $ Tx.CardanoEmulatorEraTx cTx
@@ -354,26 +357,17 @@ handleAddSignature tx@(Tx.CardanoEmulatorEraTx ctx) = do
 
 ownOutputs :: forall effs.
     ( Member ChainIndexQueryEffect effs
+    , Member (State WalletState) effs
+    , Member NodeClientEffect effs
+    , Member (Error WalletAPIError) effs
     )
-    => WalletState
-    -> Eff effs (Map.Map TxOutRef DecoratedTxOut)
-ownOutputs WalletState{_mockWallet} = do
-    refs <- allUtxoSet (Just def)
-    Map.fromList . catMaybes <$> traverse txOutRefTxOutFromRef refs
-  where
-    addr :: CardanoAddress
-    addr = CW.mockWalletAddress _mockWallet
+    => Eff effs UtxoIndex
+ownOutputs = do
+    WalletState{_mockWallet} <- get
+    Params { pNetworkId } <- getClientParams
+    pairs <- concat <$> collectQueryResponse (\pq -> ChainIndex.unspentTxOutSetAtAddress pq $ CW.mockWalletAddress _mockWallet)
+    either (throwError . WAPI.ToCardanoError) pure $ Tx.fromDecoratedIndex pNetworkId (Map.fromList pairs)
 
-    -- Accumulate all unspent 'TxOutRef's from the resulting pages.
-    allUtxoSet :: Maybe (PageQuery TxOutRef) -> Eff effs [TxOutRef]
-    allUtxoSet Nothing = pure []
-    allUtxoSet (Just pq) = do
-      refPage <- page <$> ChainIndex.utxoSetAtAddress pq addr
-      nextItems <- allUtxoSet (ChainIndex.nextPageQuery refPage)
-      pure $ ChainIndex.pageItems refPage ++ nextItems
-
-    txOutRefTxOutFromRef :: TxOutRef -> Eff effs (Maybe (TxOutRef, DecoratedTxOut))
-    txOutRefTxOutFromRef ref = fmap (ref,) <$> ChainIndex.unspentTxOutFromRef ref
 
 -- | The default signing process is 'signWallet'
 defaultSigningProcess :: MockWallet -> SigningProcess
@@ -454,7 +448,7 @@ walletPaymentPubKeyHashes = foldl' f Map.empty . Map.toList
 -- | For a set of wallets, convert them into a map of value: entity,
 -- where entity is one of 'Entity'.
 balances :: ChainState -> WalletSet -> Map.Map Entity C.Value
-balances state wallets = foldl' f Map.empty . getIndex . _index $ state
+balances state wallets = foldl' f Map.empty . C.unUTxO . _index $ state
   where
     toEntity :: CardanoAddress -> Entity
     toEntity a =
@@ -468,4 +462,4 @@ balances state wallets = foldl' f Map.empty . getIndex . _index $ state
     ws :: Map.Map PaymentPubKeyHash Wallet
     ws = walletPaymentPubKeyHashes wallets
 
-    f m o = Map.insertWith (<>) (toEntity $ Ledger.txOutAddress o) (Ledger.txOutValue o) m
+    f m (C.TxOut aie tov _tod _rs) = Map.insertWith (<>) (toEntity aie) (C.txOutValueToValue tov) m

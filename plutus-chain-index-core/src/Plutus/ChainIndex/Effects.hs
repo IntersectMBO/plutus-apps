@@ -34,12 +34,12 @@ module Plutus.ChainIndex.Effects(
 import Control.Monad.Freer.Extras.Pagination (PageQuery)
 import Control.Monad.Freer.TH (makeEffect)
 import Ledger.Address (CardanoAddress)
-import Ledger.Tx (DecoratedTxOut, TxId, TxOutRef, Versioned)
+import Ledger.Tx (DecoratedTxOut, TxOutRef, Versioned)
 import Plutus.ChainIndex.Api (IsUtxoResponse, QueryResponse, TxosResponse, UtxosResponse)
 import Plutus.ChainIndex.Tx (ChainIndexTx)
 import Plutus.ChainIndex.Types (ChainSyncBlock, Diagnostics, Point, Tip)
 import Plutus.V1.Ledger.Api (Datum, DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, RedeemerHash, StakeValidator,
-                             StakeValidatorHash, Validator, ValidatorHash)
+                             StakeValidatorHash, TxId, Validator, ValidatorHash)
 import Plutus.V1.Ledger.Value (AssetClass)
 
 data ChainIndexQueryEffect r where

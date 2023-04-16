@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds          #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances  #-}
+{-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE TemplateHaskell    #-}
 {-# LANGUAGE TypeFamilies       #-}
 
@@ -26,7 +27,7 @@ import Ledger.Crypto (PubKey, Signature)
 import Ledger.Interval (Extended, Interval, LowerBound, UpperBound)
 import Ledger.Scripts (Language (..), Versioned (..))
 import Ledger.Slot (Slot)
-import Ledger.Tx (Certificate, RedeemerPtr, ScriptTag, TxId, TxIn, TxInType, TxInput, TxInputType, TxOutRef, Withdrawal)
+import Ledger.Tx (Certificate, RedeemerPtr, ScriptTag, TxOutRef, Withdrawal)
 import Ledger.Tx.CardanoAPI (ToCardanoError, toCardanoAddressInEra, toCardanoTxOut)
 import Ledger.Tx.Constraints (MkTxError)
 import Ledger.Value.CardanoAPI (policyId)
@@ -45,7 +46,6 @@ import PlutusTx.Prelude qualified as PlutusTx
 import Test.QuickCheck (Gen, Positive (..), oneof, sized, suchThatMap)
 import Test.QuickCheck.Arbitrary.Generic (Arbitrary, Arg, arbitrary, genericArbitrary, genericShrink, shrink)
 import Test.QuickCheck.Instances ()
-import Wallet (WalletAPIError)
 import Wallet.Types (EndpointDescription (..), EndpointValue (..))
 
 -- | A validator that always succeeds.
@@ -78,11 +78,6 @@ instance Arbitrary Ledger.Script where
 instance Arbitrary Ledger.ScriptHash where
     arbitrary = genericArbitrary
     shrink = genericShrink
-
-instance Arbitrary Ledger.ValidationError where
-    arbitrary = genericArbitrary
-    shrink = genericShrink
-
 instance Arbitrary Ledger.ScriptError where
     arbitrary = genericArbitrary
     shrink = genericShrink
@@ -99,23 +94,7 @@ instance Arbitrary WrongOutTypeError where
     arbitrary = genericArbitrary
     shrink = genericShrink
 
-instance Arbitrary WalletAPIError where
-    arbitrary = genericArbitrary
-    shrink = genericShrink
-
 instance Arbitrary ToCardanoError where
-    arbitrary = genericArbitrary
-    shrink = genericShrink
-
-instance Arbitrary TxIn where
-    arbitrary = genericArbitrary
-    shrink = genericShrink
-
-instance Arbitrary TxInputType where
-    arbitrary = genericArbitrary
-    shrink = genericShrink
-
-instance Arbitrary TxInput where
     arbitrary = genericArbitrary
     shrink = genericShrink
 
@@ -128,10 +107,6 @@ instance Arbitrary TxOut where
     shrink = pure
 
 instance Arbitrary TxOutRef where
-    arbitrary = genericArbitrary
-    shrink = genericShrink
-
-instance Arbitrary TxInType where
     arbitrary = genericArbitrary
     shrink = genericShrink
 
@@ -210,7 +185,7 @@ instance Arbitrary Slot where
     arbitrary = genericArbitrary
     shrink = genericShrink
 
-instance Arbitrary TxId where
+instance Arbitrary PV2.TxId where
     arbitrary = genericArbitrary
     shrink = genericShrink
 
@@ -331,6 +306,10 @@ instance Arbitrary C.Quantity where
 
 instance Arbitrary C.PolicyId where
     arbitrary = pure $ policyId (Versioned acceptingMintingPolicy PlutusV1)
+
+instance Arbitrary C.TxIx where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
 
 instance (Arbitrary k, Arbitrary v) => Arbitrary (AssocMap.Map k v) where
     arbitrary = AssocMap.fromList <$> arbitrary

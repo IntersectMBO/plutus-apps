@@ -43,7 +43,6 @@
                        Tx 2e19f40cdf462444234d0de049163d5269ee1150feda868560315346dd12807d:
                          {inputs:
                             - d0f5b08cc20688becb8eceba9770a18ea49a49d5df159715b899736bd1d1121d!50
-
                          reference inputs:
                          collateral inputs:
                          outputs:
@@ -93,7 +92,6 @@
                        Tx 741f455cedc5326a75267c0d93d87c3ff74c7f978bf3a67250b61fb84949a7c8:
                          {inputs:
                             - d0f5b08cc20688becb8eceba9770a18ea49a49d5df159715b899736bd1d1121d!20
-
                          reference inputs:
                          collateral inputs:
                          outputs:
@@ -143,7 +141,6 @@
                        Tx ddd710ab33c2d46b0955e4844f706489cdac452163f4662747bf3c5611818634:
                          {inputs:
                             - d0f5b08cc20688becb8eceba9770a18ea49a49d5df159715b899736bd1d1121d!0
-
                          reference inputs:
                          collateral inputs:
                          outputs:

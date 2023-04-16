@@ -18,7 +18,7 @@ import Control.Lens.TH (makePrisms)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Text (Text)
 import GHC.Generics (Generic)
-import Ledger (Address, CardanoTx, TxId, getCardanoTxId)
+import Ledger (Address, CardanoTx, getCardanoTxId)
 import Ledger.Index (ValidationError, ValidationPhase)
 import Ledger.Slot (Slot)
 import Ledger.Tx.Constraints.OffChain (UnbalancedTx)
@@ -52,7 +52,7 @@ data TxBalanceMsg =
     | SubmittingTx CardanoTx
     | ValidationFailed
         ValidationPhase
-        TxId
+        C.TxId
         CardanoTx
         ValidationError
         C.Value -- ^ The amount of collateral stored in the transaction.

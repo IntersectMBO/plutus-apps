@@ -1,7 +1,9 @@
-{-# LANGUAGE DeriveAnyClass  #-}
-{-# LANGUAGE DerivingVia     #-}
-{-# LANGUAGE GADTs           #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE DeriveAnyClass    #-}
+{-# LANGUAGE DerivingVia       #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs             #-}
+{-# LANGUAGE TemplateHaskell   #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Ledger.Address
     ( module Export
@@ -53,6 +55,9 @@ import PlutusTx.Prelude qualified as PlutusTx
 import Prettyprinter (Pretty)
 
 type CardanoAddress = C.AddressInEra C.BabbageEra
+
+instance ToJSONKey (C.AddressInEra C.BabbageEra)
+instance FromJSONKey (C.AddressInEra C.BabbageEra)
 
 cardanoAddressCredential :: C.AddressInEra era -> Credential
 cardanoAddressCredential (C.AddressInEra C.ByronAddressInAnyEra (C.ByronAddress address))

@@ -16,6 +16,7 @@ module Wallet.Graph
   ) where
 
 import Data.Aeson.Types (ToJSON, toJSON)
+import Data.Bifunctor (first)
 import Data.List (nub)
 import Data.Map qualified as Map
 import Data.Maybe (catMaybes)
@@ -57,8 +58,8 @@ newtype TxRef =
 instance ToJSON TxRef where
   toJSON (TxRef t) = toJSON t
 
-mkRef :: TxId -> TxRef
-mkRef = TxRef . Text.pack . take 8 . show . getTxId
+mkRef :: C.TxId -> TxRef
+mkRef (C.TxId txId) = TxRef . Text.pack . take 8 $ show txId
 
 -- | The location of a transaction in a blockchain specified by two indices: the index of the containing
 -- block in the chain, and the index of the transaction within the block.
@@ -94,28 +95,28 @@ graph lnks = FlowGraph {..}
 txnFlows :: [PubKey] -> Blockchain -> [FlowLink]
 txnFlows keys bc = catMaybes (utxoLinks ++ foldMap extract bc')
   where
-    bc' = foldMap (\(blockNum, txns) -> fmap (\(blockIdx, txn) -> (UtxoLocation blockNum blockIdx, txn)) txns) $ zipWithIndex $ zipWithIndex <$> reverse bc
+    bc' = foldMap (\(blockNum, txns) -> fmap (first (UtxoLocation blockNum)) txns) $ zipWithIndex $ zipWithIndex <$> reverse bc
 
-    sourceLocations :: Map.Map TxOutRef UtxoLocation
+    sourceLocations :: Map.Map C.TxIn UtxoLocation
     sourceLocations = Map.fromList $ foldMap (uncurry outRefsWithLoc) bc'
 
     knownKeys :: Set.Set PubKey
     knownKeys = Set.fromList keys
 
-    utxos = fmap fst $ Map.toList $ unspentOutputs bc
+    utxos = Map.keys $ C.unUTxO $ unspentOutputs bc
     utxoLinks = uncurry (flow Nothing) <$> zip (utxoTargets <$> utxos) utxos
 
     extract :: (UtxoLocation, OnChainTx) -> [Maybe FlowLink]
     extract (loc, tx) =
       let targetRef = mkRef $ getCardanoTxId $ unOnChain tx in
-      fmap (flow (Just loc) targetRef . txInRef) (consumableInputs tx)
+      fmap (flow (Just loc) targetRef) (consumableInputs tx)
     -- make a flow for a TxOutRef
 
-    flow :: Maybe UtxoLocation -> TxRef -> TxOutRef -> Maybe FlowLink
-    flow tgtLoc tgtRef rf = do
+    flow :: Maybe UtxoLocation -> TxRef -> C.TxIn -> Maybe FlowLink
+    flow tgtLoc tgtRef rf@(C.TxIn txId _) = do
       src <- out bc rf
       sourceLoc <- Map.lookup rf sourceLocations
-      let sourceRef = mkRef $ txOutRefId rf
+      let sourceRef = mkRef txId
       pure FlowLink
             { flowLinkSource = sourceRef
             , flowLinkTarget = tgtRef
@@ -128,10 +129,10 @@ txnFlows keys bc = catMaybes (utxoLinks ++ foldMap extract bc')
     zipWithIndex = zip [1..]
 
 -- | Annotate the 'TxOutRef's produced by a transaction with the location of the transaction.
-outRefsWithLoc :: UtxoLocation -> OnChainTx -> [(TxOutRef, UtxoLocation)]
+outRefsWithLoc :: UtxoLocation -> OnChainTx -> [(C.TxIn, UtxoLocation)]
 outRefsWithLoc loc (Valid tx) = (\txo -> (snd txo, loc)) <$> getCardanoTxOutRefs tx
 outRefsWithLoc _ (Invalid _)  = []
 
 -- | Create a 'TxRef' from a 'TxOutRef'.
-utxoTargets :: TxOutRef -> TxRef
-utxoTargets (TxOutRef rf idx) = TxRef $ Text.unwords ["utxo", Text.pack $ take 8 $ show $ getTxId rf, Text.pack $ show idx]
+utxoTargets :: C.TxIn -> TxRef
+utxoTargets (C.TxIn (C.TxId rf) (C.TxIx idx)) = TxRef $ Text.unwords ["utxo", Text.pack $ take 8 $ show rf, Text.pack $ show idx]

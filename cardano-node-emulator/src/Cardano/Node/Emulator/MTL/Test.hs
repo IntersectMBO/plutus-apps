@@ -29,8 +29,6 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Monoid (Sum (..))
 import Data.Sequence (Seq)
-import Data.Set (Set)
-import Data.Set qualified as Set
 import Data.Text qualified as Text
 import Prettyprinter qualified as Pretty
 import Prettyprinter.Render.Text qualified as Pretty
@@ -42,18 +40,15 @@ import Test.QuickCheck.StateModel (Realized)
 
 import Cardano.Api qualified as C
 import Cardano.Api qualified as CardanoAPI
-import Cardano.Crypto.Hash.Class qualified as Crypto
 import Cardano.Node.Emulator qualified as E
 import Cardano.Node.Emulator.Chain as E (ChainState, _chainNewestFirst)
 import Cardano.Node.Emulator.MTL
 import Cardano.Node.Emulator.Params (pNetworkId, pProtocolParams)
 import Data.Maybe (fromMaybe)
-import Ledger (CardanoAddress, CardanoTx (..), OnChainTx, TxId (..), TxIn, TxOut (..), TxOutRef (..), UtxoIndex (..),
-               consumableInputs, onChainTxIsValid, outputsProduced, txInRef, unOnChain)
+import Ledger (CardanoAddress, CardanoTx (..), OnChainTx, onChainTxIsValid, unOnChain)
 import Ledger.Index qualified as Index
 import Ledger.Tx.CardanoAPI (fromCardanoSlotNo)
 import Ledger.Value.CardanoAPI qualified as Value
-import PlutusTx.Builtins qualified as Builtins
 
 
 -- | Test the number of validated transactions and the total number of transactions.
@@ -174,8 +169,7 @@ chainStateToChainIndex nid cs =
                        , networkId = nid
                        }
     where beforeState = CM.ChainState { slot = 0
-                                      , utxo = makeUTxOs
-                                              $ Index.initialise (take 1 $ reverse (_chainNewestFirst cs))
+                                      , utxo = Index.initialise (take 1 $ reverse (_chainNewestFirst cs))
                                       }
           addBlock block (txs, state) =
             ( txs ++ [ TxInState ((\(CardanoEmulatorEraTx tx') -> tx') . unOnChain $ tx)
@@ -187,35 +181,6 @@ chainStateToChainIndex nid cs =
           updateState :: [OnChainTx] -> CM.ChainState -> CM.ChainState
           updateState block state =
             CM.ChainState{ slot = slot state + 1
-                          , utxo = foldr addTx (utxo state) block
+                          , utxo = Index.insertBlock block (utxo state)
                           }
 
-          addTx :: OnChainTx -> CardanoAPI.UTxO CM.Era -> CardanoAPI.UTxO CM.Era
-          addTx tx (CardanoAPI.UTxO utxos) =
-              CardanoAPI.UTxO $ outputs <> Map.withoutKeys utxos consumed
-            where
-              consumed :: Set CardanoAPI.TxIn
-              consumed = Set.fromList $ map mkTxIn $ consumableInputs tx
-
-              CardanoAPI.UTxO outputs = makeUTxOs $ UtxoIndex $ outputsProduced tx
-
-          mkTxIn :: TxIn -> CardanoAPI.TxIn
-          mkTxIn = mkRef . txInRef
-
-          makeUTxOs :: UtxoIndex -> CardanoAPI.UTxO CM.Era
-          makeUTxOs (UtxoIndex i) = CardanoAPI.UTxO $ Map.fromList [ (mkRef ref, mkTxOut utxo)
-                                                                   | (ref, utxo) <- Map.toList i ]
-
-          mkRef :: TxOutRef -> CardanoAPI.TxIn
-          mkRef (TxOutRef (TxId bs) ix) = CardanoAPI.TxIn
-                                            (CardanoAPI.TxId $ makeTheHash bs)
-                                            (CardanoAPI.TxIx $ fromIntegral ix)
-
-          mkTxOut :: TxOut -> CardanoAPI.TxOut CardanoAPI.CtxUTxO Era
-          mkTxOut (TxOut o) = CardanoAPI.toCtxUTxOTxOut o
-
-          makeTheHash :: Crypto.HashAlgorithm crypto => Builtins.BuiltinByteString -> Crypto.Hash crypto stuff
-          makeTheHash bs =
-            case Crypto.hashFromBytes $ Builtins.fromBuiltin bs of
-              Nothing   -> error "Bad hash!"
-              Just hash -> hash

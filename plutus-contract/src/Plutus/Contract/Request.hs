@@ -111,6 +111,7 @@ module Plutus.Contract.Request(
     , MkTxLog(..)
     ) where
 
+import Cardano.Api qualified as C
 import Cardano.Node.Emulator.Params (Params)
 import Control.Lens (Prism', _2, _Just, only, preview, review, to, view)
 import Control.Monad.Freer.Error qualified as E
@@ -120,8 +121,10 @@ import Data.Aeson qualified as JSON
 import Data.Aeson.Types qualified as JSON
 import Data.Bifunctor (Bifunctor (..))
 import Data.Default (Default (def))
+import Data.Foldable (fold)
 import Data.List (find)
 import Data.List.NonEmpty (NonEmpty)
+import Data.List.NonEmpty qualified as NonEmpty
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (catMaybes, isJust, mapMaybe)
@@ -133,42 +136,38 @@ import Data.Void (Void)
 import GHC.Generics (Generic)
 import GHC.Natural (Natural)
 import GHC.TypeLits (Symbol, symbolVal)
-import Ledger (CardanoAddress, DiffMilliSeconds, POSIXTime, PaymentPubKeyHash (PaymentPubKeyHash), Slot, TxId, TxOutRef,
+import Ledger (CardanoAddress, DiffMilliSeconds, POSIXTime, PaymentPubKeyHash (PaymentPubKeyHash), Slot, TxOutRef,
                ValidatorHash (ValidatorHash), cardanoPubKeyHash, decoratedTxOutReferenceScript, fromMilliSeconds,
                getScriptHash, scriptHash, txOutRefId)
 import Ledger.Tx (CardanoTx, DecoratedTxOut, Versioned, decoratedTxOutValue, getCardanoTxId)
+import Ledger.Tx.CardanoAPI (toCardanoTxIn)
 import Ledger.Tx.Constraints (TxConstraints)
 import Ledger.Tx.Constraints.OffChain (ScriptLookups, UnbalancedTx)
 import Ledger.Tx.Constraints.OffChain qualified as Constraints
 import Ledger.Typed.Scripts (Any, TypedValidator, ValidatorTypes (DatumType, RedeemerType))
-import Plutus.Contract.Error (ContractError (OtherContractError), _ContractError)
-import Plutus.Contract.Util (loopM)
-import Plutus.V1.Ledger.Api (Datum, DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, RedeemerHash, StakeValidator,
-                             StakeValidatorHash, Validator)
-import Plutus.V1.Ledger.Value (AssetClass)
-import PlutusTx qualified
-
-import Plutus.Contract.Effects (ActiveEndpoint (ActiveEndpoint, aeDescription, aeMetadata),
-                                PABReq (AdjustUnbalancedTxReq, AwaitSlotReq, AwaitTimeReq, AwaitTxOutStatusChangeReq, AwaitTxStatusChangeReq, AwaitUtxoProducedReq, AwaitUtxoSpentReq, BalanceTxReq, ChainIndexQueryReq, CurrentChainIndexSlotReq, CurrentNodeClientSlotReq, CurrentNodeClientTimeRangeReq, CurrentTimeReq, ExposeEndpointReq, GetParamsReq, OwnAddressesReq, OwnContractInstanceIdReq, WriteBalancedTxReq, YieldUnbalancedTxReq),
-                                PABResp (ExposeEndpointResp))
-import Plutus.Contract.Effects qualified as E
-import Plutus.Contract.Logging (logDebug)
-import Plutus.Contract.Schema (Input, Output)
-import Wallet.Types (ContractInstanceId, EndpointDescription (EndpointDescription),
-                     EndpointValue (EndpointValue, unEndpointValue))
-
-import Cardano.Api qualified as C
-import Data.Foldable (fold)
-import Data.List.NonEmpty qualified as NonEmpty
 import Ledger.Value.CardanoAPI (valueGeq, valueLeq)
 import Plutus.ChainIndex (ChainIndexTx, Page (nextPageQuery, pageItems), PageQuery, txOutRefs)
 import Plutus.ChainIndex.Api (IsUtxoResponse, QueryResponse, TxosResponse, UtxosResponse, collectQueryResponse, paget)
 import Plutus.ChainIndex.Types (RollbackState (Unknown), Tip, TxOutStatus, TxStatus)
-import Plutus.Contract.Error (AsContractError (_ChainIndexContractError, _ConstraintResolutionContractError, _EndpointDecodeContractError, _OtherContractError, _ResumableContractError, _TxToCardanoConvertContractError, _WalletContractError))
+import Plutus.Contract.Effects (ActiveEndpoint (ActiveEndpoint, aeDescription, aeMetadata),
+                                PABReq (AdjustUnbalancedTxReq, AwaitSlotReq, AwaitTimeReq, AwaitTxOutStatusChangeReq, AwaitTxStatusChangeReq, AwaitUtxoProducedReq, AwaitUtxoSpentReq, BalanceTxReq, ChainIndexQueryReq, CurrentChainIndexSlotReq, CurrentNodeClientSlotReq, CurrentNodeClientTimeRangeReq, CurrentTimeReq, ExposeEndpointReq, GetParamsReq, OwnAddressesReq, OwnContractInstanceIdReq, WriteBalancedTxReq, YieldUnbalancedTxReq),
+                                PABResp (ExposeEndpointResp))
+import Plutus.Contract.Effects qualified as E
+import Plutus.Contract.Error (AsContractError (_ChainIndexContractError, _ConstraintResolutionContractError, _EndpointDecodeContractError, _OtherContractError, _ResumableContractError, _ToCardanoConvertContractError, _WalletContractError),
+                              ContractError (OtherContractError), _ContractError)
+import Plutus.Contract.Logging (logDebug)
 import Plutus.Contract.Resumable (prompt)
+import Plutus.Contract.Schema (Input, Output)
 import Plutus.Contract.Types (Contract (Contract), MatchingError (WrongVariantError), Promise (Promise), mapError,
                               runError, throwError)
+import Plutus.Contract.Util (loopM)
+import Plutus.V1.Ledger.Api (Datum, DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, RedeemerHash, StakeValidator,
+                             StakeValidatorHash, TxId, Validator)
+import Plutus.V1.Ledger.Value (AssetClass)
+import PlutusTx qualified
 import Wallet.Emulator.Error (WalletAPIError (NoPaymentPubKeyHashError))
+import Wallet.Types (ContractInstanceId, EndpointDescription (EndpointDescription),
+                     EndpointValue (EndpointValue, unEndpointValue))
 
 -- | Constraints on the contract schema, ensuring that the labels of the schema
 --   are unique.
@@ -205,7 +204,7 @@ adjustUnbalancedTx ::
     -> Contract w s e UnbalancedTx
 adjustUnbalancedTx utx =
   let req = pabReq (AdjustUnbalancedTxReq utx) E._AdjustUnbalancedTxResp in
-  req >>= either (throwError . review _TxToCardanoConvertContractError) pure
+  req >>= either (throwError . review _ToCardanoConvertContractError) pure
 
 -- | Wait until the slot
 awaitSlot ::
@@ -713,7 +712,9 @@ awaitUtxoSpent ::
   )
   => TxOutRef
   -> Contract w s e ChainIndexTx
-awaitUtxoSpent utxo = pabReq (AwaitUtxoSpentReq utxo) E._AwaitUtxoSpentResp
+awaitUtxoSpent ref = do
+  txIn <- either (throwError . review _ToCardanoConvertContractError) pure $ toCardanoTxIn ref
+  pabReq (AwaitUtxoSpentReq txIn) E._AwaitUtxoSpentResp
 
 {-| Wait until the UTXO has been spent, returning the transaction that spends it.
 -}
@@ -788,7 +789,7 @@ fundsAtAddressGeq addr vl =
     fundsAtAddressCondition (\presentVal -> presentVal `valueGeq` vl) addr
 
 -- | Wait for the status of a transaction to change
-awaitTxStatusChange :: forall w s e. AsContractError e => TxId -> Contract w s e TxStatus
+awaitTxStatusChange :: forall w s e. AsContractError e => C.TxId -> Contract w s e TxStatus
 awaitTxStatusChange i = pabReq (AwaitTxStatusChangeReq i) (E._AwaitTxStatusChangeResp' i)
 
 -- TODO: Configurable level of confirmation (for example, as soon as the tx is
@@ -796,7 +797,7 @@ awaitTxStatusChange i = pabReq (AwaitTxStatusChangeReq i) (E._AwaitTxStatusChang
 -- | Wait until a transaction is confirmed (added to the ledger).
 --   If the transaction is never added to the ledger then 'awaitTxConfirmed' never
 --   returns
-awaitTxConfirmed :: forall w s e. (AsContractError e) => TxId -> Contract w s e ()
+awaitTxConfirmed :: forall w s e. (AsContractError e) => C.TxId -> Contract w s e ()
 awaitTxConfirmed i = go where
   go = do
     newStatus <- awaitTxStatusChange i
@@ -805,12 +806,14 @@ awaitTxConfirmed i = go where
       _       -> pure ()
 
 -- | Wait until a transaction is confirmed (added to the ledger).
-isTxConfirmed :: forall w s e. (AsContractError e) => TxId -> Promise w s e ()
+isTxConfirmed :: forall w s e. (AsContractError e) => C.TxId -> Promise w s e ()
 isTxConfirmed = Promise . awaitTxConfirmed
 
 -- | Wait for the status of a transaction output to change.
 awaitTxOutStatusChange :: forall w s e. AsContractError e => TxOutRef -> Contract w s e TxOutStatus
-awaitTxOutStatusChange ref = snd <$> pabReq (AwaitTxOutStatusChangeReq ref) E._AwaitTxOutStatusChangeResp
+awaitTxOutStatusChange ref = do
+  txIn <- either (throwError . review _ToCardanoConvertContractError) pure $ toCardanoTxIn ref
+  snd <$> pabReq (AwaitTxOutStatusChangeReq txIn) E._AwaitTxOutStatusChangeResp
 
 -- | Get the 'ContractInstanceId' of this instance.
 ownInstanceId :: forall w s e. (AsContractError e) => Contract w s e ContractInstanceId

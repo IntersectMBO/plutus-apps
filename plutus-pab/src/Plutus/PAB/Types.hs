@@ -33,7 +33,7 @@ import Database.PostgreSQL.Simple qualified as Postgres
 import Database.SQLite.Simple qualified as Sqlite
 import GHC.Generics (Generic)
 import Ledger (Block, Blockchain, CardanoTx, TxId, eitherTx, getCardanoTxId)
-import Ledger.Index (UtxoIndex (UtxoIndex))
+import Ledger.Index (UtxoIndex)
 import Ledger.Index qualified as UtxoIndex
 import Plutus.Blockfrost.Types qualified as Blockfrost
 import Plutus.ChainIndex.Types (Point (..))
@@ -337,7 +337,7 @@ mkChainOverview = foldl reducer emptyChainOverview
         ChainOverview
             { chainOverviewBlockchain = []
             , chainOverviewUnspentTxsById = Map.empty
-            , chainOverviewUtxoIndex = UtxoIndex Map.empty
+            , chainOverviewUtxoIndex = mempty
             }
 
 makePrisms ''PABError

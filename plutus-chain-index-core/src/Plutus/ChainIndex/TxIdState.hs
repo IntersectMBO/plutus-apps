@@ -21,12 +21,13 @@ import Data.FingerTree ((|>))
 import Data.FingerTree qualified as FT
 import Data.Map qualified as Map
 import Data.Monoid (Last (..), Sum (..))
-import Ledger (OnChainTx, TxId, onChainTxIsValid)
+import Ledger (OnChainTx, onChainTxIsValid)
 import Plutus.ChainIndex.Tx (ChainIndexTx (..), citxTxId, validityFromChainIndex)
 import Plutus.ChainIndex.Types (BlockNumber (..), Depth (..), Point (..), RollbackState (..), Tip (..),
                                 TxConfirmedState (..), TxIdState (..), TxStatus, TxStatusFailure (..), TxValidity (..))
 import Plutus.ChainIndex.UtxoState (RollbackFailed (..), RollbackResult (..), UtxoIndex, UtxoState (..), rollbackWith,
                                     tip, utxoState, viewTip)
+import Plutus.V1.Ledger.Api (TxId)
 
 -- | The 'TxStatus' of a transaction right after it was added to the chain
 initialStatus :: OnChainTx -> TxStatus

@@ -56,9 +56,10 @@ import Ledger (CardanoAddress, CardanoTx, DatumFromQuery, DatumHash, DecoratedTx
                PaymentPrivateKey (..), Slot, ToCardanoError, TxOut (..), TxOutRef, UtxoIndex, ValidationErrorInPhase,
                mkDecoratedTxOut)
 import Ledger.AddressMap qualified as AM
-import Ledger.Index (UtxoIndex (..), createGenesisTransaction, insertBlock)
-import Ledger.Tx (CardanoTx (..), DatumFromQuery (..), addCardanoTxSignature, decoratedTxOutValue, getCardanoTxId)
-import Ledger.Tx.CardanoAPI (CardanoBuildTx (..), fromCardanoReferenceScript, fromCardanoScriptData,
+import Ledger.Index (createGenesisTransaction, insertBlock)
+import Ledger.Tx (CardanoTx (..), DatumFromQuery (..), addCardanoTxSignature, decoratedTxOutValue, getCardanoTxId,
+                  toCtxUTxOTxOut)
+import Ledger.Tx.CardanoAPI (CardanoBuildTx (..), fromCardanoReferenceScript, fromCardanoScriptData, fromCardanoTxIn,
                              toCardanoTxOutValue)
 import Plutus.V2.Ledger.Api qualified as PV2
 import PlutusTx.Builtins qualified as PlutusTx
@@ -149,7 +150,7 @@ awaitSlot s = do
 utxosAt :: MonadEmulator m => CardanoAddress -> m (Map TxOutRef DecoratedTxOut)
 utxosAt addr = do
   es <- get
-  pure $ Map.mapMaybe toDecoratedTxOut $ es ^. esAddressMap . AM.fundsAt addr
+  pure $ Map.mapKeys fromCardanoTxIn $ Map.mapMaybe toDecoratedTxOut $ es ^. esAddressMap . AM.fundsAt addr
   where
     toDecoratedTxOut :: (CardanoTx, TxOut) -> Maybe DecoratedTxOut
     toDecoratedTxOut (_, TxOut (C.TxOut addr' val dt rs)) =
@@ -180,7 +181,7 @@ balanceTx utxoIndex changeAddr utx = do
   params <- ask
   es <- get
   let
-    ownUtxos = UtxoIndex $ snd <$> es ^. esAddressMap . AM.fundsAt changeAddr
+    ownUtxos = C.UTxO $ toCtxUTxOTxOut . snd <$> es ^. esAddressMap . AM.fundsAt changeAddr
     utxoProvider = E.utxoProviderFromWalletOutputs ownUtxos utx
   CardanoEmulatorEraTx <$> E.makeAutoBalancedTransactionWithUtxoProvider
       params
@@ -205,7 +206,7 @@ submitUnbalancedTx utxoIndex changeAddr utx keys = do
   pure signedTx
 
 -- | Create a transaction that transfers funds from one address to another, and sign and submit it.
-payToAddress :: MonadEmulator m => (CardanoAddress, PaymentPrivateKey) -> CardanoAddress -> C.Value -> m PV2.TxId
+payToAddress :: MonadEmulator m => (CardanoAddress, PaymentPrivateKey) -> CardanoAddress -> C.Value -> m C.TxId
 payToAddress (sourceAddr, sourcePrivKey) targetAddr value = do
   let buildTx = CardanoBuildTx $ E.emptyTxBodyContent
            { C.txOuts = [C.TxOut targetAddr (toCardanoTxOutValue value) C.TxOutDatumNone C.ReferenceScriptNone]

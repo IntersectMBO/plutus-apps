@@ -22,7 +22,6 @@ import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
 import Data.Either (fromRight)
 import Data.List (sort)
-import Ledger qualified as P
 import Ledger.Tx.CardanoAPI as Export
 import Plutus.ChainIndex.Types (ChainIndexTx (..), ChainIndexTxOut (..), ChainIndexTxOutputs (..), ReferenceScript (..))
 
@@ -57,7 +56,7 @@ fromCardanoTx eraInMode tx@(C.Tx txBody@(C.TxBody C.TxBodyContent{..}) _) =
             { _citxTxId = fromCardanoTxId (C.getTxId txBody)
             , _citxValidRange = fromCardanoValidityRange txValidityRange
             -- If the transaction is invalid, we use collateral inputs
-            , _citxInputs = fmap ((`P.TxIn` Nothing) . fromCardanoTxIn) inputs
+            , _citxInputs = fmap fromCardanoTxIn inputs
             -- No outputs if the one of scripts failed
             , _citxOutputs = if isTxScriptValid then ValidTx txOutputs
                                                 else InvalidTx collateralOut

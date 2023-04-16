@@ -22,23 +22,15 @@ import Control.Monad.State (StateT, evalStateT, runState)
 import Data.List (groupBy)
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Ledger (Block, Blockchain, OnChainTx (..), TxIn (TxIn), TxOut, ValidationPhase (..), consumableInputs,
-               onChainTxIsValid, outputsProduced, txInRef, txOutRefId, txOutRefIdx, txOutValue, unOnChain)
+import Ledger (Block, Blockchain, OnChainTx (..), TxOut, ValidationPhase (..), consumableInputs, onChainTxIsValid,
+               outputsProduced, txOutValue, unOnChain)
 import Ledger.Index (genesisTxIn)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI (fromCardanoValue)
-import Ledger.Tx.CardanoAPI.Internal (fromCardanoTxIn)
 import Plutus.V1.Ledger.Value (Value)
 import Wallet.Rollup.Types
 
 ------------------------------------------------------------
-txInputKey :: TxIn -> TxKey
-txInputKey TxIn {txInRef} =
-    TxKey
-        { _txKeyTxId = txOutRefId txInRef
-        , _txKeyTxOutRefIdx = txOutRefIdx txInRef
-        }
-
 annotateTransaction ::
        Monad m => SequenceId -> OnChainTx -> StateT Rollup m AnnotatedTx
 annotateTransaction sequenceId tx = do
@@ -46,24 +38,19 @@ annotateTransaction sequenceId tx = do
     cRollingBalances <- use rollingBalances
     dereferencedInputs <-
         traverse
-            (\txIn ->
-                 let key = txInputKey txIn
-                  in case Map.lookup key cPreviousOutputs of
+            (\txIn -> case Map.lookup txIn cPreviousOutputs of
                          Just txOut -> pure $ DereferencedInput txIn txOut
-                         Nothing    -> pure $ InputNotFound key)
+                         Nothing    -> pure $ InputNotFound txIn)
             -- We are filtering out the genesisTxIn as it will be processed as `InputNotFound`
             -- because there is no matching output for it.
-            (filter (/= TxIn (fromCardanoTxIn genesisTxIn) Nothing) $ consumableInputs tx)
+            (filter (/= genesisTxIn) $ consumableInputs tx)
     let txId = Tx.getCardanoTxId $ unOnChain tx
         txOuts = Map.elems $ outputsProduced tx
         newOutputs =
             ifoldr
                 (\outputIndex ->
-                     Map.insert
-                         TxKey
-                             { _txKeyTxId = txId
-                             , _txKeyTxOutRefIdx = fromIntegral outputIndex
-                             })
+                     Map.insert $
+                         C.TxIn txId (C.TxIx (fromIntegral outputIndex)))
                 cPreviousOutputs
                 txOuts
         newBalances =

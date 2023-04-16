@@ -73,6 +73,7 @@ module Plutus.PAB.Simulator(
     , waitForValidatedTxCount
     ) where
 
+import Cardano.Api qualified as C
 import Cardano.Node.Emulator.Chain (ChainControlEffect, ChainState)
 import Cardano.Node.Emulator.Chain qualified as Chain
 import Cardano.Node.Emulator.Params (Params (..))
@@ -104,11 +105,10 @@ import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.IO qualified as Text
 import Data.Time.Units (Millisecond)
-import Ledger (Blockchain, CardanoAddress, CardanoTx, PaymentPubKeyHash, TxId, getCardanoTxFee, getCardanoTxId,
-               txOutAddress, txOutValue, unOnChain)
+import Ledger (Blockchain, CardanoAddress, CardanoTx, PaymentPubKeyHash, cardanoTxOutValue, getCardanoTxFee,
+               getCardanoTxId, unOnChain)
 import Ledger.CardanoWallet (MockWallet)
 import Ledger.CardanoWallet qualified as CW
-import Ledger.Index qualified as UtxoIndex
 import Ledger.Slot (Slot)
 import Ledger.Value.CardanoAPI qualified as CardanoAPI
 import Plutus.ChainIndex.Emulator (ChainIndexControlEffect, ChainIndexEmulatorState, ChainIndexError, ChainIndexLog,
@@ -129,7 +129,7 @@ import Plutus.PAB.Webserver.Types (ContractActivationArgs)
 import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Value (Value, flattenValue)
 import Plutus.Trace.Emulator.System (appendNewTipBlock)
-import Plutus.V1.Ledger.Tx (TxOutRef)
+import Plutus.V1.Ledger.Tx (TxId, TxOutRef)
 import Prettyprinter (Pretty (pretty), defaultLayoutOptions, layoutPretty)
 import Prettyprinter.Render.Text qualified as Render
 import Wallet.API qualified as WAPI
@@ -154,7 +154,7 @@ makeLensesFor [("_contractState", "contractState")] ''SimulatorContractInstanceS
 data AgentState t =
     AgentState
         { _walletState   :: Wallet.WalletState
-        , _submittedFees :: Map TxId CardanoAPI.Lovelace
+        , _submittedFees :: Map C.TxId CardanoAPI.Lovelace
         }
 
 makeLenses ''AgentState
@@ -706,8 +706,8 @@ valueAtSTM :: forall t. CardanoAddress -> Simulation t (STM CardanoAPI.Value)
 valueAtSTM address = do
     SimulatorState{_chainState} <- Core.askUserEnv @t @(SimulatorState t)
     pure $ do
-        Chain.ChainState{Chain._index=UtxoIndex.UtxoIndex mp} <- STM.readTVar _chainState
-        pure $ foldMap txOutValue $ filter (\txout -> txOutAddress txout == address) $ fmap snd $ Map.toList mp
+        Chain.ChainState{Chain._index=mp} <- STM.readTVar _chainState
+        pure $ foldMap cardanoTxOutValue $ filter (\(C.TxOut addr _ _ _) -> addr == address) $ fmap snd $ Map.toList $ C.unUTxO mp
 
 -- | The total value currently at an address
 valueAt :: forall t. CardanoAddress -> Simulation t CardanoAPI.Value
@@ -719,7 +719,7 @@ valueAt address = do
 walletFees :: forall t. Wallet -> Simulation t CardanoAPI.Lovelace
 walletFees wallet = succeededFees <$> walletSubmittedFees <*> blockchain
     where
-        succeededFees :: Map TxId CardanoAPI.Lovelace -> Blockchain -> CardanoAPI.Lovelace
+        succeededFees :: Map C.TxId CardanoAPI.Lovelace -> Blockchain -> CardanoAPI.Lovelace
         succeededFees submitted = foldMap . foldMap $ fold . (submitted Map.!?) . getCardanoTxId . unOnChain
         walletSubmittedFees = do
             SimulatorState{_agentStates} <- Core.askUserEnv @t @(SimulatorState t)

@@ -2,7 +2,6 @@
 {-# LANGUAGE DerivingVia         #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE FlexibleInstances   #-}
-{-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE NumericUnderscores  #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -11,7 +10,7 @@
 --   transactions using the index.
 module Ledger.Index(
     -- * Types for transaction validation based on UTXO index
-    UtxoIndex(..),
+    UtxoIndex,
     insert,
     insertCollateral,
     insertBlock,
@@ -32,8 +31,6 @@ module Ledger.Index(
     minAdaTxOutEstimated,
     minLovelaceTxOutEstimated,
     maxMinAdaTxOut,
-    pubKeyTxIns,
-    scriptTxIns,
     createGenesisTransaction,
     genesisTxIn,
     PV1.ExBudget(..),
@@ -50,7 +47,7 @@ import Cardano.Ledger.Babbage qualified as Babbage
 import Cardano.Ledger.Babbage.PParams qualified as Babbage
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Shelley.API qualified as C.Ledger
-import Control.Lens (Fold, folding, (&), (.~), (<&>))
+import Control.Lens ((&), (.~), (<&>))
 import Control.Monad.Except (MonadError (..))
 import Data.Foldable (foldl')
 import Data.Map qualified as Map
@@ -58,10 +55,8 @@ import Ledger.Address (CardanoAddress)
 import Ledger.Blockchain
 import Ledger.Index.Internal
 import Ledger.Orphans ()
-import Ledger.Tx (CardanoTx (..), ToCardanoError, TxIn (TxIn, txInType),
-                  TxInType (ConsumePublicKeyAddress, ScriptAddress), TxOut (getTxOut), TxOutRef, outValue, txOutValue,
-                  updateUtxoCollateral)
-import Ledger.Tx.CardanoAPI (toCardanoTxOutValue)
+import Ledger.Tx (CardanoTx (..), ToCardanoError, TxOut (..), outValue, txOutValue, updateUtxoCollateral)
+import Ledger.Tx.CardanoAPI (fromPlutusTxOut, toCardanoTxOutValue)
 import Ledger.Tx.Internal qualified as Tx
 import Ledger.Value.CardanoAPI (Value, lovelaceToValue)
 import Plutus.Script.Utils.Ada (Ada)
@@ -71,35 +66,30 @@ import PlutusTx.Lattice ((\/))
 
 -- | Create an index of all UTxOs on the chain.
 initialise :: Blockchain -> UtxoIndex
-initialise = UtxoIndex . unspentOutputs
+initialise = unspentOutputs
 
 -- | Update the index for the addition of a transaction.
 insert :: CardanoTx -> UtxoIndex -> UtxoIndex
-insert tx = UtxoIndex . updateUtxo tx . getIndex
+insert = updateUtxo
 
 -- | Update the index for the addition of only the collateral inputs of a failed transaction.
 insertCollateral :: CardanoTx -> UtxoIndex -> UtxoIndex
-insertCollateral tx = UtxoIndex . updateUtxoCollateral tx . getIndex
+insertCollateral = updateUtxoCollateral
 
 -- | Update the index for the addition of a block.
 insertBlock :: Block -> UtxoIndex -> UtxoIndex
 insertBlock blck i = foldl' (flip (eitherTx insertCollateral insert)) i blck
 
 -- | Find an unspent transaction output by the 'TxOutRef' that spends it.
-lookup :: MonadError ValidationError m => TxOutRef -> UtxoIndex -> m TxOut
-lookup i index = case Map.lookup i $ getIndex index of
-    Just t  -> pure t
+lookup :: MonadError ValidationError m => C.TxIn -> UtxoIndex -> m TxOut
+lookup i index = case Map.lookup i $ C.unUTxO index of
+    Just (C.TxOut aie tov tod rs) ->
+        let tod' = case tod of
+                    C.TxOutDatumNone                    -> C.TxOutDatumNone
+                    C.TxOutDatumHash era scriptDataHash -> C.TxOutDatumHash era scriptDataHash
+                    C.TxOutDatumInline era scriptData   -> C.TxOutDatumInline era scriptData
+        in pure $ TxOut (C.TxOut aie tov tod' rs)
     Nothing -> throwError $ TxOutRefNotFound i
-
--- | Filter to get only the script inputs.
-scriptTxIns :: Fold [TxIn] TxIn
-scriptTxIns = (\x -> folding x) . filter $ \case
-    TxIn{ txInType = Just ScriptAddress{} } -> True
-    _                                       -> False
-
--- | Filter to get only the pubkey inputs.
-pubKeyTxIns :: Fold [TxIn] TxIn
-pubKeyTxIns = folding (filter (\TxIn{ txInType = t } -> t == Just ConsumePublicKeyAddress))
 
 {- note [Minting of Ada]
 
@@ -148,7 +138,6 @@ minAdaCardanoTxOut :: Babbage.PParams (Babbage.BabbageEra StandardCrypto) -> Tx.
 minAdaCardanoTxOut params txOut = let
   toLovelace = C.Lovelace . C.Ledger.unCoin
   initialValue = txOutValue txOut
-  fromPlutusTxOut = C.Api.toShelleyTxOut C.Api.ShelleyBasedEraBabbage . C.Api.toCtxUTxOTxOut . getTxOut
   firstEstimate = toLovelace . C.Ledger.evaluateMinLovelaceOutput params $ fromPlutusTxOut txOut
   in -- if the estimate is above the initialValue, we run minAdaAgain, just to be sure that the
      -- new amount didn't change the TxOut size and requires more ada.
@@ -163,7 +152,6 @@ minAdaTxOut :: Babbage.PParams (Babbage.BabbageEra StandardCrypto) -> TxOut -> C
 minAdaTxOut params txOut = let
   toLovelace = C.Lovelace . C.Ledger.unCoin
   initialValue = txOutValue txOut
-  fromPlutusTxOut = C.Api.toShelleyTxOut C.Api.ShelleyBasedEraBabbage . C.Api.toCtxUTxOTxOut . getTxOut
   firstEstimate = toLovelace . C.Ledger.evaluateMinLovelaceOutput params $ fromPlutusTxOut txOut
   in -- if the estimate is above the initialValue, we run minAdaAgain, just to be sure that the
      -- new amount didn't change the TxOut size and requires more ada.

@@ -90,6 +90,7 @@ module Plutus.Contract.Effects( -- TODO: Move to Requests.Internal
     ActiveEndpoint(..),
     ) where
 
+import Cardano.Api qualified as C
 import Cardano.Node.Emulator.Params (Params)
 import Cardano.Node.Emulator.TimeSlot (SlotConversionError)
 import Control.Lens (Iso', Prism', iso, makePrisms, prism')
@@ -122,10 +123,10 @@ data PABReq =
     AdjustUnbalancedTxReq UnbalancedTx
     | AwaitSlotReq Slot
     | AwaitTimeReq POSIXTime
-    | AwaitUtxoSpentReq TxOutRef
+    | AwaitUtxoSpentReq C.TxIn
     | AwaitUtxoProducedReq CardanoAddress
-    | AwaitTxStatusChangeReq TxId
-    | AwaitTxOutStatusChangeReq TxOutRef
+    | AwaitTxStatusChangeReq C.TxId
+    | AwaitTxOutStatusChangeReq C.TxIn
     | CurrentNodeClientSlotReq
     | CurrentChainIndexSlotReq
     | CurrentTimeReq
@@ -172,8 +173,8 @@ data PABResp =
     | AwaitTimeResp POSIXTime
     | AwaitUtxoSpentResp ChainIndexTx
     | AwaitUtxoProducedResp (NonEmpty ChainIndexTx)
-    | AwaitTxStatusChangeResp TxId TxStatus
-    | AwaitTxOutStatusChangeResp TxOutRef TxOutStatus
+    | AwaitTxStatusChangeResp C.TxId TxStatus
+    | AwaitTxOutStatusChangeResp C.TxIn TxOutStatus
     | CurrentNodeClientSlotResp Slot
     | CurrentChainIndexSlotResp Slot
     | CurrentTimeResp POSIXTime
@@ -372,7 +373,7 @@ instance Pretty BalanceTxResponse where
     BalanceTxFailed e   -> "BalanceTxFailed:" <+> pretty e
     BalanceTxSuccess tx -> "BalanceTxSuccess:" <+> pretty (getCardanoTxId tx)
 
-_AwaitTxStatusChangeResp' :: TxId -> Prism' PABResp TxStatus
+_AwaitTxStatusChangeResp' :: C.TxId -> Prism' PABResp TxStatus
 _AwaitTxStatusChangeResp' i =
   prism'
     (AwaitTxStatusChangeResp i)

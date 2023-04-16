@@ -1,11 +1,12 @@
-{-# LANGUAGE ConstraintKinds     #-}
-{-# LANGUAGE DeriveAnyClass      #-}
-{-# LANGUAGE DeriveGeneric       #-}
-{-# LANGUAGE DerivingVia         #-}
-{-# LANGUAGE FlexibleContexts    #-}
-{-# LANGUAGE FlexibleInstances   #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell     #-}
+{-# LANGUAGE ConstraintKinds      #-}
+{-# LANGUAGE DeriveAnyClass       #-}
+{-# LANGUAGE DeriveGeneric        #-}
+{-# LANGUAGE DerivingVia          #-}
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE ScopedTypeVariables  #-}
+{-# LANGUAGE TemplateHaskell      #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -13,30 +14,28 @@ module Ledger.Index.Internal where
 
 import Prelude hiding (lookup)
 
+import Cardano.Api qualified as C
 import Cardano.Ledger.Alonzo.Scripts (ExUnits)
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr)
-import Codec.Serialise (Serialise)
 import Control.Lens (makeClassyPrisms)
 import Data.Aeson (FromJSON (..), ToJSON (..))
 import Data.Map qualified as Map
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import Ledger.Orphans ()
-import Ledger.Tx.Internal (TxOut)
 import Plutus.V1.Ledger.Scripts qualified as Scripts
-import Plutus.V1.Ledger.Tx qualified as PV1
 import Prettyprinter (Pretty)
 import Prettyprinter.Extras (PrettyShow (..))
 
 -- | The UTxOs of a blockchain indexed by their references.
-newtype UtxoIndex = UtxoIndex { getIndex :: Map.Map PV1.TxOutRef TxOut }
-    deriving stock (Show, Generic)
-    deriving newtype (Eq, Semigroup, Monoid, Serialise)
-    deriving anyclass (FromJSON, ToJSON)
+type UtxoIndex = C.UTxO C.BabbageEra
+
+deriving newtype instance Semigroup (C.UTxO era)
+deriving newtype instance Monoid (C.UTxO era)
 
 -- | A reason why a transaction is invalid.
 data ValidationError =
-    TxOutRefNotFound PV1.TxOutRef
+    TxOutRefNotFound C.TxIn
     -- ^ The transaction output consumed by a transaction input could not be found (either because it was already spent, or because
     -- there was no transaction with the given hash on the blockchain).
     | ScriptFailure Scripts.ScriptError
