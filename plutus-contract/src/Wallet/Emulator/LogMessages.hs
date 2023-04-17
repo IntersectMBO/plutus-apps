@@ -14,15 +14,13 @@ module Wallet.Emulator.LogMessages(
   ) where
 
 import Cardano.Api qualified as C
+import Cardano.Node.Emulator.MTL.LogMessages (TxBalanceMsg (..), _BalancingUnbalancedTx, _ValidationFailed)
 import Control.Lens.TH (makePrisms)
 import Data.Aeson (FromJSON, ToJSON)
-import Data.Text (Text)
 import GHC.Generics (Generic)
-import Ledger (Address, CardanoTx, getCardanoTxId)
-import Ledger.Index (ValidationError, ValidationPhase)
+import Ledger (Address)
 import Ledger.Slot (Slot)
-import Ledger.Tx.Constraints.OffChain (UnbalancedTx)
-import Prettyprinter (Pretty (..), colon, hang, viaShow, vsep, (<+>))
+import Prettyprinter (Pretty (..), viaShow, (<+>))
 import Wallet.Emulator.Error (WalletAPIError)
 
 data RequestHandlerLogMsg =
@@ -44,28 +42,3 @@ instance Pretty RequestHandlerLogMsg where
         HandleTxFailed e -> "handleTx failed:" <+> viaShow e
         UtxoAtFailed addr -> "UtxoAt failed:" <+> pretty addr
         AdjustingUnbalancedTx vl -> "Adjusting an unbalanced transaction:" <+> pretty vl
-
-data TxBalanceMsg =
-    BalancingUnbalancedTx UnbalancedTx
-    | FinishedBalancing CardanoTx
-    | SigningTx CardanoTx
-    | SubmittingTx CardanoTx
-    | ValidationFailed
-        ValidationPhase
-        C.TxId
-        CardanoTx
-        ValidationError
-        C.Value -- ^ The amount of collateral stored in the transaction.
-        [Text]
-    deriving stock (Eq, Show, Generic)
-    deriving anyclass (ToJSON, FromJSON)
-
-instance Pretty TxBalanceMsg where
-    pretty = \case
-        BalancingUnbalancedTx utx    -> hang 2 $ vsep ["Balancing an unbalanced transaction:", pretty utx]
-        FinishedBalancing tx         -> hang 2 $ vsep ["Finished balancing:", pretty tx]
-        SigningTx tx                 -> "Signing tx:" <+> pretty (getCardanoTxId tx)
-        SubmittingTx tx              -> "Submitting tx:" <+> pretty (getCardanoTxId tx)
-        ValidationFailed p i _ e _ _ -> "Validation error:" <+> pretty p <+> pretty i <> colon <+> pretty e
-
-makePrisms ''TxBalanceMsg

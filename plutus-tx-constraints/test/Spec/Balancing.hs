@@ -13,7 +13,6 @@ import Data.Default (def)
 import Data.Foldable (for_)
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Data.Sequence (Seq)
 import Data.Void (Void)
 import Test.Tasty (TestName, TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase)
@@ -85,7 +84,7 @@ w1 : w2 : _ = E.knownAddresses
 checkPredicate
   :: String
   -> Map CardanoAddress C.Value
-  -> (Seq E.ChainEvent -> Either EmulatorError a -> Maybe String)
+  -> (EmulatorLogs -> Either EmulatorError a -> Maybe String)
   -> EmulatorM a
   -> TestTree
 checkPredicate testName initialDist test contract =
@@ -98,7 +97,7 @@ checkPredicate testName initialDist test contract =
 checkLogPredicate
   :: String
   -> Map CardanoAddress C.Value
-  -> (Seq E.ChainEvent -> Maybe String)
+  -> (EmulatorLogs -> Maybe String)
   -> EmulatorM a
   -> TestTree
 checkLogPredicate testName initialDist test =

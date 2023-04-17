@@ -33,6 +33,7 @@ library
     Cardano.Node.Emulator.Fee
     Cardano.Node.Emulator.Generators
     Cardano.Node.Emulator.MTL
+    Cardano.Node.Emulator.MTL.LogMessages
     Cardano.Node.Emulator.MTL.Test
     Cardano.Node.Emulator.Params
     Cardano.Node.Emulator.TimeSlot
