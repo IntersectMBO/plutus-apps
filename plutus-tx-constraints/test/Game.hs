@@ -111,7 +111,7 @@ mkTx params lookups constraints =
 submitTxConfirmed :: MonadEmulator m => CardanoAddress -> Constraints.UnbalancedTx -> m CardanoTx
 submitTxConfirmed addr (Constraints.UnbalancedCardanoTx utx utxoIndex) = do
   let privateKey = Haskell.lookup addr $ zip E.knownAddresses E.knownPaymentPrivateKeys
-  tx <- submitUnbalancedTx utxoIndex addr utx privateKey
+  tx <- submitUnbalancedTx utxoIndex addr privateKey utx
   nextSlot
   Haskell.pure tx
 

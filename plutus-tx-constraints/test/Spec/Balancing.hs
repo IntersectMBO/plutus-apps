@@ -13,6 +13,7 @@ import Data.Default (def)
 import Data.Foldable (for_)
 import Data.Map (Map)
 import Data.Map qualified as Map
+import Data.Text qualified as Text
 import Data.Void (Void)
 import Test.Tasty (TestName, TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase)
@@ -63,7 +64,7 @@ mkTx params lookups constraints =
 submitTxConfirmed :: MonadEmulator m => CardanoAddress -> Constraints.UnbalancedTx -> m CardanoTx
 submitTxConfirmed addr (Constraints.UnbalancedCardanoTx utx utxoIndex) = do
   let privateKey = lookup addr $ zip E.knownAddresses E.knownPaymentPrivateKeys
-  tx <- submitUnbalancedTx utxoIndex addr utx privateKey
+  tx <- submitUnbalancedTx utxoIndex addr privateKey utx
   nextSlot
   pure tx
 
@@ -92,7 +93,7 @@ checkPredicate testName initialDist test contract =
     let params = def
         (res, log) = evalRWS (runExceptT contract) params (emptyEmulatorStateWithInitialDist initialDist)
     for_ (test log res) $ \msg ->
-      assertFailure $ renderLogs log ++ "\n" ++ msg
+      assertFailure $ Text.unpack (renderLogs log) ++ "\n" ++ msg
 
 checkLogPredicate
   :: String

@@ -65,8 +65,8 @@ hasValidatedTransactionCountOfTotal valid total lg =
     else Nothing
 
 -- | Render the logs in a format useful for debugging why a test failed.
-renderLogs :: EmulatorLogs -> String
-renderLogs = Text.unpack . Pretty.renderStrict . Pretty.layoutPretty Pretty.defaultLayoutOptions . Pretty.vsep . toList . fmap Pretty.pretty
+renderLogs :: EmulatorLogs -> Text.Text
+renderLogs = Pretty.renderStrict . Pretty.layoutPretty Pretty.defaultLayoutOptions . Pretty.vsep . toList . fmap Pretty.pretty
 
 
 type instance Realized EmulatorM a = a
@@ -137,11 +137,12 @@ propRunActionsWithOptions initialDist params predicate actions =
                               . unRunMonad
                               $ contract
           in monadicIO $
-              case (res, predicate finalState lg) of
-                (Left err, _) -> return $ counterexample (renderLogs lg ++ "\n" ++ show err)
+              let logs = Text.unpack (renderLogs lg)
+              in case (res, predicate finalState lg) of
+                (Left err, _) -> return $ counterexample (logs ++ "\n" ++ show err)
                                         $ property False
-                (Right prop, Just msg) -> return $ counterexample (renderLogs lg ++ "\n" ++ msg) prop
-                (Right prop, Nothing) -> return $ counterexample (renderLogs lg) prop
+                (Right prop, Just msg) -> return $ counterexample (logs ++ "\n" ++ msg) prop
+                (Right prop, Nothing) -> return $ counterexample logs prop
 
         balanceChangePredicate :: ContractModelResult state -> Property
         balanceChangePredicate result =

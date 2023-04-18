@@ -16,6 +16,7 @@ module Cardano.Node.Emulator.MTL (
   , fundsAt
   -- * Transactions
   , balanceTx
+  , signTx
   , submitUnbalancedTx
   , payToAddress
   -- * Logging
@@ -44,7 +45,7 @@ module Cardano.Node.Emulator.MTL (
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
 import Cardano.Node.Emulator qualified as E
-import Cardano.Node.Emulator.MTL.LogMessages (EmulatorMsg (..))
+import Cardano.Node.Emulator.MTL.LogMessages (EmulatorMsg (..), TxBalanceMsg (..))
 import Control.Lens (alaf, makeLenses, view, (%~), (&), (^.))
 import Control.Monad (void)
 import Control.Monad.Error.Class (MonadError, throwError)
@@ -135,7 +136,9 @@ handleChain eff = do
 
 -- | Queue the transaction, it will be processed when @nextSlot@ is called.
 queueTx :: MonadEmulator m => CardanoTx -> m ()
-queueTx tx = handleChain (E.queueTx tx)
+queueTx tx = do
+  logMsg L.Info $ TxBalanceMsg $ SubmittingTx tx
+  handleChain (E.queueTx tx)
 
 -- | Process the queued transactions and increase the slot number.
 nextSlot :: MonadEmulator m => m ()
@@ -189,30 +192,43 @@ balanceTx
   -> CardanoBuildTx
   -> m CardanoTx
 balanceTx utxoIndex changeAddr utx = do
+  logMsg L.Info $ TxBalanceMsg $ BalancingUnbalancedTx utx utxoIndex
   params <- ask
   es <- get
   let
     ownUtxos = C.UTxO $ toCtxUTxOTxOut . snd <$> es ^. esAddressMap . AM.fundsAt changeAddr
     utxoProvider = E.utxoProviderFromWalletOutputs ownUtxos utx
-  CardanoEmulatorEraTx <$> E.makeAutoBalancedTransactionWithUtxoProvider
+  tx <- CardanoEmulatorEraTx <$> E.makeAutoBalancedTransactionWithUtxoProvider
       params
       utxoIndex
       changeAddr
       (either (throwError . BalancingError) pure . utxoProvider)
       (throwError . either ValidationError ToCardanoError)
       utx
+  logMsg L.Info $ TxBalanceMsg $ FinishedBalancing tx
+  pure tx
+
+-- | Sign a transaction with the given signatures.
+signTx
+  :: (MonadEmulator m, Foldable f)
+  => f PaymentPrivateKey -- ^ Signatures
+  -> CardanoTx
+  -> m CardanoTx
+signTx keys tx = do
+  logMsg L.Info $ TxBalanceMsg $ SigningTx tx
+  pure $ foldr (addCardanoTxSignature . unPaymentPrivateKey) tx keys
 
 -- | Balance a transaction, sign it with the given signatures, and finally queue it.
 submitUnbalancedTx
   :: (MonadEmulator m, Foldable f)
   => UtxoIndex -- ^ Just the transaction inputs, not the entire 'UTxO'.
   -> CardanoAddress -- ^ Wallet address
-  -> CardanoBuildTx
   -> f PaymentPrivateKey -- ^ Signatures
+  -> CardanoBuildTx
   -> m CardanoTx
-submitUnbalancedTx utxoIndex changeAddr utx keys = do
+submitUnbalancedTx utxoIndex changeAddr keys utx = do
   newTx <- balanceTx utxoIndex changeAddr utx
-  let signedTx = foldr (addCardanoTxSignature . unPaymentPrivateKey) newTx keys
+  signedTx <- signTx keys newTx
   queueTx signedTx
   pure signedTx
 
@@ -222,20 +238,24 @@ payToAddress (sourceAddr, sourcePrivKey) targetAddr value = do
   let buildTx = CardanoBuildTx $ E.emptyTxBodyContent
            { C.txOuts = [C.TxOut targetAddr (toCardanoTxOutValue value) C.TxOutDatumNone C.ReferenceScriptNone]
            }
-  getCardanoTxId <$> submitUnbalancedTx mempty sourceAddr buildTx [sourcePrivKey]
+  getCardanoTxId <$> submitUnbalancedTx mempty sourceAddr [sourcePrivKey] buildTx
+
+-- | Log any message
+logMsg :: MonadEmulator m => L.LogLevel -> EmulatorMsg -> m ()
+logMsg l = tell . pure . L.LogMessage l
 
 -- | Log a message at the 'Debug' level
 logDebug :: (ToJSON a, MonadEmulator m) => a -> m ()
-logDebug = tell . pure . L.LogMessage L.Debug . GenericMsg . toJSON
+logDebug = logMsg L.Debug . GenericMsg . toJSON
 
 -- | Log a message at the 'Info' level
 logInfo :: (ToJSON a, MonadEmulator m) => a -> m ()
-logInfo = tell . pure . L.LogMessage L.Info . GenericMsg . toJSON
+logInfo = logMsg L.Info . GenericMsg . toJSON
 
 -- | Log a message at the 'Warning' level
 logWarn :: (ToJSON a, MonadEmulator m) => a -> m ()
-logWarn = tell . pure . L.LogMessage L.Warning . GenericMsg . toJSON
+logWarn = logMsg L.Warning . GenericMsg . toJSON
 
 -- | Log a message at the 'Error' level
 logError :: (ToJSON a, MonadEmulator m) => a -> m ()
-logError = tell . pure . L.LogMessage L.Error . GenericMsg . toJSON
+logError = logMsg L.Error . GenericMsg . toJSON

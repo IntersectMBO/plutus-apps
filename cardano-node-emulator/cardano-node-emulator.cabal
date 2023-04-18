@@ -126,5 +126,7 @@ test-suite cardano-node-emulator-test
     , hedgehog
     , mtl
     , tasty
+    , tasty-golden
     , tasty-hedgehog
     , tasty-hunit
+    , text
