@@ -483,9 +483,9 @@ assertModel s p = QCCM.assertModel s (p . fmap coerce)
 -- as it is a proxy for the predicate.
 observeChain :: ContractModel state
              => String
-             -> ((QCCM.SymToken -> CardanoAPI.AssetId) -> QCCM.ChainState -> Bool)
+             -> ((QCCM.SymToken -> AssetClass) -> QCCM.ChainState -> Bool)
              -> DL state ()
-observeChain s p = QCCM.observe s p
+observeChain s p = QCCM.observe s (\ sem cs -> p (fromAssetId . sem) cs)
 
 type Actions state = QCCM.Actions (CMI.WithInstances (WrappedState state))
 
