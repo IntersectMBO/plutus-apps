@@ -181,10 +181,10 @@ prop_Escrow_DoubleSatisfaction = checkDoubleSatisfactionWithOptions options defa
 observeUTxOEscrow :: DL EscrowModel ()
 observeUTxOEscrow = do
   action $ Pay w1 10
-  observeChain "After payment" $ \ _ cst -> numUTxOsAt addr cst == 1
+  observe "After payment" $ \ _ cst -> numUTxOsAt addr cst == 1
   waitUntilDL 100
   action $ Refund w1
-  observeChain "After refund" $ \ _ cst -> numUTxOsAt addr cst == 0
+  observe "After refund" $ \ _ cst -> numUTxOsAt addr cst == 0
   where
     addr = Scripts.validatorCardanoAddressAny Params.testnet $ typedValidator modelParams
 
