@@ -15,6 +15,7 @@ module Spec.Escrow( tests
                   , prop_Escrow
                   , prop_Escrow_DoubleSatisfaction
                   , prop_FinishEscrow
+                  , prop_observeEscrow
                   , prop_NoLockedFunds
                   , prop_validityChecks
                   , EscrowModel) where
@@ -26,9 +27,7 @@ import Data.Foldable
 import Data.Map (Map)
 import Data.Map qualified as Map
 
-import Cardano.Api.Shelley (TxValidityLowerBound (..), TxValidityUpperBound (..), ValidityLowerBoundSupportedInEra (..),
-                            ValidityNoUpperBoundSupportedInEra (..), ValidityUpperBoundSupportedInEra (..),
-                            toPlutusData)
+import Cardano.Api.Shelley (toPlutusData)
 import Cardano.Node.Emulator.Params qualified as Params
 import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
 import Ledger (Slot (..), minAdaTxOutEstimated)
@@ -47,7 +46,9 @@ import Plutus.Trace.Emulator qualified as Trace
 import PlutusTx (fromData)
 import PlutusTx.Monoid (inv)
 
+import Cardano.Api hiding (Value)
 import Test.QuickCheck as QC hiding ((.&&.))
+import Test.QuickCheck.ContractModel (utxo)
 import Test.QuickCheck.ContractModel.ThreatModel
 import Test.Tasty
 import Test.Tasty.HUnit qualified as HUnit
@@ -176,6 +177,25 @@ prop_Escrow = propRunActionsWithOptions options defaultCoverageOptions (\ _ -> p
 
 prop_Escrow_DoubleSatisfaction :: Actions EscrowModel -> Property
 prop_Escrow_DoubleSatisfaction = checkDoubleSatisfactionWithOptions options defaultCoverageOptions
+
+observeUTxOEscrow :: DL EscrowModel ()
+observeUTxOEscrow = do
+  action $ Pay w1 10
+  observeChain "After payment" $ \ _ cst -> numUTxOsAt addr cst == 1
+  waitUntilDL 100
+  action $ Refund w1
+  observeChain "After refund" $ \ _ cst -> numUTxOsAt addr cst == 0
+  where
+    addr = Scripts.validatorCardanoAddressAny Params.testnet $ typedValidator modelParams
+
+    numUTxOsAt addr cst =
+      length [ ()
+             | TxOut (AddressInEra _ addr') _ _ _ <- Map.elems . unUTxO $ utxo cst
+             , toAddressAny addr' == addr
+             ]
+
+prop_observeEscrow :: Property
+prop_observeEscrow = forAllDL observeUTxOEscrow prop_Escrow
 
 finishEscrow :: DL EscrowModel ()
 finishEscrow = do

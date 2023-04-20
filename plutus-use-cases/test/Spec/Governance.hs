@@ -34,6 +34,8 @@ import Data.Map qualified as Map
 import Data.Maybe (listToMaybe)
 import Data.Semigroup (Sum (..))
 
+import Cardano.Api hiding (Value)
+import Cardano.Api.Shelley (fromPlutusData, toPlutusData)
 import Cardano.Node.Emulator.Params qualified as Params
 import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
 import Ledger qualified
@@ -49,9 +51,11 @@ import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Value (TokenName)
 import Plutus.Trace.Emulator (EmulatorTrace)
 import Plutus.Trace.Emulator qualified as Trace
+import PlutusTx (fromData, toData)
 import PlutusTx.Prelude (BuiltinByteString)
 
 import Test.QuickCheck qualified as QC
+import Test.QuickCheck.ContractModel (utxo)
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit qualified as HUnit
@@ -72,7 +76,7 @@ data GovernanceModel = GovernanceModel { _state        :: (BuiltinByteString, Bo
                                        , _proposedLaw  :: BuiltinByteString
                                       } deriving (Eq, Show, Data, Generic)
 
-data Phase = Initial | Establishing | Proposing | Voting | Tallying | Finish deriving (Eq, Show, Data, Generic)
+data Phase = Initial | Establishing | Proposing | Voting | Tallying deriving (Eq, Show, Data, Generic)
 
 makeLenses ''GovernanceModel
 
@@ -83,14 +87,12 @@ deriving instance Show (ContractInstanceKey GovernanceModel w s e params)
 -- NewLaw starts the governance contract
 -- AddVote adds a vote to an ongoing proposal
 -- StartProposal starts the proposal contract
--- CheckLaw calls an off-chain endpoint to check whether the law has been changed
 -- Tally waits a slot to ensure that the contract has updated the law before checking the law
 instance ContractModel GovernanceModel where
   data Action GovernanceModel = Init Wallet
                           | NewLaw Wallet BuiltinByteString
                           | AddVote Wallet TokenName Bool
                           | StartProposal Wallet BuiltinByteString TokenName Slot
-                          | CheckLaw Wallet
                           | Tally Wallet
     deriving (Eq, Show, Data, Generic)
 
@@ -118,7 +120,7 @@ instance ContractModel GovernanceModel where
                                  })]
   startInstances _ _ = []
 
-  perform h _ s a = case a of
+  perform h _ _ a = case a of
     Init _ -> do
       return ()
     NewLaw w l        -> do
@@ -129,9 +131,6 @@ instance ContractModel GovernanceModel where
       delay 1
     StartProposal _ _ _ _ -> do
       return ()
-      delay 1
-    CheckLaw w    -> do
-      Trace.callEndpoint @"check-law" (h $ GovH w) (fst (s ^. contractState . state))
       delay 1
     Tally _ -> do
       delay 1
@@ -162,11 +161,8 @@ instance ContractModel GovernanceModel where
       curSlot <- viewModelState currentSlot
       when (curSlot <= slot) $ phase .= Voting
       wait 1
-    CheckLaw _ -> do
-      phase .= Proposing
-      wait 1
     Tally _ -> do
-      phase .= Finish
+      phase .= Proposing
       wait 1
 
   -- When the deadline is reached count all the votes and update the law if necessary.
@@ -182,12 +178,12 @@ instance ContractModel GovernanceModel where
 
 
   initialState = GovernanceModel { _state = ("" , False)
-                             , _targets       = Map.empty
-                             , _walletTokens = Map.empty
-                             , _endSlot = 0
-                             , _phase = Initial
-                             , _proposedLaw = ""
-                             }
+                                 , _targets       = Map.empty
+                                 , _walletTokens = Map.empty
+                                 , _endSlot = 0
+                                 , _phase = Initial
+                                 , _proposedLaw = ""
+                                 }
 
   arbitraryAction s
     | s ^.contractState . phase == Initial
@@ -196,8 +192,6 @@ instance ContractModel GovernanceModel where
       = NewLaw <$> QC.elements testWallets <*> QC.elements laws
     | s ^.contractState . phase == Proposing
       = StartProposal <$> QC.elements testWallets <*> QC.elements laws <*> QC.elements tokens <*> (Slot . QC.getPositive <$> QC.scale (*10) QC.arbitrary)
-    | s ^.contractState . phase == Finish
-      = CheckLaw <$> QC.elements testWallets
     | s ^.contractState . phase == Tallying
       = Tally <$> QC.elements testWallets
     | otherwise
@@ -215,7 +209,6 @@ instance ContractModel GovernanceModel where
     StartProposal w _ t _ -> currentPhase == Proposing
                                 && ownsVotingToken' w t (s ^. contractState . walletTokens)
     Tally _ -> currentPhase == Tallying
-    CheckLaw _ -> currentPhase == Finish
     where currentPhase = s ^. contractState . phase
 
 ownsVotingToken' :: Wallet -> TokenName -> Map Wallet TokenName -> Bool
@@ -234,6 +227,20 @@ prop_Gov = propRunActionsWithOptions options defaultCoverageOptions (\ _ -> pure
 
 testWallets :: [Wallet]
 testWallets = [w1, w2, w3, w4, w5, w6, w7, w8, w9, w10]
+
+checkLaw :: DL GovernanceModel ()
+checkLaw = do
+  law <- viewContractState $ state . _1
+  let checkDatum (TxOutDatumInline _ d) = fmap Gov.getLaw (fromData $ toPlutusData d) == Just law
+      checkDatum (TxOutDatumHash _ h) = hashScriptData (fromPlutusData $ toData (Gov.GovState (Gov.Law law) mph Nothing)) == h
+      checkDatum _ = False
+      mph = Scripts.forwardingMintingPolicyHash (Gov.typedValidator params)
+  observeChain ("law == " ++ show law) $ \ _ cst ->
+    1 == length [ ()
+                | TxOut addr _ d _ <- Map.elems . unUTxO $ utxo cst
+                , validatorAddress == addr
+                , checkDatum d
+                ]
 
 finishGovernance :: DL GovernanceModel ()
 finishGovernance = do
@@ -294,8 +301,7 @@ checkDL = do
           waitUntilDL 1053
           action $ AddVote w6 "TestLawToken6" True
           action $ Tally w8
-          action $ CheckLaw w8
-
+          checkLaw
 
 prop_Check :: QC.Property
 prop_Check = QC.withMaxSuccess 1 $ forAllDL checkDL prop_Gov

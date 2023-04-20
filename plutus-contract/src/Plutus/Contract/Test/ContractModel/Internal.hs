@@ -43,7 +43,7 @@ module Plutus.Contract.Test.ContractModel.Internal
   ) where
 
 import Cardano.Node.Emulator.Chain
-import Cardano.Node.Emulator.MTL.Test (chainStateToChainIndex)
+import Cardano.Node.Emulator.MTL.Test (chainStateToChainIndex, chainStateToContractModelChainState)
 import Cardano.Node.Emulator.Params
 import Control.DeepSeq
 import Control.Monad.Freer.Reader (Reader, ask, runReader)
@@ -75,7 +75,7 @@ import Ledger.Scripts
 import Ledger.Slot
 import Plutus.Contract (ContractInstanceId)
 import Plutus.Contract.Test hiding (not)
-import Plutus.Trace.Effects.EmulatorControl (discardWallets)
+import Plutus.Trace.Effects.EmulatorControl (EmulatorControl, discardWallets)
 import Plutus.Trace.Emulator as Trace (BaseEmulatorEffects, EmulatorEffects, EmulatorTrace, activateContract,
                                        freezeContractInstance, waitNSlots)
 import Plutus.V1.Ledger.Crypto
@@ -169,16 +169,17 @@ liftSpecificationTrace m = do
   s <- get
   raise . raise $ runReader s m
 
-instance HasChainIndex (EmulatorTraceWithInstances state) where
+instance Member EmulatorControl effs => HasChainIndex (Eff effs) where
   getChainIndex = do
     nid <- pNetworkId <$> EmulatorControl.getParams
     chainStateToChainIndex nid <$> EmulatorControl.chainState
+  getChainState = chainStateToContractModelChainState <$> EmulatorControl.chainState
 
 -- | `delay n` delays emulator execution by `n` slots
 delay :: Integer -> RunMonad (SpecificationEmulatorTrace state) ()
 delay = lift . void . Trace.waitNSlots . fromInteger
 
-instance Member Waiting effs => IsRunnable (Eff effs) where
+instance (HasChainIndex (Eff effs), Member Waiting effs) => IsRunnable (Eff effs) where
   awaitSlot = void . waitUntilSlot . Slot . toInteger . unSlotNo
 
 type instance Realized (Eff effs) a = a

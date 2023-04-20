@@ -11,12 +11,12 @@ repository cardano-haskell-packages
     c00aae8461a256275598500ea0e187588c35a5d5d7454fb57eac18d9edb86a56
     d4a35cd3121aa00d18544bb0ac01c3e1691d618f462c46129271bccf39f7e8ee
 
-index-state: 2023-02-28T00:00:00Z
+index-state: 2023-04-19T00:00:00Z
 
 -- See CONTRIBUTING.adoc for how to update index-state
 index-state:
-  , hackage.haskell.org 2023-02-28T00:00:00Z
-  , cardano-haskell-packages 2023-02-28T00:00:00Z
+  , hackage.haskell.org 2023-04-19T00:00:00Z
+  , cardano-haskell-packages 2023-04-25T00:00:00Z
 
 packages: cardano-node-emulator
           cardano-streaming

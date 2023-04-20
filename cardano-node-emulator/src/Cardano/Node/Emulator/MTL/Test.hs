@@ -17,6 +17,7 @@ module Cardano.Node.Emulator.MTL.Test (
   , propRunActionsWithOptions
   -- * Other exports
   , chainStateToChainIndex
+  , chainStateToContractModelChainState
 ) where
 
 import Control.Lens (use, (^.))
@@ -79,6 +80,8 @@ instance HasChainIndex EmulatorM where
   getChainIndex = do
     nid <- pNetworkId <$> getParams
     chainStateToChainIndex nid <$> use esChainState
+  getChainState = do
+    chainStateToContractModelChainState <$> use esChainState
 
 -- | Sanity check a `ContractModel`. Ensures that wallet balances are not always unchanged.
 propSanityCheckModel :: forall state. ContractModel state => QC.Property
@@ -181,6 +184,11 @@ chainStateToChainIndex nid cs =
           updateState :: [OnChainTx] -> CM.ChainState -> CM.ChainState
           updateState block state =
             CM.ChainState{ slot = slot state + 1
-                          , utxo = Index.insertBlock block (utxo state)
-                          }
+                         , utxo = Index.insertBlock block (utxo state)
+                         }
 
+chainStateToContractModelChainState :: E.ChainState -> CM.ChainState
+chainStateToContractModelChainState cst =
+  ChainState { utxo = cst ^. E.index
+             , slot = fromIntegral $ cst ^. E.chainCurrentSlot
+             }

@@ -34,6 +34,7 @@ module Plutus.Contracts.Governance (
     , GovError
     , covIdx
     , covIdx'
+    , getLaw
     ) where
 
 import Control.Lens (makeClassyPrisms, review)
@@ -116,11 +117,9 @@ getLaw (GovState (Law l) _ _) = l
 --
 -- * @new-law@ to create a new law and distribute voting tokens
 -- * @add-vote@ to vote on a proposal with the name of the voting token and a boolean to vote in favor or against.
--- * @check-law@ to check to see if the law has changed. (temporarily needed for the contract model)
 type Schema =
     Endpoint "new-law" Law
         .\/ Endpoint "add-vote" (Address, TokenName, Bool)
-        .\/ Endpoint "check-law" BuiltinByteString
 
 -- | The governace contract parameters.
 data Params = Params
@@ -215,7 +214,7 @@ contract ::
     -> Contract () Schema e ()
 contract params = forever $ mapError (review _GovError) endpoints where
     theClient = client params
-    endpoints = selectList [initLaw, addVote, checkLaw]
+    endpoints = selectList [initLaw, addVote]
 
     addVote = endpoint @"add-vote" $ \(owner, tokenName, vote) ->
         void $ SM.runStep theClient (AddVote owner tokenName vote)
@@ -225,19 +224,6 @@ contract params = forever $ mapError (review _GovError) endpoints where
         void $ SM.runInitialise theClient (GovState law mph Nothing) (Ada.lovelaceValueOf 1)
         let tokens = Haskell.zipWith (const (mkTokenName (baseTokenName params))) (initialHolders params) [1..]
         void $ SM.runStep theClient $ MintTokens tokens
-
-    -- Temporary endpoint for checking the state of the contract to see if the law has changed
-    checkLaw = endpoint @"check-law" $ \l -> do
-               maybeState <- SM.getOnChainState theClient
-               case maybeState of
-                       Nothing
-                           -> error ()
-                       Just (SM.getStateData -> (GovState law mph Nothing), _)
-                           -> do if l == getLaw (GovState law mph Nothing) then return () else error ()
-                       Just (SM.getStateData -> (GovState _ _ (Just (Voting _ _))), _)
-                           -> error ()
-                       _ -> do return ()
-
 
 -- | The contract for proposing changes to a law.
 proposalContract ::
