@@ -62,7 +62,6 @@ import Control.Monad.RWS.Class (MonadRWS)
 import Control.Monad.Trans (lift)
 import Control.Monad.Writer (WriterT)
 import Data.Default (def)
-import Data.Sequence (Seq)
 import Ledger.Value.CardanoAPI qualified as Value
 import Test.QuickCheck qualified as QC
 import Test.QuickCheck.ContractModel as QCCM
@@ -112,7 +111,7 @@ mkTx params lookups constraints =
 submitTxConfirmed :: MonadEmulator m => CardanoAddress -> Constraints.UnbalancedTx -> m CardanoTx
 submitTxConfirmed addr (Constraints.UnbalancedCardanoTx utx utxoIndex) = do
   let privateKey = Haskell.lookup addr $ zip E.knownAddresses E.knownPaymentPrivateKeys
-  tx <- submitUnbalancedTx utxoIndex addr utx privateKey
+  tx <- submitUnbalancedTx utxoIndex addr privateKey utx
   nextSlot
   Haskell.pure tx
 
@@ -195,7 +194,7 @@ data GuessArgs =
 -- | The "lock" contract
 lock :: MonadEmulator m => CardanoAddress -> LockArgs -> m ()
 lock wallet LockArgs { lockArgsGameParam, lockArgsSecret, lockArgsValue } = do
-    -- logInfo @Haskell.String $ "Pay " <> Haskell.show lockArgsValue <> " to the script"
+    logInfo @Haskell.String $ "Pay " <> Haskell.show lockArgsValue <> " to the script"
     let lookups = Constraints.typedValidatorLookups (gameInstance lockArgsGameParam)
         tx = Constraints.mustPayToTheScriptWithDatumInTx (hashString lockArgsSecret) lockArgsValue
     void $ submitTxConstraints wallet lookups tx
@@ -203,7 +202,7 @@ lock wallet LockArgs { lockArgsGameParam, lockArgsSecret, lockArgsValue } = do
 -- | The "guess" contract
 guess :: MonadEmulator m => CardanoAddress -> GuessArgs -> m ()
 guess wallet GuessArgs { guessArgsGameParam, guessArgsSecret } = do
-    -- logInfo @Haskell.String "Waiting for script to have a UTxO of at least 1 lovelace"
+    logInfo @Haskell.String "Waiting for script to have a UTxO of at least 1 lovelace"
     utxos <- utxosAt (gameAddress guessArgsGameParam)
 
     let lookups = Constraints.typedValidatorLookups (gameInstance guessArgsGameParam)

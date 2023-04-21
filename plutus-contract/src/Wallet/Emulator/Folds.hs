@@ -71,7 +71,7 @@ import Ledger.AddressMap (UtxoMap)
 import Ledger.AddressMap qualified as AM
 import Ledger.Index (ValidationError, ValidationPhase (Phase1, Phase2))
 import Ledger.Tx (CardanoTx, getCardanoTxFee, txOutValue)
-import Ledger.Tx.Constraints.OffChain (UnbalancedTx)
+import Ledger.Tx.Constraints.OffChain (UnbalancedTx (..))
 import Plutus.Contract (Contract)
 import Plutus.Contract.Effects (PABReq, PABResp, _BalanceTxReq)
 import Plutus.Contract.Request (MkTxLog)
@@ -112,7 +112,7 @@ validatedTransactions = preMapMaybe (preview (eteEvent . chainEvent . _TxnValida
 
 -- | Unbalanced transactions that are sent to the wallet for balancing
 walletTxBalanceEvents :: EmulatorEventFold [UnbalancedTx]
-walletTxBalanceEvents = preMapMaybe (preview (eteEvent . walletEvent' . _2 . _TxBalanceLog . _BalancingUnbalancedTx)) L.list
+walletTxBalanceEvents = fmap (uncurry UnbalancedCardanoTx) <$> preMapMaybe (preview (eteEvent . walletEvent' . _2 . _TxBalanceLog . _BalancingUnbalancedTx)) L.list
 
 -- | Min lovelace of 'txOut's from adjusted unbalanced transactions for all wallets
 walletsAdjustedTxEvents :: EmulatorEventFold [C.Lovelace]

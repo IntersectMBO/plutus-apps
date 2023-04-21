@@ -29,7 +29,6 @@ import Data.Foldable (toList)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Monoid (Sum (..))
-import Data.Sequence (Seq)
 import Data.Text qualified as Text
 import Prettyprinter qualified as Pretty
 import Prettyprinter.Render.Text qualified as Pretty
@@ -54,12 +53,12 @@ import Ledger.Value.CardanoAPI qualified as Value
 
 -- | Test the number of validated transactions and the total number of transactions.
 -- Returns a failure message if the numbers don't match up.
-hasValidatedTransactionCountOfTotal :: Int -> Int -> Seq E.ChainEvent -> Maybe String
+hasValidatedTransactionCountOfTotal :: Int -> Int -> EmulatorLogs -> Maybe String
 hasValidatedTransactionCountOfTotal valid total lg =
   let count = \case
-        E.TxnValidate{}       -> (Sum 1, Sum 0)
-        E.TxnValidationFail{} -> (Sum 0, Sum 1)
-        _                     -> mempty
+        LogMessage _ (ChainEvent E.TxnValidate{})       -> (Sum 1, Sum 0)
+        LogMessage _ (ChainEvent E.TxnValidationFail{}) -> (Sum 0, Sum 1)
+        _                                               -> mempty
       (Sum validCount, Sum invalidCount) = foldMap count lg
   in
     if valid /= validCount then Just $ "Unexpected number of valid transactions: " ++ show validCount
@@ -67,8 +66,8 @@ hasValidatedTransactionCountOfTotal valid total lg =
     else Nothing
 
 -- | Render the logs in a format useful for debugging why a test failed.
-renderLogs :: Seq E.ChainEvent -> String
-renderLogs = Text.unpack . Pretty.renderStrict . Pretty.layoutPretty Pretty.defaultLayoutOptions . Pretty.vsep . toList . fmap Pretty.pretty
+renderLogs :: EmulatorLogs -> Text.Text
+renderLogs = Pretty.renderStrict . Pretty.layoutPretty Pretty.defaultLayoutOptions . Pretty.vsep . toList . fmap Pretty.pretty
 
 
 type instance Realized EmulatorM a = a
@@ -107,7 +106,7 @@ propRunActions_ = propRunActions (\_ _ -> Nothing)
 
 propRunActions :: forall state.
     RunModel state EmulatorM
-    => (ModelState state -> Seq E.ChainEvent -> Maybe String) -- ^ Predicate to check at the end of execution
+    => (ModelState state -> EmulatorLogs -> Maybe String) -- ^ Predicate to check at the end of execution
     -> Actions state                           -- ^ The actions to run
     -> Property
 propRunActions = propRunActionsWithOptions (Map.fromList $ (, Value.adaValueOf 100_000_000) <$> E.knownAddresses) def
@@ -116,7 +115,7 @@ propRunActionsWithOptions :: forall state.
     RunModel state EmulatorM
     => Map CardanoAddress C.Value              -- ^ Initial distribution of funds
     -> E.Params                                -- ^ Node parameters
-    -> (ModelState state -> Seq E.ChainEvent -> Maybe String) -- ^ Predicate to check at the end of execution
+    -> (ModelState state -> EmulatorLogs -> Maybe String) -- ^ Predicate to check at the end of execution
     -> Actions state                           -- ^ The actions to run
     -> Property
 propRunActionsWithOptions initialDist params predicate actions =
@@ -141,11 +140,12 @@ propRunActionsWithOptions initialDist params predicate actions =
                               . unRunMonad
                               $ contract
           in monadicIO $
-              case (res, predicate finalState lg) of
-                (Left err, _) -> return $ counterexample (renderLogs lg ++ "\n" ++ show err)
+              let logs = Text.unpack (renderLogs lg)
+              in case (res, predicate finalState lg) of
+                (Left err, _) -> return $ counterexample (logs ++ "\n" ++ show err)
                                         $ property False
-                (Right prop, Just msg) -> return $ counterexample (renderLogs lg ++ "\n" ++ msg) prop
-                (Right prop, Nothing) -> return $ counterexample (renderLogs lg) prop
+                (Right prop, Just msg) -> return $ counterexample (logs ++ "\n" ++ msg) prop
+                (Right prop, Nothing) -> return $ counterexample logs prop
 
         balanceChangePredicate :: ContractModelResult state -> Property
         balanceChangePredicate result =

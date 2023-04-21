@@ -110,7 +110,7 @@ import Plutus.V1.Ledger.Api qualified as V1
 import Plutus.V2.Ledger.Api qualified as V2
 import Plutus.V2.Ledger.Tx qualified as V2.Tx hiding (TxId (..), TxIn (..), TxInType (..))
 
-import Prettyprinter (Pretty (pretty), braces, colon, hang, nest, viaShow, vsep, (<+>))
+import Prettyprinter (Pretty (pretty), colon, hang, nest, viaShow, vsep, (<+>))
 -- for re-export
 import Ledger.Index.Internal (UtxoIndex)
 import Ledger.Tx.Internal as Export
@@ -286,8 +286,10 @@ instance Pretty CardanoTx where
                 , "validity range:" <+> viaShow (getCardanoTxValidityRange tx)
                 , hang 2 (vsep ("data:": fmap pretty (Map.toList (getCardanoTxData tx))))
                 , hang 2 (vsep ("redeemers:": fmap (\(k, V2.Redeemer red) -> viaShow k <+> ":" <+> viaShow red) (Map.toList $ getCardanoTxRedeemers tx)))
+                ] ++
+                [ hang 2 (vsep ("required signatures:": (viaShow <$> wits))) | let wits = getCardanoTxExtraKeyWitnesses tx, not (null wits)
                 ] ++ renderScriptWitnesses tx
-        in nest 2 $ vsep ["Tx" <+> pretty (getCardanoTxId tx) <> colon, braces (vsep lines')]
+        in nest 2 $ vsep ["Tx" <+> pretty (getCardanoTxId tx) <> colon, vsep lines']
 
 instance Pretty CardanoAPI.CardanoBuildTx where
   pretty txBodyContent = case C.makeSignedTransaction [] <$> CardanoAPI.makeTransactionBody Nothing mempty txBodyContent of
@@ -384,6 +386,11 @@ txBodyContentOuts = lens (map TxOut . C.txOuts) (\bodyContent outs -> bodyConten
 
 getCardanoTxRedeemers :: CardanoTx -> V2.Tx.Redeemers
 getCardanoTxRedeemers (CardanoTx (C.Tx txBody _) _) = snd $ CardanoAPI.scriptDataFromCardanoTxBody txBody
+
+getCardanoTxExtraKeyWitnesses :: CardanoTx -> [C.Hash C.PaymentKey]
+getCardanoTxExtraKeyWitnesses (CardanoEmulatorEraTx (C.Tx (C.TxBody C.TxBodyContent {..}) _)) = case txExtraKeyWits of
+  C.Api.TxExtraKeyWitnessesNone      -> mempty
+  C.Api.TxExtraKeyWitnesses _ txwits -> txwits
 
 -- | Update a map of unspent transaction outputs and signatures based on the inputs
 --   and outputs of a transaction.

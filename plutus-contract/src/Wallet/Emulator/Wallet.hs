@@ -259,8 +259,8 @@ handleWallet = \case
         )
         => UnbalancedTx
         -> Eff effs (Either WalletAPIError CardanoTx)
-    balanceTxH utx = runError $ do
-        logInfo $ BalancingUnbalancedTx utx
+    balanceTxH utx@(U.UnbalancedCardanoTx tx utxo) = runError $ do
+        logInfo $ BalancingUnbalancedTx tx utxo
         txCTx <- handleBalance utx
         logInfo $ FinishedBalancing txCTx
         pure txCTx
