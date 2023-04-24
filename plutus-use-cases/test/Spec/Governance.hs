@@ -235,7 +235,7 @@ checkLaw = do
       checkDatum (TxOutDatumHash _ h) = hashScriptData (fromPlutusData $ toData (Gov.GovState (Gov.Law law) mph Nothing)) == h
       checkDatum _ = False
       mph = Scripts.forwardingMintingPolicyHash (Gov.typedValidator params)
-  observeChain ("law == " ++ show law) $ \ _ cst ->
+  observe ("law == " ++ show law) $ \ _ cst ->
     1 == length [ ()
                 | TxOut addr _ d _ <- Map.elems . unUTxO $ utxo cst
                 , validatorAddress == addr

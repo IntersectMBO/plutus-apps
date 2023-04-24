@@ -190,9 +190,9 @@ instance Show (Action s) => Show (Action (WithInstances s)) where
   showsPrec p (UnderlyingAction a) = showsPrec p a
   showsPrec p (Unilateral w)       = showParen (p > 10) $ showString "Unilateral " . showsPrec 11 w
 
-instance HasSymTokens (Action s) => HasSymTokens (Action (WithInstances s)) where
-  getAllSymTokens (UnderlyingAction a) = getAllSymTokens a
-  getAllSymTokens Unilateral{}         = mempty
+instance HasSymbolics (Action s) => HasSymbolics (Action (WithInstances s)) where
+  getAllSymbolics (UnderlyingAction a) = getAllSymbolics a
+  getAllSymbolics Unilateral{}         = mempty
 
 deriving via StateModel.HasNoVariables Wallet instance StateModel.HasVariables Wallet
 

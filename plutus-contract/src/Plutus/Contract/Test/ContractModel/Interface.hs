@@ -33,7 +33,7 @@ module Plutus.Contract.Test.ContractModel.Interface
       ContractModel(..)
     , Actions
     , SomeContractInstanceKey(..)
-    , QCCM.HasSymTokens(..)
+    , QCCM.HasSymbolics(..)
       -- ** Model state
     , QCCM.ModelState
     , QCCM.contractState
@@ -64,9 +64,11 @@ module Plutus.Contract.Test.ContractModel.Interface
     , withdraw
     , transfer
     , QCCM.createToken
+    , QCCM.createTxOut
     , QCCM.assertSpec
     , SpecificationEmulatorTrace
     , registerToken
+    , registerTxOut
     , delay
     , fromSlotNo
     , toSlotNo
@@ -77,7 +79,7 @@ module Plutus.Contract.Test.ContractModel.Interface
     , DL
     , action
     , waitUntilDL
-    , observeChain
+    , QCCM.observe
     , QCCM.anyAction
     , QCCM.anyActions
     , QCCM.anyActions_
@@ -202,7 +204,8 @@ type HandleFun state = forall w schema err params. (Typeable w, Typeable schema,
 data StartContract state where
   StartContract :: (CMI.SchemaConstraints w s e, Typeable p) => ContractInstanceKey state w s e p -> p -> StartContract state
 
-type SpecificationEmulatorTrace = Eff (Writer [(String, AssetClass)] ': BaseEmulatorEffects)
+type TxOut = CardanoAPI.TxOut CardanoAPI.CtxUTxO QCCM.Era
+type SpecificationEmulatorTrace = Eff (Writer [(String, Either TxOut AssetClass)] ': BaseEmulatorEffects)
 
 -- | A `ContractModel` instance captures everything that is needed to generate and run tests of a
 --   contract or set of contracts. It specifies among other things
@@ -217,7 +220,7 @@ class ( Typeable state
       , Show state
       , Show (Action state)
       , Eq (Action state)
-      , QCCM.HasSymTokens (Action state)
+      , QCCM.HasSymbolics (Action state)
       , QCSM.HasVariables (Action state)
       , QCSM.HasVariables state
       , Generic state
@@ -398,7 +401,8 @@ instance ContractModel state => QCCM.RunModel (WrappedState state) (CMI.Specific
             Just (CMI.WalletContractHandle _ h) -> h
             Nothing                             -> error $ "contractHandle: No handle for " ++ show key
     (_, ts) <- lift $ raise $ runWriter $ perform lookup (fromAssetId . e) (fmap unwrapState s) (unwrapAction a)
-    sequence_ [ QCCM.registerToken s (toAssetId ac) | (s, ac) <- ts ]
+    sequence_ [ QCCM.registerToken s (toAssetId ac) | (s, Right ac) <- ts ]
+    sequence_ [ QCCM.registerTxOut s out            | (s, Left out) <- ts ]
   monitoring (s, s') a _ _ = monitoring (fmap unwrapState s, fmap unwrapState s')
                                         (unwrapAction a)
 
@@ -461,7 +465,12 @@ transfer w1 w2 = QCCM.transfer (CMI.walletAddress w1) (CMI.walletAddress w2)
 -- | Register the real token corresponding to a symbolic token created
 -- in `createToken`.
 registerToken :: String -> AssetClass -> SpecificationEmulatorTrace ()
-registerToken s ac = tell [(s, ac)]
+registerToken s ac = tell @[(String, Either TxOut AssetClass)] [(s, Right ac)]
+
+-- | Register the real TxOut corresponding to a symbolic TxOut created
+-- in `createTxOut`.
+registerTxOut :: String -> CardanoAPI.TxOut CardanoAPI.CtxUTxO QCCM.Era -> SpecificationEmulatorTrace ()
+registerTxOut s out = tell @[(String, Either TxOut AssetClass)] [(s, Left out)]
 
 -- | `delay n` delays emulator execution by `n` slots
 delay :: Integer -> SpecificationEmulatorTrace ()
@@ -478,14 +487,6 @@ waitUntilDL = QCCM.waitUntilDL . toSlotNo
 
 assertModel :: String -> (QCCM.ModelState state -> Bool) -> DL state ()
 assertModel s p = QCCM.assertModel s (p . fmap coerce)
-
--- IMPORTANT NOTE: the first argument needs to be unique among calls to `observeChain`
--- as it is a proxy for the predicate.
-observeChain :: ContractModel state
-             => String
-             -> ((QCCM.SymToken -> AssetClass) -> QCCM.ChainState -> Bool)
-             -> DL state ()
-observeChain s p = QCCM.observe s (\ sem cs -> p (fromAssetId . sem) cs)
 
 type Actions state = QCCM.Actions (CMI.WithInstances (WrappedState state))
 
@@ -649,10 +650,10 @@ checkDoubleSatisfactionWithOptions :: forall m. ContractModel m
 checkDoubleSatisfactionWithOptions opts covopts acts =
   CMI.checkThreatModelWithOptions opts covopts QCCM.doubleSatisfaction acts
 
-instance QCCM.HasSymTokens Wallet where
-  getAllSymTokens _ = mempty
-instance QCCM.HasSymTokens Value where
-  getAllSymTokens _ = mempty
+instance QCCM.HasSymbolics Wallet where
+  getAllSymbolics _ = mempty
+instance QCCM.HasSymbolics Value where
+  getAllSymbolics _ = mempty
 
 data SomeContractInstanceKey state where
   Key :: (CMI.SchemaConstraints w s e, Typeable p)
@@ -668,6 +669,6 @@ instance ContractModel state => Show (SomeContractInstanceKey state) where
 invSymValue :: QCCM.SymValue -> QCCM.SymValue
 invSymValue = QCCM.inv
 
-instance QCCM.HasSymTokens Builtins.BuiltinByteString where
-  getAllSymTokens _ = mempty
+instance QCCM.HasSymbolics Builtins.BuiltinByteString where
+  getAllSymbolics _ = mempty
 deriving via QCSM.HasNoVariables Builtins.BuiltinByteString instance QCSM.HasVariables Builtins.BuiltinByteString
