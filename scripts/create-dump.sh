@@ -9,7 +9,7 @@
 #     AWS_ENDPOINT_URL=https://s3.devx.iog.io \
 #     NODE_DIR=$HOME/mainnet \
 #     S3_DUMP_DIR=s3://plutus/mainnet-script-dump/ \
-#     LOCAL_DUMP_DIR=../mainnet-script-dump \
+#     DUMP_DIR=../mainnet-script-dump \
 #     ./scripts/create-dump.sh
 
 set -eEuo pipefail
@@ -17,7 +17,7 @@ set -eEuo pipefail
 trap '(kill $pid_node || true); (kill $pid_dump || true); exit' INT TERM QUIT ERR EXIT
 
 mkdir -p "$NODE_DIR"
-mkdir -p "$LOCAL_DUMP_DIR"
+mkdir -p "$DUMP_DIR"
 
 set -x
 
@@ -36,7 +36,7 @@ do
 done
 
 # Start the dump job
-cabal v2-run plutus-script-evaluation-test:dump-script-events -- --socket-path "$NODE_DIR"/db/node.socket --config "$NODE_DIR"/config.json --mainnet --blocks-per-file 50000 --events-per-file 50000 --dir "$LOCAL_DUMP_DIR" &
+cabal v2-run plutus-script-evaluation-test:dump-script-events -- --socket-path "$NODE_DIR"/db/node.socket --config "$NODE_DIR"/config.json --mainnet --blocks-per-file 50000 --events-per-file 50000 &
 pid_dump=$!
 
 echo $pid_node

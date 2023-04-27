@@ -24,12 +24,13 @@ if [ -f "$DUMP_FILE_UNZIPPED" ]; then
   rm "$DUMP_FILE_ZIPPED"
 fi
 
-DUMP_DIR=$(dirname "$DUMP_FILE_UNZIPPED")
+# sync local checkpoint files to S3
+aws --endpoint-url "$AWS_ENDPOINT_URL" s3 sync "$CHECKPOINT_DIR" "$S3_CHECKPOINT_DIR" --delete
 
 # Clean up checkpoint (*.state) files. These files are large (> 1GB each), so we
 # only keep the latest two. We keep two rather than one because of the possibility
 # of a rollback.
-readarray -t checkpoint_files < <(find "$DUMP_DIR" -name "*.state" | sort -r)
+readarray -t checkpoint_files < <(find "$CHECKPOINT_DIR" -name "*.state" | sort -r)
 
 old_checkpoint_files=("${checkpoint_files[@]:2}")
 
