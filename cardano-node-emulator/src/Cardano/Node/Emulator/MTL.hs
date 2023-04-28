@@ -45,7 +45,8 @@ module Cardano.Node.Emulator.MTL (
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
 import Cardano.Node.Emulator qualified as E
-import Cardano.Node.Emulator.MTL.LogMessages (EmulatorMsg (..), TxBalanceMsg (..))
+import Cardano.Node.Emulator.MTL.LogMessages (EmulatorMsg (ChainEvent, GenericMsg, TxBalanceMsg),
+                                              TxBalanceMsg (BalancingUnbalancedTx, FinishedBalancing, SigningTx, SubmittingTx))
 import Control.Lens (alaf, makeLenses, view, (%~), (&), (^.))
 import Control.Monad (void)
 import Control.Monad.Error.Class (MonadError, throwError)
@@ -58,36 +59,36 @@ import Control.Monad.Freer.Writer qualified as F (Writer, runWriter, tell)
 import Control.Monad.Identity (Identity)
 import Control.Monad.RWS.Class (MonadRWS, ask, get, put, tell)
 import Control.Monad.RWS.Strict (RWST)
-import Data.Aeson (ToJSON (..))
+import Data.Aeson (ToJSON (toJSON))
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Data.Monoid (Endo (..))
+import Data.Monoid (Endo (Endo))
 import Data.Sequence (Seq)
-import Ledger (CardanoAddress, CardanoTx, DatumFromQuery, DatumHash, DecoratedTxOut, OnChainTx (..),
-               PaymentPrivateKey (..), Slot, ToCardanoError, TxOut (..), TxOutRef, UtxoIndex, ValidationErrorInPhase,
-               mkDecoratedTxOut)
+import Ledger (CardanoAddress, CardanoTx (CardanoEmulatorEraTx), DatumFromQuery, DatumHash, DecoratedTxOut,
+               OnChainTx (Valid), PaymentPrivateKey (unPaymentPrivateKey), Slot, ToCardanoError, TxOut (TxOut),
+               TxOutRef, UtxoIndex, ValidationErrorInPhase, mkDecoratedTxOut)
 import Ledger.AddressMap qualified as AM
 import Ledger.Index (createGenesisTransaction, insertBlock)
-import Ledger.Tx (CardanoTx (..), DatumFromQuery (..), addCardanoTxSignature, decoratedTxOutValue, getCardanoTxId,
-                  toCtxUTxOTxOut)
-import Ledger.Tx.CardanoAPI (CardanoBuildTx (..), fromCardanoReferenceScript, fromCardanoScriptData, fromCardanoTxIn,
-                             toCardanoTxOutValue)
+import Ledger.Tx (DatumFromQuery (DatumInBody, DatumInline, DatumUnknown), addCardanoTxSignature, decoratedTxOutValue,
+                  getCardanoTxId, toCtxUTxOTxOut)
+import Ledger.Tx.CardanoAPI (CardanoBuildTx (CardanoBuildTx), fromCardanoReferenceScript, fromCardanoScriptData,
+                             fromCardanoTxIn, toCardanoTxOutValue)
 import Plutus.V2.Ledger.Api qualified as PV2
 import PlutusTx.Builtins qualified as PlutusTx
 
 
 data EmulatorState = EmulatorState
-  { _esChainState :: E.ChainState
-  , _esAddressMap :: AM.AddressMap
+  { _esChainState :: !E.ChainState
+  , _esAddressMap :: !AM.AddressMap
   }
   deriving (Show)
 
 makeLenses 'EmulatorState
 
 data EmulatorError
-  = BalancingError E.BalancingError
-  | ValidationError ValidationErrorInPhase
-  | ToCardanoError ToCardanoError
+  = BalancingError !E.BalancingError
+  | ValidationError !ValidationErrorInPhase
+  | ToCardanoError !ToCardanoError
   deriving (Show)
 
 type EmulatorLogs = Seq (L.LogMessage EmulatorMsg)

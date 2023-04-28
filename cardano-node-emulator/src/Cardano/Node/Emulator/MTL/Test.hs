@@ -1,10 +1,12 @@
-{-# LANGUAGE FlexibleInstances   #-}
-{-# LANGUAGE TypeApplications    #-}
-{-# LANGUAGE TypeFamilies        #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE NumericUnderscores  #-}
 {-# LANGUAGE TupleSections       #-}
+{-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE TypeFamilies        #-}
+
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 module Cardano.Node.Emulator.MTL.Test (
   -- * Basic testing
     hasValidatedTransactionCountOfTotal
@@ -20,6 +22,13 @@ module Cardano.Node.Emulator.MTL.Test (
   , chainStateToContractModelChainState
 ) where
 
+import Cardano.Api qualified as C
+import Cardano.Api qualified as CardanoAPI
+import Cardano.Node.Emulator qualified as E
+import Cardano.Node.Emulator.Chain as E (ChainState, _chainNewestFirst)
+import Cardano.Node.Emulator.MTL (EmulatorLogs, EmulatorM, EmulatorMsg (ChainEvent), LogMessage (LogMessage), awaitSlot,
+                                  emptyEmulatorStateWithInitialDist, esChainState, getParams)
+import Cardano.Node.Emulator.Params (pNetworkId, pProtocolParams)
 import Control.Lens (use, (^.))
 import Control.Monad.Except (runExceptT)
 import Control.Monad.RWS.Strict (evalRWS)
@@ -28,27 +37,26 @@ import Data.Default (def)
 import Data.Foldable (toList)
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Data.Monoid (Sum (..))
-import Data.Text qualified as Text
-import Prettyprinter qualified as Pretty
-import Prettyprinter.Render.Text qualified as Pretty
-import Test.QuickCheck as QC hiding (total)
-import Test.QuickCheck.ContractModel as CM
-import Test.QuickCheck.ContractModel.Internal (ContractModelResult)
-import Test.QuickCheck.Monadic
-import Test.QuickCheck.StateModel (Realized)
-
-import Cardano.Api qualified as C
-import Cardano.Api qualified as CardanoAPI
-import Cardano.Node.Emulator qualified as E
-import Cardano.Node.Emulator.Chain as E (ChainState, _chainNewestFirst)
-import Cardano.Node.Emulator.MTL
-import Cardano.Node.Emulator.Params (pNetworkId, pProtocolParams)
 import Data.Maybe (fromMaybe)
-import Ledger (CardanoAddress, CardanoTx (..), OnChainTx, onChainTxIsValid, unOnChain)
+import Data.Monoid (Sum (Sum))
+import Data.Text qualified as Text
+import Ledger (CardanoAddress, CardanoTx (CardanoEmulatorEraTx), OnChainTx, onChainTxIsValid, unOnChain)
 import Ledger.Index qualified as Index
 import Ledger.Tx.CardanoAPI (fromCardanoSlotNo)
 import Ledger.Value.CardanoAPI qualified as Value
+import Prettyprinter qualified as Pretty
+import Prettyprinter.Render.Text qualified as Pretty
+import Test.QuickCheck as QC (Property, Testable (property), counterexample, expectFailure, (.&&.))
+import Test.QuickCheck.ContractModel (Actions, BalanceChangeOptions (BalanceChangeOptions),
+                                      ChainIndex (ChainIndex, networkId, transactions),
+                                      ChainState (ChainState, slot, utxo), ContractModel, HasChainIndex, IsRunnable,
+                                      ModelState, RunModel, RunMonad (unRunMonad), TxInState (TxInState),
+                                      assertBalanceChangesMatch, asserts, balanceChanges, runContractModel,
+                                      signerPaysFees, stateAfter, symIsZero)
+import Test.QuickCheck.ContractModel qualified as CM
+import Test.QuickCheck.ContractModel.Internal (ContractModelResult)
+import Test.QuickCheck.Monadic (PropertyM, monadic, monadicIO)
+import Test.QuickCheck.StateModel (Realized)
 
 
 -- | Test the number of validated transactions and the total number of transactions.
@@ -58,7 +66,7 @@ hasValidatedTransactionCountOfTotal valid total lg =
   let count = \case
         LogMessage _ (ChainEvent E.TxnValidate{})       -> (Sum 1, Sum 0)
         LogMessage _ (ChainEvent E.TxnValidationFail{}) -> (Sum 0, Sum 1)
-        _                                               -> mempty
+        _otherLogMsg                                    -> mempty
       (Sum validCount, Sum invalidCount) = foldMap count lg
   in
     if valid /= validCount then Just $ "Unexpected number of valid transactions: " ++ show validCount

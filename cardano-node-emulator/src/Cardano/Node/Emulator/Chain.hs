@@ -18,10 +18,10 @@
 module Cardano.Node.Emulator.Chain where
 
 import Cardano.Api qualified as C
-import Cardano.Node.Emulator.Params (Params (..))
+import Cardano.Node.Emulator.Params (Params)
 import Cardano.Node.Emulator.Validation qualified as Validation
-import Control.Lens hiding (index)
-import Control.Monad.Freer
+import Control.Lens (alaf, makeLenses, makePrisms, over, view, (%~), (&), (.~))
+import Control.Monad.Freer (Eff, Member, Members, send, type (~>))
 import Control.Monad.Freer.Extras.Log (LogMsg, logDebug, logInfo, logWarn)
 import Control.Monad.Freer.State (State, gets, modify)
 import Control.Monad.State qualified as S
@@ -35,7 +35,7 @@ import Data.Monoid (Ap (Ap))
 import Data.Text (Text)
 import Data.Traversable (for)
 import GHC.Generics (Generic)
-import Ledger (Block, Blockchain, CardanoTx (..), OnChainTx (..), Slot (..), getCardanoTxCollateralInputs,
+import Ledger (Block, Blockchain, CardanoTx, OnChainTx (Invalid, Valid), Slot (Slot), getCardanoTxCollateralInputs,
                getCardanoTxFee, getCardanoTxId, getCardanoTxTotalCollateral, getCardanoTxValidityRange, txOutValue,
                unOnChain)
 import Ledger.Index qualified as Index
@@ -43,15 +43,15 @@ import Ledger.Interval qualified as Interval
 import Ledger.Tx.CardanoAPI (fromPlutusIndex)
 import Ledger.Value.CardanoAPI (lovelaceToValue)
 import Plutus.V1.Ledger.Scripts qualified as Scripts
-import Prettyprinter
+import Prettyprinter (Pretty (pretty), colon, (<+>))
 
 -- | Events produced by the blockchain emulator.
 data ChainEvent =
-    TxnValidate C.TxId CardanoTx [Text]
+    TxnValidate !C.TxId !CardanoTx ![Text]
     -- ^ A transaction has been validated and added to the blockchain.
-    | TxnValidationFail Index.ValidationPhase C.TxId CardanoTx Index.ValidationError C.Value [Text]
+    | TxnValidationFail !Index.ValidationPhase !C.TxId !CardanoTx !Index.ValidationError !C.Value ![Text]
     -- ^ A transaction failed to validate. The @Value@ indicates the amount of collateral stored in the transaction.
-    | SlotAdd Slot
+    | SlotAdd !Slot
     deriving stock (Eq, Show, Generic)
     deriving anyclass (FromJSON, ToJSON)
 
@@ -70,10 +70,10 @@ chainEventOnChainTx _                                           = Nothing
 type TxPool = [CardanoTx]
 
 data ChainState = ChainState {
-    _chainNewestFirst :: Blockchain, -- ^ The current chain, with the newest transactions first in the list.
-    _txPool           :: TxPool, -- ^ The pool of pending transactions.
-    _index            :: Index.UtxoIndex, -- ^ The UTxO index, used for validation.
-    _chainCurrentSlot :: Slot -- ^ The current slot number
+    _chainNewestFirst :: !Blockchain, -- ^ The current chain, with the newest transactions first in the list.
+    _txPool           :: !TxPool, -- ^ The pool of pending transactions.
+    _index            :: !Index.UtxoIndex, -- ^ The UTxO index, used for validation.
+    _chainCurrentSlot :: !Slot -- ^ The current slot number
 } deriving (Show, Generic)
 
 emptyChainState :: ChainState
@@ -142,15 +142,15 @@ handleChain params = \case
 
 -- | The result of validating a block.
 data ValidatedBlock = ValidatedBlock
-    { vlbValid  :: Block
+    { vlbValid  :: !Block
     -- ^ The transactions that have been validated in this block.
-    , vlbEvents :: [ChainEvent]
+    , vlbEvents :: ![ChainEvent]
     -- ^ Transaction validation events for the transactions in this block.
-    , vlbIndex  :: Index.UtxoIndex
+    , vlbIndex  :: !Index.UtxoIndex
     -- ^ The updated UTxO index after processing the block
     }
 
-data ValidationCtx = ValidationCtx { vctxIndex :: Index.UtxoIndex, vctxParams :: Params }
+data ValidationCtx = ValidationCtx { vctxIndex :: !Index.UtxoIndex, vctxParams :: !Params }
 
 -- | Validate a block given the current slot and UTxO index, returning the valid
 --   transactions, success/failure events and the updated UTxO set.
