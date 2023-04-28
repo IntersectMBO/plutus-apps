@@ -25,9 +25,7 @@ module Ledger.Index(
     ValidationPhase(..),
     maxFee,
     adjustTxOut,
-    adjustCardanoTxOut,
     minAdaTxOut,
-    minAdaCardanoTxOut,
     minAdaTxOutEstimated,
     minLovelaceTxOutEstimated,
     maxMinAdaTxOut,
@@ -104,21 +102,6 @@ the blockchain.
 
 -- | Adjust a single transaction output so it contains at least the minimum amount of Ada
 -- and return the adjustment (if any) and the updated TxOut.
-adjustCardanoTxOut :: Babbage.PParams (Babbage.BabbageEra StandardCrypto) -> Tx.TxOut -> Either ToCardanoError ([C.Lovelace], Tx.TxOut)
-adjustCardanoTxOut params txOut = do
-    -- Increasing the ada amount can also increase the size in bytes, so start with a rough estimated amount of ada
-    let withMinAdaValue = toCardanoTxOutValue $ txOutValue txOut \/ lovelaceToValue (minAdaCardanoTxOut params txOut)
-    let txOutEstimate = txOut & outValue .~ withMinAdaValue
-        minAdaTxOutEstimated' = minAdaCardanoTxOut params txOutEstimate
-        missingLovelace = minAdaTxOutEstimated' - C.selectLovelace (txOutValue txOut)
-    if missingLovelace > 0
-    then
-      let adjustedLovelace = toCardanoTxOutValue $ txOutValue txOut <> lovelaceToValue missingLovelace
-      in pure ([missingLovelace], txOut & outValue .~ adjustedLovelace)
-    else pure ([], txOut)
-
--- | Adjust a single transaction output so it contains at least the minimum amount of Ada
--- and return the adjustment (if any) and the updated TxOut.
 adjustTxOut :: Babbage.PParams (Babbage.BabbageEra StandardCrypto) -> TxOut -> Either ToCardanoError ([C.Lovelace], Tx.TxOut)
 adjustTxOut params txOut = do
     -- Increasing the ada amount can also increase the size in bytes, so start with a rough estimated amount of ada
@@ -131,20 +114,6 @@ adjustTxOut params txOut = do
       let adjustedLovelace = toCardanoTxOutValue $ txOutValue txOut <> lovelaceToValue missingLovelace
       in pure ([missingLovelace], txOut & outValue .~ adjustedLovelace)
     else pure ([], txOut)
-
--- | Exact computation of the mimimum Ada required for a given TxOut.
--- TODO: Should be moved to cardano-api-extended once created
-minAdaCardanoTxOut :: Babbage.PParams (Babbage.BabbageEra StandardCrypto) -> Tx.TxOut -> C.Lovelace
-minAdaCardanoTxOut params txOut = let
-  toLovelace = C.Lovelace . C.Ledger.unCoin
-  initialValue = txOutValue txOut
-  firstEstimate = toLovelace . C.Ledger.evaluateMinLovelaceOutput params $ fromPlutusTxOut txOut
-  in -- if the estimate is above the initialValue, we run minAdaAgain, just to be sure that the
-     -- new amount didn't change the TxOut size and requires more ada.
-     if firstEstimate > C.selectLovelace initialValue
-     then minAdaTxOut params . flip (outValue .~) txOut
-            $ toCardanoTxOutValue $ lovelaceToValue firstEstimate \/ initialValue
-     else firstEstimate
 
 -- | Exact computation of the mimimum Ada required for a given TxOut.
 -- TODO: Should be moved to cardano-api-extended once created
