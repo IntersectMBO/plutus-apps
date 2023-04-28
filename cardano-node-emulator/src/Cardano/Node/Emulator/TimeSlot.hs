@@ -33,11 +33,11 @@ import Data.Time.Clock.POSIX qualified as Time
 import GHC.Generics (Generic)
 import Ledger.Orphans ()
 import Ledger.Slot (Slot (Slot), SlotRange)
-import Plutus.V1.Ledger.Interval (Extended (..), Interval (Interval), LowerBound (..), UpperBound (..), interval,
-                                  member)
+import Plutus.V1.Ledger.Interval (Extended (Finite), Interval (Interval), LowerBound (LowerBound),
+                                  UpperBound (UpperBound), interval, member)
 import Plutus.V1.Ledger.Time (POSIXTime (POSIXTime, getPOSIXTime), POSIXTimeRange)
 import PlutusTx.Lift (makeLift)
-import PlutusTx.Prelude hiding (Eq, (<$>))
+import PlutusTx.Prelude (Integer, divide, fmap, ($), (*), (+), (-), (.))
 import Prelude (Eq, IO, Show, (<$>))
 import Prelude qualified as Haskell
 import Prettyprinter (Pretty (pretty), (<+>))
@@ -46,8 +46,8 @@ import Prettyprinter (Pretty (pretty), (<+>))
 -- first slot.
 data SlotConfig =
     SlotConfig
-        { scSlotLength   :: Integer -- ^ Length (number of milliseconds) of one slot
-        , scSlotZeroTime :: POSIXTime -- ^ Beginning of slot 0 (in milliseconds)
+        { scSlotLength   :: !Integer -- ^ Length (number of milliseconds) of one slot
+        , scSlotZeroTime :: !POSIXTime -- ^ Beginning of slot 0 (in milliseconds)
         }
     deriving stock (Eq, Show, Generic)
     deriving anyclass (ToJSON, FromJSON, Serialise)
@@ -68,8 +68,8 @@ instance Pretty SlotConfig where
 
 data SlotConversionError =
     SlotOutOfRange
-        { requestedSlot :: Slot
-        , horizon       :: (Slot, POSIXTime)
+        { requestedSlot :: !Slot
+        , horizon       :: !(Slot, POSIXTime)
         }
     deriving stock (Eq, Show, Generic)
     deriving anyclass (ToJSON, FromJSON)

@@ -1,6 +1,8 @@
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE OverloadedStrings #-}
+
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
+
 module Main(main) where
 
 import Test.Tasty (TestTree, defaultMain, testGroup)
@@ -16,4 +18,3 @@ tests = testGroup "all tests"
   [ GeneratorsSpec.tests
   , MTLSpec.tests
   ]
-

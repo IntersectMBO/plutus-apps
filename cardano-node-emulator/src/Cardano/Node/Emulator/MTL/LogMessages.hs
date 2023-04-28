@@ -16,7 +16,7 @@ import GHC.Generics (Generic)
 import Ledger (CardanoTx, getCardanoTxId)
 import Ledger.Index (UtxoIndex, ValidationError, ValidationPhase)
 import Ledger.Tx.CardanoAPI (CardanoBuildTx)
-import Prettyprinter (Pretty (..), colon, hang, viaShow, vsep, (<+>))
+import Prettyprinter (Pretty (pretty), colon, hang, viaShow, vsep, (<+>))
 
 data EmulatorMsg
     = GenericMsg Value

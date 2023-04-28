@@ -59,6 +59,13 @@ module Cardano.Node.Emulator.Generators(
     Tx.emptyTxBodyContent
     ) where
 
+import Cardano.Api qualified as C
+import Cardano.Api.Shelley qualified as C
+import Cardano.Crypto.Wallet qualified as Crypto
+import Cardano.Node.Emulator.Params (Params (pSlotConfig))
+import Cardano.Node.Emulator.TimeSlot (SlotConfig)
+import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
+import Cardano.Node.Emulator.Validation (validateCardanoTx)
 import Control.Monad (guard, replicateM)
 import Data.Bifunctor (Bifunctor (first))
 import Data.ByteString qualified as BS
@@ -76,18 +83,10 @@ import Data.Set qualified as Set
 import Data.String (fromString)
 import GHC.Stack (HasCallStack)
 import Gen.Cardano.Api.Typed qualified as Gen
-import Hedgehog
+import Hedgehog (Gen, MonadGen, MonadTest, Range)
+import Hedgehog qualified as H
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-
-import Cardano.Api qualified as C
-import Cardano.Api.Shelley (ProtocolParameters (..))
-import Cardano.Api.Shelley qualified as C
-import Cardano.Crypto.Wallet qualified as Crypto
-import Cardano.Node.Emulator.Params (Params (pSlotConfig))
-import Cardano.Node.Emulator.TimeSlot (SlotConfig)
-import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
-import Cardano.Node.Emulator.Validation (validateCardanoTx)
 import Ledger (CardanoTx (CardanoEmulatorEraTx), Interval, MintingPolicy (getMintingPolicy),
                POSIXTime (POSIXTime, getPOSIXTime), POSIXTimeRange, Passphrase (Passphrase),
                PaymentPrivateKey (unPaymentPrivateKey), PaymentPubKey, Slot (Slot), SlotRange, TxOut,
@@ -111,11 +110,11 @@ signAll tx = foldl' (flip addCardanoTxSignature) tx
 
 -- | The parameters for the generators in this module.
 data GeneratorModel = GeneratorModel {
-    gmInitialBalance      :: Map PaymentPubKey C.Lovelace,
+    gmInitialBalance      :: !(Map PaymentPubKey C.Lovelace),
     -- ^ Value created at the beginning of the blockchain.
-    gmPubKeys             :: Set PaymentPubKey,
+    gmPubKeys             :: !(Set PaymentPubKey),
     -- ^ Public keys that are to be used for generating transactions.
-    gmMaxCollateralInputs :: Maybe Natural
+    gmMaxCollateralInputs :: !(Maybe Natural)
     } deriving Show
 
 -- | A generator model with some sensible defaults.
@@ -128,7 +127,7 @@ generatorModel =
     GeneratorModel
     { gmInitialBalance = Map.fromList $ zip pubKeys (repeat vl)
     , gmPubKeys        = Set.fromList pubKeys
-    , gmMaxCollateralInputs = protocolParamMaxCollateralInputs def
+    , gmMaxCollateralInputs = C.protocolParamMaxCollateralInputs def
     }
 
 -- | Blockchain for testing the emulator implementation and traces.
@@ -398,8 +397,8 @@ assertValid :: (MonadTest m, HasCallStack)
     -> Mockchain
     -> m ()
 assertValid tx mc = let res = validateMockchain mc tx in do
-    Hedgehog.annotateShow res
-    Hedgehog.assert $ isNothing res
+    H.annotateShow res
+    H.assert $ isNothing res
 
 {- | Split a value into max. n positive-valued parts such that the sum of the
      parts equals the original value. Each part should contain the required

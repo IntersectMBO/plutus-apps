@@ -24,7 +24,7 @@ import Cardano.Ledger.Core qualified as C.Ledger (Tx)
 import Cardano.Ledger.Shelley.API qualified as C.Ledger hiding (Tx)
 import Cardano.Node.Emulator.Params (EmulatorEra, PParams, Params (emulatorPParams), emulatorEraHistory,
                                      emulatorGlobals, pProtocolParams)
-import Cardano.Node.Emulator.Validation (CardanoLedgerError, UTxO (..), makeTransactionBody)
+import Cardano.Node.Emulator.Validation (CardanoLedgerError, UTxO (UTxO), makeTransactionBody)
 import Control.Arrow ((&&&))
 import Control.Lens (over, (&))
 import Data.Aeson (FromJSON, ToJSON)
@@ -36,10 +36,11 @@ import Data.Maybe (isNothing, listToMaybe)
 import Data.Ord (Down (Down))
 import GHC.Generics (Generic)
 import Ledger.Address (CardanoAddress)
-import Ledger.Index (UtxoIndex, ValidationError (..), ValidationPhase (Phase1), adjustTxOut, minAdaTxOutEstimated)
+import Ledger.Index (UtxoIndex, ValidationError (MaxCollateralInputsExceeded, TxOutRefNotFound),
+                     ValidationPhase (Phase1), adjustTxOut, minAdaTxOutEstimated)
 import Ledger.Tx (ToCardanoError (TxBodyError), TxOut)
 import Ledger.Tx qualified as Tx
-import Ledger.Tx.CardanoAPI (CardanoBuildTx (..), fromPlutusIndex, getCardanoBuildTx, toCardanoFee,
+import Ledger.Tx.CardanoAPI (CardanoBuildTx (CardanoBuildTx), fromPlutusIndex, getCardanoBuildTx, toCardanoFee,
                              toCardanoReturnCollateral, toCardanoTotalCollateral)
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
 import Ledger.Value.CardanoAPI (isZero, lovelaceToValue, split, valueGeq)

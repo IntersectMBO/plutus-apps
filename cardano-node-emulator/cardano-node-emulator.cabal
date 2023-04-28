@@ -21,8 +21,9 @@ common lang
 
   ghc-options:
     -Wall -Widentities -Wincomplete-record-updates
-    -Wincomplete-uni-patterns -Wnoncanonical-monad-instances
-    -Wredundant-constraints -Wunused-packages
+    -Wmissing-import-lists -Wincomplete-uni-patterns
+    -Wnoncanonical-monad-instances -Wredundant-constraints
+    -Wunused-packages
 
 library
   import:          lang
@@ -77,7 +78,6 @@ library
     , bytestring
     , containers
     , data-default
-    , deepseq
     , either
     , freer-simple
     , hedgehog
