@@ -20,10 +20,9 @@ common lang
     StandaloneDeriving
 
   ghc-options:
-    -Wall -Widentities -Wincomplete-record-updates
-    -Wmissing-import-lists -Wincomplete-uni-patterns
-    -Wnoncanonical-monad-instances -Wredundant-constraints
-    -Wunused-packages
+    -Wall -Widentities -Wincomplete-record-updates -Wunused-packages
+    -Wincomplete-uni-patterns -Wnoncanonical-monad-instances
+    -Wredundant-constraints -Wmissing-import-lists
 
 library
   import:          lang
@@ -54,7 +53,6 @@ library
   build-depends:
     , cardano-api:{cardano-api, gen}  >=1.35
     , cardano-crypto
-    , cardano-crypto-class
     , cardano-ledger-alonzo
     , cardano-ledger-babbage
     , cardano-ledger-core
@@ -113,20 +111,29 @@ test-suite cardano-node-emulator-test
   --------------------------
   -- Other IOG dependencies
   --------------------------
-  build-depends:      plutus-tx >=1.0.0
+  build-depends:
+    , cardano-api
+    , plutus-ledger-api  >=1.0.0
+    , plutus-tx          >=1.0.0
+    , plutus-tx-plugin   >=1.0.0
 
   ------------------------
   -- Non-IOG dependencies
   ------------------------
   build-depends:
     , aeson
-    , base            >=4.9 && <5
+    , base                      >=4.9 && <5
+    , bytestring
     , containers
     , data-default
     , hedgehog
+    , lens
     , mtl
+    , QuickCheck
+    , quickcheck-contractmodel
     , tasty
     , tasty-golden
     , tasty-hedgehog
     , tasty-hunit
+    , tasty-quickcheck
     , text

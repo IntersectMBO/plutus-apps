@@ -7,17 +7,13 @@
 module Main(main) where
 
 import Cardano.Api qualified as C
-import Cardano.Api.Shelley qualified as C
 import Cardano.Node.Emulator.Generators qualified as Gen hiding (someTokenValue)
-import Control.Lens (preview, toListOf, view)
-import Control.Monad (forM_, guard, replicateM, void)
+import Control.Lens (preview, view)
+import Control.Monad (forM_, guard)
 import Control.Monad.Except (runExcept)
-import Control.Monad.IO.Class (MonadIO (liftIO))
-import Control.Monad.Reader (ask, runReaderT)
+import Control.Monad.Reader (runReaderT)
 import Control.Monad.State (evalStateT)
-import Data.ByteString qualified as BS
 import Data.Default (def)
-import Data.Map qualified as Map
 import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Void (Void)
 import Gen.Cardano.Api.Typed (genTxId)
@@ -25,36 +21,29 @@ import Hedgehog (Property, annotateShow, forAll, property, (===))
 import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-import Language.Haskell.TH.Syntax
 import Ledger qualified hiding (TxId (..))
-import Ledger.Address (StakePubKeyHash (StakePubKeyHash), addressStakingCredential, stakePubKeyHashCredential,
-                       stakeValidatorHashCredential)
-import Ledger.Credential (Credential (PubKeyCredential, ScriptCredential), StakingCredential (StakingHash))
-import Ledger.Crypto (PubKeyHash (PubKeyHash))
+import Ledger.Address (StakePubKeyHash (StakePubKeyHash), stakePubKeyHashCredential, stakeValidatorHashCredential)
+import Ledger.Credential (StakingCredential)
 import Ledger.Scripts (WitCtx (WitCtxStake), examplePlutusScriptAlwaysSucceedsHash)
 import Ledger.Slot qualified as Slot
 import Ledger.Test (asRedeemer)
-import Ledger.Tx (TxOut (TxOut), txOutAddress)
+import Ledger.Tx (TxOut (TxOut))
 import Ledger.Tx.CardanoAPI qualified as C
-import Ledger.Tx.Constraints as Constraints
+import Ledger.Tx.Constraints qualified as Constraints
 import Ledger.Tx.Constraints.OffChain qualified as OC
 import Ledger.Tx.Constraints.ValidityInterval qualified as Interval
 import Ledger.Typed.Scripts qualified as Scripts
+import Plutus.Example.GameSpec qualified as Game
 import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.V1.Generators qualified as Gen
-import Plutus.Script.Utils.Value (CurrencySymbol, Value (Value))
+import Plutus.Script.Utils.Value (Value)
 import Plutus.Script.Utils.Value qualified as Value
 import Plutus.V1.Ledger.Api qualified as Ledger
-import Plutus.V1.Ledger.Scripts qualified as Ledger
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AMap
-import PlutusTx.Builtins.Internal (BuiltinByteString (..))
-import PlutusTx.Prelude qualified as Pl
+import Spec.Balancing qualified as Balancing
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.Hedgehog (testPropertyNamed)
-
-import Game qualified as Game
-import Spec.Balancing qualified as Balancing
 
 main :: IO ()
 main = defaultMain $ testGroup "all-tests"
@@ -157,7 +146,7 @@ mustPayToPubKeyAddressStakePubKeyNotNothingProp :: Property
 mustPayToPubKeyAddressStakePubKeyNotNothingProp = property $ do
     pkh <- forAll $ Ledger.paymentPubKeyHash <$> Gen.element Gen.knownPaymentPublicKeys
     let sc = stakePubKeyHashCredential $ StakePubKeyHash $ Ledger.pubKeyHash $ Ledger.PubKey "00000000000000000000000000000000000000000000000000000000"
-        txE = mkTx @Void def mempty (Constraints.mustPayToPubKeyAddress pkh sc (Ada.toValue Ledger.minAdaTxOutEstimated))
+        txE = Constraints.mkTx @Void def mempty (Constraints.mustPayToPubKeyAddress pkh sc (Ada.toValue Ledger.minAdaTxOutEstimated))
     case txE of
         Left err -> do
             Hedgehog.annotateShow err
@@ -188,8 +177,8 @@ mustPayToOtherScriptAddressStakeValidatorHashNotNothingProp = property $ do
 mustUseOutputAsCollateralProp :: Property
 mustUseOutputAsCollateralProp = property $ do
     txId <- forAll genTxId
-    let txOutRef = Ledger.TxOutRef (C.fromCardanoTxId txId) 0
-        txE = Constraints.mkTxWithParams @Void def mempty (Constraints.mustUseOutputAsCollateral txOutRef)
+    let txOutRefForCollateral = Ledger.TxOutRef (C.fromCardanoTxId txId) 0
+        txE = Constraints.mkTxWithParams @Void def mempty (Constraints.mustUseOutputAsCollateral txOutRefForCollateral)
     case txE of
         Left e -> do
             Hedgehog.annotateShow e
@@ -197,7 +186,7 @@ mustUseOutputAsCollateralProp = property $ do
         Right utx -> do
             let coll = view (OC.tx . OC.txInsCollateral) utx
             Hedgehog.assert $ length coll == 1
-            Hedgehog.assert $ Right (head coll) == C.toCardanoTxIn txOutRef
+            Hedgehog.assert $ Right (head coll) == C.toCardanoTxIn txOutRefForCollateral
 
 mustSpendPubKeyOutputDuplicate :: Property
 mustSpendPubKeyOutputDuplicate = property $ do
@@ -207,35 +196,35 @@ mustSpendPubKeyOutputDuplicate = property $ do
 
 mustSpendScriptOutputDuplicate :: Property
 mustSpendScriptOutputDuplicate = property $ do
-    let con = mustSpendScriptOutputWithReference @Void @Void (txOutRef 1) (asRedeemer ()) (txOutRef 0)
+    let con = Constraints.mustSpendScriptOutputWithReference @Void @Void (txOutRef 1) (asRedeemer ()) (txOutRef 0)
     let dup = con <> con
     Hedgehog.assert $ prepFromTxConstraints dup == prepFromTxConstraints con
 
 mustSpendScriptOutputKeepTheOneWithAReferenceScript :: Property
 mustSpendScriptOutputKeepTheOneWithAReferenceScript = property $ do
-    let con = mustSpendScriptOutputWithReference @Void @Void (txOutRef 1) (asRedeemer ()) (txOutRef 0)
-    let dup = mustSpendScriptOutput @Void @Void (txOutRef 1) (asRedeemer ()) <> con
+    let con = Constraints.mustSpendScriptOutputWithReference @Void @Void (txOutRef 1) (asRedeemer ()) (txOutRef 0)
+    let dup = Constraints.mustSpendScriptOutput @Void @Void (txOutRef 1) (asRedeemer ()) <> con
     Hedgehog.assert $ prepFromTxConstraints dup == prepFromTxConstraints con
 
 mustSpendScriptOutputFailsWithDifferentRedeemers :: Property
 mustSpendScriptOutputFailsWithDifferentRedeemers = property $ do
-    let con  = mustSpendScriptOutputWithReference @Void @Void (txOutRef 1) (asRedeemer ()) (txOutRef 0)
-    let con2 = mustSpendScriptOutputWithReference @Void @Void (txOutRef 1) (asRedeemer (5 :: Integer)) (txOutRef 0)
+    let con  = Constraints.mustSpendScriptOutputWithReference @Void @Void (txOutRef 1) (asRedeemer ()) (txOutRef 0)
+    let con2 = Constraints.mustSpendScriptOutputWithReference @Void @Void (txOutRef 1) (asRedeemer (5 :: Integer)) (txOutRef 0)
     Hedgehog.assert $ case prepFromTxConstraints (con <> con2) of
         Left (OC.AmbiguousRedeemer _ _) -> True
         _                               -> False
 
 mustSpendScriptOutputFailsWithDifferentReferenceScript :: Property
 mustSpendScriptOutputFailsWithDifferentReferenceScript = property $ do
-    let con  = mustSpendScriptOutputWithReference @Void @Void (txOutRef 1) (asRedeemer ()) (txOutRef 0)
-    let con2 = mustSpendScriptOutputWithReference @Void @Void (txOutRef 1) (asRedeemer ()) (txOutRef 1)
+    let con  = Constraints.mustSpendScriptOutputWithReference @Void @Void (txOutRef 1) (asRedeemer ()) (txOutRef 0)
+    let con2 = Constraints.mustSpendScriptOutputWithReference @Void @Void (txOutRef 1) (asRedeemer ()) (txOutRef 1)
     Hedgehog.assert $ case prepFromTxConstraints (con <> con2) of
         Left (OC.AmbiguousReferenceScript _ _) -> True
         _                                      -> False
 
 prepFromTxConstraints
     :: Constraints.TxConstraints Void Void
-    -> Either MkTxError OC.SortedConstraints
+    -> Either Constraints.MkTxError OC.SortedConstraints
 prepFromTxConstraints txCons = runExcept $ flip evalStateT (OC.initialState def) $
         OC.prepareConstraints @Void (Constraints.txOwnInputs txCons) (Constraints.txOwnOutputs txCons) (Constraints.txConstraints txCons)
         `runReaderT` mempty
