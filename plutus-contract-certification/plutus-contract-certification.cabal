@@ -52,7 +52,9 @@ library
   --------------------
   -- Local components
   --------------------
-  build-depends:   plutus-contract >=1.2.0
+  build-depends:
+    , plutus-contract        >=1.2.0
+    , plutus-contract-model  >=1.2.0
 
   --------------------------
   -- Other IOG dependencies

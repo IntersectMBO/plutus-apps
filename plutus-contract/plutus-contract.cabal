@@ -128,18 +128,16 @@ library
   -- Other IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api               >=1.35
+    , cardano-api             >=1.35
     , cardano-crypto
     , cardano-crypto-class
     , cardano-ledger-alonzo
     , cardano-ledger-babbage
     , cardano-ledger-core
     , cardano-ledger-shelley
-    , plutus-core               >=1.0.0
-    , plutus-ledger-api         >=1.0.0
-    , plutus-tx                 >=1.0.0
-    , quickcheck-contractmodel  >=0.1.4.0
-    , quickcheck-dynamic        >=3.0.2
+    , plutus-core             >=1.0.0
+    , plutus-ledger-api       >=1.0.0
+    , plutus-tx               >=1.0.0
 
   if !(impl(ghcjs) || os(ghcjs))
     build-depends: plutus-tx-plugin >=1.0.0
@@ -193,11 +191,6 @@ library
   if !((impl(ghcjs) || os(ghcjs)) || os(windows))
     exposed-modules:
       Plutus.Contract.Test
-      Plutus.Contract.Test.ContractModel
-      Plutus.Contract.Test.ContractModel.CrashTolerance
-      Plutus.Contract.Test.ContractModel.Interface
-      Plutus.Contract.Test.ContractModel.Internal
-      Plutus.Contract.Test.ContractModel.Internal.ContractInstance
       Plutus.Contract.Test.Coverage
       Plutus.Contract.Test.Coverage.Analysis
       Plutus.Contract.Test.Coverage.Analysis.Common
@@ -251,7 +244,6 @@ test-suite plutus-contract-test
     Spec.Contract.Tx.Constraints.Spec
     Spec.Contract.Tx.Constraints.TimeValidity
     Spec.Emulator
-    Spec.ErrorChecking
     Spec.Plutus.Contract.Oracle
     Spec.Rows
     Spec.Secrets
