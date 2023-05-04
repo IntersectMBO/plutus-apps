@@ -18,6 +18,7 @@ module Cardano.Node.Emulator.MTL (
   , balanceTx
   , signTx
   , submitUnbalancedTx
+  , submitTxConfirmed
   , payToAddress
   -- * Logging
   , logDebug
@@ -232,6 +233,18 @@ submitUnbalancedTx utxoIndex changeAddr keys utx = do
   signedTx <- signTx keys newTx
   queueTx signedTx
   pure signedTx
+
+submitTxConfirmed
+    :: MonadEmulator m
+    => UtxoIndex -- ^ Just the transaction inputs, not the entire 'UTxO'.
+    -> CardanoAddress
+    -> CardanoBuildTx
+    -> m CardanoTx
+submitTxConfirmed utxoIndex addr utx = do
+  let privateKey = lookup addr $ zip E.knownAddresses E.knownPaymentPrivateKeys
+  tx <- submitUnbalancedTx utxoIndex addr privateKey utx
+  nextSlot
+  pure tx
 
 -- | Create a transaction that transfers funds from one address to another, and sign and submit it.
 payToAddress :: MonadEmulator m => (CardanoAddress, PaymentPrivateKey) -> CardanoAddress -> C.Value -> m C.TxId

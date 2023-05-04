@@ -2,10 +2,17 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE TypeApplications   #-}
+
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
+
 module Spec.Balancing(tests) where
 
-import Control.Applicative ((<|>))
-import Control.Lens ((&), (^.))
+import Cardano.Api qualified as C
+import Cardano.Node.Emulator qualified as E
+import Cardano.Node.Emulator.MTL (EmulatorError, EmulatorLogs, EmulatorM, MonadEmulator,
+                                  emptyEmulatorStateWithInitialDist, nextSlot, submitUnbalancedTx, utxosAt)
+import Cardano.Node.Emulator.MTL.Test (hasValidatedTransactionCountOfTotal, renderLogs)
+import Control.Lens ((&))
 import Control.Monad (void)
 import Control.Monad.Except (runExceptT)
 import Control.Monad.RWS.Strict (ask, evalRWS)
@@ -15,18 +22,10 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Text qualified as Text
 import Data.Void (Void)
-import Test.Tasty (TestName, TestTree, testGroup)
-import Test.Tasty.HUnit (assertFailure, testCase)
-
-import Cardano.Api qualified as C
-import Cardano.Node.Emulator qualified as E
-import Cardano.Node.Emulator.MTL
-import Cardano.Node.Emulator.MTL.Test
 import Ledger (CardanoAddress, CardanoTx, toPlutusAddress, unitDatum, unitRedeemer)
 import Ledger qualified
-import Ledger.AddressMap qualified as AM
-import Ledger.Test
-import Ledger.Tx.CardanoAPI (fromCardanoAddress, toCardanoValue)
+import Ledger.Test (coinMintingPolicyV1, someAddress, someCardanoAddress, someValidator)
+import Ledger.Tx.CardanoAPI (toCardanoValue)
 import Ledger.Tx.Constraints qualified as Constraints
 import Ledger.Typed.Scripts qualified as Typed
 import Plutus.Script.Utils.Ada qualified as Ada
@@ -35,6 +34,8 @@ import Plutus.Script.Utils.V1.Scripts qualified as Scripts
 import Plutus.Script.Utils.V1.Typed.Scripts qualified as TypedScripts
 import Plutus.Script.Utils.Value qualified as Value
 import PlutusTx (FromData, ToData, toBuiltinData)
+import Test.Tasty (TestName, TestTree, testGroup)
+import Test.Tasty.HUnit (assertFailure, testCase)
 
 tests :: TestTree
 tests =
@@ -91,9 +92,9 @@ checkPredicate
 checkPredicate testName initialDist test contract =
   testCase testName $ do
     let params = def
-        (res, log) = evalRWS (runExceptT contract) params (emptyEmulatorStateWithInitialDist initialDist)
-    for_ (test log res) $ \msg ->
-      assertFailure $ Text.unpack (renderLogs log) ++ "\n" ++ msg
+        (res, emulatorLogs) = evalRWS (runExceptT contract) params (emptyEmulatorStateWithInitialDist initialDist)
+    for_ (test emulatorLogs res) $ \msg ->
+      assertFailure $ Text.unpack (renderLogs emulatorLogs) ++ "\n" ++ msg
 
 checkLogPredicate
   :: String
@@ -133,7 +134,7 @@ balanceTxnMinAda =
                   unitDatum
                   (Value.scale 100 ff)
             <> Constraints.mustIncludeDatumInTx unitDatum
-        submitTxConstraints w1 mempty constraints1
+        void $ submitTxConstraints w1 mempty constraints1
 
         params <- ask
         utxo <- utxosAt (someCardanoAddress (E.pNetworkId params))
@@ -164,7 +165,7 @@ balanceTxnMinAda2 =
 
       setupContract = do
         -- Make sure there is a utxo with 1 A, 1 B, and 4 ada at w2
-        submitTxConstraints w1 mempty
+        void $ submitTxConstraints w1 mempty
           (payToWallet w2 ( vA 1 <> vB 1 <> Value.scale 2 (Ada.toValue Ledger.minAdaTxOutEstimated)))
         -- Make sure there is a UTxO with 1 B and datum () at the script
         submitTxConstraints w1 mempty
@@ -194,7 +195,7 @@ balanceTxnMinAda2 =
 
       contract :: EmulatorM ()
       contract = do
-        setupContract
+        void setupContract
         void wallet2Contract
 
   in checkLogPredicate "balancing doesn't create outputs with no Ada (2)" initialDist (hasValidatedTransactionCountOfTotal 3 3) contract
