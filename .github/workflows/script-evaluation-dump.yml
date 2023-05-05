@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   script-evaluation-dump:
-    runs-on: [ubuntu-latest]
+    runs-on: [self-hosted, plutus-benchmark]
     timeout-minutes: 360
 
     steps:
