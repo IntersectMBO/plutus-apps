@@ -153,7 +153,6 @@ library
     , containers
     , cryptonite            >=0.25
     , data-default
-    , deepseq
     , directory
     , filepath
     , flat
@@ -285,7 +284,6 @@ test-suite plutus-contract-test
     , bytestring
     , containers
     , data-default
-    , deepseq
     , extensible-effects
     , freer-simple
     , hedgehog
