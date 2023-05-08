@@ -38,10 +38,10 @@ common lang
   -- See Plutus Tx readme for why we need the following flags:
   -- -fobject-code -fno-ignore-interface-pragmas and -fno-omit-interface-pragmas
   ghc-options:
-    -Wall -Wnoncanonical-monad-instances -Wunused-packages
-    -Wincomplete-uni-patterns -Wincomplete-record-updates
-    -Wredundant-constraints -Widentities -fobject-code
-    -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
+    -Wall -Wnoncanonical-monad-instances -Wincomplete-uni-patterns
+    -Wincomplete-record-updates -Wredundant-constraints -Widentities
+    -fobject-code -fno-ignore-interface-pragmas
+    -fno-omit-interface-pragmas
 
 flag defer-plugin-errors
   description:
@@ -113,7 +113,7 @@ test-suite plutus-contract-model-test
     -Wall -Wnoncanonical-monad-instances -Wincomplete-uni-patterns
     -Wincomplete-record-updates -Wredundant-constraints -Widentities
     -rtsopts -fobject-code -fno-ignore-interface-pragmas
-    -fno-omit-interface-pragmas
+    -Wno-unused-packages -fno-omit-interface-pragmas
 
   hs-source-dirs:     test
   other-modules:      Spec.ErrorChecking
