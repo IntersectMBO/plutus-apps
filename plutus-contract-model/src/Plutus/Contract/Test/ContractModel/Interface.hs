@@ -65,10 +65,14 @@ module Plutus.Contract.Test.ContractModel.Interface
     , transfer
     , QCCM.createToken
     , QCCM.createTxOut
+    , QCCM.createTxIn
+    , QCCM.createSymbolic
     , QCCM.assertSpec
     , SpecificationEmulatorTrace
     , registerToken
     , registerTxOut
+    , registerTxIn
+    , registerSymbolic
     , delay
     , fromSlotNo
     , toSlotNo
@@ -159,6 +163,10 @@ module Plutus.Contract.Test.ContractModel.Interface
     , checkDoubleSatisfaction
     , checkDoubleSatisfactionWithOptions
     , Generic
+
+    -- ** Utils
+    , fromAssetId
+    , toAssetId
     ) where
 
 import Control.Monad.Freer.Reader (ask)
@@ -204,8 +212,10 @@ type HandleFun state = forall w schema err params. (Typeable w, Typeable schema,
 data StartContract state where
   StartContract :: (CMI.SchemaConstraints w s e, Typeable p) => ContractInstanceKey state w s e p -> p -> StartContract state
 
-type TxOut = CardanoAPI.TxOut CardanoAPI.CtxUTxO QCCM.Era
-type SpecificationEmulatorTrace = Eff (Writer [(String, Either TxOut AssetClass)] ': BaseEmulatorEffects)
+type SpecificationEmulatorTrace = Eff (Writer [(String, SomethingWithSymbolicRep)] ': BaseEmulatorEffects)
+
+data SomethingWithSymbolicRep where
+  WithSymbolicRep :: QCCM.HasSymbolicRep t => t -> SomethingWithSymbolicRep
 
 -- | A `ContractModel` instance captures everything that is needed to generate and run tests of a
 --   contract or set of contracts. It specifies among other things
@@ -310,7 +320,7 @@ class ( Typeable state
 
     -- | Map a `ContractInstanceKey` `k` to the `Contract` that is started when we start
     -- `k` in a given `QCCM.ModelState` with a given semantics of `SymToken`s
-    instanceContract :: (QCCM.SymToken -> AssetClass)
+    instanceContract :: (forall t. QCCM.HasSymbolicRep t => QCCM.Symbolic t -> t)
                      -> ContractInstanceKey state w s e p
                      -> p
                      -> Contract w s e ()
@@ -319,8 +329,9 @@ class ( Typeable state
     --   running the actions in the emulator (see "Plutus.Trace.Emulator"). It gets access to the
     --   wallet contract handles, the current model state, and the action to be performed.
     perform :: HandleFun state  -- ^ Function from `ContractInstanceKey` to `ContractHandle`
-            -> (QCCM.SymToken -> AssetClass) -- ^ Map from symbolic tokens (that may appear in actions or the state)
-                                             -- to assset class of actual blockchain token
+            -> (forall t. QCCM.HasSymbolicRep t => QCCM.Symbolic t -> t)
+                -- ^ Map from symbolic things (that may appear in actions or the state)
+                -- to actual things that appear at runtime
             -> QCCM.ModelState state -- ^ The model state before peforming the action
             -> Action state     -- ^ The action to perform
             -> SpecificationEmulatorTrace ()
@@ -370,7 +381,7 @@ instance ContractModel state => CMI.ContractInstanceModel (WrappedState state) w
   instanceTag = instanceTag . unwrapContractInstanceKey
   initialInstances = map wrapStartContract $ initialInstances @state
   startInstances m a = map wrapStartContract $ startInstances (fmap unwrapState m) (unwrapAction a)
-  instanceContract e k p = instanceContract (fromAssetId . e) (unwrapContractInstanceKey k) p
+  instanceContract e k p = instanceContract e (unwrapContractInstanceKey k) p
 
 wrapStartContract :: StartContract state -> CMI.StartContract (WrappedState state)
 wrapStartContract (StartContract k p) = CMI.StartContract (WrapContractInstanceKey k) p
@@ -400,9 +411,8 @@ instance ContractModel state => QCCM.RunModel (WrappedState state) (CMI.Specific
           case CMI.imLookup (WrapContractInstanceKey key) handles of
             Just (CMI.WalletContractHandle _ h) -> h
             Nothing                             -> error $ "contractHandle: No handle for " ++ show key
-    (_, ts) <- lift $ raise $ runWriter $ perform lookup (fromAssetId . e) (fmap unwrapState s) (unwrapAction a)
-    sequence_ [ QCCM.registerToken s (toAssetId ac) | (s, Right ac) <- ts ]
-    sequence_ [ QCCM.registerTxOut s out            | (s, Left out) <- ts ]
+    (_, ts) <- lift $ raise $ runWriter $ perform lookup e (fmap unwrapState s) (unwrapAction a)
+    sequence_ [ QCCM.registerSymbolic s t | (s, WithSymbolicRep t) <- ts ]
   monitoring (s, s') a _ _ = monitoring (fmap unwrapState s, fmap unwrapState s')
                                         (unwrapAction a)
 
@@ -464,13 +474,21 @@ transfer w1 w2 = QCCM.transfer (CMI.walletAddress w1) (CMI.walletAddress w2)
 
 -- | Register the real token corresponding to a symbolic token created
 -- in `createToken`.
-registerToken :: String -> AssetClass -> SpecificationEmulatorTrace ()
-registerToken s ac = tell @[(String, Either TxOut AssetClass)] [(s, Right ac)]
+registerToken :: String -> CardanoAPI.AssetId -> SpecificationEmulatorTrace ()
+registerToken = registerSymbolic
 
 -- | Register the real TxOut corresponding to a symbolic TxOut created
 -- in `createTxOut`.
 registerTxOut :: String -> CardanoAPI.TxOut CardanoAPI.CtxUTxO QCCM.Era -> SpecificationEmulatorTrace ()
-registerTxOut s out = tell @[(String, Either TxOut AssetClass)] [(s, Left out)]
+registerTxOut = registerSymbolic
+
+-- | Register the real TxIn corresponding to a symbolic TxIn created
+-- in `createTxIn`.
+registerTxIn :: String -> CardanoAPI.TxIn -> SpecificationEmulatorTrace ()
+registerTxIn = registerSymbolic
+
+registerSymbolic :: QCCM.HasSymbolicRep t => String -> t -> SpecificationEmulatorTrace ()
+registerSymbolic s t = tell [(s, WithSymbolicRep t)]
 
 -- | `delay n` delays emulator execution by `n` slots
 delay :: Integer -> SpecificationEmulatorTrace ()

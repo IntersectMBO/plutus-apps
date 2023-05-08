@@ -32,7 +32,6 @@ import Data.Aeson qualified as JSON
 import Data.Data
 import Data.Row (Row)
 
-import Cardano.Api (AssetId)
 import Plutus.Contract (Contract)
 import Plutus.Contract.Test hiding (not)
 import Plutus.Trace.Emulator as Trace (walletInstanceTag)
@@ -148,7 +147,7 @@ class ( ContractModel state
 
     -- | Map a `ContractInstanceKey` `k` to the `Contract` that is started when we start
     -- `k` in a given `ModelState` with a given semantics of `SymToken`s
-    instanceContract :: (SymToken -> AssetId)
+    instanceContract :: (forall t. HasSymbolicRep t => Symbolic t -> t)
                      -> ContractInstanceKey state w s e p
                      -> p
                      -> Contract w s e ()

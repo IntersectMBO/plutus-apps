@@ -21,6 +21,10 @@ import Control.Monad (when)
 import Data.Data (Data)
 import System.Random (Random)
 
+-- START import Cardano.Api
+import Cardano.Api qualified as C
+-- END import Cardano.Api
+
 -- START import Log
 import Control.Monad.Freer.Extras.Log (LogLevel)
 -- END import Log
@@ -35,6 +39,7 @@ import Plutus.Contract.Test (Wallet, minLogLevel, mockWalletAddress, w1, w2, w3)
 
 -- START import ContractModel
 import Plutus.Contract.Test.ContractModel qualified as CM
+import Test.QuickCheck.ContractModel qualified as CM (HasSymbolicRep, Symbolic)
 -- END import ContractModel
 
 -- END import ContractModel
@@ -405,7 +410,7 @@ v1_model = ()
 
     perform
         :: CM.HandleFun GameModel
-        -> (CM.SymToken -> Value.AssetClass)
+        -> (forall t. CM.HasSymbolicRep t => CM.Symbolic t -> t)
         -> CM.ModelState GameModel
         -> CM.Action GameModel
         -> CM.SpecificationEmulatorTrace ()
@@ -599,7 +604,7 @@ typeSignatures = id
 -- START perform type
  perform
      :: CM.HandleFun state
-     -> (CM.SymToken -> Value.AssetClass)
+     -> (forall t. CM.HasSymbolicRep t => CM.Symbolic t -> t)
      -> CM.ModelState state
      -> CM.Action state
      -> CM.SpecificationEmulatorTrace ()
