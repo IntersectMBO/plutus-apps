@@ -136,6 +136,7 @@ test-suite plutus-contract-model-test
   build-depends:
     , plutus-ledger-api         >=1.0.0
     , plutus-tx                 >=1.0.0
+    , plutus-tx-plugin          >=1.0.0.0
     , quickcheck-contractmodel  >=0.1.4.0
 
   ------------------------
