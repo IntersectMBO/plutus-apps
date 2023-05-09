@@ -235,14 +235,14 @@ submitUnbalancedTx utxoIndex changeAddr keys utx = do
   pure signedTx
 
 submitTxConfirmed
-    :: MonadEmulator m
+    :: (MonadEmulator m, Foldable f)
     => UtxoIndex -- ^ Just the transaction inputs, not the entire 'UTxO'.
     -> CardanoAddress
+    -> f PaymentPrivateKey
     -> CardanoBuildTx
     -> m CardanoTx
-submitTxConfirmed utxoIndex addr utx = do
-  let privateKey = lookup addr $ zip E.knownAddresses E.knownPaymentPrivateKeys
-  tx <- submitUnbalancedTx utxoIndex addr privateKey utx
+submitTxConfirmed utxoIndex addr privateKeys utx = do
+  tx <- submitUnbalancedTx utxoIndex addr privateKeys utx
   nextSlot
   pure tx
 

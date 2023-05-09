@@ -187,7 +187,8 @@ submitLockTx wallet lockArgs@LockArgs { lockArgsValue } = do
     params <- getParams
     -- TODO How to throw custom errors?
     (Constraints.UnbalancedCardanoTx utx utxoIndex) <- either (error . show) pure $ mkLockTx params lockArgs
-    void $ submitTxConfirmed utxoIndex wallet utx
+    let privateKey = lookup wallet $ zip E.knownAddresses E.knownPaymentPrivateKeys
+    void $ submitTxConfirmed utxoIndex wallet privateKey utx
 
 submitGuessTx :: MonadEmulator m => CardanoAddress -> GuessArgs -> m ()
 submitGuessTx wallet guessArgs@GuessArgs { guessArgsGameParam } = do
@@ -196,7 +197,8 @@ submitGuessTx wallet guessArgs@GuessArgs { guessArgsGameParam } = do
     params <- getParams
     -- TODO How to throw custom errors?
     (Constraints.UnbalancedCardanoTx utx utxoIndex) <- either (error . show) pure $ mkGuessTx params utxos guessArgs
-    void $ submitTxConfirmed utxoIndex wallet utx
+    let privateKey = lookup wallet $ zip E.knownAddresses E.knownPaymentPrivateKeys
+    void $ submitTxConfirmed utxoIndex wallet privateKey utx
 
 tests :: TestTree
 tests =
