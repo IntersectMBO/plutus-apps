@@ -59,6 +59,7 @@ let
             plutus-chain-index.package.buildable = false;
             plutus-chain-index-core.package.buildable = false;
             plutus-contract.package.buildable = false;
+            plutus-contract-model.package.buildable = false;
             plutus-contract-certification.package.buildable = false;
             plutus-e2e-tests.package.buildable = false;
             plutus-errors.package.buildable = false;
@@ -142,6 +143,9 @@ let
             plutus-contract.doHaddock = deferPluginErrors;
             plutus-contract.flags.defer-plugin-errors = deferPluginErrors;
 
+            plutus-contract-model.doHaddock = deferPluginErrors;
+            plutus-contract-model.flags.defer-plugin-errors = deferPluginErrors;
+
             plutus-e2e-tests.doHaddock = deferPluginErrors;
             plutus-e2e-tests.flags.defer-plugin-errors = deferPluginErrors;
             plutus-e2e-tests.preCheck = "
@@ -192,6 +196,7 @@ let
             plutus-chain-index.ghcOptions = [ "-Werror" ];
             plutus-chain-index-core.ghcOptions = [ "-Werror" ];
             plutus-contract.ghcOptions = [ "-Werror" ];
+            plutus-contract-model.ghcOptions = [ "-Werror" ];
             plutus-doc.ghcOptions = [ "-Werror" ];
             plutus-example.ghcOptions = [ "-Werror" ];
             plutus-ledger.ghcOptions = [ "-Werror" ];

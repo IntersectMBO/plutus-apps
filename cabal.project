@@ -30,6 +30,7 @@ packages: cardano-node-emulator
           plutus-chain-index-core
           plutus-contract
           plutus-contract-certification
+          plutus-contract-model
           plutus-e2e-tests
           plutus-example
           plutus-ledger
@@ -109,6 +110,8 @@ package plutus-ledger
 package plutus-script-utils
   haddock-options: "--optghc=-fplugin-opt PlutusTx.Plugin:defer-errors"
 package plutus-contract
+  haddock-options: "--optghc=-fplugin-opt PlutusTx.Plugin:defer-errors"
+package plutus-contract-model
   haddock-options: "--optghc=-fplugin-opt PlutusTx.Plugin:defer-errors"
 
 -- These packages appear in our dependency tree and are very slow to build.
@@ -206,6 +209,6 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/quickcheck-contractmodel
-  tag: 11fbbf4823655e91cf015b369f62982724a8cdf5
+  tag: 97252cfb352351ba1ade544c2c1c9000c558a6d8
   subdir:
     quickcheck-contractmodel
