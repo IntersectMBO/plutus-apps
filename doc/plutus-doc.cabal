@@ -91,11 +91,11 @@ executable doc-doctests
   -- Other IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api
+    , cardano-api               >=1.35
     , plutus-core               >=1.0.0
     , plutus-ledger-api         >=1.0.0
     , plutus-tx                 >=1.0.0
-    , quickcheck-contractmodel
+    , quickcheck-contractmodel  >=0.1.4.1
     , quickcheck-dynamic        >=3.0.2
 
   if !(impl(ghcjs) || os(ghcjs))
