@@ -66,7 +66,7 @@ import Data.Set qualified as Set
 import Data.Text qualified as Text
 import GHC.Generics
 
-import Cardano.Api (AssetId, SlotNo (..))
+import Cardano.Api (SlotNo (..))
 import Cardano.Api qualified as CardanoAPI
 import Cardano.Api.Shelley (ProtocolParameters)
 import Ledger.Address
@@ -128,7 +128,7 @@ contractHandle key = do
     Nothing                         -> error $ "contractHandle: No handle for " ++ show key
 
 activateWallets :: ContractInstanceModel state
-                => (SymToken -> AssetId)
+                => (forall t. HasSymbolicRep t => Symbolic t -> t)
                 -> [StartContract state]
                 -> EmulatorTraceWithInstances state ()
 activateWallets _ [] = return ()
