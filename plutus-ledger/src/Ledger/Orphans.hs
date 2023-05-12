@@ -59,8 +59,6 @@ instance Serialise (C.AddressInEra C.BabbageEra) where
       pure
       $ C.deserialiseFromRawBytes (C.AsAddressInEra C.AsBabbageEra) bs
 
-deriving instance Generic C.TxId
-deriving instance Generic C.TxIx
 deriving instance Generic C.Lovelace
 deriving instance Generic C.PolicyId
 deriving instance Generic C.Quantity

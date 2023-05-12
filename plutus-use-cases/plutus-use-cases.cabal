@@ -187,6 +187,7 @@ test-suite plutus-use-cases-test
     , freer-extras                   >=1.1.0
     , plutus-contract                >=1.1.0
     , plutus-contract-certification  >=1.1.0
+    , plutus-contract-model          >=1.1.0
     , plutus-ledger                  >=1.1.0
     , plutus-script-utils            >=1.1.0
     , plutus-tx-constraints          >=1.1.0
@@ -208,7 +209,7 @@ test-suite plutus-use-cases-test
     , ouroboros-consensus-cardano
     , plutus-ledger-api            >=1.0.0
     , plutus-tx                    >=1.0.0
-    , quickcheck-contractmodel
+    , quickcheck-contractmodel     >=0.1.4.0
     , quickcheck-dynamic           >=3.0.2
 
   if !(impl(ghcjs) || os(ghcjs))
@@ -286,6 +287,7 @@ executable plutus-use-cases-scripts
     , freer-extras                   >=1.1.0
     , plutus-contract                >=1.1.0
     , plutus-contract-certification  >=1.1.0
+    , plutus-contract-model          >=1.1.0
     , plutus-ledger                  >=1.1.0
     , plutus-script-utils            >=1.1.0
     , plutus-tx-constraints          >=1.1.0
@@ -306,7 +308,7 @@ executable plutus-use-cases-scripts
   -- Non-IOG dependencies
   ------------------------
   build-depends:
-      base                      >=4.9 && <5
+      base                      >=4.9     && <5
     , bytestring
     , containers
     , data-default
@@ -317,7 +319,7 @@ executable plutus-use-cases-scripts
     , optparse-applicative
     , prettyprinter
     , QuickCheck
-    , quickcheck-contractmodel
+    , quickcheck-contractmodel  >=0.1.4.0
     , streaming
     , tasty
     , tasty-golden

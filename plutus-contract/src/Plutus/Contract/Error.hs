@@ -61,7 +61,7 @@ data ContractError =
     WalletContractError WalletAPIError
   | ChainIndexContractError T.Text ChainIndexResponse
   | ConstraintResolutionContractError MkTxError
-  | TxToCardanoConvertContractError ToCardanoError
+  | ToCardanoConvertContractError ToCardanoError
   | ResumableContractError MatchingError
   | CCheckpointContractError CheckpointError
   | EndpointDecodeContractError
@@ -86,7 +86,7 @@ instance Pretty ContractError where
         <> ", got"
         <+> pretty actualResp
     ConstraintResolutionContractError e -> "Constraint resolution error:" <+> pretty e
-    TxToCardanoConvertContractError e   -> "To Cardano transaction conversation error:" <+> pretty e
+    ToCardanoConvertContractError e   -> "To Cardano conversion error:" <+> pretty e
     ResumableContractError e            -> "Resumable error:" <+> pretty e
     CCheckpointContractError e          -> "Checkpoint error:" <+> pretty e
     EndpointDecodeContractError (EndpointDescription ed) (EndpointValue ev) err

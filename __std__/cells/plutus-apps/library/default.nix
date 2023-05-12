@@ -8,7 +8,7 @@
 
   plutus-apps-project = import ./plutus-apps-project.nix block;
 
-  plutus-core-objects-inv = import ./plutus-core-objects-inv.nix block;
+  plutus-apps-project-with-haddock = import ./plutus-apps-project-with-haddock.nix block;
 
   make-plutus-apps-project = import ./make-plutus-apps-project.nix block;
 

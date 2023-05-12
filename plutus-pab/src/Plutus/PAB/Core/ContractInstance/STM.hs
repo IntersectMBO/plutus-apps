@@ -66,7 +66,7 @@ import Data.List.NonEmpty (NonEmpty)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Set (Set)
-import Ledger (CardanoAddress, Slot, TxId, TxOutRef)
+import Ledger (CardanoAddress, Slot, TxOutRef)
 import Ledger.Time (POSIXTime)
 import Plutus.ChainIndex (BlockNumber (BlockNumber), ChainIndexTx, TxIdState, TxOutBalance, TxOutStatus, TxStatus,
                           transactionStatus)
@@ -75,6 +75,7 @@ import Plutus.ChainIndex.UtxoState (UtxoIndex, UtxoState (_usTxUtxoData), utxoSt
 import Plutus.Contract.Effects (ActiveEndpoint (ActiveEndpoint, aeDescription))
 import Plutus.Contract.Resumable (IterationID, Request (Request, itID, rqID, rqRequest), RequestID)
 import Plutus.PAB.Core.Indexer.TxConfirmationStatus (TCSIndex)
+import Plutus.V1.Ledger.Api (TxId)
 import Wallet.Types (ContractInstanceId, EndpointDescription, EndpointValue (EndpointValue),
                      NotificationError (EndpointNotAvailable, InstanceDoesNotExist, MoreThanOneEndpointAvailable))
 import Wallet.Types qualified as Wallet (ContractActivityStatus (Active, Done, Stopped))

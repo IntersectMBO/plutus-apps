@@ -128,7 +128,7 @@ getInput outRef tx = do
     let findRedeemer (ix, _) = Map.lookup (Tx.RedeemerPtr Tx.Spend ix) (_citxRedeemers tx)
     Ledger.Redeemer r <- listToMaybe
                        $ mapMaybe findRedeemer
-                       $ filter (\(_, Tx.TxIn{Tx.txInRef}) -> outRef == txInRef)
+                       $ filter (\(_, ref) -> outRef == ref)
                        $ zip [0..] $ _citxInputs tx
     PlutusTx.fromBuiltinData r
 

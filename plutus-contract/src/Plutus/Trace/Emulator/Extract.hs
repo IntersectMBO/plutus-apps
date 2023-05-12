@@ -24,7 +24,6 @@ import Data.Foldable (traverse_)
 import Data.Int (Int64)
 import Data.Monoid (Sum (..))
 
-import Ledger qualified
 import Ledger.Tx.CardanoAPI (fromPlutusIndex)
 import Ledger.Tx.Constraints.OffChain (UnbalancedTx (..))
 import Plutus.Contract.Request (MkTxLog)
@@ -117,10 +116,7 @@ writeTransaction params fp prefix idx utx = do
     where
       buildTx :: UnbalancedTx -> Either CardanoLedgerError (C.Tx C.BabbageEra)
       buildTx (UnbalancedCardanoTx tx utxos) =
-        let fromCardanoTx ctx = do
-              utxo <- fromPlutusIndex $ Ledger.UtxoIndex utxos
-              makeTransactionBody params utxo ctx
-        in C.makeSignedTransaction [] <$> fromCardanoTx tx
+        C.makeSignedTransaction [] <$> makeTransactionBody params (fromPlutusIndex utxos) tx
 
 
 writeMkTxLog :: FilePath -> String -> Int -> MkTxLog -> IO ()

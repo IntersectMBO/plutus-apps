@@ -8,7 +8,7 @@ module Plutus.ChainIndex.TxUtxoBalance where
 import Control.Lens (view)
 import Data.Set (Set)
 import Data.Set qualified as Set
-import Ledger (TxIn (txInRef), TxOutRef (..))
+import Ledger (TxOutRef (..))
 import Plutus.ChainIndex.Tx (ChainIndexTx (..), citxInputs, txOutsWithRef)
 import Plutus.ChainIndex.Types (Point (..), Tip (..), TxUtxoBalance (..), tubUnspentOutputs)
 import Plutus.ChainIndex.UtxoState (RollbackFailed, RollbackResult, UtxoIndex,
@@ -18,7 +18,7 @@ fromTx :: ChainIndexTx -> TxUtxoBalance
 fromTx tx =
     TxUtxoBalance
         { _tubUnspentOutputs = Set.fromList $ fmap snd $ txOutsWithRef tx
-        , _tubUnmatchedSpentInputs = Set.fromList $ map txInRef (view citxInputs tx)
+        , _tubUnmatchedSpentInputs = Set.fromList $ view citxInputs tx
         }
 
 -- | Whether a 'TxOutRef' is a member of the UTXO set (ie. unspent)

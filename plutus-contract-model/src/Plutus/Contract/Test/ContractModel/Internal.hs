@@ -43,7 +43,7 @@ module Plutus.Contract.Test.ContractModel.Internal
   ) where
 
 import Cardano.Node.Emulator.Chain
-import Cardano.Node.Emulator.MTL.Test (chainStateToChainIndex)
+import Cardano.Node.Emulator.MTL.Test (chainStateToChainIndex, chainStateToContractModelChainState)
 import Cardano.Node.Emulator.Params
 import Control.DeepSeq
 import Control.Monad.Freer.Reader (Reader, ask, runReader)
@@ -66,7 +66,7 @@ import Data.Set qualified as Set
 import Data.Text qualified as Text
 import GHC.Generics
 
-import Cardano.Api (AssetId, SlotNo (..))
+import Cardano.Api (SlotNo (..))
 import Cardano.Api qualified as CardanoAPI
 import Cardano.Api.Shelley (ProtocolParameters)
 import Ledger.Address
@@ -75,7 +75,7 @@ import Ledger.Scripts
 import Ledger.Slot
 import Plutus.Contract (ContractInstanceId)
 import Plutus.Contract.Test hiding (not)
-import Plutus.Trace.Effects.EmulatorControl (discardWallets)
+import Plutus.Trace.Effects.EmulatorControl (EmulatorControl, discardWallets)
 import Plutus.Trace.Emulator as Trace (BaseEmulatorEffects, EmulatorEffects, EmulatorTrace, activateContract,
                                        freezeContractInstance, waitNSlots)
 import Plutus.V1.Ledger.Crypto
@@ -128,7 +128,7 @@ contractHandle key = do
     Nothing                         -> error $ "contractHandle: No handle for " ++ show key
 
 activateWallets :: ContractInstanceModel state
-                => (SymToken -> AssetId)
+                => (forall t. HasSymbolicRep t => Symbolic t -> t)
                 -> [StartContract state]
                 -> EmulatorTraceWithInstances state ()
 activateWallets _ [] = return ()
@@ -169,16 +169,17 @@ liftSpecificationTrace m = do
   s <- get
   raise . raise $ runReader s m
 
-instance HasChainIndex (EmulatorTraceWithInstances state) where
+instance Member EmulatorControl effs => HasChainIndex (Eff effs) where
   getChainIndex = do
     nid <- pNetworkId <$> EmulatorControl.getParams
     chainStateToChainIndex nid <$> EmulatorControl.chainState
+  getChainState = chainStateToContractModelChainState <$> EmulatorControl.chainState
 
 -- | `delay n` delays emulator execution by `n` slots
 delay :: Integer -> RunMonad (SpecificationEmulatorTrace state) ()
 delay = lift . void . Trace.waitNSlots . fromInteger
 
-instance Member Waiting effs => IsRunnable (Eff effs) where
+instance (HasChainIndex (Eff effs), Member Waiting effs) => IsRunnable (Eff effs) where
   awaitSlot = void . waitUntilSlot . Slot . toInteger . unSlotNo
 
 type instance Realized (Eff effs) a = a
@@ -189,9 +190,9 @@ instance Show (Action s) => Show (Action (WithInstances s)) where
   showsPrec p (UnderlyingAction a) = showsPrec p a
   showsPrec p (Unilateral w)       = showParen (p > 10) $ showString "Unilateral " . showsPrec 11 w
 
-instance HasSymTokens (Action s) => HasSymTokens (Action (WithInstances s)) where
-  getAllSymTokens (UnderlyingAction a) = getAllSymTokens a
-  getAllSymTokens Unilateral{}         = mempty
+instance HasSymbolics (Action s) => HasSymbolics (Action (WithInstances s)) where
+  getAllSymbolics (UnderlyingAction a) = getAllSymbolics a
+  getAllSymbolics Unilateral{}         = mempty
 
 deriving via StateModel.HasNoVariables Wallet instance StateModel.HasVariables Wallet
 

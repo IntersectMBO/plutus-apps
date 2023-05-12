@@ -25,15 +25,15 @@ import GHC.Generics (Generic)
 
 import Cardano.Node.Emulator.Params (pNetworkId)
 import Ledger hiding (Value, initialise, to)
+import Ledger.Tx.CardanoAPI (fromCardanoTxIn)
+import Ledger.Tx.Constraints qualified as Constraints
 import Ledger.Typed.Scripts qualified as Scripts
+import Plutus.ChainIndex.Types (Tip (Tip, TipAtGenesis))
+import Plutus.Contract as Contract
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
 import Plutus.V2.Ledger.Api (Value)
 import Plutus.V2.Ledger.Contexts qualified as V2
 import PlutusTx qualified
-
-import Ledger.Tx.Constraints qualified as Constraints
-import Plutus.ChainIndex.Types (Tip (Tip, TipAtGenesis))
-import Plutus.Contract as Contract
 
 mkValidator :: PaymentPubKeyHash -> () -> () -> V2.ScriptContext -> Bool
 mkValidator pk' _ _ p = V2.txSignedBy (V2.scriptContextTxInfo p) (unPaymentPubKeyHash pk')
@@ -72,7 +72,7 @@ pubKeyContract
     => PaymentPubKeyHash
     -> Value
     -> Contract w s e (TxOutRef, Maybe DecoratedTxOut, V2.TypedValidator PubKeyContract)
-pubKeyContract pk vl = mapError (review _PubKeyError   ) $ do
+pubKeyContract pk vl = mapError (review _PubKeyError) $ do
     networkId <- pNetworkId <$> getParams
     let inst = typedValidator pk
         address = Scripts.validatorCardanoAddress networkId inst
@@ -111,8 +111,8 @@ pubKeyContract pk vl = mapError (review _PubKeyError   ) $ do
             slot <- currentNodeClientSlot
             awaitChainIndexSlot slot
 
-            ciTxOut <- unspentTxOutFromRef outRef
-            pure (outRef, ciTxOut, inst)
+            ciTxOut <- unspentTxOutFromRef (fromCardanoTxIn outRef)
+            pure (fromCardanoTxIn outRef, ciTxOut, inst)
         _                    -> throwing _MultipleScriptOutputs pk
 
 -- | Temporary. Read TODO in 'pubKeyContract'.

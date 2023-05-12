@@ -141,7 +141,7 @@ library
   -- defined there.
   build-depends:
     , aeson
-    , base                      >=4.9  && <5
+    , base                      >=4.9     && <5
     , base16-bytestring
     , bytestring
     , cborg
@@ -155,7 +155,7 @@ library
     , mtl
     , newtype-generics
     , prettyprinter
-    , quickcheck-contractmodel
+    , quickcheck-contractmodel  >=0.1.4.0
     , scientific
     , serialise
     , servant

@@ -13,6 +13,7 @@ module Plutus.Trace.Effects.EmulatedWalletAPI(
     , handleEmulatedWalletAPI
     ) where
 
+import Cardano.Api qualified as C
 import Control.Monad.Freer (Eff, Member, subsume, type (~>))
 import Control.Monad.Freer.Error (Error)
 import Control.Monad.Freer.Extras (raiseEnd)
@@ -21,7 +22,7 @@ import Control.Monad.Freer.TH (makeEffect)
 import Data.Default (def)
 import Data.Text (Text)
 import Ledger qualified
-import Ledger.Tx (TxId, getCardanoTxId)
+import Ledger.Tx (getCardanoTxId)
 import Plutus.Script.Utils.Value (Value)
 import Wallet.API (WalletAPIError, defaultSlotRange, payToAddress)
 import Wallet.Effects (WalletEffect)
@@ -43,7 +44,7 @@ payToWallet ::
     => Wallet
     -> Wallet
     -> Value
-    -> Eff effs TxId
+    -> Eff effs C.TxId
 payToWallet source target amount = do
     ctx <- liftWallet source
          $ payToAddress def defaultSlotRange amount (Ledger.toPlutusAddress $ EM.mockWalletAddress target)

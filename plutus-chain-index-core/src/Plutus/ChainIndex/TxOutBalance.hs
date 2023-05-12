@@ -11,7 +11,7 @@ import Control.Lens (view)
 import Data.Map qualified as Map
 import Data.Set (Set)
 import Data.Set qualified as Set
-import Ledger (TxIn (txInRef), TxOutRef (..))
+import Ledger (TxOutRef (..))
 import Plutus.ChainIndex.Tx (ChainIndexTx (..), citxInputs, citxTxId, txOutsWithRef)
 import Plutus.ChainIndex.TxIdState (transactionStatus)
 import Plutus.ChainIndex.Types (BlockNumber, Point (..), Tip (..), TxIdState, TxOutBalance (..), TxOutState (..),
@@ -66,7 +66,7 @@ fromTx tx =
         { _tobUnspentOutputs = Set.fromList $ fmap snd $ txOutsWithRef tx
         , _tobSpentOutputs =
           Map.fromSet (const $ view citxTxId tx)
-                     $ Set.fromList $ map txInRef (view citxInputs tx)
+                     $ Set.fromList (view citxInputs tx)
         }
 
 -- | Whether a 'TxOutRef' is a member of the UTXO set (ie. unspent)

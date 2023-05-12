@@ -37,7 +37,7 @@ import Data.Set qualified as Set
 import GHC.Generics (Generic)
 import Ledger.Address (CardanoAddress, cardanoAddressCredential)
 import Ledger.Scripts (ScriptHash (ScriptHash))
-import Ledger.Tx (TxId, TxOutRef (..), Versioned)
+import Ledger.Tx (TxOutRef (..), Versioned)
 import Ledger.Tx qualified as L (DatumFromQuery (..), DecoratedTxOut, datumInDatumFromQuery, decoratedTxOutDatum,
                                  mkPubkeyDecoratedTxOut, mkScriptDecoratedTxOut)
 import Ledger.Tx.CardanoAPI (toCardanoAssetId)
@@ -59,7 +59,7 @@ import Plutus.ChainIndex.UtxoState qualified as UtxoState
 import Plutus.Script.Utils.Scripts (datumHash)
 import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential), Datum, DatumHash,
                              MintingPolicy (MintingPolicy), MintingPolicyHash (MintingPolicyHash), Script,
-                             StakeValidator (StakeValidator), StakeValidatorHash (StakeValidatorHash),
+                             StakeValidator (StakeValidator), StakeValidatorHash (StakeValidatorHash), TxId,
                              Validator (Validator), ValidatorHash (ValidatorHash))
 import Plutus.V2.Ledger.Api (OutputDatum (..))
 

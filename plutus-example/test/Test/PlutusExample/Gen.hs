@@ -84,7 +84,7 @@ genPlutusCert = Alonzo.transDCert . toShelleyCertificate <$> genCertificate
 genLedgerTxIn :: Gen (Ledger.TxIn StandardCrypto)
 genLedgerTxIn = toShelleyTxIn <$> genTxIn
 
-genPlutusTxId :: Gen Plutus.TxId
+genPlutusTxId :: Gen PV1.TxId
 genPlutusTxId =
   Alonzo.txInfoId . toShelleyTxId <$> genTxId
 

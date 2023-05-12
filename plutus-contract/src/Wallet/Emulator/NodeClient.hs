@@ -29,7 +29,7 @@ import Prettyprinter hiding (annotate)
 import Wallet.Effects (NodeClientEffect (..))
 
 data NodeClientEvent =
-    TxSubmit TxId C.Lovelace
+    TxSubmit C.TxId C.Lovelace
     -- ^ A transaction has been added to the pool of pending transactions. The value is the fee of the transaction.
     deriving stock (Eq, Show, Generic)
     deriving anyclass (FromJSON, ToJSON)

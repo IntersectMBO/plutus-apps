@@ -24,7 +24,7 @@ import Cardano.Ledger.Core qualified as C.Ledger (Tx)
 import Cardano.Ledger.Shelley.API qualified as C.Ledger hiding (Tx)
 import Cardano.Node.Emulator.Params (EmulatorEra, PParams, Params (emulatorPParams), emulatorEraHistory,
                                      emulatorGlobals, pProtocolParams)
-import Cardano.Node.Emulator.Validation (CardanoLedgerError, UTxO (..), makeTransactionBody)
+import Cardano.Node.Emulator.Validation (CardanoLedgerError, UTxO (UTxO), makeTransactionBody)
 import Control.Arrow ((&&&))
 import Control.Lens (over, (&))
 import Data.Aeson (FromJSON, ToJSON)
@@ -36,11 +36,11 @@ import Data.Maybe (isNothing, listToMaybe)
 import Data.Ord (Down (Down))
 import GHC.Generics (Generic)
 import Ledger.Address (CardanoAddress)
-import Ledger.Index (UtxoIndex (UtxoIndex), ValidationError (..), ValidationPhase (Phase1), adjustCardanoTxOut,
-                     minAdaTxOutEstimated)
-import Ledger.Tx (ToCardanoError (TxBodyError), TxOut, TxOutRef)
+import Ledger.Index (UtxoIndex, ValidationError (MaxCollateralInputsExceeded, TxOutRefNotFound),
+                     ValidationPhase (Phase1), adjustTxOut, minAdaTxOutEstimated)
+import Ledger.Tx (ToCardanoError (TxBodyError), TxOut)
 import Ledger.Tx qualified as Tx
-import Ledger.Tx.CardanoAPI (CardanoBuildTx (..), fromPlutusIndex, getCardanoBuildTx, toCardanoFee,
+import Ledger.Tx.CardanoAPI (CardanoBuildTx (CardanoBuildTx), fromPlutusIndex, getCardanoBuildTx, toCardanoFee,
                              toCardanoReturnCollateral, toCardanoTotalCollateral)
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
 import Ledger.Value.CardanoAPI (isZero, lovelaceToValue, split, valueGeq)
@@ -95,7 +95,7 @@ makeAutoBalancedTransaction params utxo (CardanoBuildTx txBodyContent) cChangeAd
 
 -- | A utxo provider returns outputs that cover at least the given value,
 -- and return the change, i.e. how much the outputs overshoot the given value.
-type UtxoProvider m = C.Value -> m ([(TxOutRef, TxOut)], C.Value)
+type UtxoProvider m = C.Value -> m (UtxoIndex, C.Value)
 
 -- | Creates a balanced transaction by calculating the execution units, the fees and then the balance.
 -- If the balance is negative the utxo provider is asked to pick extra inputs to make the balance is positive,
@@ -111,7 +111,7 @@ makeAutoBalancedTransactionWithUtxoProvider
     -> (forall a. CardanoLedgerError -> m a) -- ^ How to handle errors
     -> CardanoBuildTx
     -> m (C.Tx C.BabbageEra)
-makeAutoBalancedTransactionWithUtxoProvider params (UtxoIndex txUtxo) cChangeAddr utxoProvider errorReporter (CardanoBuildTx unbalancedBodyContent) = do
+makeAutoBalancedTransactionWithUtxoProvider params txUtxo cChangeAddr utxoProvider errorReporter (CardanoBuildTx unbalancedBodyContent) = do
 
     let initialFeeEstimate = C.Lovelace 300_000
 
@@ -120,7 +120,7 @@ makeAutoBalancedTransactionWithUtxoProvider params (UtxoIndex txUtxo) cChangeAdd
             (txBodyContent, extraUtxos) <- handleBalanceTx params txUtxo cChangeAddr utxoProvider errorReporter fee unbalancedBodyContent
 
             newFee <- either errorReporter pure $ do
-                cUtxo <- fromPlutusIndex $ UtxoIndex $ txUtxo <> Map.fromList extraUtxos
+                let cUtxo = fromPlutusIndex $ txUtxo <> extraUtxos
                 estimateCardanoBuildTxFee params cUtxo (CardanoBuildTx txBodyContent)
 
             if newFee /= fee
@@ -135,32 +135,32 @@ makeAutoBalancedTransactionWithUtxoProvider params (UtxoIndex txUtxo) cChangeAdd
     (txBodyContent, extraUtxos) <- handleBalanceTx params txUtxo cChangeAddr utxoProvider errorReporter theFee unbalancedBodyContent
 
     either errorReporter pure $ do
-        cUtxo <- fromPlutusIndex $ UtxoIndex $ txUtxo <> Map.fromList extraUtxos
+        let cUtxo = fromPlutusIndex $ txUtxo <> extraUtxos
         C.makeSignedTransaction [] <$> makeTransactionBody params cUtxo (CardanoBuildTx txBodyContent)
 
 -- | Balance an unbalanced transaction by adding missing inputs and outputs
 handleBalanceTx
     :: Monad m
     => Params
-    -> Map.Map TxOutRef TxOut -- ^ Just the transaction inputs, not the entire 'UTxO'.
+    -> UtxoIndex -- ^ Just the transaction inputs, not the entire 'UTxO'.
     -> C.AddressInEra C.BabbageEra -- ^ Change address
     -> UtxoProvider m -- ^ The utxo provider
     -> (forall a. CardanoLedgerError -> m a) -- ^ How to handle errors
     -> C.Lovelace -- ^ Estimated fee value to use.
     -> C.TxBodyContent C.BuildTx C.BabbageEra
-    -> m (C.TxBodyContent C.BuildTx C.BabbageEra, [(TxOutRef, TxOut)])
-handleBalanceTx params txUtxo cChangeAddr utxoProvider errorReporter fees utx = do
+    -> m (C.TxBodyContent C.BuildTx C.BabbageEra, UtxoIndex)
+handleBalanceTx params (C.UTxO txUtxo) cChangeAddr utxoProvider errorReporter fees utx = do
 
     let theFee = toCardanoFee fees
 
     let filteredUnbalancedTxTx = removeEmptyOutputsBuildTx utx { C.txFee = theFee }
         txInputs = Tx.getTxBodyContentInputs filteredUnbalancedTxTx
 
-        lookupValue txIn = let txOutRef = Tx.txInRef txIn in
+        lookupValue txIn =
           maybe
-            (errorReporter (Left (Phase1, TxOutRefNotFound txOutRef)))
-            (pure . Tx.txOutValue)
-            (Map.lookup txOutRef txUtxo)
+            (errorReporter (Left (Phase1, TxOutRefNotFound txIn)))
+            (pure . Tx.cardanoTxOutValue)
+            (Map.lookup txIn txUtxo)
 
     inputValues <- traverse lookupValue txInputs
 
@@ -170,7 +170,7 @@ handleBalanceTx params txUtxo cChangeAddr utxoProvider errorReporter fees utx = 
 
     ((neg, newInputs), (pos, mNewTxOut)) <- calculateTxChanges params cChangeAddr utxoProvider errorReporter $ split balance
 
-    newTxIns <- traverse (either (errorReporter . Right) (pure . (, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending)) . CardanoAPI.toCardanoTxIn . fst) newInputs
+    let newTxIns = map (, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending) $ Map.keys $ C.unUTxO newInputs
 
     let txWithOutputsAdded = if isZero pos
         then filteredUnbalancedTxTx
@@ -195,15 +195,15 @@ handleBalanceTx params txUtxo cChangeAddr utxoProvider errorReporter fees utx = 
             collFees = (fees * collateralPercent + 99 {- make sure to round up -}) `div` 100
             collBalance = fold collateral <> lovelaceToValue (-collFees)
 
-        ((negColl, newColInputs), (_, mNewTxOutColl)) <- calculateTxChanges params collAddr utxoProvider errorReporter $ split collBalance
+        ((negColl, newColInputs@(C.UTxO newColInputsMap)), (_, mNewTxOutColl)) <- calculateTxChanges params collAddr utxoProvider errorReporter $ split collBalance
 
         case C.Api.protocolParamMaxCollateralInputs $ pProtocolParams params of
             Just maxInputs
-                | length collateral + length newColInputs > fromIntegral maxInputs
+                | length collateral + Map.size newColInputsMap > fromIntegral maxInputs
                 -> errorReporter (Left (Phase1, MaxCollateralInputsExceeded))
             _ -> pure ()
 
-        newTxInsColl <- traverse (either (errorReporter . Right) pure . CardanoAPI.toCardanoTxIn . fst) newColInputs
+        let newTxInsColl = Map.keys newColInputsMap
 
         let txWithCollateralInputs = if isZero negColl
             then txWithinputsAdded
@@ -230,7 +230,7 @@ calculateTxChanges
     -> UtxoProvider m -- ^ The utxo provider
     -> (forall a. CardanoLedgerError -> m a) -- ^ How to handle errors
     -> (C.Value, C.Value) -- ^ The unbalanced tx's negative and positive balance.
-    -> m ((C.Value, [(TxOutRef, TxOut)]), (C.Value, Maybe TxOut))
+    -> m ((C.Value, UtxoIndex), (C.Value, Maybe TxOut))
 calculateTxChanges params addr utxoProvider errorReporter (neg, pos) = do
 
     -- Calculate the change output with minimal ada
@@ -238,14 +238,14 @@ calculateTxChanges params addr utxoProvider errorReporter (neg, pos) = do
         then pure (neg, pos, Nothing)
         else do
             let txOut = C.TxOut addr (CardanoAPI.toCardanoTxOutValue pos) C.TxOutDatumNone C.Api.ReferenceScriptNone
-            (missing, extraTxOut) <- adjustCardanoTxOut (emulatorPParams params) (Tx.TxOut txOut)
+            (missing, extraTxOut) <- adjustTxOut (emulatorPParams params) (Tx.TxOut txOut)
             let missingValue = lovelaceToValue (fold missing)
             -- Add the missing ada to both sides to keep the balance.
             pure (neg <> missingValue, pos <> missingValue, Just extraTxOut)
 
     -- Calculate the extra inputs needed
     (spend, change) <- if isZero newNeg
-        then pure ([], mempty)
+        then pure (mempty, mempty)
         else utxoProvider newNeg
 
     if isZero change
@@ -277,13 +277,13 @@ utxoProviderFromWalletOutputs
     -> CardanoBuildTx
     -- ^ The transaction being balanced, to make sure that we don't reuse any inputs from it.
     -> UtxoProvider (Either BalancingError)
-utxoProviderFromWalletOutputs (UtxoIndex walletUtxos) unbalancedBodyContent value =
-    let inputOutRefs = map Tx.txInRef $ Tx.getTxBodyContentInputs $ CardanoAPI.getCardanoBuildTx unbalancedBodyContent
+utxoProviderFromWalletOutputs (C.UTxO walletUtxos) unbalancedBodyContent value =
+    let inputOutRefs = Tx.getTxBodyContentInputs $ CardanoAPI.getCardanoBuildTx unbalancedBodyContent
         -- filter out inputs from walletUtxos that are already in unbalancedBodyContent
         filteredUtxos = flip Map.filterWithKey walletUtxos $ \txOutRef _ ->
             txOutRef `notElem` inputOutRefs
-        outRefsWithValue = (\p -> (p, Tx.txOutValue (snd p))) <$> Map.toList filteredUtxos
-    in selectCoin outRefsWithValue value
+        outRefsWithValue = (\p -> (p, Tx.cardanoTxOutValue (snd p))) <$> Map.toList filteredUtxos
+    in first (C.UTxO . Map.fromList) <$> selectCoin outRefsWithValue value
 
 -- | Given a set of @a@s with coin values, and a target value, select a number
 -- of @a@ such that their total value is greater than or equal to the target.

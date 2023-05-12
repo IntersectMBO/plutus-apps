@@ -66,12 +66,12 @@ import Data.Maybe (mapMaybe)
 import Data.Monoid (Endo (..))
 import Data.Set qualified as Set
 import Data.Text (Text)
-import Ledger (Block, CardanoAddress, OnChainTx (Invalid, Valid), TxId)
+import Ledger (Block, CardanoAddress, OnChainTx (Invalid, Valid))
 import Ledger.AddressMap (UtxoMap)
 import Ledger.AddressMap qualified as AM
 import Ledger.Index (ValidationError, ValidationPhase (Phase1, Phase2))
 import Ledger.Tx (CardanoTx, getCardanoTxFee, txOutValue)
-import Ledger.Tx.Constraints.OffChain (UnbalancedTx)
+import Ledger.Tx.Constraints.OffChain (UnbalancedTx (..))
 import Plutus.Contract (Contract)
 import Plutus.Contract.Effects (PABReq, PABResp, _BalanceTxReq)
 import Plutus.Contract.Request (MkTxLog)
@@ -98,7 +98,7 @@ type EmulatorEventFold a = Fold EmulatorEvent a
 type EmulatorEventFoldM effs a = FoldM (Eff effs) EmulatorEvent a
 
 -- | Transactions that failed to validate, in the given validation phase (if specified).
-failedTransactions :: Maybe ValidationPhase -> EmulatorEventFold [(TxId, CardanoTx, ValidationError, C.Value, [Text])]
+failedTransactions :: Maybe ValidationPhase -> EmulatorEventFold [(C.TxId, CardanoTx, ValidationError, C.Value, [Text])]
 failedTransactions phase = preMapMaybe (f >=> filterPhase phase) L.list
     where
         f e = preview (eteEvent . chainEvent . _TxnValidationFail) e
@@ -107,12 +107,12 @@ failedTransactions phase = preMapMaybe (f >=> filterPhase phase) L.list
         filterPhase (Just p) (p', i, t, v, c, l) = if p == p' then Just (i, t, v, c, l) else Nothing
 
 -- | Transactions that were validated
-validatedTransactions :: EmulatorEventFold [(TxId, CardanoTx, [Text])]
+validatedTransactions :: EmulatorEventFold [(C.TxId, CardanoTx, [Text])]
 validatedTransactions = preMapMaybe (preview (eteEvent . chainEvent . _TxnValidate)) L.list
 
 -- | Unbalanced transactions that are sent to the wallet for balancing
 walletTxBalanceEvents :: EmulatorEventFold [UnbalancedTx]
-walletTxBalanceEvents = preMapMaybe (preview (eteEvent . walletEvent' . _2 . _TxBalanceLog . _BalancingUnbalancedTx)) L.list
+walletTxBalanceEvents = fmap (uncurry UnbalancedCardanoTx) <$> preMapMaybe (preview (eteEvent . walletEvent' . _2 . _TxBalanceLog . _BalancingUnbalancedTx)) L.list
 
 -- | Min lovelace of 'txOut's from adjusted unbalanced transactions for all wallets
 walletsAdjustedTxEvents :: EmulatorEventFold [C.Lovelace]

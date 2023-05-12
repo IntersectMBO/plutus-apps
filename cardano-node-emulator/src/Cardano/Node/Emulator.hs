@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-missing-import-lists #-}
+
 module Cardano.Node.Emulator
   ( module Export
   ) where

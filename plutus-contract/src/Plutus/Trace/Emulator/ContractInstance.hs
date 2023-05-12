@@ -34,7 +34,7 @@ module Plutus.Trace.Emulator.ContractInstance(
     , addResponse
     ) where
 
-import Cardano.Api (NetworkId)
+import Cardano.Api qualified as C
 import Control.Lens (at, preview, view, (?~))
 import Control.Monad (guard, join, unless, void, when)
 import Control.Monad.Freer (Eff, Member, Members, interpret, send, subsume)
@@ -54,7 +54,8 @@ import Data.Set qualified as Set
 import Data.Text qualified as T
 import Ledger.Address (CardanoAddress)
 import Ledger.Blockchain (OnChainTx (Invalid, Valid))
-import Ledger.Tx (TxIn (txInRef), TxOutRef, getCardanoTxId)
+import Ledger.Tx (getCardanoTxId)
+import Ledger.Tx.CardanoAPI (fromCardanoTxIn, toCardanoTxIn)
 import Plutus.ChainIndex (ChainIndexQueryEffect, ChainIndexTx (_citxTxId),
                           ChainIndexTxOut (ChainIndexTxOut, citoAddress), RollbackState (Committed),
                           TxOutState (Spent, Unspent), TxValidity (TxInvalid, TxValid), citxInputs, fromOnChainTx,
@@ -155,7 +156,7 @@ runInstance :: forall w s e effs.
     , JSON.ToJSON w
     , Monoid w
     )
-    => NetworkId
+    => C.NetworkId
     -> Contract w s e ()
     -> Maybe EmulatorMessage
     -> Eff (ContractInstanceThreadEffs w s e effs) ()
@@ -345,14 +346,14 @@ updateTxOutStatus txns = do
     -- Check whether the contract instance is waiting for a status change of a
     -- transaction output of any of the new transactions. If that is the case,
     -- call 'addResponse' to sent the response.
-    let getSpentOutputs = map txInRef . view citxInputs
+    let getSpentOutputs = view citxInputs
         txWithTxOutStatus tx = let validity = validityFromChainIndex tx in
              fmap (, Committed validity (Spent (_citxTxId tx))) (getSpentOutputs tx)
           <> fmap (, Committed validity Unspent) (txOutRefs tx)
         statusMap = Map.fromList $ foldMap txWithTxOutStatus txns
     hks <- mapMaybe (traverse (preview E._AwaitTxOutStatusChangeReq)) <$> getHooks @w @s @e
     let mpReq Request{rqID, itID, rqRequest=txOutRef} =
-            case Map.lookup txOutRef statusMap of
+            case Map.lookup (fromCardanoTxIn txOutRef) statusMap of
                 Nothing        -> Nothing
                 Just newStatus ->
                     Just Response { rspRqID=rqID
@@ -514,7 +515,7 @@ logNewMessages = do
 --   addresses on which new outputs are produced
 data IndexedBlock =
   IndexedBlock
-    { ibUtxoSpent    :: Map TxOutRef ChainIndexTx
+    { ibUtxoSpent    :: Map C.TxIn ChainIndexTx
     , ibUtxoProduced :: Map CardanoAddress (NonEmpty ChainIndexTx)
     }
 
@@ -532,6 +533,7 @@ indexBlock :: [ChainIndexTx] -> IndexedBlock
 indexBlock = foldMap indexTx where
   indexTx otx =
     IndexedBlock
-      { ibUtxoSpent = Map.fromSet (const otx) $ Set.fromList $ map txInRef $ view citxInputs otx
+      { ibUtxoSpent = Map.fromSet (const otx) $ Set.fromList $ either (error . ("Plutus.Trace.Emulator.ContractInstance.indexBlock: " ++) . show) id $
+            traverse toCardanoTxIn $ view citxInputs otx
       , ibUtxoProduced = Map.fromListWith (<>) $ txOuts otx >>= (\ChainIndexTxOut{citoAddress} -> [(citoAddress, otx :| [])])
       }

@@ -9,6 +9,7 @@
 {-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
 module Spec.Emulator(tests) where
 
+import Cardano.Api qualified as C
 import Cardano.Node.Emulator.Chain qualified as Chain
 import Cardano.Node.Emulator.Fee (selectCoin)
 import Cardano.Node.Emulator.Generators (Mockchain (Mockchain))
@@ -28,7 +29,7 @@ import Hedgehog (Property, forAll, property)
 import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-import Ledger (CardanoTx (..), OnChainTx (Valid), PaymentPubKeyHash, unspentOutputs)
+import Ledger (CardanoTx (..), OnChainTx (Valid), PaymentPubKeyHash, toCtxUTxOTxOut, unspentOutputs)
 import Ledger.Index qualified as Index
 import Ledger.Value.CardanoAPI qualified as Value
 import Plutus.Contract.Test hiding (not)
@@ -111,7 +112,7 @@ pubKey3 = mockWalletPaymentPubKeyHash wallet3
 utxo :: Property
 utxo = property $ do
     Mockchain txPool o _params <- forAll Gen.genMockchain
-    Hedgehog.assert (unspentOutputs [map Valid txPool] == o)
+    Hedgehog.assert (unspentOutputs [map Valid txPool] == C.UTxO (fmap toCtxUTxOTxOut o))
 
 txnValid :: Property
 txnValid = property $ do

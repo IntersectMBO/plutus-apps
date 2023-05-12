@@ -9,24 +9,13 @@
 
 module Wallet.Rollup.Types where
 
+import Cardano.Api qualified as C
 import Control.Lens (makeLenses, makeLensesFor)
 import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
 import Data.Map (Map)
 import GHC.Generics
-import Ledger (CardanoTx, PaymentPubKeyHash (PaymentPubKeyHash), TxIn, TxOut, cardanoAddressCredential, txOutAddress)
-import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential), TxId, ValidatorHash, Value)
-import Prettyprinter (Pretty, pretty, viaShow)
-
-data TxKey =
-    TxKey
-        { _txKeyTxId        :: TxId
-        , _txKeyTxOutRefIdx :: Integer
-        }
-    deriving (Show, Eq, Ord, Generic)
-    deriving anyclass (FromJSON, ToJSON)
-
-instance Pretty TxKey where
-    pretty = viaShow
+import Ledger (CardanoTx, PaymentPubKeyHash (PaymentPubKeyHash), TxOut, cardanoAddressCredential, txOutAddress)
+import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential), ValidatorHash, Value)
 
 data SequenceId =
     SequenceId
@@ -44,10 +33,10 @@ makeLensesFor
 
 data DereferencedInput
     = DereferencedInput
-          { originalInput :: TxIn
+          { originalInput :: C.TxIn
           , refersTo      :: TxOut
           }
-    | InputNotFound TxKey
+    | InputNotFound C.TxIn
     deriving (Eq, Show, Generic)
     deriving anyclass (FromJSON, ToJSON)
 
@@ -70,7 +59,7 @@ toBeneficialOwner txOut =
 data AnnotatedTx =
     AnnotatedTx
         { sequenceId         :: SequenceId
-        , txId               :: TxId
+        , txId               :: C.TxId
         , tx                 :: CardanoTx
         , dereferencedInputs :: [DereferencedInput]
         , balances           :: Map BeneficialOwner Value
@@ -83,7 +72,7 @@ makeLenses 'AnnotatedTx
 
 data Rollup =
     Rollup
-        { _previousOutputs :: Map TxKey TxOut
+        { _previousOutputs :: Map C.TxIn TxOut
         , _rollingBalances :: Map BeneficialOwner Value
         }
     deriving (Show, Eq, Generic)

@@ -200,8 +200,8 @@ instance ContractModel UniswapModel where
   instanceContract tokenSem key token = case key of
     OwnerKey    -> ownerEndpoint
     SetupKey    -> setupTokens
-    WalletKey _ -> toContract . userEndpoints . Uniswap . Coin . tokenSem  $ token
-    BadReqKey _ -> toContract . badEndpoints  . Uniswap . Coin . tokenSem  $ token
+    WalletKey _ -> toContract . userEndpoints . Uniswap . Coin . fromAssetId . tokenSem  $ token
+    BadReqKey _ -> toContract . badEndpoints  . Uniswap . Coin . fromAssetId . tokenSem  $ token
 
   initialState = UniswapModel Nothing mempty mempty mempty
 
@@ -483,52 +483,52 @@ instance ContractModel UniswapModel where
     SetupTokens -> do
       delay 40
       Trace.observableState (h SetupKey) >>= \case
-        Just (Semigroup.Last cur) -> sequence_ [ registerToken tn (Value.assetClass (Currency.currencySymbol cur) $ fromString tn) | tn <- ["A", "B", "C", "D"]]
+        Just (Semigroup.Last cur) -> sequence_ [ registerToken tn (toAssetId $ Value.assetClass (Currency.currencySymbol cur) $ fromString tn) | tn <- ["A", "B", "C", "D"]]
         _                         -> Trace.throwError $ GenericError "failed to create currency"
 
     Start -> do
       delay 5
       Trace.observableState (h OwnerKey) >>= \case
-        Last (Just (Right (Uniswap (Coin v)))) -> registerToken "Uniswap" v
+        Last (Just (Right (Uniswap (Coin v)))) -> registerToken "Uniswap" (toAssetId v)
         _                                      -> Trace.throwError $ GenericError "initialisation failed"
 
     CreatePool w t1 a1 t2 a2 -> do
       let us = s ^. contractState . uniswapToken . to fromJust
-          c1 = Coin (tokenSem t1)
-          c2 = Coin (tokenSem t2)
-          Coin ac = liquidityCoin (fst . Value.unAssetClass . tokenSem $ us) c1 c2
+          c1 = Coin (fromAssetId $ tokenSem t1)
+          c2 = Coin (fromAssetId $ tokenSem t2)
+          Coin ac = liquidityCoin (fst . Value.unAssetClass . fromAssetId . tokenSem $ us) c1 c2
       Trace.callEndpoint @"create" (h (WalletKey w)) $ CreateParams c1 c2 (Amount a1) (Amount a2)
       delay 5
       unless (hasPool s t1 t2) $ do
-        registerToken "Liquidity" ac
+        registerToken "Liquidity" (toAssetId ac)
 
     AddLiquidity w t1 a1 t2 a2 -> do
-      let c1 = Coin (tokenSem t1)
-          c2 = Coin (tokenSem t2)
+      let c1 = Coin (fromAssetId $ tokenSem t1)
+          c2 = Coin (fromAssetId $ tokenSem t2)
       Trace.callEndpoint @"add" (h (WalletKey w)) $ AddParams c1 c2 (Amount a1) (Amount a2)
       delay 5
 
     PerformSwap w t1 t2 a -> do
-      let c1 = Coin (tokenSem t1)
-          c2 = Coin (tokenSem t2)
+      let c1 = Coin (fromAssetId $ tokenSem t1)
+          c2 = Coin (fromAssetId $ tokenSem t2)
       Trace.callEndpoint @"swap" (h (WalletKey w)) $ SwapParams c1 c2 (Amount a) 0
       delay 5
 
     RemoveLiquidity w t1 t2 a -> do
-      let c1 = Coin (tokenSem t1)
-          c2 = Coin (tokenSem t2)
+      let c1 = Coin (fromAssetId $ tokenSem t1)
+          c2 = Coin (fromAssetId $ tokenSem t2)
       Trace.callEndpoint @"remove" (h (WalletKey w)) $ RemoveParams c1 c2 (Amount a)
       delay 5
 
     BadRemoveLiquidity w t1 a1 t2 a2 a -> do
-      let c1 = Coin (tokenSem t1)
-          c2 = Coin (tokenSem t2)
+      let c1 = Coin (fromAssetId $ tokenSem t1)
+          c2 = Coin (fromAssetId $ tokenSem t2)
       Trace.callEndpoint @"bad-remove" (h (BadReqKey w)) $ BadRemoveParams c1 (Amount a1) c2 (Amount a2) (Amount a)
       delay 5
 
     ClosePool w t1 t2 -> do
-      let c1 = Coin (tokenSem t1)
-          c2 = Coin (tokenSem t2)
+      let c1 = Coin (fromAssetId $ tokenSem t1)
+          c2 = Coin (fromAssetId $ tokenSem t2)
       Trace.callEndpoint @"close" (h (WalletKey w)) $ CloseParams c1 c2
       delay 5
 

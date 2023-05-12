@@ -39,7 +39,7 @@ import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Prelude hiding (Monoid (..), Semigroup (..))
 
-import Ledger (CardanoAddress, TxId, TxOutRef (..), getCardanoTxId)
+import Ledger (CardanoAddress, TxOutRef (..), getCardanoTxId)
 import Ledger.Scripts
 import Ledger.Tx.Constraints qualified as Constraints
 import Ledger.Typed.Scripts qualified as Scripts
@@ -58,7 +58,7 @@ import Prelude qualified as Haskell
 
 -- | A currency that can be created exactly once
 data OneShotCurrency = OneShotCurrency
-  { curRefTransactionOutput :: (TxId, Integer)
+  { curRefTransactionOutput :: (V2.TxId, Integer)
   -- ^ Transaction input that must be spent when
   --   the currency is minted.
   , curAmounts              :: AssocMap.Map TokenName Integer

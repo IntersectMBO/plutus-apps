@@ -52,7 +52,8 @@ import Data.Maybe (fromMaybe)
 import Data.Monoid (Sum (Sum))
 import Data.Proxy (Proxy (Proxy))
 import Data.Text qualified as Text
-import Ledger (TxId, TxOutRef (..))
+import Ledger (TxOutRef (..))
+import Ledger.Tx.CardanoAPI (fromCardanoTxId, fromCardanoTxIn)
 import Marconi.Core.Index.VSplit qualified as Ix
 import Plutus.ChainIndex (ChainIndexQueryEffect, Depth (..), RollbackState (..), TxConfirmedState (..), TxOutState (..),
                           TxOutStatus, TxStatus, TxValidity (..), transactionOutputState)
@@ -79,6 +80,7 @@ import Plutus.PAB.Effects.UUID (UUIDEffect, uuidNextRandom)
 import Plutus.PAB.Events.Contract (ContractInstanceId (ContractInstanceId))
 import Plutus.PAB.Types (PABError)
 import Plutus.PAB.Webserver.Types (ContractActivationArgs (ContractActivationArgs, caID, caWallet))
+import Plutus.V1.Ledger.Api (TxId)
 import Wallet.Effects (NodeClientEffect, WalletEffect)
 import Wallet.Emulator.LogMessages (TxBalanceMsg)
 import Wallet.Emulator.Wallet qualified as Wallet
@@ -208,9 +210,9 @@ processTxStatusChangeRequestsSTM =
             env <- ask
             case InstanceState.beTxChanges env of
               Left _      ->
-                  pure (AwaitTxStatusChangeResp txId <$> InstanceState.waitForTxStatusChange Unknown txId env)
+                  pure (AwaitTxStatusChangeResp txId <$> InstanceState.waitForTxStatusChange Unknown (fromCardanoTxId txId) env)
               Right ixRef -> do
-                  txStatus <- raise . liftIO $ processTxStatusChangeRequestIO ixRef env txId
+                  txStatus <- raise . liftIO $ processTxStatusChangeRequestIO ixRef env (fromCardanoTxId txId)
                   pure (AwaitTxStatusChangeResp txId <$> txStatus)
 
 processTxStatusChangeRequestIO
@@ -249,9 +251,9 @@ processTxOutStatusChangeRequestsSTM =
             env <- ask
             case InstanceState.beTxChanges env of
               Left _ ->
-                pure (AwaitTxOutStatusChangeResp txOutRef <$> InstanceState.waitForTxOutStatusChange Unknown txOutRef env)
+                pure (AwaitTxOutStatusChangeResp txOutRef <$> InstanceState.waitForTxOutStatusChange Unknown (fromCardanoTxIn txOutRef) env)
               Right txChange -> do
-                 txOutStatus <- raise . liftIO $ processTxOutStatusChangeRequestsIO txChange env txOutRef
+                 txOutStatus <- raise . liftIO $ processTxOutStatusChangeRequestsIO txChange env (fromCardanoTxIn txOutRef)
                  pure (AwaitTxOutStatusChangeResp txOutRef <$> txOutStatus)
 
 processTxOutStatusChangeRequestsIO
@@ -264,7 +266,7 @@ processTxOutStatusChangeRequestsIO tcsIx BlockchainEnv{beTxOutChanges} txOutRef 
   case transactionOutputState txOutBalance txOutRef of
     Nothing             -> pure empty
     Just s@(Spent txId) -> queryTx s txId
-    Just s@(Unspent)    -> queryTx s $ txOutRefId txOutRef
+    Just s@Unspent      -> queryTx s $ txOutRefId txOutRef
   where
     queryTx :: TxOutState -> TxId -> IO (STM TxOutStatus)
     queryTx s txId = do
@@ -286,7 +288,7 @@ processUtxoSpentRequestsSTM = RequestHandler $ \req -> do
     case traverse (preview Contract.Effects._AwaitUtxoSpentReq) req of
         Just request@Request{rqID, itID} -> do
             env <- ask
-            pure $ Response rqID itID (AwaitUtxoSpentResp <$> InstanceState.waitForUtxoSpent request env)
+            pure $ Response rqID itID (AwaitUtxoSpentResp <$> InstanceState.waitForUtxoSpent (fmap fromCardanoTxIn request) env)
         _ -> empty
 
 processUtxoProducedRequestsSTM ::
@@ -454,7 +456,7 @@ updateState ContractResponse{newState = State{observableState}, hooks} = do
         forM_ hooks $ \r -> do
             case rqRequest r of
                 ExposeEndpointReq endpoint -> InstanceState.addEndpoint (r { rqRequest = endpoint}) state
-                AwaitUtxoSpentReq txOutRef -> InstanceState.addUtxoSpentReq (r { rqRequest = txOutRef }) state
+                AwaitUtxoSpentReq txOutRef -> InstanceState.addUtxoSpentReq (r { rqRequest = fromCardanoTxIn txOutRef }) state
                 AwaitUtxoProducedReq addr  -> InstanceState.addUtxoProducedReq (r { rqRequest = addr }) state
                 _                          -> pure ()
         InstanceState.setObservableState observableState state

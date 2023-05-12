@@ -47,9 +47,10 @@ import GHC.Generics (Generic)
 import Prettyprinter (Pretty (..), (<+>))
 
 import Cardano.Api qualified as C
-import Ledger.Tx (CardanoTx, TxId, TxIn, TxOut, TxOutRef (..), getCardanoTxCollateralInputs, getCardanoTxId,
-                  getCardanoTxInputs, getCardanoTxProducedOutputs, getCardanoTxProducedReturnCollateral, txOutDatumHash,
-                  txOutPubKey, txOutValue, updateUtxo, updateUtxoCollateral)
+import Ledger.Index.Internal (UtxoIndex)
+import Ledger.Tx (CardanoTx, TxOut, getCardanoTxCollateralInputs, getCardanoTxId, getCardanoTxInputs,
+                  getCardanoTxProducedOutputs, getCardanoTxProducedReturnCollateral, txOutDatumHash, txOutPubKey,
+                  txOutValue, updateUtxo, updateUtxoCollateral)
 import Plutus.V1.Ledger.Crypto
 import Plutus.V1.Ledger.Scripts
 
@@ -99,38 +100,38 @@ onChainTxIsValid :: OnChainTx -> Bool
 onChainTxIsValid = eitherTx (const False) (const True)
 
 -- | Outputs consumed from the UTXO set by the 'OnChainTx'
-consumableInputs :: OnChainTx -> [TxIn]
+consumableInputs :: OnChainTx -> [C.TxIn]
 consumableInputs = eitherTx getCardanoTxCollateralInputs getCardanoTxInputs
 
 -- | Outputs added to the UTXO set by the 'OnChainTx'
-outputsProduced :: OnChainTx -> Map TxOutRef TxOut
+outputsProduced :: OnChainTx -> Map C.TxIn TxOut
 outputsProduced = eitherTx getCardanoTxProducedReturnCollateral getCardanoTxProducedOutputs
 
 -- | Lookup a transaction in a 'Blockchain' by its id.
-transaction :: Blockchain -> TxId -> Maybe OnChainTx
+transaction :: Blockchain -> C.TxId -> Maybe OnChainTx
 transaction bc tid = getFirst . foldMap (foldMap p) $ bc where
     p tx = if tid == eitherTx getCardanoTxId getCardanoTxId tx then First (Just tx) else mempty
 
 -- | Determine the unspent output that an input refers to
-out :: Blockchain -> TxOutRef -> Maybe TxOut
-out bc o = do
-    tx <- transaction bc (txOutRefId o)
+out :: Blockchain -> C.TxIn -> Maybe TxOut
+out bc o@(C.TxIn txId _) = do
+    tx <- transaction bc txId
     Map.lookup o $ outputsProduced tx
 
 -- | Determine the unspent value that a transaction output refers to.
-value :: Blockchain -> TxOutRef -> Maybe C.Value
+value :: Blockchain -> C.TxIn -> Maybe C.Value
 value bc o = txOutValue <$> out bc o
 
 -- | Determine the data script that a transaction output refers to.
-datumTxo :: Blockchain -> TxOutRef -> Maybe DatumHash
+datumTxo :: Blockchain -> C.TxIn -> Maybe DatumHash
 datumTxo bc o = txOutDatumHash =<< out bc o
 
 -- | Determine the public key that locks a transaction output, if there is one.
-pubKeyTxo :: Blockchain -> TxOutRef -> Maybe PubKeyHash
+pubKeyTxo :: Blockchain -> C.TxIn -> Maybe PubKeyHash
 pubKeyTxo bc o = out bc o >>= txOutPubKey
 
 -- | The unspent transaction outputs of the ledger as a whole.
-unspentOutputs :: Blockchain -> Map TxOutRef TxOut
-unspentOutputs = foldr (eitherTx updateUtxoCollateral updateUtxo) Map.empty . join
+unspentOutputs :: Blockchain -> UtxoIndex
+unspentOutputs = foldr (eitherTx updateUtxoCollateral updateUtxo) (C.UTxO Map.empty) . join
 
 makePrisms ''OnChainTx

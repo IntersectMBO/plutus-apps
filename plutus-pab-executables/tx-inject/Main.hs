@@ -39,7 +39,7 @@ import Cardano.Node.Types (PABServerConfig (..))
 import Cardano.Protocol.Socket.Mock.Client (TxSendHandle (..), queueTx, runTxSender)
 import Data.Either (fromRight)
 import Ledger.Blockchain (OnChainTx (..))
-import Ledger.Index (UtxoIndex (..), insertBlock)
+import Ledger.Index (UtxoIndex, insertBlock)
 import Ledger.Slot (Slot (..))
 import Ledger.Tx (CardanoTx (..))
 import Ledger.Value.CardanoAPI qualified as CardanoAPI
@@ -80,7 +80,7 @@ initialUtxoIndex config =
         view (chainState . txPool) $ fromRight (error "cannot initialize chain state") $
         emulatorStateInitialDist (def {pNetworkId = testnet}) $
         Map.mapKeys mockWalletPaymentPubKeyHash dist
-  in insertBlock (map Valid initialTxs) (UtxoIndex Map.empty)
+  in insertBlock (map Valid initialTxs) mempty
 
 -- | Starts the producer thread
 runProducer :: AppEnv -> IO ThreadId
@@ -97,7 +97,7 @@ runProducer AppEnv{txQueue, stats, utxoIndex} = do
       let utxo' = insertBlock [Valid $ CardanoEmulatorEraTx tx] utxo
       atomically $ do
         writeTBQueue txQueue tx
-        modifyTVar' stats $ \s -> s { stUtxoSize = Map.size $ getIndex utxo' }
+        modifyTVar' stats $ \s -> s { stUtxoSize = Map.size $ C.unUTxO utxo' }
       producer rng utxo'
 
 -- | Default consumer will take transactions from the queue and send them

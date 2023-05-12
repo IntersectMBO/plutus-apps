@@ -112,7 +112,7 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
 import Ledger (Datum, Language (PlutusV1, PlutusV2), MintingPolicy, MintingPolicyHash, POSIXTimeRange,
-               Redeemer (Redeemer), Versioned, adjustCardanoTxOut, decoratedTxOutReferenceScript)
+               Redeemer (Redeemer), UtxoIndex, Versioned, adjustTxOut, decoratedTxOutReferenceScript)
 import Ledger.Address (PaymentPubKey (PaymentPubKey), PaymentPubKeyHash (PaymentPubKeyHash))
 import Ledger.Crypto (pubKeyHash)
 import Ledger.Interval ()
@@ -335,7 +335,7 @@ paymentPubKeyHash pkh =
 data UnbalancedTx
     = UnbalancedCardanoTx
         { unBalancedCardanoBuildTx :: C.CardanoBuildTx
-        , unBalancedTxUtxoIndex    :: Map TxOutRef TxOut
+        , unBalancedTxUtxoIndex    :: UtxoIndex
         -- ^ Utxo lookups that are used for adding inputs to the 'UnbalancedTx'.
         -- Simply refers to  'slTxOutputs' of 'ScriptLookups'.
         }
@@ -351,7 +351,7 @@ tx :: Traversal' UnbalancedTx C.CardanoBuildTx
 tx = cardanoTx
 
 instance Pretty UnbalancedTx where
-    pretty (UnbalancedCardanoTx utx utxo) =
+    pretty (UnbalancedCardanoTx utx (C.UTxO utxo)) =
         vsep
         [ hang 2 $ vsep ["Tx:", pretty utx]
         , hang 2 $ vsep $ "Requires signatures:" : (viaShow <$> Set.toList (utx ^. txExtraKeyWits))
@@ -747,7 +747,7 @@ processConstraint = \case
                 refTxOut <- lookupTxOutRef ref
                 case refTxOut ^? decoratedTxOutReferenceScript of
                     Just _ -> do
-                      txIn <- throwLeft ToCardanoError $ C.toCardanoTxIn . Tx.txInputRef . Tx.pubKeyTxInput $ ref
+                      txIn <- throwLeft ToCardanoError $ C.toCardanoTxIn ref
                       unbalancedTx . tx . txInsReference <>= [txIn]
                       throwLeft ToCardanoError
                         $ toCardanoMintWitness red (flip Tx.Versioned PlutusV2 <$> mref) Nothing
@@ -952,7 +952,7 @@ mkTxWithParams params lookups txc = mkSomeTx params [SomeLookupsAndConstraints l
 -- | Each transaction output should contain a minimum amount of Ada (this is a
 -- restriction on the real Cardano network).
 adjustUnbalancedTx :: PParams -> UnbalancedTx -> Either Tx.ToCardanoError ([C.Lovelace], UnbalancedTx)
-adjustUnbalancedTx params = alaf Compose (tx . txOuts . traverse) (adjustCardanoTxOut params)
+adjustUnbalancedTx params = alaf Compose (tx . txOuts . traverse) (adjustTxOut params)
 
 updateUtxoIndex
     :: ( MonadReader (ScriptLookups a) m
@@ -963,5 +963,5 @@ updateUtxoIndex
 updateUtxoIndex = do
     ScriptLookups{slTxOutputs} <- ask
     networkId <- gets $ pNetworkId . cpsParams
-    slUtxos <- traverse (throwToCardanoError . Tx.toTxOut networkId) slTxOutputs
+    slUtxos <- throwToCardanoError $ Tx.fromDecoratedIndex networkId slTxOutputs
     unbalancedTx . utxoIndex <>= slUtxos

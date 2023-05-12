@@ -49,17 +49,9 @@ deriving anyclass instance ToJSON ScriptTag
 deriving anyclass instance FromJSON ScriptTag
 deriving anyclass instance Serialise ScriptTag
 
-deriving anyclass instance ToJSON TxIn
-deriving anyclass instance FromJSON TxIn
-deriving anyclass instance Serialise TxIn
-
 deriving anyclass instance ToJSON TxOut
 deriving anyclass instance FromJSON TxOut
 deriving anyclass instance Serialise TxOut
-
-deriving anyclass instance ToJSON TxInType
-deriving anyclass instance FromJSON TxInType
-deriving anyclass instance Serialise TxInType
 
 deriving anyclass instance ToJSON TxOutRef
 deriving anyclass instance FromJSON TxOutRef

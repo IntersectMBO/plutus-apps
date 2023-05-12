@@ -14,6 +14,8 @@
 {-# OPTIONS_GHC -fno-omit-interface-pragmas #-}
 {-# OPTIONS_GHC -fno-specialise #-}
 {-# OPTIONS_GHC -fno-spec-constr #-}
+{-# OPTIONS_GHC -g -fplugin-opt PlutusTx.Plugin:coverage-all #-}
+{-# LANGUAGE ViewPatterns       #-}
 -- | A basic governance contract in Plutus.
 module Plutus.Contracts.Governance (
     -- $governance
@@ -28,7 +30,11 @@ module Plutus.Contracts.Governance (
     , GovState(..)
     , Law(..)
     , Voting(..)
+    , votingValue
     , GovError
+    , covIdx
+    , covIdx'
+    , getLaw
     ) where
 
 import Control.Lens (makeClassyPrisms, review)
@@ -46,6 +52,7 @@ import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract
 import Plutus.Contract.StateMachine (AsSMContractError, State (..), StateMachine (..), Void)
 import Plutus.Contract.StateMachine qualified as SM
+import Plutus.Contract.Test.Coverage.Analysis
 import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.V2.Scripts (MintingPolicyHash)
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
@@ -53,6 +60,8 @@ import Plutus.Script.Utils.Value (TokenName)
 import Plutus.Script.Utils.Value qualified as Value
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
+import PlutusTx.Code
+import PlutusTx.Coverage
 import PlutusTx.Prelude
 import Prelude qualified as Haskell
 
@@ -97,8 +106,12 @@ data GovInput
     | ProposeChange Address Proposal
     | AddVote Address TokenName Bool
     | FinishVoting
+    | Check
     deriving stock (Haskell.Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
+
+getLaw :: GovState -> BuiltinByteString
+getLaw (GovState (Law l) _ _) = l
 
 -- | The endpoints of governance contracts are
 --
@@ -241,3 +254,9 @@ PlutusTx.unstableMakeIsData ''GovState
 PlutusTx.makeLift ''GovState
 PlutusTx.unstableMakeIsData ''GovInput
 PlutusTx.makeLift ''GovInput
+
+covIdx :: CoverageIndex
+covIdx =  getCovIdx $$(PlutusTx.compile [|| mkValidator ||])
+
+covIdx' :: CoverageIndex
+covIdx' = computeRefinedCoverageIndex $$(PlutusTx.compile [|| \a b c d -> check (mkValidator a b c d) ||])

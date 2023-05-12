@@ -6,15 +6,13 @@
 {-# LANGUAGE TypeApplications   #-}
 module Cardano.Node.Emulator.GeneratorsSpec (tests) where
 
-import Hedgehog (Property, forAll, property)
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.Hedgehog (testPropertyNamed)
-
 import Cardano.Node.Emulator.Generators qualified as Gen
 import Cardano.Node.Emulator.TimeSlot (SlotConfig (scSlotLength))
 import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
 import Data.Aeson qualified as JSON
 import Data.Aeson.Internal qualified as Aeson
+import Data.String (fromString)
+import Hedgehog (Gen, Property, forAll, property)
 import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
@@ -27,9 +25,8 @@ import Ledger.Value.CardanoAPI qualified as C
 import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Value qualified as Value
 import PlutusTx.Prelude qualified as PlutusTx
-
-import Data.String (fromString)
-import Hedgehog (Gen)
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.Hedgehog (testPropertyNamed)
 
 
 tests :: TestTree

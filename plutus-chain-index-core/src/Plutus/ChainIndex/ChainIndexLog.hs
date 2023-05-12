@@ -8,11 +8,12 @@ import Cardano.BM.Data.Tracer (ToObject (..))
 import Control.Monad.Freer.Extras.Beam (BeamLog)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
-import Ledger (TxId, TxOutRef)
+import Ledger (TxOutRef)
 import Plutus.ChainIndex.ChainIndexError (ChainIndexError)
 import Plutus.ChainIndex.Tx (ChainIndexTxOut)
 import Plutus.ChainIndex.Types (Tip (..))
 import Plutus.Contract.CardanoAPI (FromCardanoError (..))
+import Plutus.V1.Ledger.Api (TxId)
 import Prettyprinter (Pretty (..), colon, viaShow, (<+>))
 
 data ChainIndexLog =
