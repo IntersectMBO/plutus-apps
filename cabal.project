@@ -31,7 +31,6 @@ packages: cardano-node-emulator
           plutus-contract
           plutus-contract-certification
           plutus-contract-model
-          plutus-e2e-tests
           plutus-example
           plutus-ledger
           plutus-pab
