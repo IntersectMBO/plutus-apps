@@ -15,7 +15,7 @@ module Spec.Stablecoin(
 import Control.Monad (void)
 import Prelude hiding (Rational, negate)
 
-import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
+import Cardano.Node.Emulator.Internal.Node.TimeSlot qualified as TimeSlot
 import Ledger.Address (PaymentPrivateKey (unPaymentPrivateKey), PaymentPubKey (PaymentPubKey))
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Crypto (toPublicKey)

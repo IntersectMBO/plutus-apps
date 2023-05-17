@@ -14,7 +14,7 @@ import Text.Read (readEither)
 
 import Cardano.Api (Block (..), BlockHeader (..), BlockInMode (..), ChainPoint (..), HasTypeProxy (..),
                     deserialiseFromRawBytesHex, serialiseToRawBytesHexText)
-import Cardano.Node.Emulator.TimeSlot (SlotConfig (..))
+import Cardano.Node.Emulator.Internal.Node.TimeSlot (SlotConfig (..))
 import Cardano.Protocol.Socket.Client (ChainSyncEvent (..), runChainSync)
 import Cardano.Protocol.Socket.Type (cfgNetworkId)
 import Cardano.Slotting.Slot (SlotNo (..))

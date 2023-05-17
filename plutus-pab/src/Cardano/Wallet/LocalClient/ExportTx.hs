@@ -1,6 +1,5 @@
 {-# LANGUAGE BlockArguments     #-}
 {-# LANGUAGE DataKinds          #-}
-{-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts   #-}
 {-# LANGUAGE FlexibleInstances  #-}
@@ -24,8 +23,8 @@ module Cardano.Wallet.LocalClient.ExportTx(
     ) where
 
 import Cardano.Api qualified as C
-import Cardano.Node.Emulator.Params (Params)
-import Cardano.Node.Emulator.Validation (CardanoLedgerError, makeTransactionBody)
+import Cardano.Node.Emulator.Internal.Node.Params (Params)
+import Cardano.Node.Emulator.Internal.Node.Validation (CardanoLedgerError, makeTransactionBody)
 import Control.Applicative ((<|>))
 import Control.Monad ((>=>))
 import Control.Monad.Freer (Eff, Member)

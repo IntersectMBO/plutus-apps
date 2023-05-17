@@ -118,10 +118,10 @@ import Test.Tasty.HUnit qualified as HUnit
 import Test.Tasty.Providers (TestTree)
 
 import Cardano.Api qualified as C
-import Cardano.Node.Emulator.Chain (ChainEvent)
 import Cardano.Node.Emulator.Generators (GeneratorModel, Mockchain (..))
 import Cardano.Node.Emulator.Generators qualified as Gen
-import Cardano.Node.Emulator.Params qualified as Params
+import Cardano.Node.Emulator.Internal.Node (ChainEvent)
+import Cardano.Node.Emulator.Internal.Node.Params qualified as Params
 import Ledger qualified
 import Ledger.Address (CardanoAddress, toPlutusAddress)
 import Ledger.Index (ValidationError)

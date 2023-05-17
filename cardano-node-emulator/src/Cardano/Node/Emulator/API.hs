@@ -1,11 +1,8 @@
-{-# LANGUAGE ConstraintKinds  #-}
-{-# LANGUAGE DataKinds        #-}
-{-# LANGUAGE GADTs            #-}
-{-# LANGUAGE TemplateHaskell  #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeOperators    #-}
+{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE DataKinds       #-}
+{-# LANGUAGE GADTs           #-}
 -- | If you want to run the node emulator without using the `Contract` monad, this module provides a simple MTL-based interface.
-module Cardano.Node.Emulator.MTL (
+module Cardano.Node.Emulator.API (
   -- * Updating the blockchain
     queueTx
   , nextSlot
@@ -31,6 +28,7 @@ module Cardano.Node.Emulator.MTL (
   , EmulatorState(EmulatorState)
   , esChainState
   , esAddressMap
+  , esDatumMap
   , EmulatorError(..)
   , EmulatorLogs
   , EmulatorMsg(..)
@@ -41,60 +39,37 @@ module Cardano.Node.Emulator.MTL (
   , emptyEmulatorState
   , emptyEmulatorStateWithInitialDist
   , getParams
-  -- * Running Eff chain effects in MTL
-  , handleChain
 ) where
 
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
-import Cardano.Node.Emulator qualified as E
-import Cardano.Node.Emulator.MTL.LogMessages (EmulatorMsg (ChainEvent, GenericMsg, TxBalanceMsg),
-                                              TxBalanceMsg (BalancingUnbalancedTx, FinishedBalancing, SigningTx, SubmittingTx))
-import Control.Lens (makeLenses, view, (%~), (&), (<>~), (^.))
+import Cardano.Node.Emulator.Internal.API (EmulatorError (BalancingError, ToCardanoError, ValidationError),
+                                           EmulatorLogs, EmulatorM, EmulatorState (EmulatorState), EmulatorT,
+                                           MonadEmulator, esAddressMap, esChainState, esDatumMap, handleChain)
+import Control.Lens (view, (%~), (&), (<>~), (^.))
 import Control.Monad (void)
-import Control.Monad.Error.Class (MonadError, throwError)
-import Control.Monad.Except (ExceptT)
-import Control.Monad.Freer (Eff, Member, interpret, run, type (~>))
-import Control.Monad.Freer.Extras (raiseEnd)
+import Control.Monad.Error.Class (throwError)
 import Control.Monad.Freer.Extras.Log qualified as L
-import Control.Monad.Freer.State (State, modify, runState)
-import Control.Monad.Freer.Writer qualified as F (Writer, runWriter, tell)
-import Control.Monad.Identity (Identity)
-import Control.Monad.RWS.Class (MonadRWS, ask, get, put, tell)
-import Control.Monad.RWS.Strict (RWST)
+import Control.Monad.RWS.Class (ask, get, tell)
 import Data.Aeson (ToJSON (toJSON))
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Data.Sequence (Seq)
 import Ledger (CardanoAddress, CardanoTx (CardanoEmulatorEraTx), Datum, DatumHash, DecoratedTxOut, OnChainTx (Valid),
-               PaymentPrivateKey (unPaymentPrivateKey), Slot, ToCardanoError, TxOutRef, UtxoIndex,
-               ValidationErrorInPhase, eitherTx)
+               PaymentPrivateKey (unPaymentPrivateKey), Slot, TxOutRef, UtxoIndex)
 import Ledger.AddressMap qualified as AM
 import Ledger.Index (createGenesisTransaction, insertBlock)
 import Ledger.Tx (addCardanoTxSignature, decoratedTxOutValue, getCardanoTxData, getCardanoTxId, toCtxUTxOTxOut,
                   toDecoratedTxOut)
 import Ledger.Tx.CardanoAPI (CardanoBuildTx (CardanoBuildTx), fromCardanoTxIn, toCardanoTxIn, toCardanoTxOutValue)
 
-
-data EmulatorState = EmulatorState
-  { _esChainState :: !E.ChainState
-  , _esAddressMap :: !AM.AddressMap
-  , _esDatumMap   :: !(Map DatumHash Datum)
-  }
-  deriving (Show)
-
-makeLenses 'EmulatorState
-
-data EmulatorError
-  = BalancingError !E.BalancingError
-  | ValidationError !ValidationErrorInPhase
-  | ToCardanoError !ToCardanoError
-  deriving (Show)
-
-type EmulatorLogs = Seq (L.LogMessage EmulatorMsg)
-type MonadEmulator m = (MonadRWS E.Params EmulatorLogs EmulatorState m, MonadError EmulatorError m)
-type EmulatorT m = ExceptT EmulatorError (RWST E.Params EmulatorLogs EmulatorState m)
-type EmulatorM = EmulatorT Identity
+import Cardano.Node.Emulator.Generators qualified as G
+import Cardano.Node.Emulator.Internal.Node.Chain qualified as E (chainNewestFirst, emptyChainState, getCurrentSlot,
+                                                                 index, modifySlot, processBlock, queueTx)
+import Cardano.Node.Emulator.Internal.Node.Fee qualified as E (makeAutoBalancedTransactionWithUtxoProvider,
+                                                               utxoProviderFromWalletOutputs)
+import Cardano.Node.Emulator.Internal.Node.Params qualified as E (Params)
+import Cardano.Node.Emulator.LogMessages (EmulatorMsg (ChainEvent, GenericMsg, TxBalanceMsg),
+                                          TxBalanceMsg (BalancingUnbalancedTx, FinishedBalancing, SigningTx, SubmittingTx))
 
 emptyEmulatorState :: EmulatorState
 emptyEmulatorState = EmulatorState E.emptyChainState mempty mempty
@@ -110,36 +85,6 @@ emptyEmulatorStateWithInitialDist initialDist =
 
 getParams :: MonadEmulator m => m E.Params
 getParams = ask
-
-handleChain :: MonadEmulator m => Eff [E.ChainControlEffect, E.ChainEffect] a -> m a
-handleChain eff = do
-  params <- ask
-  EmulatorState chainState am dm <- get
-  let ((((a, dm'), am') , newChainState), lg) = raiseEnd eff
-        & interpret (E.handleControlChain params)
-        & interpret (E.handleChain params)
-        & interpret handleChainLogs
-        & runState dm
-        & runState am
-        & runState chainState
-        & F.runWriter
-        & run
-  tell lg
-  put $ EmulatorState newChainState am' dm'
-  pure a
-  where
-    handleChainLogs
-      :: ( Member (State AM.AddressMap) effs
-        , Member (State (Map DatumHash Datum)) effs
-        , Member (F.Writer EmulatorLogs) effs
-        )
-      => L.LogMsg E.ChainEvent ~> Eff effs
-    handleChainLogs (L.LMessage msg@(L.LogMessage _ e)) = do
-      F.tell @EmulatorLogs (pure $ ChainEvent <$> msg)
-      E.chainEventOnChainTx e & maybe (pure ()) (\tx -> do
-        void $ modify $ AM.updateAllAddresses tx
-        void $ modify $ ((<>) . eitherTx getCardanoTxData getCardanoTxData) tx
-        )
 
 -- | Queue the transaction, it will be processed when @nextSlot@ is called.
 queueTx :: MonadEmulator m => CardanoTx -> m ()
@@ -256,7 +201,7 @@ submitTxConfirmed utxoIndex addr privateKeys utx = do
 -- | Create a transaction that transfers funds from one address to another, and sign and submit it.
 payToAddress :: MonadEmulator m => (CardanoAddress, PaymentPrivateKey) -> CardanoAddress -> C.Value -> m C.TxId
 payToAddress (sourceAddr, sourcePrivKey) targetAddr value = do
-  let buildTx = CardanoBuildTx $ E.emptyTxBodyContent
+  let buildTx = CardanoBuildTx $ G.emptyTxBodyContent
            { C.txOuts = [C.TxOut targetAddr (toCardanoTxOutValue value) C.TxOutDatumNone C.ReferenceScriptNone]
            }
   getCardanoTxId <$> submitUnbalancedTx mempty sourceAddr [sourcePrivKey] buildTx

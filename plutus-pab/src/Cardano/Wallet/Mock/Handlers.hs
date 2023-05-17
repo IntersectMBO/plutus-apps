@@ -19,7 +19,7 @@ module Cardano.Wallet.Mock.Handlers
 
 import Cardano.BM.Data.Trace (Trace)
 import Cardano.Node.Client qualified as NodeClient
-import Cardano.Node.Emulator.Params (Params)
+import Cardano.Node.Emulator.Internal.Node.Params (Params)
 import Cardano.Node.Types (ChainSyncHandle)
 import Cardano.Protocol.Socket.Mock.Client qualified as MockClient
 import Cardano.Wallet.Mock.Types (MultiWalletEffect (..), WalletEffects, WalletInfo (..), WalletMsg (..), Wallets,

@@ -7,7 +7,8 @@
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Node.Emulator.MTL.Test (
+ -- | Test facility for 'Cardano.Node.Emulator.API.MonadEmulator'
+module Cardano.Node.Emulator.Test (
   -- * Basic testing
     hasValidatedTransactionCountOfTotal
   , renderLogs
@@ -20,16 +21,18 @@ module Cardano.Node.Emulator.MTL.Test (
   -- * Other exports
   , chainStateToChainIndex
   , chainStateToContractModelChainState
+  -- * Re-export quickcheck-contractmodel
+  , module Test.QuickCheck.ContractModel
 ) where
 
 import Cardano.Api qualified as C
 import Cardano.Api qualified as CardanoAPI
-import Cardano.Node.Emulator qualified as E
-import Cardano.Node.Emulator.Chain as E (ChainState, _chainNewestFirst)
-import Cardano.Node.Emulator.MTL (EmulatorLogs, EmulatorM, EmulatorMsg (ChainEvent), LogMessage (LogMessage), awaitSlot,
+import Cardano.Node.Emulator.API (EmulatorLogs, EmulatorM, EmulatorMsg (ChainEvent), LogMessage (LogMessage), awaitSlot,
                                   emptyEmulatorStateWithInitialDist, esChainState, getParams)
-import Cardano.Node.Emulator.Params (pNetworkId, pProtocolParams)
-import Control.Lens (use, (^.))
+import Cardano.Node.Emulator.Generators (knownAddresses)
+import Cardano.Node.Emulator.Internal.Node qualified as E
+import Cardano.Node.Emulator.Internal.Node.Params (pNetworkId, pProtocolParams)
+import Control.Lens (use, view, (^.))
 import Control.Monad.Except (runExceptT)
 import Control.Monad.RWS.Strict (evalRWS)
 import Control.Monad.Writer (runWriterT)
@@ -81,7 +84,7 @@ renderLogs = Pretty.renderStrict . Pretty.layoutPretty Pretty.defaultLayoutOptio
 type instance Realized EmulatorM a = a
 
 instance IsRunnable EmulatorM where
-  awaitSlot = Cardano.Node.Emulator.MTL.awaitSlot . fromCardanoSlotNo
+  awaitSlot = awaitSlot . fromCardanoSlotNo
 
 instance HasChainIndex EmulatorM where
   getChainIndex = do
@@ -117,7 +120,7 @@ propRunActions :: forall state.
     => (ModelState state -> EmulatorLogs -> Maybe String) -- ^ Predicate to check at the end of execution
     -> Actions state                           -- ^ The actions to run
     -> Property
-propRunActions = propRunActionsWithOptions (Map.fromList $ (, Value.adaValueOf 100_000_000) <$> E.knownAddresses) def
+propRunActions = propRunActionsWithOptions (Map.fromList $ (, Value.adaValueOf 100_000_000) <$> knownAddresses) def
 
 propRunActionsWithOptions :: forall state.
     RunModel state EmulatorM
@@ -161,7 +164,7 @@ propRunActionsWithOptions initialDist params predicate actions =
           in assertBalanceChangesMatch (BalanceChangeOptions False signerPaysFees ps prettyAddr) result
 
 prettyWalletNames :: [(String, String)]
-prettyWalletNames = [ (show addr, "Wallet " ++ show nr) | (addr, nr) <- zip E.knownAddresses [1..10::Int]]
+prettyWalletNames = [ (show addr, "Wallet " ++ show nr) | (addr, nr) <- zip knownAddresses [1..10::Int]]
 
 -- Note `chainStateToChainIndex` below is moved from `Plutus.Contract.Test.ContractModel.Internal`
 -- and could use some serious clean up. Mostly to get rid of the conversions to/from plutus types.
@@ -175,12 +178,12 @@ chainStateToChainIndex nid cs =
                                                              ( reverse
                                                              . drop 1
                                                              . reverse
-                                                             . _chainNewestFirst
+                                                             . view E.chainNewestFirst
                                                              $ cs)
                        , networkId = nid
                        }
     where beforeState = CM.ChainState { slot = 0
-                                      , utxo = Index.initialise (take 1 $ reverse (_chainNewestFirst cs))
+                                      , utxo = Index.initialise (take 1 $ reverse (cs ^. E.chainNewestFirst))
                                       }
           addBlock block (txs, state) =
             ( txs ++ [ TxInState ((\(CardanoEmulatorEraTx tx') -> tx') . unOnChain $ tx)

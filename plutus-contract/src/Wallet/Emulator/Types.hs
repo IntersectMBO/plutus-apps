@@ -26,7 +26,7 @@ module Wallet.Emulator.Types(
     Ledger.CardanoWallet.toWalletNumber,
     Wallet.Emulator.Wallet.fromWalletNumber,
     Ledger.CardanoWallet.MockWallet(..),
-    Cardano.Node.Emulator.Chain.TxPool,
+    Cardano.Node.Emulator.Internal.Node.TxPool,
     -- * Emulator
     EmulatorEffs,
     Wallet.Emulator.MultiAgent.Assertion(OwnFundsEqual, IsValidated),
@@ -54,11 +54,11 @@ module Wallet.Emulator.Types(
     Wallet.Emulator.MultiAgent.emulatorState,
     Wallet.Emulator.MultiAgent.emulatorStatePool,
     Wallet.Emulator.MultiAgent.emulatorStateInitialDist,
-    Cardano.Node.Emulator.Chain.txPool,
+    Cardano.Node.Emulator.Internal.Node.txPool,
     Wallet.Emulator.MultiAgent.walletStates,
-    Cardano.Node.Emulator.Chain.index,
+    Cardano.Node.Emulator.Internal.Node.index,
     Wallet.Emulator.MultiAgent.chainState,
-    Cardano.Node.Emulator.Chain.chainCurrentSlot,
+    Cardano.Node.Emulator.Internal.Node.chainCurrentSlot,
     processEmulated,
     Wallet.Emulator.MultiAgent.fundsDistribution,
     Wallet.Emulator.MultiAgent.emLog
@@ -72,13 +72,12 @@ import Control.Monad.Freer.Extras qualified as Eff
 import Control.Monad.Freer.Extras.Log (LogMsg, mapLog)
 import Control.Monad.Freer.State (State)
 
-import Cardano.Node.Emulator.Params (Params)
 import Plutus.ChainIndex (ChainIndexError)
 import Wallet.API (WalletAPIError)
 
-import Cardano.Node.Emulator.Chain (ChainControlEffect, ChainEffect, ChainEvent, ChainState, handleChain,
-                                    handleControlChain)
-import Cardano.Node.Emulator.Chain qualified
+import Cardano.Node.Emulator.Internal.Node (ChainControlEffect, ChainEffect, ChainEvent, ChainState, Params,
+                                            handleChain, handleControlChain)
+import Cardano.Node.Emulator.Internal.Node qualified
 import Ledger.CardanoWallet qualified
 import Plutus.Contract.Error (AssertionError)
 import Plutus.Contract.Error qualified

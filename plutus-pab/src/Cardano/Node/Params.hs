@@ -3,7 +3,7 @@ module Cardano.Node.Params where
 
 import Cardano.Api.NetworkId.Extra (NetworkIdWrapper (..))
 import Cardano.Api.Shelley (ProtocolParameters)
-import Cardano.Node.Emulator.Params
+import Cardano.Node.Emulator.Internal.Node.Params
 import Cardano.Node.Types
 import Data.Aeson (eitherDecode)
 import Data.ByteString.Lazy qualified as BSL

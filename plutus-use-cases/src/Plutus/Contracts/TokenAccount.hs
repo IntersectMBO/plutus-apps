@@ -37,7 +37,7 @@ module Plutus.Contracts.TokenAccount(
   , typedValidator
   ) where
 
-import Cardano.Node.Emulator.Params qualified as Params
+import Cardano.Node.Emulator.Internal.Node.Params qualified as Params
 import Control.Lens (makeClassyPrisms, review)
 import Control.Monad (void)
 import Data.Aeson (FromJSON, ToJSON)

@@ -88,7 +88,7 @@ module Plutus.PAB.Core
     , timed
     ) where
 
-import Cardano.Node.Emulator.Params (Params)
+import Cardano.Node.Emulator.Internal.Node (Params)
 import Cardano.Wallet.LocalClient.ExportTx (ExportTx)
 import Control.Applicative (empty, (<|>))
 import Control.Concurrent.STM (STM)

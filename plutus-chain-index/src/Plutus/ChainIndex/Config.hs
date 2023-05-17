@@ -24,7 +24,7 @@ module Plutus.ChainIndex.Config(
   ) where
 
 import Cardano.Api (BlockNo (BlockNo), NetworkId (Testnet))
-import Cardano.Node.Emulator.TimeSlot (SlotConfig (SlotConfig, scSlotLength, scSlotZeroTime))
+import Cardano.Node.Emulator.Internal.Node.TimeSlot (SlotConfig (SlotConfig, scSlotLength, scSlotZeroTime))
 import Control.Exception (Exception)
 import Control.Lens (makeLensesFor)
 import Data.Aeson (FromJSON, ToJSON)

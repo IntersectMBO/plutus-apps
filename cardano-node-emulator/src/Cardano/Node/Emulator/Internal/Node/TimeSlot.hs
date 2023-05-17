@@ -9,7 +9,7 @@
 
 {-# OPTIONS_GHC -Wno-orphans        #-}
 
-module Cardano.Node.Emulator.TimeSlot(
+module Cardano.Node.Emulator.Internal.Node.TimeSlot (
   SlotConfig(..)
 , SlotConversionError(..)
 , slotRangeToPOSIXTimeRange

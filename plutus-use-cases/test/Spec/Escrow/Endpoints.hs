@@ -12,7 +12,7 @@ import Data.Text (unpack)
 import Control.Lens (_1, has, only)
 import Control.Monad (void)
 
-import Cardano.Node.Emulator.Params (pNetworkId)
+import Cardano.Node.Emulator.Internal.Node (pNetworkId)
 import Ledger (PaymentPubKeyHash)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.Constraints qualified as Constraints

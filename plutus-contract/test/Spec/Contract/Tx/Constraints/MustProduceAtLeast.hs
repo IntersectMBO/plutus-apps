@@ -14,7 +14,7 @@ import Test.Tasty (TestTree, testGroup)
 
 import Cardano.Api qualified as C
 import Cardano.Node.Emulator.Generators (someTokenValue)
-import Cardano.Node.Emulator.Params qualified as Params
+import Cardano.Node.Emulator.Internal.Node.Params qualified as Params
 import Ledger qualified
 import Ledger.CardanoWallet (paymentPrivateKey)
 import Ledger.Tx qualified as Tx

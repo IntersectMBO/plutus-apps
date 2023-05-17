@@ -10,10 +10,10 @@
 module Spec.Emulator(tests) where
 
 import Cardano.Api qualified as C
-import Cardano.Node.Emulator.Chain qualified as Chain
-import Cardano.Node.Emulator.Fee (selectCoin)
 import Cardano.Node.Emulator.Generators (Mockchain (Mockchain))
 import Cardano.Node.Emulator.Generators qualified as Gen
+import Cardano.Node.Emulator.Internal.Node (selectCoin)
+import Cardano.Node.Emulator.Internal.Node.Chain qualified as Chain
 import Control.Lens ((&), (.~))
 import Control.Monad (void)
 import Control.Monad.Freer qualified as Eff

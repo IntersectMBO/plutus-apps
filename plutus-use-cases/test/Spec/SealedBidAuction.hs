@@ -16,7 +16,7 @@ import Control.Monad (when)
 import Data.Default (Default (def))
 
 import Cardano.Node.Emulator.Generators (someTokenValue)
-import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
+import Cardano.Node.Emulator.Internal.Node.TimeSlot qualified as TimeSlot
 import Ledger (Slot (..))
 import Ledger qualified
 import Ledger.Value.CardanoAPI qualified as Value

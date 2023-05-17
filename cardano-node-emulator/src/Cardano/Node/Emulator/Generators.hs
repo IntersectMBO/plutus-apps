@@ -62,10 +62,10 @@ module Cardano.Node.Emulator.Generators(
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
 import Cardano.Crypto.Wallet qualified as Crypto
-import Cardano.Node.Emulator.Params (Params (pSlotConfig))
-import Cardano.Node.Emulator.TimeSlot (SlotConfig)
-import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
-import Cardano.Node.Emulator.Validation (validateCardanoTx)
+import Cardano.Node.Emulator.Internal.Node.Params (Params (pSlotConfig))
+import Cardano.Node.Emulator.Internal.Node.TimeSlot (SlotConfig)
+import Cardano.Node.Emulator.Internal.Node.TimeSlot qualified as TimeSlot
+import Cardano.Node.Emulator.Internal.Node.Validation (validateCardanoTx)
 import Control.Monad (guard, replicateM)
 import Data.Bifunctor (Bifunctor (first))
 import Data.ByteString qualified as BS

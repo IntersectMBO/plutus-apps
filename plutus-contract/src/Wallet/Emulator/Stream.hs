@@ -27,15 +27,14 @@ module Wallet.Emulator.Stream(
     , foldEmulatorStreamM
     ) where
 
-import Cardano.Node.Emulator.Chain (ChainControlEffect, ChainEffect, _SlotAdd)
+import Cardano.Node.Emulator.Internal.Node (ChainControlEffect, ChainEffect, _SlotAdd)
 import Control.Foldl qualified as L
 import Control.Lens (filtered, makeLenses, preview, view)
 import Control.Monad.Freer (Eff, Member, interpret, reinterpret, run, subsume, type (~>))
 import Control.Monad.Freer.Coroutine (Yield, yield)
 import Control.Monad.Freer.Error (Error, runError)
 import Control.Monad.Freer.Extras (raiseEnd, wrapError)
-import Control.Monad.Freer.Extras.Log (LogLevel, LogMessage (LogMessage, _logLevel), LogMsg (LMessage),
-                                       logMessageContent, mapMLog)
+import Control.Monad.Freer.Extras.Log (LogLevel, LogMessage, LogMsg (LMessage), logLevel, logMessageContent, mapMLog)
 import Control.Monad.Freer.Extras.Stream (runStream)
 import Control.Monad.Freer.State (State, gets, runState)
 import Data.Bifunctor (first)
@@ -87,7 +86,7 @@ takeUntilSlot maxSlot = S.takeWhile (maybe True (\sl -> sl <= maxSlot) . preview
 -- | Remove from the stream all log messages whose log level is lower than the
 --   the given level.
 filterLogLevel :: forall effs a. LogLevel -> S.Stream (S.Of (LogMessage EmulatorEvent)) (Eff effs) a -> S.Stream (S.Of (LogMessage EmulatorEvent)) (Eff effs) a
-filterLogLevel lvl = S.mapMaybe (preview (filtered (\LogMessage{_logLevel} -> lvl <= _logLevel)))
+filterLogLevel lvl = S.mapMaybe (preview (filtered ((lvl <=) . view logLevel)))
 
 -- | Apply a fold to an effectful stream of events.
 foldStreamM :: forall m a b c.

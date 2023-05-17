@@ -18,7 +18,7 @@ module Plutus.PAB.CoreSpec
     , assertEqual
     ) where
 
-import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
+import Cardano.Node.Emulator.Internal.Node.TimeSlot qualified as TimeSlot
 import Control.Concurrent.STM.Extras.Stream (readN, readOne)
 import Control.Lens ((&), (+~), (^.))
 import Control.Monad (replicateM, replicateM_, unless, void)
@@ -32,8 +32,8 @@ import Control.Monad.IO.Class (MonadIO (liftIO))
 import Data.Aeson qualified as JSON
 import Data.Foldable (fold, traverse_)
 
-import Cardano.Node.Emulator.Chain qualified as Chain
-import Cardano.Node.Emulator.Params qualified as Params
+import Cardano.Node.Emulator.Internal.Node.Chain qualified as Chain
+import Cardano.Node.Emulator.Internal.Node.Params qualified as Params
 import Control.Concurrent.STM qualified as STM
 import Data.Aeson.Types qualified as JSON
 import Data.Default (def)

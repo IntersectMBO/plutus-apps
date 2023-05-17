@@ -56,7 +56,7 @@ import PlutusTx.Code
 import PlutusTx.Coverage
 import PlutusTx.Prelude hiding (Applicative (..), Semigroup (..), check, foldMap)
 
-import Cardano.Node.Emulator.Params (pNetworkId)
+import Cardano.Node.Emulator.Internal.Node (pNetworkId)
 import Ledger (POSIXTime, PaymentPubKeyHash (unPaymentPubKeyHash), TxId, getCardanoTxId)
 import Ledger qualified
 import Ledger.Interval (after, before)

@@ -32,7 +32,7 @@ import Cardano.Api qualified as C
 import Cardano.Api.NetworkId.Extra (NetworkIdWrapper (NetworkIdWrapper, unNetworkIdWrapper))
 import Cardano.ChainIndex.Types (ChainIndexConfig (ciBaseUrl), ChainIndexUrl (ChainIndexUrl))
 import Cardano.Ledger.Shelley.Genesis (ShelleyGenesis (sgNetworkMagic, sgSecurityParam, sgSlotLength, sgSystemStart))
-import Cardano.Node.Emulator.TimeSlot (SlotConfig (SlotConfig))
+import Cardano.Node.Emulator.Internal.Node (SlotConfig (SlotConfig))
 import Cardano.Node.Types (NodeMode (AlonzoNode),
                            PABServerConfig (pscBaseUrl, pscKeptBlocks, pscNetworkId, pscNodeMode, pscSlotConfig, pscSocketPath))
 import Cardano.Wallet.Types (LocalWalletSettings (LocalWalletSettings),

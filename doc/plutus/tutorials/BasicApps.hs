@@ -18,7 +18,7 @@ module BasicApps where
 
 -- BLOCK0
 
-import Cardano.Node.Emulator.Params (pNetworkId)
+import Cardano.Node.Emulator.Internal.Node (pNetworkId)
 import Control.Monad (forever, void)
 import Control.Monad.Freer.Extras.Log (LogLevel (Debug, Info))
 import Data.Aeson (FromJSON, ToJSON)

@@ -50,8 +50,8 @@ import Data.Traversable (forM)
 import Plutus.Contract.Resumable (Request (Request, itID, rqID, rqRequest),
                                   Response (Response, rspItID, rspResponse, rspRqID))
 
-import Cardano.Node.Emulator.Params (Params (..))
-import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
+import Cardano.Node.Emulator.Internal.Node (Params (..), posixTimeRangeToContainedSlotRange, posixTimeToEnclosingSlot,
+                                            slotToBeginPOSIXTime, slotToEndPOSIXTime)
 import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg, LogObserve, logDebug, logWarn, surroundDebug)
 import Data.List.NonEmpty (NonEmpty)
 import Ledger (CardanoAddress, POSIXTime, POSIXTimeRange, Slot (..), SlotRange)
@@ -156,10 +156,10 @@ handleTimeNotifications =
         surroundDebug @Text "handleTimeNotifications" $ do
             currentSlot <- getClientSlot
             Params { pSlotConfig } <- getClientParams
-            let targetSlot_ = TimeSlot.posixTimeToEnclosingSlot pSlotConfig targetTime_
+            let targetSlot_ = posixTimeToEnclosingSlot pSlotConfig targetTime_
             logDebug $ SlotNoticationTargetVsCurrent targetSlot_ currentSlot
             guard (currentSlot >= targetSlot_)
-            pure $ TimeSlot.slotToEndPOSIXTime pSlotConfig currentSlot
+            pure $ slotToEndPOSIXTime pSlotConfig currentSlot
 
 handleCurrentNodeClientSlot ::
     forall effs a.
@@ -196,7 +196,7 @@ handleCurrentTime =
     RequestHandler $ \_ ->
         surroundDebug @Text "handleCurrentTime" $ do
             Params { pSlotConfig }  <- getClientParams
-            TimeSlot.slotToEndPOSIXTime pSlotConfig <$> getClientSlot
+            slotToEndPOSIXTime pSlotConfig <$> getClientSlot
 
 handleCurrentNodeClientTimeRange ::
     forall effs a.
@@ -209,8 +209,8 @@ handleCurrentNodeClientTimeRange =
         surroundDebug @Text "handleCurrentNodeClientTimeRange" $ do
             Params { pSlotConfig }  <- getClientParams
             nodeClientSlot <- getClientSlot
-            pure ( TimeSlot.slotToBeginPOSIXTime pSlotConfig nodeClientSlot
-                 , TimeSlot.slotToEndPOSIXTime pSlotConfig nodeClientSlot
+            pure ( slotToBeginPOSIXTime pSlotConfig nodeClientSlot
+                 , slotToEndPOSIXTime pSlotConfig nodeClientSlot
                  )
 
 handleTimeToSlotConversions ::
@@ -223,7 +223,7 @@ handleTimeToSlotConversions =
     RequestHandler $ \poxisTimeRange ->
         surroundDebug @Text "handleTimeToSlotConversions" $ do
             Params { pSlotConfig }  <- getClientParams
-            pure $ TimeSlot.posixTimeRangeToContainedSlotRange pSlotConfig poxisTimeRange
+            pure $ posixTimeRangeToContainedSlotRange pSlotConfig poxisTimeRange
 
 handleUnbalancedTransactions ::
     forall effs.

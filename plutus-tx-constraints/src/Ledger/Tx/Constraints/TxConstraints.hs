@@ -18,7 +18,7 @@
 -- | Constraints for transactions
 module Ledger.Tx.Constraints.TxConstraints where
 
-import Cardano.Node.Emulator.TimeSlot (slotRangeToPOSIXTimeRange)
+import Cardano.Node.Emulator.Internal.Node.TimeSlot (slotRangeToPOSIXTimeRange)
 import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON))
 import Data.Aeson qualified as Aeson
 import Data.Bifunctor (Bifunctor (bimap))

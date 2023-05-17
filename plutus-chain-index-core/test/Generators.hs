@@ -35,7 +35,7 @@ module Generators(
     ) where
 
 import Cardano.Node.Emulator.Generators qualified as Gen
-import Cardano.Node.Emulator.Params (testnet)
+import Cardano.Node.Emulator.Internal.Node.Params (testnet)
 import Codec.Serialise (serialise)
 import Control.Lens (makeLenses, over, view)
 import Control.Monad (replicateM)

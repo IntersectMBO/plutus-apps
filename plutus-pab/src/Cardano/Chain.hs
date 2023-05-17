@@ -12,8 +12,8 @@
 
 module Cardano.Chain where
 
-import Cardano.Node.Emulator.Chain qualified as EC
-import Cardano.Node.Emulator.Params (Params)
+import Cardano.Node.Emulator.Internal.Node (Params)
+import Cardano.Node.Emulator.Internal.Node.Chain qualified as EC
 import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Lens hiding (index)

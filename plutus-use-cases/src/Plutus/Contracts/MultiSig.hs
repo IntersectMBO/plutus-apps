@@ -23,7 +23,7 @@ module Plutus.Contracts.MultiSig
     , validate
     ) where
 
-import Cardano.Node.Emulator.Params (pNetworkId)
+import Cardano.Node.Emulator.Internal.Node (pNetworkId)
 import Control.Monad (void)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)

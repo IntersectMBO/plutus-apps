@@ -62,7 +62,7 @@ module Wallet.API(
     Wallet.Error.throwOtherError,
     ) where
 
-import Cardano.Node.Emulator.Params (Params (..))
+import Cardano.Node.Emulator.Internal.Node.Params (Params (..))
 import Control.Monad (unless, void)
 import Control.Monad.Freer (Eff, Member)
 import Control.Monad.Freer.Error (Error, throwError)

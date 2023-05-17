@@ -10,7 +10,7 @@ import Control.Lens
 import Control.Monad (void)
 
 import Cardano.Node.Emulator.Generators (someTokenValue)
-import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
+import Cardano.Node.Emulator.Internal.Node.TimeSlot qualified as TimeSlot
 import Ledger qualified
 import Ledger.Time (POSIXTime)
 import Ledger.Value.CardanoAPI qualified as Value

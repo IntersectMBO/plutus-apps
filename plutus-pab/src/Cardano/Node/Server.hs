@@ -10,8 +10,7 @@ module Cardano.Node.Server
 
 import Cardano.BM.Data.Trace (Trace)
 import Cardano.Node.API (API)
-import Cardano.Node.Emulator.Params (Params (..))
-import Cardano.Node.Emulator.TimeSlot (SlotConfig (SlotConfig, scSlotLength, scSlotZeroTime))
+import Cardano.Node.Emulator.Internal.Node (Params (..), SlotConfig (SlotConfig, scSlotLength, scSlotZeroTime))
 import Cardano.Node.Mock
 import Cardano.Node.Params qualified as Params
 import Cardano.Node.Types

@@ -18,7 +18,7 @@
 module Plutus.Contracts.SimpleEscrow
   where
 
-import Cardano.Node.Emulator.Params qualified as Params
+import Cardano.Node.Emulator.Internal.Node.Params qualified as Params
 import Control.Lens (makeClassyPrisms)
 import Control.Monad (void)
 import Control.Monad.Error.Lens (throwing)

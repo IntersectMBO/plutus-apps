@@ -38,8 +38,8 @@ import Data.Monoid (Last (..))
 
 import Cardano.Api qualified as C
 import Cardano.Node.Emulator.Generators qualified as Gen
-import Cardano.Node.Emulator.TimeSlot (SlotConfig)
-import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
+import Cardano.Node.Emulator.Internal.Node (SlotConfig)
+import Cardano.Node.Emulator.Internal.Node.TimeSlot qualified as TimeSlot
 import Ledger (Slot (..))
 import Ledger qualified
 import Ledger.Value.CardanoAPI qualified as Value

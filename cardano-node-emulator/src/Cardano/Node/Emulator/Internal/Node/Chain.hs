@@ -15,11 +15,11 @@
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeOperators         #-}
 
-module Cardano.Node.Emulator.Chain where
+module Cardano.Node.Emulator.Internal.Node.Chain where
 
 import Cardano.Api qualified as C
-import Cardano.Node.Emulator.Params (Params)
-import Cardano.Node.Emulator.Validation qualified as Validation
+import Cardano.Node.Emulator.Internal.Node.Params (Params)
+import Cardano.Node.Emulator.Internal.Node.Validation qualified as Validation
 import Control.Lens (alaf, makeLenses, makePrisms, over, view, (%~), (&), (.~))
 import Control.Monad.Freer (Eff, Member, Members, send, type (~>))
 import Control.Monad.Freer.Extras.Log (LogMsg, logDebug, logInfo, logWarn)

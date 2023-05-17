@@ -43,7 +43,7 @@ module Plutus.Contracts.Game.Babbage
     , covIdx
     ) where
 
-import Cardano.Node.Emulator.Params (testnet)
+import Cardano.Node.Emulator.Internal.Node (testnet)
 import Control.Lens (_2, (^?))
 import Data.Aeson (FromJSON, ToJSON)
 import Data.ByteString.Char8 qualified as C

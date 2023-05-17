@@ -14,7 +14,7 @@ module Wallet.Emulator.LogMessages(
   ) where
 
 import Cardano.Api qualified as C
-import Cardano.Node.Emulator.MTL.LogMessages (TxBalanceMsg (..), _BalancingUnbalancedTx, _ValidationFailed)
+import Cardano.Node.Emulator.LogMessages (TxBalanceMsg (..), _BalancingUnbalancedTx, _ValidationFailed)
 import Control.Lens.TH (makePrisms)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)

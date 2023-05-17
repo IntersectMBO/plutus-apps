@@ -6,7 +6,7 @@
 {-# LANGUAGE TemplateHaskell    #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 -- | The set of parameters, like protocol parameters and slot configuration.
-module Cardano.Node.Emulator.Params(
+module Cardano.Node.Emulator.Internal.Node.Params (
   Params(..),
   paramsWithProtocolsParameters,
   slotConfigL,
@@ -38,8 +38,8 @@ import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Shelley.API (Coin (Coin), Globals, ShelleyGenesis, mkShelleyGlobals)
 import Cardano.Ledger.Shelley.API qualified as C.Ledger
 import Cardano.Ledger.Slot (EpochSize (EpochSize))
-import Cardano.Node.Emulator.TimeSlot (SlotConfig (scSlotLength, scSlotZeroTime), posixTimeToNominalDiffTime,
-                                       posixTimeToUTCTime)
+import Cardano.Node.Emulator.Internal.Node.TimeSlot (SlotConfig (scSlotLength, scSlotZeroTime),
+                                                     posixTimeToNominalDiffTime, posixTimeToUTCTime)
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
 import Cardano.Slotting.Time (SlotLength, mkSlotLength)
 import Control.Lens (Lens', lens, makeLensesFor, over, (&), (.~))

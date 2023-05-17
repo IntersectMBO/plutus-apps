@@ -17,7 +17,7 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text qualified as Text
 
-import Cardano.Node.Emulator.Chain
+import Cardano.Node.Emulator.Internal.Node
 import Plutus.Trace.Emulator.Types
 import PlutusTx.Coverage
 import Wallet.Emulator.MultiAgent (EmulatorEvent, EmulatorEvent' (..), EmulatorTimeEvent (..), eteEvent)

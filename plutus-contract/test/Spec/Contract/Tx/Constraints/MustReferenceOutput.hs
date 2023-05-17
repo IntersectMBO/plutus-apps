@@ -16,7 +16,7 @@ import Control.Monad (void)
 import Test.Tasty (TestTree, testGroup)
 
 import Cardano.Api qualified as C
-import Cardano.Node.Emulator.Params qualified as Params
+import Cardano.Node.Emulator.Internal.Node.Params qualified as Params
 import Data.Default (Default (def))
 import Data.Map qualified as M
 import Data.Maybe (catMaybes)

@@ -3,9 +3,7 @@
 {-# LANGUAGE DerivingStrategies  #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE GADTs               #-}
-{-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
 
 module Cardano.Protocol.Socket.Client where
@@ -22,7 +20,7 @@ import Cardano.Api (BlockInMode (..), CardanoMode, ChainPoint (..), ChainTip (..
 import Cardano.BM.Data.Trace (Trace)
 import Cardano.BM.Data.Tracer (ToObject (..))
 import Cardano.BM.Trace (logDebug, logWarning)
-import Cardano.Node.Emulator.TimeSlot (SlotConfig, currentSlot)
+import Cardano.Node.Emulator.Internal.Node.TimeSlot (SlotConfig, currentSlot)
 import Control.Retry (fibonacciBackoff, recovering, skipAsyncExceptions)
 import Control.Tracer (nullTracer)
 import Ouroboros.Network.IOManager

@@ -19,7 +19,7 @@ module Plutus.Trace.Effects.Waiting(
     , handleWaiting
     ) where
 
-import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
+import Cardano.Node.Emulator.Internal.Node.TimeSlot qualified as TimeSlot
 import Control.Monad.Freer (Eff, Member, type (~>))
 import Control.Monad.Freer.Coroutine (Yield)
 import Control.Monad.Freer.TH (makeEffect)

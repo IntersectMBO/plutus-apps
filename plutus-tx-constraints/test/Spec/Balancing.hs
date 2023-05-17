@@ -8,10 +8,10 @@
 module Spec.Balancing(tests) where
 
 import Cardano.Api qualified as C
-import Cardano.Node.Emulator qualified as E
-import Cardano.Node.Emulator.MTL (EmulatorError, EmulatorLogs, EmulatorM, MonadEmulator,
-                                  emptyEmulatorStateWithInitialDist, nextSlot, submitUnbalancedTx, utxosAt)
-import Cardano.Node.Emulator.MTL.Test (hasValidatedTransactionCountOfTotal, renderLogs)
+import Cardano.Node.Emulator (EmulatorError, EmulatorLogs, EmulatorM, MonadEmulator, emptyEmulatorStateWithInitialDist,
+                              hasValidatedTransactionCountOfTotal, knownAddresses, knownPaymentPrivateKeys, nextSlot,
+                              renderLogs, submitUnbalancedTx, utxosAt)
+import Cardano.Node.Emulator.Internal.Node qualified as E
 import Control.Lens ((&))
 import Control.Monad (void)
 import Control.Monad.Except (runExceptT)
@@ -64,7 +64,7 @@ mkTx params lookups constraints =
 
 submitTxConfirmed :: MonadEmulator m => CardanoAddress -> Constraints.UnbalancedTx -> m CardanoTx
 submitTxConfirmed addr (Constraints.UnbalancedCardanoTx utx utxoIndex) = do
-  let privateKey = lookup addr $ zip E.knownAddresses E.knownPaymentPrivateKeys
+  let privateKey = lookup addr $ zip knownAddresses knownPaymentPrivateKeys
   tx <- submitUnbalancedTx utxoIndex addr privateKey utx
   nextSlot
   pure tx
@@ -81,7 +81,7 @@ submitTxConstraints addr lookups constraints = do
     $ mkTx @Void params lookups constraints
 
 w1, w2 :: CardanoAddress
-w1 : w2 : _ = E.knownAddresses
+w1 : w2 : _ = knownAddresses
 
 checkPredicate
   :: String

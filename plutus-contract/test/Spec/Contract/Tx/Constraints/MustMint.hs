@@ -14,7 +14,7 @@ import Spec.Contract.Error (cardanoLedgerErrorContaining, insufficientFundsError
 import Test.Tasty (TestTree, testGroup)
 
 import Cardano.Api qualified as C
-import Cardano.Node.Emulator.Params qualified as Params
+import Cardano.Node.Emulator.Internal.Node.Params qualified as Params
 import Control.Lens (_Just, has, (&), (??))
 import Data.Map qualified as Map
 import Data.Void (Void)
@@ -50,7 +50,7 @@ import PlutusTx qualified
 import Prelude hiding (not)
 
 tests :: TestTree
-tests = testGroup "MustMint" $ [v1Tests, v2Tests]
+tests = testGroup "MustMint" [v1Tests, v2Tests]
 
 v1Tests :: TestTree
 v1Tests = testGroup "Plutus V1" $

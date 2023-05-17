@@ -63,7 +63,7 @@ import Plutus.Script.Utils.Value (Value, geq, lt)
 import Plutus.V2.Ledger.Api (Datum (Datum), DatumHash)
 import Plutus.V2.Ledger.Contexts (valuePaidTo)
 
-import Cardano.Node.Emulator.Params qualified as Params
+import Cardano.Node.Emulator.Internal.Node.Params qualified as Params
 import Plutus.Contract
 import PlutusTx qualified
 import PlutusTx.Code

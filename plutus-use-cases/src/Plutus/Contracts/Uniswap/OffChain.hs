@@ -35,7 +35,7 @@ module Plutus.Contracts.Uniswap.OffChain
     , calculateRemoval, funds
     ) where
 
-import Cardano.Node.Emulator.Params (testnet)
+import Cardano.Node.Emulator.Internal.Node.Params (testnet)
 import Control.Lens ((^?))
 import Control.Monad hiding (fmap)
 import Data.Aeson (FromJSON, ToJSON)

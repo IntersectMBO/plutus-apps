@@ -18,7 +18,7 @@ import Control.Monad.Freer.Extras.Log
 import Data.Row
 import Test.Tasty
 
-import Cardano.Node.Emulator.Params (pNetworkId)
+import Cardano.Node.Emulator.Internal.Node (pNetworkId)
 import Ledger.Tx (getCardanoTxId)
 import Ledger.Tx.Constraints (mustIncludeDatumInTx, mustPayToOtherScriptWithDatumInTx, spendUtxosFromTheScript)
 import Ledger.Typed.Scripts qualified as Scripts hiding (validatorHash)

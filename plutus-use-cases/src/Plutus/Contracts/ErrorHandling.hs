@@ -22,8 +22,8 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Text (Text)
 import GHC.Generics (Generic)
 
-import Cardano.Node.Emulator.TimeSlot (SlotConfig)
-import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
+import Cardano.Node.Emulator.Internal.Node (SlotConfig)
+import Cardano.Node.Emulator.Internal.Node.TimeSlot qualified as TimeSlot
 import Plutus.Contract
 
 -- $errorHandling

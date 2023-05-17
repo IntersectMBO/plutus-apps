@@ -17,7 +17,7 @@ module Plutus.Trace.Emulator.System
   , appendNewTipBlock
   ) where
 
-import Cardano.Node.Emulator.Chain (ChainControlEffect, modifySlot, processBlock)
+import Cardano.Node.Emulator.Internal.Node (ChainControlEffect, modifySlot, processBlock)
 import Control.Monad (forM_, void)
 import Control.Monad.Freer
 import Control.Monad.Freer.Coroutine

@@ -14,7 +14,7 @@ module Cardano.Wallet.Mock.Server
 
 import Cardano.BM.Data.Trace (Trace)
 import Cardano.ChainIndex.Types (ChainIndexUrl (ChainIndexUrl))
-import Cardano.Node.Emulator.Params (Params (..))
+import Cardano.Node.Emulator.Internal.Node.Params (Params (..))
 import Cardano.Node.Types (ChainSyncHandle)
 import Cardano.Protocol.Socket.Mock.Client qualified as MockClient
 import Cardano.Wallet.Mock.API (API)

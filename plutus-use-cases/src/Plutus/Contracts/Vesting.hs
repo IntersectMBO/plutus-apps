@@ -32,7 +32,7 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Map qualified as Map
 import Prelude (Semigroup (..))
 
-import Cardano.Node.Emulator.Params (pNetworkId, testnet)
+import Cardano.Node.Emulator.Internal.Node (pNetworkId, testnet)
 import GHC.Generics (Generic)
 import Ledger (CardanoAddress, POSIXTime, POSIXTimeRange, PaymentPubKeyHash (unPaymentPubKeyHash),
                decoratedTxOutPlutusValue)

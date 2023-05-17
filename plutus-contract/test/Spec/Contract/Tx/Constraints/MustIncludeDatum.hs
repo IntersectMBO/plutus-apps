@@ -10,7 +10,7 @@ module Spec.Contract.Tx.Constraints.MustIncludeDatum(tests) where
 
 import Test.Tasty (TestTree, testGroup)
 
-import Cardano.Node.Emulator.Params qualified as Params
+import Cardano.Node.Emulator.Internal.Node.Params qualified as Params
 import Control.Monad (void)
 import Data.Void (Void)
 import Ledger qualified
