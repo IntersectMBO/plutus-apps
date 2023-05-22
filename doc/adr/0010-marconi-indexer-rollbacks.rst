@@ -45,8 +45,6 @@ Note that to support resume from disk we need to always have at least one event 
 Queries
 ^^^^^^^
 
-We also extend the queries with a bit more structure that will make specifying query validity intervals possible. The validity is important in the case where we want to query several indexers and we would like them to require to have processed all the information up to some slot number or be between some slot interval.
-
 At this point all query results are synchronous. We have plans to extend this functionality, but these plans are based on updating the notification system for indexers which will be described in a further ADR.
 
 API Design
