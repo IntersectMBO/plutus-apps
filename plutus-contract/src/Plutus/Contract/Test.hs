@@ -293,7 +293,6 @@ checkPredicateInnerStream CheckOptions{_minLogLevel, _emulatorConfig}
             $ consumedStream
 
     let logEmulator = do
-          annot "Test failed."
           annot "Emulator log:"
           S.mapM_ annot
               $ S.hoist runM
@@ -302,12 +301,19 @@ checkPredicateInnerStream CheckOptions{_minLogLevel, _emulatorConfig}
               theStream
 
     case result of
-      Right (True  S.:> res) -> return res
+      Right (True  S.:> res) -> do
+        -- Also log on success. The test runner suppresses the output on success so this has no effect on succesful tests.
+        -- But this makes `checkPredicateInnerStream` more modular: When another test function calls it,
+        -- and that function has a failure, the logs will be shown.
+        _ <- logEmulator
+        return res
       Right (False S.:> res) -> do
+        annot "Test failed."
         _ <- logEmulator
         assert False
         return res
       Left err -> do
+        annot "Test failed."
         _ <- logEmulator
         annot "Error:"
         annot (describeError err)
