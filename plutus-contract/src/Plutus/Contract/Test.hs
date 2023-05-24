@@ -305,16 +305,16 @@ checkPredicateInnerStream CheckOptions{_minLogLevel, _emulatorConfig}
         -- Also log on success. The test runner suppresses the output on success so this has no effect on succesful tests.
         -- But this makes `checkPredicateInnerStream` more modular: When another test function calls it,
         -- and that function has a failure, the logs will be shown.
-        _ <- logEmulator
+        void logEmulator
         return res
       Right (False S.:> res) -> do
         annot "Test failed."
-        _ <- logEmulator
+        void logEmulator
         assert False
         return res
       Left err -> do
         annot "Test failed."
-        _ <- logEmulator
+        void logEmulator
         annot "Error:"
         annot (describeError err)
         annot (show err)
