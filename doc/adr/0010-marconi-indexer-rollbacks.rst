@@ -45,8 +45,6 @@ Note that to support resume from disk we need to always have at least one event 
 Queries
 ^^^^^^^
 
-We also extend the queries with a bit more structure that will make specifying query validity intervals possible. The validity is important in the case where we want to query several indexers and we would like them to require to have processed all the information up to some slot number or be between some slot interval.
-
 At this point all query results are synchronous. We have plans to extend this functionality, but these plans are based on updating the notification system for indexers which will be described in a further ADR.
 
 API Design
@@ -65,12 +63,10 @@ Data types
 
 * The `Query` data type contains the following fields:
 
-  * Validity interval (can be any interval defined by using the slot numbers or a special value that turn off checking for validity)
   * q (type variable standing for the query)
 
 * Result
 
-  * Slot number at which the query was ran
   * r (type variable standing for the query result)
 
 Functions
@@ -79,7 +75,6 @@ Functions
 * The `Query` function takes the following parameters:
 
   * Indexer - The indexer that we are using to run the query.
-  * Validity interval - The interval under which the query needs to be ran.
   * The query (q type variable) - The user-defined query.
   * The query result
 
@@ -110,10 +105,6 @@ Extension mechanisms
 A. Storage engine
 
 You can customise the query and store functions which run in some generic monad to use whatever backend is best for the job. We currently use SQLite, but that is more for convenience than anything else.
-
-B. Query intervals
-
-If you want to specify an interval for your queries (which is highly encouraged) then you need to have in memory (or on disk) sufficient information to reconstruct the state at the given slot number. The information required is contained in the event (which includes the slot number). By storing more than K events you can extend the query interval as much as you need. In extreme, you can store events without ever aggregating and deleting them, in which case your queries can span the whole blockchain.
 
 Implementation
 ^^^^^^^^^^^^^^
