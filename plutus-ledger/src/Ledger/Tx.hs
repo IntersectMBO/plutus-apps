@@ -25,6 +25,7 @@ module Ledger.Tx
     , DecoratedTxOut(..)
     , toTxOut
     , toTxInfoTxOut
+    , toDecoratedTxOut
     -- ** Lenses and Prisms
     , decoratedTxOutPubKeyHash
     , decoratedTxOutAddress
@@ -215,6 +216,20 @@ decoratedTxOutDatum f p@(PublicKeyDecoratedTxOut pkh sc v dat rs) =
   maybe (pure p) (fmap (\ dat' -> PublicKeyDecoratedTxOut pkh sc v (Just dat') rs) . f) dat
 decoratedTxOutDatum f (ScriptDecoratedTxOut vh sc v dat rs val) =
   (\dat' -> ScriptDecoratedTxOut vh sc v dat' rs val) <$> f dat
+
+toDecoratedTxOut :: TxOut -> Maybe DecoratedTxOut
+toDecoratedTxOut (TxOut (C.TxOut addr' val dt rs)) =
+  mkDecoratedTxOut addr' (C.txOutValueToValue val) (toDecoratedDatum dt) (CardanoAPI.fromCardanoReferenceScript rs)
+  where
+    toDecoratedDatum :: C.TxOutDatum C.CtxTx C.BabbageEra -> Maybe (V2.DatumHash, DatumFromQuery)
+    toDecoratedDatum C.TxOutDatumNone       =
+      Nothing
+    toDecoratedDatum (C.TxOutDatumHash _ h) =
+      Just (V2.DatumHash $ V2.toBuiltin (C.serialiseToRawBytes h), DatumUnknown)
+    toDecoratedDatum (C.TxOutDatumInTx _ d) =
+      Just (V2.DatumHash $ V2.toBuiltin (C.serialiseToRawBytes (C.hashScriptData d)), DatumInBody $ V2.Datum $ CardanoAPI.fromCardanoScriptData d)
+    toDecoratedDatum (C.TxOutDatumInline _ d) =
+      Just (V2.DatumHash $ V2.toBuiltin (C.serialiseToRawBytes (C.hashScriptData d)), DatumInline $ V2.Datum $ CardanoAPI.fromCardanoScriptData d)
 
 toTxOut :: C.NetworkId -> DecoratedTxOut -> Either ToCardanoError TxOut
 toTxOut networkId p =

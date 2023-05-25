@@ -34,6 +34,7 @@ cell.library.combine-haddock {
         * "Ledger.Typed.Scripts": A type-safe interface for spending and
           producing script outputs. Built on "PlutusTx".
         * "Plutus.Trace.Emulator": Testing Plutus contracts in the emulator.
+        * "Cardano.Node.Emulator.MTL": Test your transactions on an emulated node.
     '';
   };
 }

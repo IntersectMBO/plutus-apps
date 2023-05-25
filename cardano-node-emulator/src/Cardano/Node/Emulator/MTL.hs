@@ -13,7 +13,9 @@ module Cardano.Node.Emulator.MTL (
   , awaitSlot
   -- * Querying the blockchain
   , utxosAt
+  , utxoAtTxOutRef
   , fundsAt
+  , lookupDatum
   -- * Transactions
   , balanceTx
   , signTx
@@ -48,7 +50,7 @@ import Cardano.Api.Shelley qualified as C
 import Cardano.Node.Emulator qualified as E
 import Cardano.Node.Emulator.MTL.LogMessages (EmulatorMsg (ChainEvent, GenericMsg, TxBalanceMsg),
                                               TxBalanceMsg (BalancingUnbalancedTx, FinishedBalancing, SigningTx, SubmittingTx))
-import Control.Lens (alaf, makeLenses, view, (%~), (&), (^.))
+import Control.Lens (makeLenses, view, (%~), (&), (<>~), (^.))
 import Control.Monad (void)
 import Control.Monad.Error.Class (MonadError, throwError)
 import Control.Monad.Except (ExceptT)
@@ -63,24 +65,21 @@ import Control.Monad.RWS.Strict (RWST)
 import Data.Aeson (ToJSON (toJSON))
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Data.Monoid (Endo (Endo))
 import Data.Sequence (Seq)
-import Ledger (CardanoAddress, CardanoTx (CardanoEmulatorEraTx), DatumFromQuery, DatumHash, DecoratedTxOut,
-               OnChainTx (Valid), PaymentPrivateKey (unPaymentPrivateKey), Slot, ToCardanoError, TxOut (TxOut),
-               TxOutRef, UtxoIndex, ValidationErrorInPhase, mkDecoratedTxOut)
+import Ledger (CardanoAddress, CardanoTx (CardanoEmulatorEraTx), Datum, DatumHash, DecoratedTxOut, OnChainTx (Valid),
+               PaymentPrivateKey (unPaymentPrivateKey), Slot, ToCardanoError, TxOutRef, UtxoIndex,
+               ValidationErrorInPhase, eitherTx)
 import Ledger.AddressMap qualified as AM
 import Ledger.Index (createGenesisTransaction, insertBlock)
-import Ledger.Tx (DatumFromQuery (DatumInBody, DatumInline, DatumUnknown), addCardanoTxSignature, decoratedTxOutValue,
-                  getCardanoTxId, toCtxUTxOTxOut)
-import Ledger.Tx.CardanoAPI (CardanoBuildTx (CardanoBuildTx), fromCardanoReferenceScript, fromCardanoScriptData,
-                             fromCardanoTxIn, toCardanoTxOutValue)
-import Plutus.V2.Ledger.Api qualified as PV2
-import PlutusTx.Builtins qualified as PlutusTx
+import Ledger.Tx (addCardanoTxSignature, decoratedTxOutValue, getCardanoTxData, getCardanoTxId, toCtxUTxOTxOut,
+                  toDecoratedTxOut)
+import Ledger.Tx.CardanoAPI (CardanoBuildTx (CardanoBuildTx), fromCardanoTxIn, toCardanoTxIn, toCardanoTxOutValue)
 
 
 data EmulatorState = EmulatorState
   { _esChainState :: !E.ChainState
   , _esAddressMap :: !AM.AddressMap
+  , _esDatumMap   :: !(Map DatumHash Datum)
   }
   deriving (Show)
 
@@ -98,15 +97,16 @@ type EmulatorT m = ExceptT EmulatorError (RWST E.Params EmulatorLogs EmulatorSta
 type EmulatorM = EmulatorT Identity
 
 emptyEmulatorState :: EmulatorState
-emptyEmulatorState = EmulatorState E.emptyChainState mempty
+emptyEmulatorState = EmulatorState E.emptyChainState mempty mempty
 
 emptyEmulatorStateWithInitialDist :: Map CardanoAddress C.Value -> EmulatorState
 emptyEmulatorStateWithInitialDist initialDist =
-  let tx = Valid $ createGenesisTransaction initialDist
+  let tx = createGenesisTransaction initialDist
   in emptyEmulatorState
-    & esChainState . E.chainNewestFirst %~ ([tx] :)
-    & esChainState . E.index %~ insertBlock [tx]
-    & esAddressMap %~ AM.updateAllAddresses tx
+    & esChainState . E.chainNewestFirst %~ ([Valid tx] :)
+    & esChainState . E.index %~ insertBlock [Valid tx]
+    & esAddressMap %~ AM.updateAllAddresses (Valid tx)
+    & esDatumMap <>~ getCardanoTxData tx
 
 getParams :: MonadEmulator m => m E.Params
 getParams = ask
@@ -114,27 +114,32 @@ getParams = ask
 handleChain :: MonadEmulator m => Eff [E.ChainControlEffect, E.ChainEffect] a -> m a
 handleChain eff = do
   params <- ask
-  EmulatorState chainState am <- get
-  let (((a, am') , newChainState), lg) = raiseEnd eff
+  EmulatorState chainState am dm <- get
+  let ((((a, dm'), am') , newChainState), lg) = raiseEnd eff
         & interpret (E.handleControlChain params)
         & interpret (E.handleChain params)
         & interpret handleChainLogs
+        & runState dm
         & runState am
         & runState chainState
         & F.runWriter
         & run
   tell lg
-  put $ EmulatorState newChainState am'
+  put $ EmulatorState newChainState am' dm'
   pure a
   where
     handleChainLogs
       :: ( Member (State AM.AddressMap) effs
+        , Member (State (Map DatumHash Datum)) effs
         , Member (F.Writer EmulatorLogs) effs
         )
       => L.LogMsg E.ChainEvent ~> Eff effs
     handleChainLogs (L.LMessage msg@(L.LogMessage _ e)) = do
       F.tell @EmulatorLogs (pure $ ChainEvent <$> msg)
-      void $ modify $ alaf Endo foldMap AM.updateAllAddresses $ E.chainEventOnChainTx e
+      E.chainEventOnChainTx e & maybe (pure ()) (\tx -> do
+        void $ modify $ AM.updateAllAddresses tx
+        void $ modify $ ((<>) . eitherTx getCardanoTxData getCardanoTxData) tx
+        )
 
 -- | Queue the transaction, it will be processed when @nextSlot@ is called.
 queueTx :: MonadEmulator m => CardanoTx -> m ()
@@ -166,24 +171,26 @@ awaitSlot s = do
 utxosAt :: MonadEmulator m => CardanoAddress -> m (Map TxOutRef DecoratedTxOut)
 utxosAt addr = do
   es <- get
-  pure $ Map.mapKeys fromCardanoTxIn $ Map.mapMaybe toDecoratedTxOut $ es ^. esAddressMap . AM.fundsAt addr
+  pure $ Map.mapKeys fromCardanoTxIn $ Map.mapMaybe (toDecoratedTxOut . snd) $ es ^. esAddressMap . AM.fundsAt addr
+
+-- | Resolve the transaction output reference.
+utxoAtTxOutRef :: MonadEmulator m => TxOutRef -> m (Maybe DecoratedTxOut)
+utxoAtTxOutRef ref = either (const $ pure Nothing) findTxOut (toCardanoTxIn ref)
   where
-    toDecoratedTxOut :: (CardanoTx, TxOut) -> Maybe DecoratedTxOut
-    toDecoratedTxOut (_, TxOut (C.TxOut addr' val dt rs)) =
-      mkDecoratedTxOut addr' (C.txOutValueToValue val) (toDecoratedDatum dt) (fromCardanoReferenceScript rs)
-    toDecoratedDatum :: C.TxOutDatum C.CtxTx C.BabbageEra -> Maybe (DatumHash, DatumFromQuery)
-    toDecoratedDatum C.TxOutDatumNone       =
-      Nothing
-    toDecoratedDatum (C.TxOutDatumHash _ h) =
-      Just (PV2.DatumHash $ PlutusTx.toBuiltin (C.serialiseToRawBytes h), DatumUnknown)
-    toDecoratedDatum (C.TxOutDatumInTx _ d) =
-      Just (PV2.DatumHash $ PlutusTx.toBuiltin (C.serialiseToRawBytes (C.hashScriptData d)), DatumInBody $ PV2.Datum $ fromCardanoScriptData d)
-    toDecoratedDatum (C.TxOutDatumInline _ d) =
-      Just (PV2.DatumHash $ PlutusTx.toBuiltin (C.serialiseToRawBytes (C.hashScriptData d)), DatumInline $ PV2.Datum $ fromCardanoScriptData d)
+    findTxOut txIn = do
+      es <- get
+      let mTxOut = snd <$> Map.lookup txIn (AM.outRefMap (es ^. esAddressMap))
+      pure $ mTxOut >>= toDecoratedTxOut
 
 -- | Query the total value of the unspent transaction outputs at the given address.
 fundsAt :: MonadEmulator m => CardanoAddress -> m C.Value
 fundsAt addr = foldMap (view decoratedTxOutValue) <$> utxosAt addr
+
+-- | Resolve a datum hash to an actual datum, if known.
+lookupDatum :: MonadEmulator m => DatumHash -> m (Maybe Datum)
+lookupDatum h = do
+  es <- get
+  pure $ Map.lookup h (es ^. esDatumMap)
 
 
 -- | Balance an unbalanced transaction, using funds from the given wallet if needed, and returning any remaining value to the same wallet.
