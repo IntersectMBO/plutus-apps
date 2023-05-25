@@ -42,8 +42,6 @@ rec {
 
   marconi-chain-index = plutus-apps.haskell.packages.marconi-chain-index.components.exes.marconi-chain-index;
 
-  marconi-sidechain = plutus-apps.haskell.packages.marconi-sidechain.components.exes.marconi-sidechain;
-
   create-script-context = plutus-apps.haskell.packages.plutus-example.components.exes.create-script-context;
 
   tests = import ./nix/tests/default.nix {
