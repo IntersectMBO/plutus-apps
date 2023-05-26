@@ -1,7 +1,7 @@
 .. _support_return_and_total_collateral_when_building_transactions:
 
-ADR 11: Support return and total collateral when building transactions
-======================================================================
+ADR 9: Support return and total collateral when building transactions
+=====================================================================
 
 Date: 2022-08-30
 

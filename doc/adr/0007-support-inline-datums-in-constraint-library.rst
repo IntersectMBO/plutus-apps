@@ -1,6 +1,6 @@
 .. _support_inline_datums_in_constraint_library:
 
-ADR 8: Support inline datums in constraint library
+ADR 7: Support inline datums in constraint library
 ==================================================
 
 Date: 2022-08-14

@@ -1,6 +1,6 @@
 .. _time_conversion_semantic_change:
 
-ADR 15: Time conversion semantic change
+ADR 12: Time conversion semantic change
 =======================================
 
 Date: 2022-11-19

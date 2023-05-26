@@ -1,6 +1,6 @@
 .. _cardano_node_emulator:
 
-ADR 16: Self-contained cardano-node emulator component
+ADR 13: Self-contained cardano-node emulator component
 ======================================================
 
 Date: 2022-11-23

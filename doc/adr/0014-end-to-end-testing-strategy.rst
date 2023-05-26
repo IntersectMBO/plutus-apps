@@ -1,6 +1,6 @@
 .. _end_to_end_testing_strategy:
 
-ADR 17: End-to-end testing strategy for Plutus, cardano-ledger-api and cardano-node-client
+ADR 14: End-to-end testing strategy for Plutus, cardano-ledger-api and cardano-node-client
 ==========================================================================================
 
 Date: 2022-12-02
@@ -94,7 +94,7 @@ Examples
 * Use cases that go beyond testing features in isolation.
   Bringing together various functionality
   helps demonstrate the capability of more realistic Plutus applications.
-  
+
 * Functionality introduced by a new Plutus version.
   This could mean that ``ScriptContext`` changes to accommodate an extended transaction body.
 
@@ -171,10 +171,10 @@ Argument
    flags and the cli's error handling with script evaluation.
    Some examples of tests that should be covered:
 
-   * Cli flags that require use of Plutus scripts E.g. tx-out-reference-script-file or 
+   * Cli flags that require use of Plutus scripts E.g. tx-out-reference-script-file or
      calculate-plutus-script-cost
    * Cli behaviour when script evaluation passes. This could be displaying expected fee correctly.
-   * Cli behaviour when script evaluation fails. This can be how different types errors are formatted. 
+   * Cli behaviour when script evaluation fails. This can be how different types errors are formatted.
 
 9. At some point, we may wish to incorporate the `cardano-node-emulator
    <https://github.com/input-output-hk/Plutus-apps/pull/831>`_ as an alternative to ``cardano-testnet``.
@@ -192,7 +192,7 @@ Pros of building and maintaining our own test framework
 * Plutus scripts can be defined alongside the tests. ``cardano-node-tests`` requires
   pre-compiled scripts.
 * Tests will demonstrate how these Haskell packages can be used together to guide Plutus application
-  development using the node apis. Particularly useful for less experienced Haskell developers.  
+  development using the node apis. Particularly useful for less experienced Haskell developers.
 * Possible to define tests once and run at different levels. For example, on private or public
   testnets and with ``cardano-node-emulator`` emulated node.
 * Benefits from use of all ``Plutus`` apis. For example, using PlutusTx to produce scripts using a

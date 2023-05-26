@@ -1,4 +1,4 @@
-ADR 5: PAB and indexing component integration
+ADR 4: PAB and indexing component integration
 =============================================
 
 Date: 2022-07-27

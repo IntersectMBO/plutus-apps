@@ -1,6 +1,6 @@
 .. _tx_validity_time_range_fix:
 
-ADR 13: Transaction validity time range fix
+ADR 11: Transaction validity time range fix
 ===========================================
 
 Date: 2022-10-19
