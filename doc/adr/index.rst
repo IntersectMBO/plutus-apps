@@ -33,18 +33,14 @@ The general process for creating an ADR is:
    0001-record-architecture-decisions
    0002-repository-standardization
    0003-marconi-monorepo
-   0004-marconi-initiative
-   0005-pab-indexing-solution-integration
-   0006-common-contract-api
-   0007-support-reference-inputs-in-constraint-library
-   0008-support-inline-datums-in-constraint-library
-   0009-support-reference-scripts-in-constraint-library
-   0010-marconi-indexer-rollbacks
-   0011-support-return-and-total-collateral-when-building-transactions
-   0012-commit-to-data-types-in-cardano-api
-   0013-tx-validity-time-range-fix
-   0014-marconi-query-interface
-   0015-time-conversion
-   0016-cardano-node-emulator
-   0017-end-to-end-testing-strategy
-   0018-Indexers-query-synchronisation-primitive
+   0004-pab-indexing-solution-integration
+   0005-common-contract-api
+   0006-support-reference-inputs-in-constraint-library
+   0007-support-inline-datums-in-constraint-library
+   0008-support-reference-scripts-in-constraint-library
+   0009-support-return-and-total-collateral-when-building-transactions
+   0010-commit-to-data-types-in-cardano-api
+   0011-tx-validity-time-range-fix
+   0012-time-conversion
+   0013-cardano-node-emulator
+   0014-end-to-end-testing-strategy

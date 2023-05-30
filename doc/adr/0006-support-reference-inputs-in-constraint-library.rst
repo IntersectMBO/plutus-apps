@@ -1,6 +1,6 @@
 .. _support_reference_inputs_in_constraint_library:
 
-ADR 7: Support reference inputs in constraint library
+ADR 6: Support reference inputs in constraint library
 =====================================================
 
 Date: 2022-08-09

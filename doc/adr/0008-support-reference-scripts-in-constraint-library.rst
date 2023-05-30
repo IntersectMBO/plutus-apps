@@ -1,6 +1,6 @@
 .. _support_reference_scripts_in_constraint_library:
 
-ADR 9: Support reference scripts in constraint library
+ADR 8: Support reference scripts in constraint library
 ======================================================
 
 Date: 2022-08-15

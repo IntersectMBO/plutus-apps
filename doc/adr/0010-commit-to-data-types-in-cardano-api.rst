@@ -1,6 +1,6 @@
 .. _commit-to-data-types-in-cardano-api:
 
-ADR 12: Commit to data types in cardano-api
+ADR 10: Commit to data types in cardano-api
 ===========================================
 
 Date: 2022-10-03
