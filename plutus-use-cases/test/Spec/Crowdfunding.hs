@@ -36,7 +36,7 @@ import Test.Tasty.Golden (goldenVsString)
 import Test.Tasty.HUnit qualified as HUnit
 import Test.Tasty.QuickCheck hiding ((.&&.))
 
-import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
+import Cardano.Node.Emulator.Internal.Node.TimeSlot qualified as TimeSlot
 import Ledger qualified
 import Ledger.Slot (Slot (..))
 import Ledger.Time (POSIXTime)

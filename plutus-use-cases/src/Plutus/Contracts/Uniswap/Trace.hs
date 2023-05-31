@@ -15,7 +15,7 @@ module Plutus.Contracts.Uniswap.Trace(
     , increaseTransactionLimitsOpts
     ) where
 
-import Cardano.Node.Emulator.Params qualified as Params
+import Cardano.Node.Emulator.Internal.Node.Params qualified as Params
 import Control.Lens (over)
 import Control.Monad (forM_, when)
 import Control.Monad.Freer.Error (throwError)

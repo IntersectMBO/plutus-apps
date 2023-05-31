@@ -13,7 +13,7 @@ module Spec.MultiSigStateMachine(tests, lockProposeSignPay) where
 
 import Data.Foldable (traverse_)
 
-import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
+import Cardano.Node.Emulator.Internal.Node.TimeSlot qualified as TimeSlot
 import Ledger qualified
 import Ledger.Time (POSIXTime)
 import Ledger.Typed.Scripts qualified as Scripts

@@ -51,8 +51,8 @@ module Plutus.PAB.Core.ContractInstance.STM(
     , InstanceClientEnv(..)
     ) where
 
-import Cardano.Node.Emulator.Params (Params (pSlotConfig))
-import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
+import Cardano.Node.Emulator.Internal.Node.Params (Params (pSlotConfig))
+import Cardano.Node.Emulator.Internal.Node.TimeSlot qualified as TimeSlot
 import Cardano.Wallet.LocalClient.ExportTx (ExportTx)
 import Control.Applicative (Alternative (empty))
 import Control.Concurrent.STM (STM, TMVar, TVar)

@@ -41,7 +41,7 @@ module Plutus.Contracts.Game.Alonzo
     , covIdx
     ) where
 
-import Cardano.Node.Emulator.Params (testnet)
+import Cardano.Node.Emulator.Internal.Node.Params (testnet)
 import Control.Lens (_2, (^?))
 import Data.Aeson (FromJSON, ToJSON)
 import Data.ByteString.Char8 qualified as C

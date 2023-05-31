@@ -50,8 +50,8 @@ module Wallet.Emulator.Folds (
     ) where
 
 import Cardano.Api qualified as C
-import Cardano.Node.Emulator.Chain (ChainEvent (SlotAdd, TxnValidate, TxnValidationFail), _TxnValidate,
-                                    _TxnValidationFail, chainEventOnChainTx)
+import Cardano.Node.Emulator.Internal.Node (ChainEvent (SlotAdd, TxnValidate, TxnValidationFail), _TxnValidate,
+                                            _TxnValidationFail, chainEventOnChainTx)
 import Control.Applicative ((<|>))
 import Control.Foldl (Fold (Fold), FoldM (FoldM))
 import Control.Foldl qualified as L

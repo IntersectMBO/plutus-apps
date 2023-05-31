@@ -22,7 +22,7 @@ import Data.Coerce (coerce)
 import Plutus.Monitoring.Util (runLogEffects)
 
 import Cardano.ChainIndex.ChainIndex (processChainIndexEffects, syncState)
-import Cardano.Node.Emulator.Params (Params (..))
+import Cardano.Node.Emulator.Internal.Node (Params (..))
 import Control.Monad.IO.Class (MonadIO (..))
 import Ledger.Blockchain (Block)
 

@@ -25,7 +25,7 @@ import Data.Map qualified as Map
 import Data.Void (Void)
 import Test.Tasty (TestTree, testGroup)
 
-import Cardano.Node.Emulator.Params qualified as Params
+import Cardano.Node.Emulator.Internal.Node.Params qualified as Params
 import Ledger qualified
 import Ledger.Tx.Constraints qualified as Constraints
 import Plutus.Contract as Con

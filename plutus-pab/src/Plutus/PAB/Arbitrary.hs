@@ -14,7 +14,7 @@
 module Plutus.PAB.Arbitrary where
 
 import Cardano.Api qualified as C
-import Cardano.Node.Emulator.Params (testnet)
+import Cardano.Node.Emulator.Internal.Node.Params (testnet)
 import Control.Monad (replicateM)
 import Data.Aeson (Value)
 import Data.Aeson qualified as Aeson

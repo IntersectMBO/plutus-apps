@@ -17,7 +17,7 @@ import Control.Monad (void)
 import Test.Tasty (TestTree, testGroup)
 
 import Cardano.Api.Shelley (protocolParamMaxCollateralInputs)
-import Cardano.Node.Emulator.Params qualified as Params
+import Cardano.Node.Emulator.Internal.Node.Params qualified as Params
 import Data.Default (Default (def))
 import Data.Map as M
 import Data.Maybe (fromJust, maybeToList)

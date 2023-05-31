@@ -8,8 +8,8 @@
 module Spec.Contract.Tx.Constraints.TimeValidity(tests) where
 
 import Cardano.Api.Shelley (protocolParamProtocolVersion)
-import Cardano.Node.Emulator.Params (Params, protocolParamsL)
-import Cardano.Node.Emulator.Params qualified as Params
+import Cardano.Node.Emulator.Internal.Node (Params, protocolParamsL)
+import Cardano.Node.Emulator.Internal.Node.Params qualified as Params
 import Control.Lens hiding (contains, from, (.>))
 import Control.Monad (void)
 import Data.Map qualified as Map

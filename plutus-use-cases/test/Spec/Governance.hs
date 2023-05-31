@@ -4,7 +4,6 @@
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE GADTs               #-}
-{-# LANGUAGE MonoLocalBinds      #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ParallelListComp    #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -36,8 +35,8 @@ import Data.Semigroup (Sum (..))
 
 import Cardano.Api hiding (Value)
 import Cardano.Api.Shelley (fromPlutusData, toPlutusData)
-import Cardano.Node.Emulator.Params qualified as Params
-import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
+import Cardano.Node.Emulator.Internal.Node.Params qualified as Params
+import Cardano.Node.Emulator.Internal.Node.TimeSlot qualified as TimeSlot
 import Ledger qualified
 import Ledger.Slot
 import Ledger.Typed.Scripts qualified as Scripts

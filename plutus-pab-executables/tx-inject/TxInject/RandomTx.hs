@@ -19,8 +19,8 @@ import System.Random.MWC as MWC
 
 import Cardano.Api qualified as C
 import Cardano.Node.Emulator.Generators qualified as Generators
-import Cardano.Node.Emulator.Params (Params (pSlotConfig))
-import Cardano.Node.Emulator.Validation qualified as Validation
+import Cardano.Node.Emulator.Internal.Node (Params (pSlotConfig))
+import Cardano.Node.Emulator.Internal.Node.Validation qualified as Validation
 import Ledger.Address (CardanoAddress)
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Index (UtxoIndex)

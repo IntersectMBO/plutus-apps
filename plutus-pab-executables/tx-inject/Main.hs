@@ -34,7 +34,7 @@ import System.Signal (installHandler, sigINT)
 import Text.Pretty.Simple (pPrint)
 
 import Cardano.Api qualified as C
-import Cardano.Node.Emulator.Params (Params (..), testnet)
+import Cardano.Node.Emulator.Internal.Node (Params (..), testnet)
 import Cardano.Node.Types (PABServerConfig (..))
 import Cardano.Protocol.Socket.Mock.Client (TxSendHandle (..), queueTx, runTxSender)
 import Data.Either (fromRight)

@@ -7,7 +7,6 @@
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE GADTs                 #-}
-{-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE OverloadedStrings     #-}
@@ -112,7 +111,7 @@ module Plutus.Contract.Request(
     ) where
 
 import Cardano.Api qualified as C
-import Cardano.Node.Emulator.Params (Params)
+import Cardano.Node.Emulator.Internal.Node.Params (Params)
 import Control.Lens (Prism', _2, _Just, only, preview, review, to, view)
 import Control.Monad.Freer.Error qualified as E
 import Control.Monad.Trans.State.Strict (StateT (..), evalStateT)

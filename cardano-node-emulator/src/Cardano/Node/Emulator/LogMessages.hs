@@ -4,10 +4,10 @@
 {-# LANGUAGE LambdaCase         #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE TemplateHaskell    #-}
-module Cardano.Node.Emulator.MTL.LogMessages where
+module Cardano.Node.Emulator.LogMessages where
 
 import Cardano.Api qualified as C
-import Cardano.Node.Emulator.Chain (ChainEvent)
+import Cardano.Node.Emulator.Internal.Node.Chain (ChainEvent)
 import Control.Lens.TH (makePrisms)
 import Data.Aeson (FromJSON, ToJSON, Value)
 import Data.Map qualified as Map

@@ -13,7 +13,7 @@ import Control.Monad (void)
 import Spec.Contract.Error (txOutRefNotFound)
 import Test.Tasty (TestTree, testGroup)
 
-import Cardano.Node.Emulator.Params qualified as Params
+import Cardano.Node.Emulator.Internal.Node.Params qualified as Params
 import Data.Either (fromRight)
 import Data.Set (Set)
 import Data.Set qualified as S (elemAt, elems)

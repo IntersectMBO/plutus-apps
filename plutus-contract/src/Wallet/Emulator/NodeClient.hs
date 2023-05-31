@@ -15,7 +15,7 @@
 module Wallet.Emulator.NodeClient where
 
 import Cardano.Api qualified as C
-import Cardano.Node.Emulator.Chain
+import Cardano.Node.Emulator.Internal.Node.Chain
 import Control.Lens hiding (index)
 import Control.Monad.Freer
 import Control.Monad.Freer.Extras.Log (LogMsg, logInfo)

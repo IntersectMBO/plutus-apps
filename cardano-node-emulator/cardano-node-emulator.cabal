@@ -29,15 +29,17 @@ library
   hs-source-dirs:  src
   exposed-modules:
     Cardano.Node.Emulator
-    Cardano.Node.Emulator.Chain
-    Cardano.Node.Emulator.Fee
+    Cardano.Node.Emulator.API
     Cardano.Node.Emulator.Generators
-    Cardano.Node.Emulator.MTL
-    Cardano.Node.Emulator.MTL.LogMessages
-    Cardano.Node.Emulator.MTL.Test
-    Cardano.Node.Emulator.Params
-    Cardano.Node.Emulator.TimeSlot
-    Cardano.Node.Emulator.Validation
+    Cardano.Node.Emulator.Internal.API
+    Cardano.Node.Emulator.Internal.Node
+    Cardano.Node.Emulator.Internal.Node.Chain
+    Cardano.Node.Emulator.Internal.Node.Fee
+    Cardano.Node.Emulator.Internal.Node.Params
+    Cardano.Node.Emulator.Internal.Node.TimeSlot
+    Cardano.Node.Emulator.Internal.Node.Validation
+    Cardano.Node.Emulator.LogMessages
+    Cardano.Node.Emulator.Test
 
   --------------------
   -- Local components

@@ -12,7 +12,7 @@ import Control.Lens (has)
 import Control.Monad (void)
 import Test.Tasty (TestTree, testGroup)
 
-import Cardano.Node.Emulator.Params qualified as Params
+import Cardano.Node.Emulator.Internal.Node.Params qualified as Params
 import Ledger qualified
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.Constraints.OffChain qualified as Constraints

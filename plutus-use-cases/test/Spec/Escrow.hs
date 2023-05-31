@@ -28,8 +28,8 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 
 import Cardano.Api.Shelley (toPlutusData)
-import Cardano.Node.Emulator.Params qualified as Params
-import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
+import Cardano.Node.Emulator.Internal.Node.Params qualified as Params
+import Cardano.Node.Emulator.Internal.Node.TimeSlot qualified as TimeSlot
 import Ledger (Slot (..), minAdaTxOutEstimated)
 import Ledger.Time (POSIXTime)
 import Ledger.Typed.Scripts qualified as Scripts

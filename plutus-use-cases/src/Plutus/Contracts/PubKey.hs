@@ -23,7 +23,7 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Map qualified as Map
 import GHC.Generics (Generic)
 
-import Cardano.Node.Emulator.Params (pNetworkId)
+import Cardano.Node.Emulator.Internal.Node (pNetworkId)
 import Ledger hiding (Value, initialise, to)
 import Ledger.Tx.CardanoAPI (fromCardanoTxIn)
 import Ledger.Tx.Constraints qualified as Constraints

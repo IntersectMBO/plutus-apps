@@ -68,7 +68,7 @@ import Plutus.Contract.Secrets (secretArg)
 -- END import Contract.Security
 
 -- START import TimeSlot
-import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
+import Cardano.Node.Emulator.Internal.Node.TimeSlot qualified as TimeSlot
 -- END import TimeSlot
 
 -- START import Data.Default

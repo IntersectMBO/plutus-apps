@@ -7,8 +7,8 @@
 module Cardano.Node.Emulator.GeneratorsSpec (tests) where
 
 import Cardano.Node.Emulator.Generators qualified as Gen
-import Cardano.Node.Emulator.TimeSlot (SlotConfig (scSlotLength))
-import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
+import Cardano.Node.Emulator.Internal.Node.TimeSlot (SlotConfig (scSlotLength))
+import Cardano.Node.Emulator.Internal.Node.TimeSlot qualified as TimeSlot
 import Data.Aeson qualified as JSON
 import Data.Aeson.Internal qualified as Aeson
 import Data.String (fromString)

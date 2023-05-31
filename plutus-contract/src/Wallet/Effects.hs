@@ -26,7 +26,7 @@ module Wallet.Effects(
     , getClientParams
     ) where
 
-import Cardano.Node.Emulator.Params (Params)
+import Cardano.Node.Emulator.Internal.Node.Params (Params)
 import Control.Monad.Freer.TH (makeEffect)
 import Data.List.NonEmpty (NonEmpty)
 import Ledger (CardanoAddress, CardanoTx, Slot)

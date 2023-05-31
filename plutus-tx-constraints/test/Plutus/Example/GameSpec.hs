@@ -18,9 +18,9 @@
 module Plutus.Example.GameSpec (tests) where
 
 import Cardano.Node.Emulator qualified as E
-import Cardano.Node.Emulator.MTL (EmulatorM, MonadEmulator, getParams, logInfo, submitTxConfirmed, utxosAt)
-import Cardano.Node.Emulator.MTL.Test (propRunActions_, propSanityCheckAssertions, propSanityCheckModel)
-import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
+import Cardano.Node.Emulator.API (EmulatorM, MonadEmulator, getParams, logInfo, submitTxConfirmed, utxosAt)
+import Cardano.Node.Emulator.Internal.Node.TimeSlot qualified as TimeSlot
+import Cardano.Node.Emulator.Test (propRunActions_, propSanityCheckAssertions, propSanityCheckModel)
 import Control.Lens (makeLenses, (.=), (^.))
 import Control.Monad (void, when)
 import Control.Monad.Trans (lift)

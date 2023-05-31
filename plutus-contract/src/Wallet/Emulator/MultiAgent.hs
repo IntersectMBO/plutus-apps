@@ -19,9 +19,9 @@ module Wallet.Emulator.MultiAgent where
 
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
-import Cardano.Node.Emulator.Chain qualified as Chain
 import Cardano.Node.Emulator.Generators (alwaysSucceedPolicy, alwaysSucceedPolicyId, signAll)
-import Cardano.Node.Emulator.Params (Params (..))
+import Cardano.Node.Emulator.Internal.Node.Chain qualified as Chain
+import Cardano.Node.Emulator.Internal.Node.Params (Params (..))
 import Control.Lens (AReview, Getter, Lens', Prism', anon, at, folded, makeLenses, prism', reversed, review, to, unto,
                      view, (&), (.~), (^.), (^..))
 import Control.Monad (join)

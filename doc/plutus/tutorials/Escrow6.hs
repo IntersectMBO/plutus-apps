@@ -42,7 +42,7 @@ import Plutus.V1.Ledger.Api (Datum)
 import Plutus.Trace.Emulator qualified as Trace
 import PlutusTx.Monoid (inv)
 
-import Cardano.Node.Emulator.TimeSlot (SlotConfig (scSlotLength), scSlotZeroTime)
+import Cardano.Node.Emulator.Internal.Node (SlotConfig (scSlotLength), scSlotZeroTime)
 import Data.Default (Default (def))
 import Plutus.Contract.Test.ContractModel (SomeContractInstanceKey (Key), coverageIndex, currentSlot,
                                            defaultCheckOptionsContractModel, defaultCoverageOptions,

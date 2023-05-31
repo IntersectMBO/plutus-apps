@@ -42,9 +42,9 @@ module Plutus.Contract.Test.ContractModel.Internal
   , module Plutus.Contract.Test.ContractModel.Internal
   ) where
 
-import Cardano.Node.Emulator.Chain
-import Cardano.Node.Emulator.MTL.Test (chainStateToChainIndex, chainStateToContractModelChainState)
-import Cardano.Node.Emulator.Params
+import Cardano.Node.Emulator (chainStateToChainIndex, chainStateToContractModelChainState)
+import Cardano.Node.Emulator.Internal.Node (ChainEvent (TxnValidationFail))
+import Cardano.Node.Emulator.Internal.Node.Params
 import Control.DeepSeq
 import Control.Monad.Freer.Reader (Reader, ask, runReader)
 import Control.Monad.Freer.State (State, get, modify, runState)
@@ -543,7 +543,7 @@ checkNoLockedFundsProofLight NoLockedFundsProofLight{nlfplMainStrategy = mainStr
 
 -- | A whitelist entry tells you what final log entry prefixes
 -- are acceptable for a given error
-data Whitelist = Whitelist { errorPrefixes :: Set Text.Text }
+newtype Whitelist = Whitelist { errorPrefixes :: Set Text.Text }
 
 instance Semigroup Whitelist where
   Whitelist wl <> Whitelist wl' = Whitelist $ wl <> wl'

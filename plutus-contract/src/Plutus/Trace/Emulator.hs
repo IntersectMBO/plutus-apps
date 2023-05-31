@@ -77,9 +77,8 @@ module Plutus.Trace.Emulator(
     ) where
 
 import Cardano.Api qualified as C
-import Cardano.Node.Emulator.Chain (ChainControlEffect)
-import Cardano.Node.Emulator.Chain qualified as ChainState
-import Cardano.Node.Emulator.Params (Params (..))
+import Cardano.Node.Emulator.Internal.Node (ChainControlEffect, Params (..))
+import Cardano.Node.Emulator.Internal.Node qualified as ChainState
 import Control.Foldl (generalize, list)
 import Control.Lens hiding ((:>))
 import Control.Monad (forM_, void)

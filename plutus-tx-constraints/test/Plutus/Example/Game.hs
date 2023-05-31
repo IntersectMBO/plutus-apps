@@ -16,8 +16,8 @@ module Plutus.Example.Game
     , mkGameAddress
     ) where
 
-import Cardano.Node.Emulator qualified as E
-import Cardano.Node.Emulator.Params (testnet)
+import Cardano.Node.Emulator.Internal.Node qualified as E
+import Cardano.Node.Emulator.Internal.Node.Params (testnet)
 import Data.Bifunctor (first)
 import Data.ByteString.Char8 qualified as C
 import Data.Map (Map)

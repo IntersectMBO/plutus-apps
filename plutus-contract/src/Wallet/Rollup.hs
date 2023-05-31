@@ -15,7 +15,7 @@ module Wallet.Rollup
     ) where
 
 import Cardano.Api qualified as C
-import Cardano.Node.Emulator.Chain (ChainEvent (..))
+import Cardano.Node.Emulator.Internal.Node.Chain (ChainEvent (..))
 import Control.Lens (assign, ifoldr, over, set, use, view, (&), (^.))
 import Control.Lens.Combinators (itraverse)
 import Control.Monad.State (StateT, evalStateT, runState)

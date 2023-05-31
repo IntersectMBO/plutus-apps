@@ -74,10 +74,9 @@ module Plutus.PAB.Simulator(
     ) where
 
 import Cardano.Api qualified as C
-import Cardano.Node.Emulator.Chain (ChainControlEffect, ChainState)
-import Cardano.Node.Emulator.Chain qualified as Chain
-import Cardano.Node.Emulator.Params (Params (..))
-import Cardano.Node.Emulator.TimeSlot (SlotConfig (SlotConfig, scSlotLength))
+import Cardano.Node.Emulator.Internal.Node (ChainControlEffect, ChainState, Params (..),
+                                            SlotConfig (SlotConfig, scSlotLength))
+import Cardano.Node.Emulator.Internal.Node.Chain qualified as Chain
 import Cardano.Wallet.Mock.Handlers qualified as MockWallet
 import Control.Concurrent (forkIO)
 import Control.Concurrent.STM (STM, TQueue, TVar)

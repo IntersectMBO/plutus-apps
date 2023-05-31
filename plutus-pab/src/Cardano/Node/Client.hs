@@ -8,7 +8,7 @@
 
 module Cardano.Node.Client where
 
-import Cardano.Node.Emulator.Params (Params)
+import Cardano.Node.Emulator.Internal.Node.Params (Params)
 import Control.Monad.Freer
 import Control.Monad.Freer.Error (Error, throwError)
 import Control.Monad.Freer.Reader (Reader, ask)

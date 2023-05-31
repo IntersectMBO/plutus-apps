@@ -12,8 +12,8 @@ module Plutus.Trace.Emulator.Extract(
 ) where
 
 import Cardano.Api qualified as C
-import Cardano.Node.Emulator.Params (Params (..), networkIdL, protocolParamsL)
-import Cardano.Node.Emulator.Validation (CardanoLedgerError, makeTransactionBody)
+import Cardano.Node.Emulator.Internal.Node (CardanoLedgerError, Params (..), makeTransactionBody, networkIdL,
+                                            protocolParamsL)
 import Control.Foldl qualified as L
 import Control.Lens ((&), (.~))
 import Control.Monad.Freer (run)

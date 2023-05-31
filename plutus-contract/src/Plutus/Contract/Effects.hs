@@ -91,8 +91,7 @@ module Plutus.Contract.Effects( -- TODO: Move to Requests.Internal
     ) where
 
 import Cardano.Api qualified as C
-import Cardano.Node.Emulator.Params (Params)
-import Cardano.Node.Emulator.TimeSlot (SlotConversionError)
+import Cardano.Node.Emulator.Internal.Node (Params, SlotConversionError)
 import Control.Lens (Iso', Prism', iso, makePrisms, prism')
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Aeson qualified as JSON

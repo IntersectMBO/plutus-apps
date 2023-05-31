@@ -21,7 +21,7 @@ import Test.Tasty
 import Test.Tasty.HUnit qualified as HUnit
 import Test.Tasty.QuickCheck (testProperty)
 
-import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
+import Cardano.Node.Emulator.Internal.Node.TimeSlot qualified as TimeSlot
 import Ledger qualified
 import Ledger.Slot
 import Ledger.Time (POSIXTime)

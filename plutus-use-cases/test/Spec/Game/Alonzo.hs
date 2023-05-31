@@ -24,8 +24,8 @@ import Data.Text (Text)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit qualified as HUnit
 
-import Cardano.Node.Emulator.Params (testnet)
-import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
+import Cardano.Node.Emulator.Internal.Node.Params (testnet)
+import Cardano.Node.Emulator.Internal.Node.TimeSlot qualified as TimeSlot
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value.CardanoAPI qualified as Value
 import Plutus.Contract.Test (checkPredicate, goldenPir, mockWalletPaymentPubKeyHash, reasonable', valueAtAddress, w1,

@@ -6,7 +6,7 @@
 {-# LANGUAGE TupleSections      #-}
 {-# LANGUAGE TypeFamilies       #-}
 -- | Calculating transaction fees in the emulator.
-module Cardano.Node.Emulator.Fee(
+module Cardano.Node.Emulator.Internal.Node.Fee(
   estimateCardanoBuildTxFee,
   makeAutoBalancedTransaction,
   makeAutoBalancedTransactionWithUtxoProvider,
@@ -22,9 +22,9 @@ import Cardano.Api.Shelley qualified as C.Api
 import Cardano.Ledger.BaseTypes (Globals (systemStart))
 import Cardano.Ledger.Core qualified as C.Ledger (Tx)
 import Cardano.Ledger.Shelley.API qualified as C.Ledger hiding (Tx)
-import Cardano.Node.Emulator.Params (EmulatorEra, PParams, Params (emulatorPParams), emulatorEraHistory,
-                                     emulatorGlobals, pProtocolParams)
-import Cardano.Node.Emulator.Validation (CardanoLedgerError, UTxO (UTxO), makeTransactionBody)
+import Cardano.Node.Emulator.Internal.Node.Params (EmulatorEra, PParams, Params (emulatorPParams), emulatorEraHistory,
+                                                   emulatorGlobals, pProtocolParams)
+import Cardano.Node.Emulator.Internal.Node.Validation (CardanoLedgerError, UTxO (UTxO), makeTransactionBody)
 import Control.Arrow ((&&&))
 import Control.Lens (over, (&))
 import Data.Aeson (FromJSON, ToJSON)

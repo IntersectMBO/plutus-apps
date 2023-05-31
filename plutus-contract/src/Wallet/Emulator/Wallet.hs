@@ -24,10 +24,10 @@
 module Wallet.Emulator.Wallet where
 
 import Cardano.Api qualified as C
-import Cardano.Node.Emulator.Chain (ChainState (_index))
-import Cardano.Node.Emulator.Fee qualified as Fee
-import Cardano.Node.Emulator.Params (Params (..))
-import Control.Lens (makeLenses, makePrisms)
+import Cardano.Node.Emulator.Internal.Node (BalancingError (CardanoLedgerError, InsufficientFunds), ChainState,
+                                            Params (..), index, makeAutoBalancedTransactionWithUtxoProvider,
+                                            utxoProviderFromWalletOutputs)
+import Control.Lens (makeLenses, makePrisms, view)
 import Control.Monad (foldM, (<=<))
 import Control.Monad.Freer (Eff, Member, Members, interpret, type (~>))
 import Control.Monad.Freer.Error (Error, runError, throwError)
@@ -313,11 +313,11 @@ handleBalance utx = do
     utxo <- ownOutputs
     let unbalancedBodyContent = U.unBalancedCardanoBuildTx utx
     ownAddr <- gets ownAddress
-    cTx <- Fee.makeAutoBalancedTransactionWithUtxoProvider
+    cTx <- makeAutoBalancedTransactionWithUtxoProvider
         params
         (U.unBalancedTxUtxoIndex utx)
         ownAddr
-        (handleBalancingError utx . Fee.utxoProviderFromWalletOutputs utxo unbalancedBodyContent)
+        (handleBalancingError utx . utxoProviderFromWalletOutputs utxo unbalancedBodyContent)
         (handleError utx . Left)
         unbalancedBodyContent
     pure $ Tx.CardanoEmulatorEraTx cTx
@@ -332,11 +332,11 @@ handleBalance utx = do
             throwError $ WAPI.ValidationError ve
         handleError _ (Left (Right ce)) = throwError $ WAPI.ToCardanoError ce
         handleError _ (Right v) = pure v
-        handleBalancingError _ (Left (Fee.InsufficientFunds total expected)) = throwError $ WAPI.InsufficientFunds
+        handleBalancingError _ (Left (InsufficientFunds total expected)) = throwError $ WAPI.InsufficientFunds
             $ T.unwords
                 [ "Total:", T.pack $ show total
                 , "expected:", T.pack $ show expected ]
-        handleBalancingError utx' (Left (Fee.CardanoLedgerError e)) = handleError utx' (Left e)
+        handleBalancingError utx' (Left (CardanoLedgerError e)) = handleError utx' (Left e)
         handleBalancingError _ (Right v) = pure v
 
 handleAddSignature ::
@@ -448,7 +448,7 @@ walletPaymentPubKeyHashes = foldl' f Map.empty . Map.toList
 -- | For a set of wallets, convert them into a map of value: entity,
 -- where entity is one of 'Entity'.
 balances :: ChainState -> WalletSet -> Map.Map Entity C.Value
-balances state wallets = foldl' f Map.empty . C.unUTxO . _index $ state
+balances state wallets = foldl' f Map.empty . C.unUTxO . view index $ state
   where
     toEntity :: CardanoAddress -> Entity
     toEntity a =

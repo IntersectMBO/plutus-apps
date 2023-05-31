@@ -2,10 +2,6 @@
 
 module Cardano.Node.Emulator.MTLSpec (tests) where
 
-import Cardano.Node.Emulator qualified as E
-import Cardano.Node.Emulator.MTL (EmulatorError, EmulatorLogs, EmulatorM, emptyEmulatorStateWithInitialDist, nextSlot,
-                                  payToAddress, submitUnbalancedTx)
-import Cardano.Node.Emulator.MTL.Test (hasValidatedTransactionCountOfTotal, renderLogs)
 import Control.Monad (void)
 import Control.Monad.Except (runExceptT)
 import Control.Monad.RWS.Strict (evalRWS)
@@ -21,6 +17,11 @@ import Ledger.Value.CardanoAPI qualified as Value
 import Test.Tasty (TestName, TestTree, testGroup)
 import Test.Tasty.Golden (goldenVsString)
 import Test.Tasty.HUnit (assertFailure, testCase)
+
+import Cardano.Node.Emulator.API (EmulatorError, EmulatorLogs, EmulatorM, emptyEmulatorStateWithInitialDist, nextSlot,
+                                  payToAddress, submitUnbalancedTx)
+import Cardano.Node.Emulator.Generators qualified as E
+import Cardano.Node.Emulator.Test (hasValidatedTransactionCountOfTotal, renderLogs)
 
 tests :: TestTree
 tests = testGroup "Cardano.Node.Emulator.MTL"

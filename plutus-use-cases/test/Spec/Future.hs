@@ -19,7 +19,7 @@ import Data.Default (Default (def))
 import Test.Tasty
 import Test.Tasty.HUnit qualified as HUnit
 
-import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
+import Cardano.Node.Emulator.Internal.Node.TimeSlot qualified as TimeSlot
 import Ledger qualified
 import Ledger.Address (PaymentPrivateKey, PaymentPubKey)
 import Ledger.Time (POSIXTime)

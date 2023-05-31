@@ -8,9 +8,8 @@
 {-# LANGUAGE TypeApplications   #-}
 {-# LANGUAGE ViewPatterns       #-}
 
-{-| Transaction validation using 'cardano-ledger-specs'
--}
-module Cardano.Node.Emulator.Validation(
+-- | Transaction validation using 'cardano-ledger-specs'
+module Cardano.Node.Emulator.Internal.Node.Validation (
   EmulatorBlock,
   EmulatedLedgerState(..),
   Coin(..),
@@ -57,7 +56,6 @@ import Cardano.Ledger.Shelley.LedgerState (LedgerState (LedgerState), UTxOState 
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (UtxoEnv))
 import Cardano.Ledger.Shelley.TxBody (DCert, Wdrl)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval)
-import Cardano.Node.Emulator.Params (EmulatorEra, Params (emulatorPParams), emulatorGlobals, emulatorPParams)
 import Cardano.Slotting.Slot (SlotNo (SlotNo))
 import Control.Lens (makeLenses, over, (&), (.~), (^.))
 import Control.Monad.Except (MonadError (throwError))
@@ -76,6 +74,9 @@ import Ledger.Tx (CardanoTx (CardanoEmulatorEraTx))
 import Ledger.Tx.CardanoAPI qualified as P
 import Plutus.V1.Ledger.Api qualified as V1 hiding (TxOut (..))
 import Plutus.V1.Ledger.Scripts qualified as P
+
+import Cardano.Node.Emulator.Internal.Node.Params (EmulatorEra, Params (emulatorPParams), emulatorGlobals,
+                                                   emulatorPParams)
 
 type CardanoLedgerError = Either P.ValidationErrorInPhase P.ToCardanoError
 

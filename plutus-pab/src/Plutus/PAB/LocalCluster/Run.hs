@@ -23,8 +23,8 @@ import Cardano.CLI (LogOutput (LogToFile, LogToStdStreams), Port, ekgEnabled, ge
 import Cardano.ChainIndex.Types qualified as PAB.CI
 import Cardano.Launcher.Node (nodeSocketFile)
 import Cardano.Mnemonic (SomeMnemonic (SomeMnemonic))
-import Cardano.Node.Emulator.TimeSlot (SlotConfig (SlotConfig))
-import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
+import Cardano.Node.Emulator.Internal.Node (SlotConfig (SlotConfig))
+import Cardano.Node.Emulator.Internal.Node.TimeSlot qualified as TimeSlot
 import Cardano.Node.Types (NodeMode (AlonzoNode),
                            PABServerConfig (pscKeptBlocks, pscNetworkId, pscNodeMode, pscSlotConfig, pscSocketPath))
 import Cardano.Startup (installSignalHandlers, setDefaultFilePermissions, withUtf8Encoding)

@@ -34,7 +34,6 @@ module Spec.GameStateMachine
   ) where
 
 import Cardano.Api qualified as CardanoAPI
-import Cardano.Node.Emulator.Params qualified as Params
 import Control.Exception hiding (handle)
 import Control.Lens
 import Control.Monad
@@ -50,7 +49,8 @@ import Test.Tasty hiding (after)
 import Test.Tasty.HUnit qualified as HUnit
 import Test.Tasty.QuickCheck (testProperty)
 
-import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
+import Cardano.Node.Emulator.Internal.Node.Params qualified as Params
+import Cardano.Node.Emulator.Internal.Node.TimeSlot qualified as TimeSlot
 import Data.Default (Default (def))
 import Ledger qualified
 import Ledger.Typed.Scripts qualified as Scripts

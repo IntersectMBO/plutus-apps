@@ -11,7 +11,7 @@ import Control.Monad (void)
 import Data.Void (Void)
 import Test.Tasty (TestTree, testGroup)
 
-import Cardano.Node.Emulator.Params qualified as Params
+import Cardano.Node.Emulator.Internal.Node.Params qualified as Params
 import Data.Maybe (fromJust)
 import Ledger qualified
 import Ledger.CardanoWallet qualified as CW

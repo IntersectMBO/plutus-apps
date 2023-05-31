@@ -12,7 +12,7 @@ module Plutus.PAB.Core.ContractInstance.BlockchainEnv(
 import Cardano.Api (BlockInMode (..), ChainPoint (..), chainPointToSlotNo)
 import Cardano.Api qualified as C
 import Cardano.Api.NetworkId.Extra (NetworkIdWrapper (NetworkIdWrapper))
-import Cardano.Node.Emulator.TimeSlot qualified as TimeSlot
+import Cardano.Node.Emulator.Internal.Node.TimeSlot qualified as TimeSlot
 import Cardano.Node.Params qualified as Params
 import Cardano.Node.Types (NodeMode (..),
                            PABServerConfig (PABServerConfig, pscNetworkId, pscNodeMode, pscSlotConfig, pscSocketPath))

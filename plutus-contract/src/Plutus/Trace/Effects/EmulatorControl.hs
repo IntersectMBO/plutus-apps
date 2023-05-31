@@ -26,9 +26,7 @@ module Plutus.Trace.Effects.EmulatorControl(
     , getSlotConfig
     ) where
 
-import Cardano.Node.Emulator.Chain (ChainState)
-import Cardano.Node.Emulator.Params
-import Cardano.Node.Emulator.TimeSlot (SlotConfig)
+import Cardano.Node.Emulator.Internal.Node (ChainState, Params (Params, pSlotConfig), SlotConfig)
 import Control.Lens (over, view)
 import Control.Monad (void)
 import Control.Monad.Freer (Eff, Member, type (~>))

@@ -92,8 +92,8 @@ module Ledger.Tx.Constraints.OffChain(
 
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
-import Cardano.Node.Emulator.Params (PParams, Params (..), networkIdL, pProtocolParams)
-import Cardano.Node.Emulator.TimeSlot (posixTimeRangeToContainedSlotRange, slotRangeToPOSIXTimeRange)
+import Cardano.Node.Emulator.Internal.Node.Params (PParams, Params (..), networkIdL, pProtocolParams)
+import Cardano.Node.Emulator.Internal.Node.TimeSlot (posixTimeRangeToContainedSlotRange, slotRangeToPOSIXTimeRange)
 import Control.Lens
 import Control.Lens.Extras (is)
 import Control.Monad.Except (Except, MonadError (catchError), guard, lift, runExcept, throwError, unless)

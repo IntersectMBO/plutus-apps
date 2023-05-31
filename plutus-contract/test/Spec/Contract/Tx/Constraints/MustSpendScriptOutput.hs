@@ -15,7 +15,7 @@ import Control.Lens (_1, _Just, _head, filtered, has, makeClassyPrisms, (&), (.~
 import Control.Monad (void)
 import Test.Tasty (TestTree, testGroup)
 
-import Cardano.Node.Emulator.Params qualified as Params
+import Cardano.Node.Emulator.Internal.Node.Params qualified as Params
 import Data.List as L
 import Data.Map as M
 import Data.Text qualified as Text

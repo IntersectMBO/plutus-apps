@@ -12,8 +12,7 @@ module Cardano.Wallet.RemoteClientSpec
     ) where
 
 import Cardano.Node.Emulator.Generators qualified as Gen
-import Cardano.Node.Emulator.Params (Params (..), pParamsFromProtocolParams, pProtocolParams)
-import Cardano.Node.Emulator.TimeSlot (SlotConfig)
+import Cardano.Node.Emulator.Internal.Node (Params (..), SlotConfig, pParamsFromProtocolParams, pProtocolParams)
 import Cardano.Wallet.RemoteClient (handleWalletClient)
 import Control.Concurrent.STM qualified as STM
 import Control.Monad.Freer (Eff, interpret, runM, type (~>))
