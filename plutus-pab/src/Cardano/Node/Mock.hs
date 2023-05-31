@@ -34,7 +34,6 @@ import Cardano.Node.Emulator.Internal.Node.Chain qualified as Chain
 import Cardano.Node.Types
 import Cardano.Protocol.Socket.Mock.Client qualified as Client
 import Cardano.Protocol.Socket.Mock.Server qualified as Server
-import Plutus.PAB.Arbitrary ()
 import Plutus.PAB.Monitoring.Monitoring qualified as LM
 
 healthcheck :: Monad m => m NoContent

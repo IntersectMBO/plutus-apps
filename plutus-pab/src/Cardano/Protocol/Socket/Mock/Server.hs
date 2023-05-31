@@ -7,7 +7,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies      #-}
 
-module Cardano.Protocol.Socket.Mock.Server where
+module Cardano.Protocol.Socket.Mock.Server (ServerHandler, runServerNode, processBlock, modifySlot, addTx) where
 
 import Cardano.BM.Data.Trace (Trace)
 import Cardano.Node.Types (PABServerLogMsg (..))
@@ -59,8 +59,6 @@ data CommandChannel = CommandChannel
   { ccCommand  :: TQueue ServerCommand
   , ccResponse :: TQueue ServerResponse
   }
-
-type Error a = Either Text a
 
 {- | Clone the original channel for each connected client, then use
      this wrapper to make sure that no data is consumed from the
@@ -456,7 +454,7 @@ getChainPoints :: MonadIO m => TChan Block -> MockNodeServerChainState -> m [Poi
 getChainPoints ch st = do
   chain <- chainNewestFirst ch
   pure $ zipWith mkPoint
-    [(st ^. currentSlot) .. 0]
+    [st ^. currentSlot, st ^. currentSlot - 1 .. 0]
     chain
   where
     mkPoint :: Slot -> Block -> Point Block
