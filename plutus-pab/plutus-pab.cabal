@@ -57,7 +57,6 @@ library
   exposed-modules:
     Cardano.Api.NetworkId.Extra
     Cardano.BM.Data.Tracer.Extras
-    Cardano.Chain
     Cardano.ChainIndex.ChainIndex
     Cardano.ChainIndex.Server
     Cardano.ChainIndex.Types
@@ -68,7 +67,6 @@ library
     Cardano.Node.Server
     Cardano.Node.Types
     Cardano.Protocol.Socket.Mock.Client
-    Cardano.Protocol.Socket.Mock.Server
     Cardano.Wallet.LocalClient
     Cardano.Wallet.LocalClient.ExportTx
     Cardano.Wallet.Mock.API
@@ -127,16 +125,17 @@ library
   -- Local components
   --------------------
   build-depends:
-    , cardano-node-emulator    >=1.2.0
-    , freer-extras             >=1.2.0
-    , marconi-core             >=1.2.0
-    , pab-blockfrost           >=1.2.0
-    , plutus-chain-index       >=1.2.0
-    , plutus-chain-index-core  >=1.2.0
-    , plutus-contract          >=1.2.0
-    , plutus-ledger            >=1.2.0
-    , plutus-script-utils      >=1.2.0
-    , plutus-tx-constraints    >=1.2.0
+    , cardano-node-emulator         >=1.2.0
+    , cardano-node-socket-emulator  >=1.2.0
+    , freer-extras                  >=1.2.0
+    , marconi-core                  >=1.2.0
+    , pab-blockfrost                >=1.2.0
+    , plutus-chain-index            >=1.2.0
+    , plutus-chain-index-core       >=1.2.0
+    , plutus-contract               >=1.2.0
+    , plutus-ledger                 >=1.2.0
+    , plutus-script-utils           >=1.2.0
+    , plutus-tx-constraints         >=1.2.0
 
   --------------------------
   -- Other IOG dependencies

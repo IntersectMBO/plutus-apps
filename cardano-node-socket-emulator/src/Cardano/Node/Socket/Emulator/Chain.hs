@@ -10,7 +10,7 @@
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeOperators       #-}
 
-module Cardano.Chain where
+module Cardano.Node.Socket.Emulator.Chain where
 
 import Cardano.Node.Emulator.Internal.Node (Params)
 import Cardano.Node.Emulator.Internal.Node.Chain qualified as EC

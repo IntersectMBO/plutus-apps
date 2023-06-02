@@ -1,0 +1,83 @@
+cabal-version: 3.0
+name:          cardano-node-socket-emulator
+version:       1.2.0.0
+
+common lang
+  default-language:   Haskell2010
+  default-extensions:
+    DeriveFoldable
+    DeriveFunctor
+    DeriveGeneric
+    DeriveLift
+    DeriveTraversable
+    ExplicitForAll
+    FlexibleContexts
+    GeneralizedNewtypeDeriving
+    ImportQualifiedPost
+    LambdaCase
+    NamedFieldPuns
+    ScopedTypeVariables
+    StandaloneDeriving
+
+  ghc-options:
+    -Wall -Widentities -Wincomplete-record-updates -Wunused-packages
+    -Wincomplete-uni-patterns -Wnoncanonical-monad-instances
+    -Wredundant-constraints
+
+library
+  import:          lang
+  hs-source-dirs:  src
+  exposed-modules:
+    Cardano.Node.Socket.Emulator
+    Cardano.Node.Socket.Emulator.Chain
+
+  --------------------
+  -- Local components
+  --------------------
+  build-depends:
+    , cardano-node-emulator    >=1.2.0
+    , freer-extras             >=1.2.0
+    , plutus-chain-index-core
+    , plutus-ledger            >=1.2.0
+    , plutus-script-utils      >=1.2.0
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
+    , cardano-api                  >=1.35
+    , cardano-crypto
+    , cardano-ledger-alonzo
+    , cardano-ledger-babbage
+    , cardano-ledger-core
+    , cardano-ledger-shelley
+    , cardano-ledger-shelley-ma
+    , cardano-slotting
+    , iohk-monitoring
+    , ouroboros-consensus
+    , ouroboros-network
+    , ouroboros-network-framework
+    , plutus-core                  >=1.0.0
+    , plutus-ledger-api            >=1.0.0
+    , plutus-tx                    >=1.0.0
+    , quickcheck-contractmodel     >=0.1.4.0
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    , aeson              >=2
+    , async
+    , base               >=4.9 && <5
+    , bytestring
+    , containers
+    , contra-tracer
+    , freer-simple
+    , hedgehog
+    , lens
+    , mtl
+    , serialise
+    , stm
+    , strict-containers
+    , text
+    , time

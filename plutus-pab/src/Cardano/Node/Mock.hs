@@ -28,12 +28,12 @@ import Servant (NoContent (NoContent))
 
 import Cardano.Api qualified as C
 import Cardano.BM.Data.Trace (Trace)
-import Cardano.Chain (handleChain, handleControlChain)
 import Cardano.Node.Emulator.Internal.Node (Params (..), SlotConfig (SlotConfig, scSlotLength), currentSlot)
 import Cardano.Node.Emulator.Internal.Node.Chain qualified as Chain
+import Cardano.Node.Socket.Emulator qualified as Server
+import Cardano.Node.Socket.Emulator.Chain (handleChain, handleControlChain)
 import Cardano.Node.Types
 import Cardano.Protocol.Socket.Mock.Client qualified as Client
-import Cardano.Protocol.Socket.Mock.Server qualified as Server
 import Plutus.PAB.Monitoring.Monitoring qualified as LM
 
 healthcheck :: Monad m => m NoContent

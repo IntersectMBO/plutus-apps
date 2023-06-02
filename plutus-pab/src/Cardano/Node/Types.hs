@@ -50,9 +50,9 @@ module Cardano.Node.Types
 
 import Cardano.BM.Data.Tracer (ToObject)
 import Cardano.BM.Data.Tracer.Extras (Tagged (Tagged), mkObjectStr)
-import Cardano.Chain (MockNodeServerChainState, fromEmulatorChainState)
 import Cardano.Node.Emulator.Internal.Node (ChainControlEffect, ChainEffect, ChainEvent, SlotConfig, pNetworkId,
                                             testnet)
+import Cardano.Node.Socket.Emulator.Chain (MockNodeServerChainState, fromEmulatorChainState)
 import Cardano.Protocol.Socket.Client qualified as Client
 import Cardano.Protocol.Socket.Mock.Client qualified as Client
 import Control.Lens (makeLenses, makePrisms, view)

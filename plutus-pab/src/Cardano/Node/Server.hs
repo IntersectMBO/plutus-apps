@@ -13,9 +13,9 @@ import Cardano.Node.API (API)
 import Cardano.Node.Emulator.Internal.Node (Params (..), SlotConfig (SlotConfig, scSlotLength, scSlotZeroTime))
 import Cardano.Node.Mock
 import Cardano.Node.Params qualified as Params
+import Cardano.Node.Socket.Emulator qualified as Server
 import Cardano.Node.Types
 import Cardano.Protocol.Socket.Mock.Client qualified as Client
-import Cardano.Protocol.Socket.Mock.Server qualified as Server
 import Control.Concurrent (MVar, forkIO, newMVar)
 import Control.Concurrent.Availability (Availability, available)
 import Control.Monad (void)
@@ -69,7 +69,7 @@ main trace nodeServerConfig@PABServerConfig { pscBaseUrl
             , _eventHistory = mempty
             }
     params <- liftIO $ Params.fromPABServerConfig nodeServerConfig
-    serverHandler <- liftIO $ Server.runServerNode trace pscSocketPath pscKeptBlocks (_chainState appState) params
+    serverHandler <- liftIO $ Server.runServerNode (LM.convertLog ProcessingChainEvent trace) pscSocketPath pscKeptBlocks (_chainState appState) params
     serverState   <- liftIO $ newMVar appState
     handleDelayEffect $ delayThread (2 :: Second)
     clientHandler <- liftIO $ Client.runTxSender pscSocketPath
