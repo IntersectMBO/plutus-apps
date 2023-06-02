@@ -1,4 +1,4 @@
-= Plutus Haskell style guide
+= Plutus Apps Haskell style guide
 :toc:
 
 The purpose of this document is to codify various aspects of how we write Haskell code as we contribute to Plutus.
@@ -40,18 +40,30 @@ f x = y
 
 Avoid lines over 100 characters. This is codified in `.editorconfig`.
 
-Format Haskell source with `stylish-haskell` (config in `.stylish-haskell.yaml`).
+Format Haskell source with `fourmolu` (config in `fourmolu.yaml`).
 This is enforced in the pre-commit hook and in CI.
-Formatting with `stylish-haskell` must be a no-op.
+Formatting with `fourmolu` must be a no-op.
 
-Type signatures should have the double-colon on the same line as the name, separated by one space.
+Type signatures should either be on a single line or start by a symbol
+(double-colon or arrow, open-parenthesis, coma).
 
 Bad:
 
 [source,Haskell]
 ----
+foo ::
+  A ->
+  B ->
+  C
+----
+
+Good:
+
+[source,Haskell]
+----
 foo
-  :: A -> B
+  :: A
+  -> B
   -> C
 ----
 
@@ -65,35 +77,25 @@ foo :: A -> B -> C
 Good:
 [source,Haskell]
 ----
-foo ::
-  A ->
-  B ->
-  C
-----
-
-Good:
-[source,Haskell]
-----
-foo ::
-  forall a b c.
+foo
+  :: forall a b c.
   ( C1 a
   , C2 b
-  ) =>
-  A ->
-  B ->
-  C
+  )
+  => A
+  -> B
+  -> C
 ----
 
 ==== Reasoning
 
-The indentation is arbitrary. The line length is longer than the “traditional” 80 characters, but anecdotally Haskell code tends toward longer lines, and breaking them up doesn’t help readability much.
+The indentation is arbitrary. The line length is longer than the “traditional” 80 characters,
+but anecdotally Haskell code tends toward longer lines, and breaking them up doesn’t help readability much.
 
 Placing the double-colon on the same line makes it easier to find definitions.
 We don't necessarily have HLS running all the time, and it may not work on every module.
 
-`stylish-haskell` is a fairly modest formatter that doesn’t touch too much. At the moment we mostly use it for formatting imports!
-
-In the past we tried `ormolu`, but its https://github.com/tweag/ormolu/issues/641[lack of support for multi-line comments] was a deal-breaker.
+`fourmolu` is a fairly modest formatter that doesn’t touch too much. At the moment we mostly use it for formatting imports!
 
 === Write type signatures
 
@@ -201,57 +203,17 @@ sortWithOrder Ascending  = id . sort
 sortWithOrder Descending = reverse . sort
 ----
 
-===== Instead of destructor functions
-
-Bad:
-
-[source,Haskell]
-----
-either f g x
-----
-
-Good:
-
-[source,Haskell]
-----
-case x of
-  Left e -> f e
-  Right s -> g s
-----
-
-But this might be okay:
-
-[source,Haskell]
-----
-fmap (either f g) eithers
-----
-
 ==== Reasoning
 
 Pattern matching is easy to read, and allows the compiler to give better errors and warnings (e.g. incomplete match warnings).
 
-=== Avoid punning
-
-Avoid using the same names for things at the term and type level. Except for `newtype`` constructors.
-
-==== Examples
-Bad:
-
-[source,Haskell]
-----
-data Foo = Foo Int
-----
-
-Good:
-
-[source,Haskell]
-----
-data Foo = MkFoo Int
-----
-
 === Avoid ticks in function names
 
-Generally avoid using ticks to distinguish function names. All this conveys is that it is “another” version of the function. Try expressing the difference in the function name, even if it makes it longer.
+Generally avoid using ticks to distinguish function names.
+All this conveys is that it is “another” version of the function.
+Try expressing the difference in the function name, even if it makes it longer.
+Ticks can be used locally, to differentiate a local name
+(restricted to the scope of `let`/`where`/do`) from global one.
 
 ==== Examples
 
@@ -319,7 +281,7 @@ Use Text instead of String unless you have a good reason not to.
 
 ==== Reasoning
 
-It’s 2022, use a proper, unicode aware string type instead of a linked list.
+Use a proper, unicode aware string type instead of a linked list.
 
 === Derive `Show`, define `Pretty`, use `Pretty` for human-readable output
 
@@ -340,11 +302,12 @@ This will typically need to be hand-written, unless it happens that you can defe
 
 === Use the package name as the root of the module name hierarchy
 
-If the package is `foo-bar`, then the modules should all be `FooBar.X`.
+If the package is `foo-bar`, then the modules should all be `FooBar.X` or `Foo.Bar.X`.
 
 ==== Reasoning
 
-See “Naming conventions” https://www.haskellforall.com/2021/05/module-organization-guidelines-for.html[here]. We do it slightly differently (“FooBar” rather than “Foo.Bar”), but the main principle is the same.
+See “Naming conventions” https://www.haskellforall.com/2021/05/module-organization-guidelines-for.html[here].
+We accept both “FooBar” and “Foo.Bar”, but the main principle is the same.
 
 === Reading direction
 
@@ -429,7 +392,11 @@ If you find you have:
 1. A long explicit import list
 2. Several hiding declarations
 
-Then either just import the module in its entirety, or qualify it. Usually if you are using hiding you will need to qualify it.
+Then use a qualify import.
+Usually if you are using hiding you will need to qualify it.
+
+It's acceptable to use two imports for the same module (a qualified import and
+an import list) if the import list is used to import types and operators.
 
 ==== Examples
 
@@ -445,6 +412,14 @@ Good:
 [source,Haskell]
 ----
 import Control.Lens qualified as Lens
+----
+
+Good:
+
+[source,Haskell]
+----
+import Control.Lens qualified as Lens
+import Control.Lens ((.~), (^.), Lens)
 ----
 
 ==== Reasoning
@@ -493,21 +468,11 @@ Use lenses where they allow a significant simplification of the code. For simple
 
 Arguably if we’re going to allow lenses in our codebase and force people to know about them, we should commit to them wholesale and use them everywhere. But in practice we just use them for places where they’re hard to beat.
 
-=== data-default
-
-Don’t use `data-default`, instead just define `defaultX` values for your `X` type.
-
-==== Reasoning
-
-`Default` is not terribly bad. It’s truly ad-hoc polymorphism: all you get is name reuse, you can’t (or shouldn’t) write a function that’s polymorphic over `Default a`. That’s fine, but it also means that the benefit is fairly marginal.
-
-Additionally, just defining specific values is more flexible. If, say, you want multiple default values for different contexts, then that is straightforward with values but not with `Default`.
-
 == Cabal
 
 === default-language
 
-Use Haskel2010.
+Use Haskell2010.
 
 ==== Reasoning
 It’s the latest.
