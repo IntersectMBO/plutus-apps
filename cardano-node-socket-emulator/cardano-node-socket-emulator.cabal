@@ -30,6 +30,8 @@ library
   exposed-modules:
     Cardano.Node.Socket.Emulator
     Cardano.Node.Socket.Emulator.Chain
+    Cardano.Node.Socket.Emulator.Types
+    Cardano.Node.Socket.Mock
 
   --------------------
   -- Local components
@@ -37,7 +39,8 @@ library
   build-depends:
     , cardano-node-emulator    >=1.2.0
     , freer-extras             >=1.2.0
-    , plutus-chain-index-core
+    , plutus-chain-index-core  >=1.2.0
+    , plutus-contract          >=1.2.0
     , plutus-ledger            >=1.2.0
     , plutus-script-utils      >=1.2.0
 
@@ -46,7 +49,6 @@ library
   --------------------------
   build-depends:
     , cardano-api                  >=1.35
-    , cardano-crypto
     , cardano-ledger-alonzo
     , cardano-ledger-babbage
     , cardano-ledger-core
@@ -66,18 +68,18 @@ library
   -- Non-IOG dependencies
   ------------------------
   build-depends:
-    , aeson              >=2
+    , aeson           >=2
     , async
-    , base               >=4.9 && <5
+    , base            >=4.9 && <5
     , bytestring
     , containers
     , contra-tracer
+    , data-default
     , freer-simple
-    , hedgehog
     , lens
     , mtl
-    , serialise
+    , servant-server
     , stm
-    , strict-containers
     , text
     , time
+    , time-units

@@ -11,11 +11,11 @@ module Cardano.Node.Server
 import Cardano.BM.Data.Trace (Trace)
 import Cardano.Node.API (API)
 import Cardano.Node.Emulator.Internal.Node (Params (..), SlotConfig (SlotConfig, scSlotLength, scSlotZeroTime))
-import Cardano.Node.Mock
 import Cardano.Node.Params qualified as Params
 import Cardano.Node.Socket.Emulator qualified as Server
+import Cardano.Node.Socket.Emulator.Types (AppState (..), initialChainState)
+import Cardano.Node.Socket.Mock
 import Cardano.Node.Types
-import Cardano.Protocol.Socket.Mock.Client qualified as Client
 import Control.Concurrent (MVar, forkIO, newMVar)
 import Control.Concurrent.Availability (Availability, available)
 import Control.Monad (void)
@@ -38,18 +38,16 @@ import Wallet.Emulator.Wallet (fromWalletNumber)
 app ::
     Trace IO PABServerLogMsg
  -> Params
- -> Client.TxSendHandle
  -> MVar AppState
  -> Application
-app trace params clientHandler stateVar =
+app trace params stateVar =
     serve (Proxy @API) $
     hoistServer
         (Proxy @API)
-        (liftIO . processChainEffects trace params (Just clientHandler) stateVar)
-        (healthcheck :<|> consumeEventHistory stateVar)
+        (liftIO . processChainEffects (LM.convertLog ProcessingChainEvent trace) params stateVar)
+        (healthcheck :<|> (fmap (fmap ProcessingChainEvent) <$> consumeEventHistory stateVar))
 
 data Ctx = Ctx { serverHandler :: Server.ServerHandler
-               , txSendHandle  :: Client.TxSendHandle
                , serverState   :: MVar AppState
                , mockTrace     :: Trace IO PABServerLogMsg
                }
@@ -72,10 +70,8 @@ main trace nodeServerConfig@PABServerConfig { pscBaseUrl
     serverHandler <- liftIO $ Server.runServerNode (LM.convertLog ProcessingChainEvent trace) pscSocketPath pscKeptBlocks (_chainState appState) params
     serverState   <- liftIO $ newMVar appState
     handleDelayEffect $ delayThread (2 :: Second)
-    clientHandler <- liftIO $ Client.runTxSender pscSocketPath
 
     let ctx = Ctx { serverHandler = serverHandler
-                  , txSendHandle  = clientHandler
                   , serverState   = serverState
                   , mockTrace     = trace
                   }
@@ -83,12 +79,12 @@ main trace nodeServerConfig@PABServerConfig { pscBaseUrl
     runSlotCoordinator ctx
 
     logInfo $ StartingPABServer $ baseUrlPort pscBaseUrl
-    liftIO $ Warp.runSettings warpSettings $ app trace params clientHandler serverState
+    liftIO $ Warp.runSettings warpSettings $ app trace params serverState
 
         where
             warpSettings = Warp.defaultSettings & Warp.setPort (baseUrlPort pscBaseUrl) & Warp.setBeforeMainLoop (available availability)
 
-            runSlotCoordinator (Ctx serverHandler _ _ _)  = do
+            runSlotCoordinator (Ctx serverHandler _ _)  = do
                 let SlotConfig{scSlotZeroTime, scSlotLength} = pscSlotConfig
                 logInfo $ StartingSlotCoordination (posixSecondsToUTCTime $ realToFrac scSlotZeroTime / 1000)
                                                    (fromInteger scSlotLength :: Millisecond)

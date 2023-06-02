@@ -21,44 +21,24 @@ module Cardano.Node.Types
       -- * Logging types
       PABServerLogMsg (..)
 
-     -- * Event types
-    , BlockEvent (..)
-
      -- * Effects
-    , NodeServerEffects
     , ChainSyncHandle
-
-     -- *  State types
-    , AppState (..)
-    , initialAppState
-    , initialChainState
-
-    -- * Lens functions
-    , chainState
-    , eventHistory
 
     -- * Config types
     , PABServerConfig (..)
     , NodeMode (..)
     , _MockNode
     , _AlonzoNode
-
-    -- * newtype wrappers
-    , NodeUrl (..)
     )
         where
 
 import Cardano.BM.Data.Tracer (ToObject)
 import Cardano.BM.Data.Tracer.Extras (Tagged (Tagged), mkObjectStr)
-import Cardano.Node.Emulator.Internal.Node (ChainControlEffect, ChainEffect, ChainEvent, SlotConfig, pNetworkId,
-                                            testnet)
+import Cardano.Node.Emulator.Internal.Node (ChainEvent, SlotConfig, pNetworkId, testnet)
 import Cardano.Node.Socket.Emulator.Chain (MockNodeServerChainState, fromEmulatorChainState)
 import Cardano.Protocol.Socket.Client qualified as Client
-import Cardano.Protocol.Socket.Mock.Client qualified as Client
 import Control.Lens (makeLenses, makePrisms, view)
-import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg)
-import Control.Monad.Freer.Reader (Reader)
-import Control.Monad.Freer.State (State)
+import Control.Monad.Freer.Extras.Log (LogMessage)
 import Control.Monad.IO.Class (MonadIO)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Default (Default, def)
@@ -103,9 +83,6 @@ useful for frontends that need to convert the slot number back to a timestamp.
 We use this approach for the "proper" pab executable.
 
 -}
-
-newtype NodeUrl = NodeUrl BaseUrl
-    deriving (Show, Eq) via BaseUrl
 
 -- | Which node we're connecting to
 data NodeMode =
@@ -183,92 +160,21 @@ type ChainSyncHandle = Either (Client.ChainSyncHandle Block) (Client.ChainSyncHa
 -- inside the PAB server.
 data PABServerLogMsg =
     StartingSlotCoordination UTCTime Millisecond
-    | NoRandomTxGeneration
-    | StartingRandomTx
-    | KeepingOldBlocks
-    | RemovingOldBlocks
     | StartingPABServer Int
     | ProcessingChainEvent ChainEvent
-    | BlockOperation BlockEvent
-    | CreatingRandomTransaction
-    | TxSendCalledWithoutMock
     deriving (Generic, Show, ToJSON, FromJSON)
 
 instance Pretty PABServerLogMsg where
     pretty = \case
-        NoRandomTxGeneration      -> "Not creating random transactions"
-        StartingRandomTx          -> "Starting random transaction generation thread"
-        KeepingOldBlocks          -> "Not starting block reaper thread (old blocks will be retained in-memory forever"
-        RemovingOldBlocks         -> "Starting block reaper thread (old blocks will be removed)"
         StartingPABServer p      -> "Starting PAB Server on port" <+> pretty p
         StartingSlotCoordination initialSlotTime slotLength  ->
             "Starting slot coordination thread."
             <+> "Initial slot time:" <+> pretty (F.iso8601Show initialSlotTime)
             <+> "Slot length:" <+> viaShow slotLength
         ProcessingChainEvent e    -> "Processing chain event" <+> pretty e
-        BlockOperation e          -> "Block operation" <+> pretty e
-        CreatingRandomTransaction -> "Generating a random transaction"
-        TxSendCalledWithoutMock   -> "Cannot send transaction without a mocked environment."
 
 instance ToObject PABServerLogMsg where
     toObject _ = \case
-        NoRandomTxGeneration      ->  mkObjectStr "Not creating random transactions" ()
-        StartingRandomTx          ->  mkObjectStr "Starting random transaction generation thread" ()
-        KeepingOldBlocks          ->  mkObjectStr "Not starting block reaper thread (old blocks will be retained in-memory forever" ()
-        RemovingOldBlocks         ->  mkObjectStr "Starting block reaper thread (old blocks will be removed)" ()
         StartingPABServer p      ->  mkObjectStr "Starting PAB Server on port " (Tagged @"port" p)
         StartingSlotCoordination i l  -> mkObjectStr "Starting slot coordination thread" (Tagged @"initial-slot-time" (F.iso8601Show  i), Tagged @"slot-length" l)
         ProcessingChainEvent e    ->  mkObjectStr "Processing chain event" (Tagged @"event" e)
-        BlockOperation e          ->  mkObjectStr "Block operation" (Tagged @"event" e)
-        CreatingRandomTransaction ->  mkObjectStr "Creating random transaction" ()
-        TxSendCalledWithoutMock   ->  mkObjectStr "Cannot send transaction without a mocked environment." ()
-
-data BlockEvent = NewSlot
-    | NewTransaction (C.Tx C.BabbageEra)
-    deriving (Generic, Show, ToJSON, FromJSON)
-
-instance Pretty BlockEvent where
-    pretty = \case
-        NewSlot          -> "Adding a new slot"
-        NewTransaction t -> "Adding a transaction " <+> viaShow (C.getTxId $ C.getTxBody t)
-
-
--- State --------------------------------------------------------------------------------------------------------------
-
--- | Application State
-data AppState =
-    AppState
-        { _chainState   :: MockNodeServerChainState -- ^ blockchain state
-        , _eventHistory :: [LogMessage PABServerLogMsg] -- ^ history of all log messages
-        }
-    deriving (Show)
-
-makeLenses 'AppState
-
--- | 'AppState' with an initial transaction that pays some Ada to
---   the wallets.
-initialAppState :: MonadIO m => [Wallet] -> m AppState
-initialAppState wallets = do
-    initialState <- initialChainState (Trace.defaultDistFor wallets)
-    pure $ AppState
-        { _chainState = initialState
-        , _eventHistory = mempty
-        }
-
--- | 'ChainState' with initial values
-initialChainState :: MonadIO m => Trace.InitialDistribution -> m MockNodeServerChainState
-initialChainState =
-    fromEmulatorChainState . view EM.chainState . fromRight (error "Can't initialise chain state") .
-    MultiAgent.emulatorStateInitialDist (def {pNetworkId = testnet}) . Map.mapKeys EM.mockWalletPaymentPubKeyHash
-
--- Effects -------------------------------------------------------------------------------------------------------------
-
-type NodeServerEffects m
-     = '[ ChainControlEffect
-        , ChainEffect
-        , State MockNodeServerChainState
-        , LogMsg PABServerLogMsg
-        , Reader (Maybe Client.TxSendHandle)
-        , State AppState
-        , LogMsg PABServerLogMsg
-        , m]
