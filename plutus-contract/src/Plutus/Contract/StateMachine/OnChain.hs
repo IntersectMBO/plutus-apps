@@ -25,7 +25,7 @@ module Plutus.Contract.StateMachine.OnChain(
     , threadTokenValueOrZero
     ) where
 
-import Cardano.Api.Shelley (NetworkId (..), NetworkMagic (..))
+import Cardano.Node.Emulator.Internal.Node.Params (testnet)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Void (Void)
 import GHC.Generics (Generic)
@@ -109,7 +109,7 @@ data StateMachineInstance s i = StateMachineInstance {
 -- | TODO StateMachine can be use only on a testnet at the moment, to enable it on another network, we need to
 -- parametrise the networkId
 machineAddress :: StateMachineInstance s i -> CardanoAddress
-machineAddress = validatorCardanoAddress (Testnet $ NetworkMagic 1) . typedValidator
+machineAddress = validatorCardanoAddress testnet . typedValidator
 
 {-# INLINABLE mkValidator #-}
 -- | Turn a state machine into a validator script.

@@ -18,9 +18,9 @@ import Ledger (CardanoTx (CardanoEmulatorEraTx))
 import Servant (NoContent, (:<|>) (..))
 import Servant.Client (ClientM, client)
 
-import Cardano.Api.NetworkId.Extra (NetworkIdWrapper (..))
-import Cardano.Node.API (API)
-import Cardano.Node.Types (ChainSyncHandle, NodeMode (..), PABServerConfig (..), PABServerLogMsg)
+import Cardano.Node.Socket.Emulator.API (API)
+import Cardano.Node.Socket.Emulator.Types (NodeServerConfig (..), PABServerLogMsg)
+import Cardano.Node.Types (ChainSyncHandle, NodeMode (..), PABServerConfig (..))
 import Cardano.Protocol.Socket.Client qualified as Client
 import Cardano.Protocol.Socket.Mock.Client qualified as MockClient
 import Control.Monad.Freer.Extras.Log (LogMessage)
@@ -73,16 +73,20 @@ handleNodeClientClient params e = do
 runChainSyncWithCfg ::
      PABServerConfig
   -> IO ChainSyncHandle
-runChainSyncWithCfg PABServerConfig { pscSocketPath
-                                    , pscNodeMode
-                                    , pscNetworkId
-                                    , pscSlotConfig } =
+runChainSyncWithCfg PABServerConfig
+                        { pscNodeMode
+                        , pscNodeServerConfig = NodeServerConfig
+                            { nscSocketPath
+                            , nscNetworkId
+                            , nscSlotConfig
+                            }
+                        } =
     case pscNodeMode of
       MockNode   ->
-          Left <$> MockClient.runChainSync' pscSocketPath pscSlotConfig
+          Left <$> MockClient.runChainSync' nscSocketPath nscSlotConfig
       _ ->
-          Right <$> Client.runChainSync' pscSocketPath
-                                         pscSlotConfig
-                                         (unNetworkIdWrapper pscNetworkId)
+          Right <$> Client.runChainSync' nscSocketPath
+                                         nscSlotConfig
+                                         nscNetworkId
                                          []
 

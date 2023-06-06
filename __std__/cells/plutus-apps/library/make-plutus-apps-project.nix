@@ -50,6 +50,7 @@ let
             # Things that need plutus-tx-plugin
             freer-extras.package.buildable = false;
             cardano-node-emulator.package.buildable = false;
+            cardano-node-socket-emulator.package.buildable = false;
             cardano-streaming.package.buildable = false;
             marconi-chain-index.package.buildable = false;
             marconi-core.package.buildable = false;

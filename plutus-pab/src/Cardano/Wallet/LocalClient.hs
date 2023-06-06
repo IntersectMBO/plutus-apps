@@ -74,7 +74,7 @@ handleWalletClient
     , Member (Reader ClientEnv) effs
     , Member (LogMsg WalletClientMsg) effs
     )
-    => PABServerConfig -- TODO: Rename. Not mock
+    => PABServerConfig
     -> Wallet
     -> WalletEffect
     ~> Eff effs

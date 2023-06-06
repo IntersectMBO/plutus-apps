@@ -25,13 +25,15 @@ import Cardano.Api qualified as C
 import Cardano.BM.Data.Tracer (ToObject (toObject), TracingVerbosity (MaximalVerbosity))
 import Cardano.BM.Data.Tracer.Extras (StructuredLog, Tagged (Tagged), mkObjectStr)
 import Cardano.ChainIndex.Types (ChainIndexServerMsg)
-import Cardano.Node.Types (PABServerConfig, PABServerLogMsg)
+import Cardano.Node.Socket.Emulator.Types (PABServerLogMsg (..))
+import Cardano.Node.Types (PABServerConfig)
 import Cardano.Wallet.Mock.Types (WalletMsg)
 import Control.Monad.Freer.Extras.Beam (BeamLog)
 import Data.Aeson (FromJSON, ToJSON, Value)
 import Data.Aeson.Text (encodeToLazyText)
 import Data.Text (Text)
 import Data.Text qualified as T
+import Data.Time.Format.ISO8601 qualified as F
 import GHC.Generics (Generic)
 import Plutus.Contract.Effects (PABReq, PABResp)
 import Plutus.Contract.Resumable (Response)
@@ -138,8 +140,12 @@ instance (StructuredLog (ContractDef t), ToJSON (ContractDef t)) => ToObject (PA
         SCoreMsg m             -> toObject v m
         SChainIndexServerMsg m -> toObject v m
         SWalletMsg m           -> toObject v m
-        SMockserverLogMsg m    -> toObject v m
         SMultiAgent m          -> toObject v m
+        SMockserverLogMsg m    -> case m of
+            StartingPABServer p      ->  mkObjectStr "Starting PAB Server on port " (Tagged @"port" p)
+            StartingSlotCoordination i l  -> mkObjectStr "Starting slot coordination thread" (Tagged @"initial-slot-time" (F.iso8601Show  i), Tagged @"slot-length" l)
+            ProcessingChainEvent e    ->  mkObjectStr "Processing chain event" (Tagged @"event" e)
+
 
 -- | FIXME: Redundant?
 data PABMultiAgentMsg t =

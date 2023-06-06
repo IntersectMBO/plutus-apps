@@ -21,13 +21,13 @@ module Plutus.PAB.Run.Cli (ConfigCommandArgs(..), runConfigCommand) where
 -----------------------------------------------------------------------------------------------------------------------
 
 import Cardano.Api qualified as C
-import Cardano.Api.NetworkId.Extra (NetworkIdWrapper (..))
 import Cardano.BM.Configuration (Configuration)
 import Cardano.BM.Data.Trace (Trace)
 import Cardano.ChainIndex.Server qualified as ChainIndex
-import Cardano.Node.Params qualified as Params
-import Cardano.Node.Server qualified as NodeServer
-import Cardano.Node.Types (NodeMode (MockNode), PABServerConfig (pscNetworkId, pscNodeMode, pscSocketPath), _AlonzoNode)
+import Cardano.Node.Socket.Emulator.Params qualified as Params
+import Cardano.Node.Socket.Emulator.Server qualified as NodeServer
+import Cardano.Node.Socket.Emulator.Types (NodeServerConfig (..))
+import Cardano.Node.Types (NodeMode (MockNode), PABServerConfig (pscNodeMode, pscNodeServerConfig), _AlonzoNode)
 import Cardano.Protocol.Socket.Type (epochSlots)
 import Cardano.Wallet.Mock.Server qualified as WalletServer
 import Cardano.Wallet.Mock.Types (WalletMsg)
@@ -39,8 +39,8 @@ import Control.Concurrent.STM qualified as STM
 import Control.Lens (preview)
 import Control.Monad (forM, forM_, forever, void, when)
 import Control.Monad.Freer (Eff, LastMember, Member, interpret, runM)
-import Control.Monad.Freer.Delay (DelayEffect, delayThread, handleDelayEffect)
 import Control.Monad.Freer.Error (throwError)
+import Control.Monad.Freer.Extras.Delay (DelayEffect, delayThread, handleDelayEffect)
 import Control.Monad.Freer.Extras.Log (logInfo)
 import Control.Monad.Freer.Reader (ask, runReader)
 import Control.Monad.IO.Class (liftIO)
@@ -110,11 +110,11 @@ runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig=Config{dbConfig}} Mi
 
 -- Run mock wallet service
 runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig = Config {nodeServerConfig, chainQueryConfig = ChainIndexConfig ciConfig, walletServerConfig = LocalWalletConfig ws},ccaAvailability} MockWallet = do
-    params <- liftIO $ Params.fromPABServerConfig nodeServerConfig
+    params <- liftIO $ Params.fromNodeServerConfig $ pscNodeServerConfig nodeServerConfig
     liftIO $ WalletServer.main
         (toWalletLog ccaTrace)
         ws
-        (pscSocketPath nodeServerConfig)
+        (nscSocketPath $ pscNodeServerConfig nodeServerConfig)
         params
         (ChainIndex.ciBaseUrl ciConfig)
         ccaAvailability
@@ -133,8 +133,8 @@ runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig = Config {nodeServer
         MockNode -> do
             liftIO $ NodeServer.main
                 (toMockNodeServerLog ccaTrace)
-                nodeServerConfig
-                ccaAvailability
+                (pscNodeServerConfig nodeServerConfig)
+                (available ccaAvailability)
         _        -> do
             available ccaAvailability
             -- The semantics of Command(s) is that once a set of commands are
@@ -154,8 +154,8 @@ runConfigCommand
     when (isJust $ preview _AlonzoNode $ pscNodeMode nodeServerConfig) $ do
         C.ChainTip slotNo _ _ <- C.getLocalChainTip $ C.LocalNodeConnectInfo
             { C.localConsensusModeParams = C.CardanoModeParams epochSlots
-            , C.localNodeNetworkId = unNetworkIdWrapper $ pscNetworkId nodeServerConfig
-            , C.localNodeSocketPath = pscSocketPath nodeServerConfig
+            , C.localNodeNetworkId = nscNetworkId $ pscNodeServerConfig nodeServerConfig
+            , C.localNodeSocketPath = nscSocketPath $ pscNodeServerConfig nodeServerConfig
             }
         LM.runLogEffects ccaTrace $ do
             logInfo @(LM.AppMsg (Builtin a))
@@ -233,11 +233,11 @@ runConfigCommand contractHandler c@ConfigCommandArgs{ccaAvailability, ccaPABConf
 
 -- Run the chain-index service
 runConfigCommand _ ConfigCommandArgs{ccaAvailability, ccaTrace, ccaPABConfig=Config { nodeServerConfig, chainQueryConfig = ChainIndexConfig ciConfig}} ChainIndex = do
-    params <- liftIO $ Params.fromPABServerConfig nodeServerConfig
+    params <- liftIO $ Params.fromNodeServerConfig $ pscNodeServerConfig nodeServerConfig
     ChainIndex.main
         (toChainIndexLog ccaTrace)
         ciConfig
-        (pscSocketPath nodeServerConfig)
+        (nscSocketPath $ pscNodeServerConfig nodeServerConfig)
         params
         ccaAvailability
 

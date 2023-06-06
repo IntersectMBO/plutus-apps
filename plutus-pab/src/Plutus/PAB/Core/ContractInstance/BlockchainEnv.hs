@@ -11,11 +11,10 @@ module Plutus.PAB.Core.ContractInstance.BlockchainEnv(
 
 import Cardano.Api (BlockInMode (..), ChainPoint (..), chainPointToSlotNo)
 import Cardano.Api qualified as C
-import Cardano.Api.NetworkId.Extra (NetworkIdWrapper (NetworkIdWrapper))
 import Cardano.Node.Emulator.Internal.Node.TimeSlot qualified as TimeSlot
-import Cardano.Node.Params qualified as Params
-import Cardano.Node.Types (NodeMode (..),
-                           PABServerConfig (PABServerConfig, pscNetworkId, pscNodeMode, pscSlotConfig, pscSocketPath))
+import Cardano.Node.Socket.Emulator.Params qualified as Params
+import Cardano.Node.Socket.Emulator.Types (NodeServerConfig (..))
+import Cardano.Node.Types (NodeMode (..), PABServerConfig (PABServerConfig, pscNodeMode, pscNodeServerConfig))
 import Cardano.Protocol.Socket.Client (ChainSyncEvent (..))
 import Cardano.Protocol.Socket.Client qualified as Client
 import Cardano.Protocol.Socket.Mock.Client qualified as MockClient
@@ -68,11 +67,14 @@ startNodeClient ::
   -> IO BlockchainEnv
 startNodeClient config instancesState = do
     let Config { nodeServerConfig =
-                   PABServerConfig { pscSocketPath = socket
-                                   , pscSlotConfig = slotConfig
-                                   , pscNodeMode
-                                   , pscNetworkId = NetworkIdWrapper networkId
-                                   }
+                   PABServerConfig
+                      { pscNodeMode
+                      , pscNodeServerConfig = NodeServerConfig
+                          { nscSocketPath = socket
+                          , nscSlotConfig = slotConfig
+                          , nscNetworkId = networkId
+                          }
+                      }
                , developmentOptions =
                    DevelopmentOptions { pabRollbackHistory
                                       , pabResumeFrom = resumePoint
@@ -81,7 +83,7 @@ startNodeClient config instancesState = do
                    WebserverConfig { enableMarconi = useDiskIndex }
                , dbConfig = dbConf
                } = config
-    params <- Params.fromPABServerConfig $ nodeServerConfig config
+    params <- Params.fromNodeServerConfig $ pscNodeServerConfig $ nodeServerConfig config
     env <- do
       env' <- STM.atomically $ emptyBlockchainEnv pabRollbackHistory params
       if useDiskIndex && nodeStartsInAlonzoMode pscNodeMode

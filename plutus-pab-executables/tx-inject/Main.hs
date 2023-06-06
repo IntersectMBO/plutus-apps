@@ -35,6 +35,7 @@ import Text.Pretty.Simple (pPrint)
 
 import Cardano.Api qualified as C
 import Cardano.Node.Emulator.Internal.Node (Params (..), testnet)
+import Cardano.Node.Socket.Emulator.Types (NodeServerConfig (..))
 import Cardano.Node.Types (PABServerConfig (..))
 import Cardano.Protocol.Socket.Mock.Client (TxSendHandle (..), queueTx, runTxSender)
 import Data.Either (fromRight)
@@ -74,7 +75,7 @@ data AppEnv = AppEnv
 initialUtxoIndex :: Config -> UtxoIndex
 initialUtxoIndex config =
   let dist = Map.fromList $
-               zip (config & nodeServerConfig & pscInitialTxWallets & fmap fromWalletNumber)
+               zip (config & nodeServerConfig & pscNodeServerConfig & nscInitialTxWallets & fmap fromWalletNumber)
                    (repeat (CardanoAPI.adaValueOf 1000_000_000))
       initialTxs =
         view (chainState . txPool) $ fromRight (error "cannot initialize chain state") $
@@ -195,7 +196,7 @@ initializeInterruptHandler stats = do
 -- | Build a client environment for servant.
 initializeClient :: Config -> IO TxSendHandle
 initializeClient cfg = do
-    let serverSocket = pscSocketPath $ nodeServerConfig cfg
+    let serverSocket = nscSocketPath $ pscNodeServerConfig $ nodeServerConfig cfg
     runTxSender serverSocket
 
 main :: IO ()

@@ -209,11 +209,6 @@ Mock or real implementation of a Goguen node. Clients to this service are:
 
 - plutus-pab.yaml
 
-#### Source
-
-- [Cardano.Node.API.API](https://github.com/input-output-hk/plutus-apps/blob/main/plutus-pab/src/Cardano/Node/API.hs#L14)
-- [Cardano.Node.Server.main](https://github.com/input-output-hk/plutus-apps/blob/main/plutus-pab/src/Cardano/Node/Server.hs#L56)
-
 ### chain-index
 
 ```

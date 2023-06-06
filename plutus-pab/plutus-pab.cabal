@@ -55,15 +55,11 @@ library
   import:          lang
   ghc-options:     -Wunused-packages
   exposed-modules:
-    Cardano.Api.NetworkId.Extra
     Cardano.BM.Data.Tracer.Extras
     Cardano.ChainIndex.ChainIndex
     Cardano.ChainIndex.Server
     Cardano.ChainIndex.Types
-    Cardano.Node.API
     Cardano.Node.Client
-    Cardano.Node.Params
-    Cardano.Node.Server
     Cardano.Node.Types
     Cardano.Protocol.Socket.Mock.Client
     Cardano.Wallet.LocalClient
@@ -78,7 +74,6 @@ library
     Control.Concurrent.Availability
     Control.Concurrent.STM.Extras
     Control.Concurrent.STM.Extras.Stream
-    Control.Monad.Freer.Delay
     Plutus.PAB.App
     Plutus.PAB.Arbitrary
     Plutus.PAB.Core
@@ -232,7 +227,6 @@ test-suite plutus-pab-test-light
   type:               exitcode-stdio-1.0
   main-is:            Spec.hs
   other-modules:
-    Cardano.Api.NetworkId.ExtraSpec
     Cardano.Wallet.LocalClient.ExportTxSpec
     Cardano.Wallet.RemoteClientSpec
     Cardano.Wallet.ServerSpec
@@ -271,10 +265,8 @@ test-suite plutus-pab-test-light
     , hedgehog-quickcheck
     , QuickCheck
     , quickcheck-instances
-    , smallcheck
     , stm
     , tasty
     , tasty-hedgehog
     , tasty-hunit
     , tasty-quickcheck
-    , tasty-smallcheck

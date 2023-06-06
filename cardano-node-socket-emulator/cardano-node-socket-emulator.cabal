@@ -29,9 +29,12 @@ library
   hs-source-dirs:  src
   exposed-modules:
     Cardano.Node.Socket.Emulator
+    Cardano.Node.Socket.Emulator.API
     Cardano.Node.Socket.Emulator.Chain
+    Cardano.Node.Socket.Emulator.Mock
+    Cardano.Node.Socket.Emulator.Params
+    Cardano.Node.Socket.Emulator.Server
     Cardano.Node.Socket.Emulator.Types
-    Cardano.Node.Socket.Mock
 
   --------------------
   -- Local components
@@ -78,8 +81,12 @@ library
     , freer-simple
     , lens
     , mtl
+    , prettyprinter
+    , servant
+    , servant-client
     , servant-server
     , stm
     , text
     , time
     , time-units
+    , warp
