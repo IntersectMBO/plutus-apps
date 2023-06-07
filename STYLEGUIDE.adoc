@@ -95,8 +95,6 @@ but anecdotally Haskell code tends toward longer lines, and breaking them up doe
 Placing the double-colon on the same line makes it easier to find definitions.
 We don't necessarily have HLS running all the time, and it may not work on every module.
 
-`fourmolu` is a fairly modest formatter that doesn’t touch too much. At the moment we mostly use it for formatting imports!
-
 === Write type signatures
 
 Every top-level binding should have a type signature. _Most_ other named bindings (e.g. `let` and `where` bindings) should also have type signatures.
