@@ -27,8 +27,8 @@ import Servant (NoContent (NoContent))
 import Cardano.BM.Data.Trace (Trace)
 import Cardano.Node.Emulator.Internal.Node (ChainEvent, Params (..), SlotConfig (SlotConfig, scSlotLength), currentSlot)
 import Cardano.Node.Emulator.Internal.Node.Chain qualified as Chain
-import Cardano.Node.Socket.Emulator qualified as Server
 import Cardano.Node.Socket.Emulator.Chain (handleChain, handleControlChain)
+import Cardano.Node.Socket.Emulator.Server qualified as Server
 import Cardano.Node.Socket.Emulator.Types
 import Plutus.Monitoring.Util qualified as LM
 

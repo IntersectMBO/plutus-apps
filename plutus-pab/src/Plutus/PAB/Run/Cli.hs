@@ -24,8 +24,8 @@ import Cardano.Api qualified as C
 import Cardano.BM.Configuration (Configuration)
 import Cardano.BM.Data.Trace (Trace)
 import Cardano.ChainIndex.Server qualified as ChainIndex
+import Cardano.Node.Socket.Emulator qualified as NodeServer
 import Cardano.Node.Socket.Emulator.Params qualified as Params
-import Cardano.Node.Socket.Emulator.Server qualified as NodeServer
 import Cardano.Node.Socket.Emulator.Types (NodeServerConfig (..))
 import Cardano.Node.Types (NodeMode (MockNode), PABServerConfig (pscNodeMode, pscNodeServerConfig), _AlonzoNode)
 import Cardano.Protocol.Socket.Type (epochSlots)
@@ -131,7 +131,7 @@ runConfigCommand _ ConfigCommandArgs{ccaPABConfig = Config {chainQueryConfig = B
 runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig = Config {nodeServerConfig},ccaAvailability} StartNode = do
     case pscNodeMode nodeServerConfig of
         MockNode -> do
-            liftIO $ NodeServer.main
+            NodeServer.main
                 (toMockNodeServerLog ccaTrace)
                 (pscNodeServerConfig nodeServerConfig)
                 (available ccaAvailability)
