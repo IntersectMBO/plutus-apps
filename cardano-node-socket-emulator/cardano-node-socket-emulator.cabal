@@ -90,3 +90,18 @@ library
     , time
     , time-units
     , warp
+
+executable cardano-node-socket-emulator
+  import:           lang
+  main-is:          Main.hs
+  hs-source-dirs:   app
+  default-language: Haskell2010
+  build-depends:
+    , cardano-node-socket-emulator  >=1.2.0
+    , plutus-chain-index-core       >=1.2.0
+
+  build-depends:    iohk-monitoring
+  build-depends:
+    , base           >=4.9 && <5
+    , data-default
+    , prettyprinter
