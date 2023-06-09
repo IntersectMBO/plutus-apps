@@ -18,7 +18,6 @@ import Control.Lens hiding (ix)
 import Control.Monad (forever)
 import Control.Monad.IO.Class (liftIO)
 import Control.RateLimit (rateLimitExecution)
-import Data.Default (Default (def))
 import Data.Map qualified as Map
 import Data.Text (Text)
 import Data.Text qualified as T
@@ -34,21 +33,17 @@ import System.Signal (installHandler, sigINT)
 import Text.Pretty.Simple (pPrint)
 
 import Cardano.Api qualified as C
-import Cardano.Node.Emulator.Internal.Node (Params (..), testnet)
 import Cardano.Node.Socket.Emulator.Types (NodeServerConfig (..))
 import Cardano.Node.Types (PABServerConfig (..))
 import Cardano.Protocol.Socket.Mock.Client (TxSendHandle (..), queueTx, runTxSender)
-import Data.Either (fromRight)
 import Ledger.Blockchain (OnChainTx (..))
-import Ledger.Index (UtxoIndex, insertBlock)
+import Ledger.Index (UtxoIndex, createGenesisTransaction, insertBlock)
 import Ledger.Slot (Slot (..))
 import Ledger.Tx (CardanoTx (..))
 import Ledger.Value.CardanoAPI qualified as CardanoAPI
 import Plutus.PAB.Types (Config (..))
 import TxInject.RandomTx (generateTx)
-import Wallet.Emulator (chainState, mockWalletPaymentPubKeyHash, txPool)
-import Wallet.Emulator.MultiAgent (emulatorStateInitialDist)
-import Wallet.Emulator.Wallet (fromWalletNumber)
+import Wallet.Emulator.Wallet (fromWalletNumber, mockWalletAddress)
 
 {- | The `Stats` are used by both the producer and consumer to track the number of
      generated transactions (used to verify if we respect the requested TPS rate)
@@ -75,13 +70,10 @@ data AppEnv = AppEnv
 initialUtxoIndex :: Config -> UtxoIndex
 initialUtxoIndex config =
   let dist = Map.fromList $
-               zip (config & nodeServerConfig & pscNodeServerConfig & nscInitialTxWallets & fmap fromWalletNumber)
-                   (repeat (CardanoAPI.adaValueOf 1000_000_000))
-      initialTxs =
-        view (chainState . txPool) $ fromRight (error "cannot initialize chain state") $
-        emulatorStateInitialDist (def {pNetworkId = testnet}) $
-        Map.mapKeys mockWalletPaymentPubKeyHash dist
-  in insertBlock (map Valid initialTxs) mempty
+               zip (config & nodeServerConfig & pscNodeServerConfig & nscInitialTxWallets & fmap (mockWalletAddress . fromWalletNumber))
+                   (repeat (CardanoAPI.adaValueOf 1_000_000_000))
+      initialTx = createGenesisTransaction dist
+  in insertBlock [Valid initialTx] mempty
 
 -- | Starts the producer thread
 runProducer :: AppEnv -> IO ThreadId
@@ -204,12 +196,14 @@ main = do
   opts <- execParser prgHelp
   pPrint opts
   config <- liftIO $ decodeFileThrow (ioServerConfig opts)
+  let initUtxos = initialUtxoIndex config
+  pPrint initUtxos
   env    <-
     AppEnv <$> initializeClient config
            -- Increasing the size beyond this point adds quite a bit of overhead.
            <*> newTBQueueIO 1000
            <*> initializeStats
-           <*> pure (initialUtxoIndex config)
+           <*> pure initUtxos
   initializeInterruptHandler (stats env)
   _   <- runProducer env
   forever =<< rateLimitedConsumer opts <*> pure env

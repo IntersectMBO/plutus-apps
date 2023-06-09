@@ -91,8 +91,8 @@ generateTx gen slot utxo = do
       utxoIndex = fromPlutusIndex utxo
       validationResult = Validation.validateCardanoTx params slot utxoIndex txn
     case validationResult of
-      Left _  -> pure cTx
-      Right _ -> generateTx gen slot utxo
+      Left _  -> generateTx gen slot utxo
+      Right _ -> pure cTx
 
 keyPairs :: NonEmpty CardanoAddress
 keyPairs = fmap CW.mockWalletAddress (CW.knownMockWallet 1 :| drop 1 CW.knownMockWallets)

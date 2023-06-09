@@ -45,6 +45,7 @@ import Cardano.Slotting.Time (SlotLength, mkSlotLength)
 import Control.Lens (Lens', lens, makeLensesFor, over, (&), (.~))
 import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), Value (Object), (.:), (.=))
 import Data.Aeson qualified as JSON
+import Data.Aeson.Types (prependFailure, typeMismatch)
 import Data.Default (Default (def))
 import Data.Map (fromList)
 import Data.Maybe (fromMaybe)
@@ -71,8 +72,13 @@ data Params = Params
   }
   deriving (Eq, Show, Generic)
 
-deriving instance ToJSON C.NetworkId
-instance FromJSON C.NetworkId
+instance ToJSON C.NetworkId where
+  toJSON C.Mainnet                      = JSON.String "Mainnet"
+  toJSON (C.Testnet (C.NetworkMagic n)) = JSON.Number $ fromIntegral n
+instance FromJSON C.NetworkId where
+  parseJSON (JSON.String "Mainnet") = pure C.Mainnet
+  parseJSON (JSON.Number n)         = pure $ C.Testnet $ C.NetworkMagic $ truncate n
+  parseJSON v                       = prependFailure "parsing NetworkId failed, " (typeMismatch "'Mainnet' or Number" v)
 
 deriving newtype instance ToJSON C.NetworkMagic
 deriving newtype instance FromJSON C.NetworkMagic

@@ -19,8 +19,7 @@
 module Cardano.Node.Socket.Emulator.Types where
 
 import Cardano.Api (NetworkId)
-import Cardano.Node.Emulator.Internal.Node (ChainControlEffect, ChainEffect, ChainEvent, SlotConfig, pNetworkId,
-                                            testnet)
+import Cardano.Node.Emulator.Internal.Node (ChainControlEffect, ChainEffect, ChainEvent, SlotConfig, testnet)
 import Cardano.Node.Socket.Emulator.Chain (MockNodeServerChainState, fromEmulatorChainState)
 import Control.Lens (makeLenses, view)
 import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg)
@@ -28,19 +27,19 @@ import Control.Monad.Freer.State qualified as Eff
 import Control.Monad.IO.Class (MonadIO)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Default (Default, def)
-import Data.Either (fromRight)
 import Data.Map qualified as Map
 import Data.Time.Clock (UTCTime)
 import Data.Time.Format.ISO8601 qualified as F
 import Data.Time.Units (Millisecond)
 import Data.Time.Units.Extra ()
 import GHC.Generics (Generic)
+import Ledger.Blockchain (OnChainTx (..))
+import Ledger.Index (createGenesisTransaction)
 import Plutus.Contract.Trace qualified as Trace
 import Prettyprinter (Pretty, pretty, viaShow, vsep, (<+>))
 import Servant.Client (BaseUrl (BaseUrl, baseUrlPort), Scheme (Http))
 import Wallet.Emulator (Wallet, WalletNumber (WalletNumber))
 import Wallet.Emulator qualified as EM
-import Wallet.Emulator.MultiAgent qualified as MultiAgent
 
 
 -- | Node server configuration
@@ -73,8 +72,15 @@ defaultNodeServerConfig =
           [ WalletNumber 1
           , WalletNumber 2
           , WalletNumber 3
+          , WalletNumber 4
+          , WalletNumber 5
+          , WalletNumber 6
+          , WalletNumber 7
+          , WalletNumber 8
+          , WalletNumber 9
+          , WalletNumber 10
           ]
-      , nscSocketPath = "./node-server.sock"
+      , nscSocketPath = "/tmp/node-server.sock"
       , nscKeptBlocks = 100
       , nscSlotConfig = def
       , nscNetworkId = testnet
@@ -124,8 +130,8 @@ initialAppState wallets = do
 -- | 'ChainState' with initial values
 initialChainState :: MonadIO m => Trace.InitialDistribution -> m MockNodeServerChainState
 initialChainState =
-    fromEmulatorChainState . view EM.chainState . fromRight (error "Can't initialise chain state") .
-    MultiAgent.emulatorStateInitialDist (def {pNetworkId = testnet}) . Map.mapKeys EM.mockWalletPaymentPubKeyHash
+    fromEmulatorChainState . view EM.chainState . EM.emulatorState . pure . pure . Valid .
+    createGenesisTransaction . Map.mapKeys EM.mockWalletAddress
 
 
 -- Logging ------------------------------------------------------------------------------------------------------------
