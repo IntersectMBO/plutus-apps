@@ -31,7 +31,10 @@ let
     pkgs.lib.optionalAttrs (system == "x86_64-linux") { mingwW64 = windows-plutus-apps-jobs; } //
     # Devcontainer is only available on linux
     pkgs.lib.optionalAttrs (system == "x86_64-linux") inputs.cells.plutus-apps.devcontainer //
-    other-jobs;
+    # Because of lack of resources in our darwin CI cluster, the "combined-plutus-apps-haddock" job
+    # often gets timed out, which of course makes the required darwin CI checks fail. In the end, we
+    # just remove it from the required darwin jobs, but still keep it in the linux jobs.
+    pkgs.lib.filterAttrsRecursive (n: _: pkgs.system != "x86_64-darwin" || n != "combined-plutus-apps-haddock") other-jobs;
 
   # Hydra doesn't like these attributes hanging around in "jobsets": it thinks they're jobs!
   filtered-jobs = pkgs.lib.filterAttrsRecursive (n: _: n != "recurseForDerivations") jobs;
