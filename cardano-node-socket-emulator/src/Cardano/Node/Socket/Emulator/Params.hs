@@ -1,19 +1,17 @@
 {-# LANGUAGE NamedFieldPuns #-}
-module Cardano.Node.Params where
+module Cardano.Node.Socket.Emulator.Params where
 
-import Cardano.Api.NetworkId.Extra (NetworkIdWrapper (..))
 import Cardano.Api.Shelley (ProtocolParameters)
 import Cardano.Node.Emulator.Internal.Node.Params
-import Cardano.Node.Types
+import Cardano.Node.Socket.Emulator.Types
 import Data.Aeson (eitherDecode)
 import Data.ByteString.Lazy qualified as BSL
 import Data.Default (def)
 
-fromPABServerConfig :: PABServerConfig -> IO Params
-fromPABServerConfig PABServerConfig{pscSlotConfig, pscNetworkId, pscProtocolParametersJsonPath} = do
-  let NetworkIdWrapper networkId = pscNetworkId
-  protocolParameters <- readProtocolParameters pscProtocolParametersJsonPath
-  pure $ paramsWithProtocolsParameters pscSlotConfig protocolParameters networkId
+fromNodeServerConfig :: NodeServerConfig -> IO Params
+fromNodeServerConfig NodeServerConfig{nscSlotConfig, nscNetworkId, nscProtocolParametersJsonPath} = do
+  protocolParameters <- readProtocolParameters nscProtocolParametersJsonPath
+  pure $ paramsWithProtocolsParameters nscSlotConfig protocolParameters nscNetworkId
 
 readProtocolParameters :: Maybe FilePath -> IO ProtocolParameters
 readProtocolParameters = maybe (pure def) readPP

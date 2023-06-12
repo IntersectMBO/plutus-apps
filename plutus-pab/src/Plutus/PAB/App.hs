@@ -29,13 +29,12 @@ module Plutus.PAB.App(
     handleContractDefinition
     ) where
 
-import Cardano.Api.NetworkId.Extra (NetworkIdWrapper (unNetworkIdWrapper))
 import Cardano.BM.Trace (Trace, logDebug)
 import Cardano.ChainIndex.Types qualified as ChainIndex
 import Cardano.Node.Client (handleNodeClientClient, runChainSyncWithCfg)
-import Cardano.Node.Params qualified as Params
+import Cardano.Node.Socket.Emulator.Params qualified as Params
 import Cardano.Node.Types (ChainSyncHandle, NodeMode (MockNode),
-                           PABServerConfig (PABServerConfig, pscBaseUrl, pscNetworkId, pscNodeMode, pscSocketPath))
+                           PABServerConfig (PABServerConfig, pscNodeMode, pscNodeServerConfig))
 import Cardano.Protocol.Socket.Mock.Client qualified as MockClient
 import Cardano.Wallet.LocalClient qualified as LocalWalletClient
 import Cardano.Wallet.Mock.Client qualified as WalletMockClient
@@ -94,6 +93,7 @@ import Wallet.Emulator.Wallet (Wallet)
 import Wallet.Error (WalletAPIError)
 import Wallet.Types (ContractInstanceId)
 
+import Cardano.Node.Socket.Emulator.Types (NodeServerConfig (..))
 import Database.Beam.Postgres (Postgres)
 import Database.Beam.Sqlite (Sqlite)
 import Plutus.Blockfrost.Client as BlockfrostClient
@@ -190,7 +190,7 @@ appEffectHandlers storageBackend config trace BuiltinHandler{contractHandler} =
             . reinterpret (Core.handleMappedReader @(AppEnv a) @ClientEnv nodeClientEnv)
             . reinterpretN @'[_, _, _, _]
               (\nodeClientEffect -> do
-                params <- liftIO $ Params.fromPABServerConfig $ nodeServerConfig config
+                params <- liftIO $ Params.fromNodeServerConfig $ pscNodeServerConfig $ nodeServerConfig config
                 handleNodeClientClient @IO params nodeClientEffect)
 
             -- handle 'ChainIndexEffect'
@@ -272,18 +272,22 @@ data StorageBackend = BeamBackend | InMemoryBackend
   deriving (Eq, Ord, Show)
 
 mkEnv :: Trace IO (PABLogMsg (Builtin a)) -> Config -> IO (AppEnv a)
-mkEnv appTrace appConfig@Config { dbConfig
-             , nodeServerConfig = PABServerConfig{pscBaseUrl, pscSocketPath, pscNodeMode, pscNetworkId}
-             , walletServerConfig
-             , chainQueryConfig
-             } = do
+mkEnv appTrace appConfig@Config
+                { dbConfig
+                , nodeServerConfig = PABServerConfig
+                    { pscNodeMode
+                    , pscNodeServerConfig = NodeServerConfig { nscBaseUrl, nscSocketPath, nscNetworkId }
+                    }
+                , walletServerConfig
+                , chainQueryConfig
+                } = do
     walletClientEnv <- maybe (pure Nothing) (fmap Just . clientEnv) $ preview Wallet._LocalWalletConfig walletServerConfig
-    nodeClientEnv <- clientEnv pscBaseUrl
+    nodeClientEnv <- clientEnv nscBaseUrl
     chainQueryEnv <- mkChainQueryEnv
     dbPool <- dbConnect dbConfig appTrace
     txSendHandle <-
       case pscNodeMode of
-        MockNode -> liftIO $ Just <$> MockClient.runTxSender pscSocketPath
+        MockNode -> liftIO $ Just <$> MockClient.runTxSender nscSocketPath
         _        -> pure Nothing
     -- This is for access to the slot number in the interpreter
     chainSyncHandle <- runChainSyncWithCfg $ nodeServerConfig appConfig
@@ -302,7 +306,7 @@ mkEnv appTrace appConfig@Config { dbConfig
         ChainIndexConfig config -> ChainIndexEnv <$> clientEnv (ChainIndex.ciBaseUrl config)
         BlockfrostConfig config -> return $ BlockfrostEnv $
             BF.BlockfrostEnv { envBfTokenPath = BF.bfTokenPath config
-                             , envNetworkId = unNetworkIdWrapper pscNetworkId}
+                             , envNetworkId = nscNetworkId}
 
 logDebugString :: Trace IO (PABLogMsg t) -> Text -> IO ()
 logDebugString trace = logDebug trace . SMultiAgent . UserLog

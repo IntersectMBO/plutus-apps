@@ -4,7 +4,8 @@ let
   playgroundStatic = pkgs.callPackage ./playground-static.nix { inherit staticSite; docs = docs.site; };
 in
 {
-  plutus-playground-client-entrypoint = playgroundStatic {
-    variant = "plutus";
-  };
+  # We're disabling this because we don't want Bitte to host the plutus-apps docs website anymore.
+  # plutus-playground-client-entrypoint = playgroundStatic {
+  #   variant = "plutus";
+  # };
 }

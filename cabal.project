@@ -19,6 +19,7 @@ index-state:
   , cardano-haskell-packages 2023-05-10T00:00:00Z
 
 packages: cardano-node-emulator
+          cardano-node-socket-emulator
           cardano-streaming
           doc
           freer-extras

@@ -29,12 +29,10 @@ import System.FilePath ((</>))
 import System.Process (callCommand)
 
 import Cardano.Api qualified as C
-import Cardano.Api.NetworkId.Extra (NetworkIdWrapper (NetworkIdWrapper, unNetworkIdWrapper))
 import Cardano.ChainIndex.Types (ChainIndexConfig (ciBaseUrl), ChainIndexUrl (ChainIndexUrl))
 import Cardano.Ledger.Shelley.Genesis (ShelleyGenesis (sgNetworkMagic, sgSecurityParam, sgSlotLength, sgSystemStart))
 import Cardano.Node.Emulator.Internal.Node (SlotConfig (SlotConfig))
-import Cardano.Node.Types (NodeMode (AlonzoNode),
-                           PABServerConfig (pscBaseUrl, pscKeptBlocks, pscNetworkId, pscNodeMode, pscSlotConfig, pscSocketPath))
+import Cardano.Node.Types (NodeMode (AlonzoNode), PABServerConfig (pscNodeMode, pscNodeServerConfig))
 import Cardano.Wallet.Types (LocalWalletSettings (LocalWalletSettings),
                              WalletConfig (LocalWalletConfig, RemoteWalletConfig), WalletUrl (WalletUrl))
 import Control.Monad.Freer.Extras.Beam.Sqlite (DbConfig (dbConfigFile, dbConfigPoolSize))
@@ -46,6 +44,7 @@ import Plutus.PAB.Types (ChainQueryConfig (ChainIndexConfig),
                          DevelopmentOptions (DevelopmentOptions, pabResumeFrom, pabRollbackHistory),
                          WebserverConfig (baseUrl))
 
+import Cardano.Node.Socket.Emulator.Types (NodeServerConfig (nscBaseUrl, nscKeptBlocks, nscNetworkId, nscSlotConfig, nscSocketPath))
 import Data.Monoid (Alt (Alt, getAlt))
 import Types (AppOpts (AppOpts, appOptsChainIndexOpts, appOptsCommand, appOptsNodeOpts),
               ChainIndexOpts (ChainIndexOpts, chainIndexOptsPort), ChainIndexPort (ChainIndexPort, unChainIndexPort),
@@ -111,20 +110,21 @@ runAppCommand (MockNetCommand pabOpts (WalletPort walletPort)) = do
             } <- ask @AppOpts
 
     let nodeServerConfig =
-            def { pscBaseUrl = BaseUrl Http "localhost" (fromIntegral nodePort) ""
-                , pscSocketPath = getNodeSocketFilePath $ createNodeSocketFilePath nodeOptsOutputDir
+            def { nscBaseUrl = BaseUrl Http "localhost" (fromIntegral nodePort) ""
+                , nscSocketPath = getNodeSocketFilePath $ createNodeSocketFilePath nodeOptsOutputDir
                 }
+        pabServerConfig = def { pscNodeServerConfig = nodeServerConfig }
         walletConfig = LocalWalletConfig
                      $ LocalWalletSettings
                      $ WalletUrl
                      $ BaseUrl Http "localhost" (fromIntegral walletPort) ""
-        pabServerConfig =
-            (pabWebserverBaseConfig nodeServerConfig pabOpts appOptsChainIndexOpts)
+        config =
+            (pabWebserverBaseConfig pabServerConfig pabOpts appOptsChainIndexOpts)
                 { walletServerConfig = walletConfig
-                , nodeServerConfig = nodeServerConfig
+                , nodeServerConfig = def { pscNodeServerConfig = nodeServerConfig }
                 }
 
-    liftIO $ startPabWebserverAndMockServers pabOpts pabServerConfig
+    liftIO $ startPabWebserverAndMockServers pabOpts config
 
 runAppCommand (NodeWBECommand networkName pabOptsM walletPort@(WalletPort wp)) = do
     appOpts@AppOpts { appOptsNodeOpts = NodeOpts { nodeOptsOutputDir }
@@ -134,7 +134,7 @@ runAppCommand (NodeWBECommand networkName pabOptsM walletPort@(WalletPort wp)) =
     liftIO $ fetchNodeConfigFiles networkName nodeOptsOutputDir
 
     nodeServerConfig <- getCardanoNodeConfig networkName nodeOptsOutputDir
-    let networkId = unNetworkIdWrapper $ pscNetworkId nodeServerConfig
+    let networkId = nscNetworkId $ pscNodeServerConfig nodeServerConfig
     let startChainIndexAction =
             startChainIndex networkId appOptsChainIndexOpts (appOptsNodeOpts appOpts)
         startCardanoNodeAction = startCardanoNode networkName (appOptsNodeOpts appOpts)
@@ -174,7 +174,7 @@ runAppCommand (NodeRemoteWalletCommand network pabOptsM) = do
     liftIO $ fetchNodeConfigFiles network nodeOptsOutputDir
 
     nodeServerConfig <- getCardanoNodeConfig network nodeOptsOutputDir
-    let networkId = unNetworkIdWrapper $ pscNetworkId nodeServerConfig
+    let networkId = nscNetworkId $ pscNodeServerConfig nodeServerConfig
         networkName = getNetworkName networkId
         startChainIndexAction =
             startChainIndex networkId appOptsChainIndexOpts (appOptsNodeOpts appOpts)
@@ -268,7 +268,7 @@ startPabWebserver
     -> IO ()
 startPabWebserver PABOpts { pabOptsOutputDir, pabOptsExe, pabOptsPassphrase } pabServerConfig = do
     waitUntilNodeSocketExists
-        $ NodeSocketPath $ pscSocketPath $ nodeServerConfig pabServerConfig
+        $ NodeSocketPath $ nscSocketPath $ pscNodeServerConfig $ nodeServerConfig pabServerConfig
 
     createPABDirectory pabOptsOutputDir
 
@@ -418,11 +418,13 @@ getCardanoNodeConfig network nodeDir@(NodeDirectory nd) = do
                     $ utcTimeToPOSIXSeconds
                     $ sgSystemStart shelleyGenesisConfig
 
-    pure $ def { pscSocketPath = getNodeSocketFilePath $ createNodeSocketFilePath nodeDir
-               , pscKeptBlocks = fromIntegral securityParam
-               , pscSlotConfig = SlotConfig slotLength (POSIXTime systemStartPosix)
-               , pscNetworkId = NetworkIdWrapper networkId
-               , pscNodeMode = AlonzoNode
+    pure $ def { pscNodeMode = AlonzoNode
+               , pscNodeServerConfig = def
+                    { nscSocketPath = getNodeSocketFilePath $ createNodeSocketFilePath nodeDir
+                    , nscKeptBlocks = fromIntegral securityParam
+                    , nscSlotConfig = SlotConfig slotLength (POSIXTime systemStartPosix)
+                    , nscNetworkId = networkId
+                    }
                }
   where
     readShelleyGenesis

@@ -5,7 +5,7 @@
 {-# LANGUAGE TemplateHaskell  #-}
 {-# LANGUAGE TypeOperators    #-}
 
-module Control.Monad.Freer.Delay where
+module Control.Monad.Freer.Extras.Delay where
 
 import Control.Concurrent (threadDelay)
 import Control.Monad.Freer (Eff, LastMember, interpret, type (~>))

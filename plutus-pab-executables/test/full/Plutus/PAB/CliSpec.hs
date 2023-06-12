@@ -20,6 +20,7 @@ import Cardano.BM.Data.Severity (Severity)
 import Cardano.BM.Data.Trace (Trace)
 import Cardano.BM.Setup (setupTrace_)
 import Cardano.ChainIndex.Types qualified as ChainIndex.Types
+import Cardano.Node.Socket.Emulator.Types qualified as Node.Types
 import Cardano.Node.Types (NodeMode (AlonzoNode, MockNode))
 import Cardano.Node.Types qualified as Node.Types
 import Cardano.Wallet.Mock.Client qualified as Wallet.Client
@@ -103,7 +104,11 @@ defaultPabConfig
       -- TODO: Note: If it exceeds 900, Hydra assumes the CI is unresponsive
       -- (not unreasonably...)
       { pabWebserverConfig = def { PAB.Types.endpointTimeout = Just 60 }
-      , nodeServerConfig = def { Node.Types.pscSocketPath = "/tmp/node-server.sock" }
+      , nodeServerConfig = def {
+          Node.Types.pscNodeServerConfig = def {
+            Node.Types.nscSocketPath = "/tmp/node-server.sock"
+          }
+        }
       }
 
 -- | Bump all the default ports, and any other needed things so that we
@@ -115,7 +120,7 @@ bumpConfig
   -> Config    -- ^ Bumped config!
 bumpConfig x dbName conf@Config{ pabWebserverConfig   = p@PAB.Types.WebserverConfig{PAB.Types.baseUrl=p_u}
                                , walletServerConfig
-                               , nodeServerConfig     = n@Node.Types.PABServerConfig{Node.Types.pscBaseUrl=n_u,Node.Types.pscSocketPath=soc}
+                               , nodeServerConfig     = pn@Node.Types.PABServerConfig{Node.Types.pscNodeServerConfig=n@Node.Types.NodeServerConfig{Node.Types.nscBaseUrl=n_u,Node.Types.nscSocketPath=soc}}
                                , chainQueryConfig     = PAB.Types.ChainIndexConfig c@ChainIndex.Types.ChainIndexConfig{ChainIndex.Types.ciBaseUrl=c_u}
                                , dbConfig             = PAB.Types.SqliteDB db
                                } = newConf
@@ -124,7 +129,7 @@ bumpConfig x dbName conf@Config{ pabWebserverConfig   = p@PAB.Types.WebserverCon
     newConf
       = conf { pabWebserverConfig   = p { PAB.Types.baseUrl          = bump p_u }
              , walletServerConfig   = over (Wallet.Types.walletSettingsL . Wallet.Types.baseUrlL) (coerce . bump . coerce) walletServerConfig
-             , nodeServerConfig     = n { Node.Types.pscBaseUrl      = bump n_u, Node.Types.pscSocketPath = soc ++ "." ++ show x }
+             , nodeServerConfig     = pn { Node.Types.pscNodeServerConfig = n { Node.Types.nscBaseUrl = bump n_u, Node.Types.nscSocketPath = soc ++ "." ++ show x } }
              , chainQueryConfig     = PAB.Types.ChainIndexConfig $ c { ChainIndex.Types.ciBaseUrl = coerce $ bump $ coerce c_u }
              , dbConfig             = PAB.Types.SqliteDB db { FEx.Sqlite.dbConfigFile    = "file::" <> dbName <> "?mode=memory&cache=shared" }
              }

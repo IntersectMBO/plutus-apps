@@ -81,7 +81,7 @@ handleLogMsgTraceMap :: forall b a m effs.
   -> Trace m a
   -> LogMsg b
   ~> Eff effs
-handleLogMsgTraceMap f t = handleLogMsgTrace (contramap (second (fmap f)) t)
+handleLogMsgTraceMap f t = handleLogMsgTrace (convertLog f t)
 
 runLogEffects ::
     forall m l.

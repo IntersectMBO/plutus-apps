@@ -1,11 +1,12 @@
-dbConfig:
-    dbConfigFile: ./primary.db
-    dbConfigPoolSize: 20
+sqliteDB:
+  dbConfigFile: pab-core.db
+  dbConfigPoolSize: 20
 
 pabWebserverConfig:
   baseUrl: http://localhost:9080
   staticDir: .
   permissiveCorsPolicy: False
+  enableMarconi: False
 
 walletServerConfig:
   tag: LocalWalletConfig
@@ -13,26 +14,27 @@ walletServerConfig:
     baseUrl: http://localhost:9081
 
 nodeServerConfig:
-  pscBaseUrl: http://localhost:9082
-  pscSocketPath: /tmp/node-server.sock
-  pscKeptBlocks: 100000
-  # pscNetworkId: "1097911063"
-  pscNetworkId: "3"
-  pscSlotConfig:
-    scSlotZeroTime: 1596059091000 # Wednesday, July 29, 2020 21:44:51 - shelley launch time in milliseconds
-    scSlotLength: 1000 # In milliseconds
-  pscInitialTxWallets:
-    - getWallet: 1
-    - getWallet: 2
-    - getWallet: 3
-    - getWallet: 4
-    - getWallet: 5
-    - getWallet: 6
-    - getWallet: 7
-    - getWallet: 8
-    - getWallet: 9
-    - getWallet: 10
   pscNodeMode: AlonzoNode
+  pscNodeServerConfig:
+    nscBaseUrl: http://localhost:9082
+    nscSocketPath: /tmp/node-server.sock
+    nscKeptBlocks: 100000
+    # nscNetworkId: 1097911063
+    nscNetworkId: 1
+    nscSlotConfig:
+      scSlotZeroTime: 1596059091000 # Wednesday, July 29, 2020 21:44:51 - shelley launch time in milliseconds
+      scSlotLength: 1000 # In milliseconds
+    nscInitialTxWallets:
+      - getWallet: 1
+      - getWallet: 2
+      - getWallet: 3
+      - getWallet: 4
+      - getWallet: 5
+      - getWallet: 6
+      - getWallet: 7
+      - getWallet: 8
+      - getWallet: 9
+      - getWallet: 10
 
 chainIndexConfig:
   ciBaseUrl: http://localhost:9083

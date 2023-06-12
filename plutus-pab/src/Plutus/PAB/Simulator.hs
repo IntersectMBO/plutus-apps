@@ -85,9 +85,9 @@ import Control.Lens (_Just, at, makeLenses, makeLensesFor, preview, set, view, (
 import Control.Monad (forM_, forever, guard, void, when)
 import Control.Monad.Freer (Eff, LastMember, Member, interpret, reinterpret, reinterpret2, reinterpretN, run, send,
                             type (~>))
-import Control.Monad.Freer.Delay (DelayEffect, delayThread, handleDelayEffect)
 import Control.Monad.Freer.Error (Error, handleError, runError, throwError)
 import Control.Monad.Freer.Extras qualified as Modify
+import Control.Monad.Freer.Extras.Delay (DelayEffect, delayThread, handleDelayEffect)
 import Control.Monad.Freer.Extras.Log (LogLevel (Info), LogMessage, LogMsg (LMessage), handleLogWriter, logInfo,
                                        logLevel, mapLog)
 import Control.Monad.Freer.Reader (Reader, ask, asks)

@@ -12,13 +12,13 @@ module Plutus.PAB.Db.Beam (runBeamStoreAction) where
 
 import Cardano.BM.Trace (Trace)
 import Control.Monad.Freer (Eff, interpret, reinterpret, runM, subsume, type (~>))
-import Control.Monad.Freer.Delay (DelayEffect, handleDelayEffect)
 import Control.Monad.Freer.Error (Error, handleError, runError, throwError)
 import Control.Monad.Freer.Extras (LogMsg, mapLog)
 import Control.Monad.Freer.Extras.Beam (BeamError)
 import Control.Monad.Freer.Extras.Beam.Effects (BeamEffect, handleBeam)
 import Control.Monad.Freer.Extras.Beam.Postgres qualified as Postgres (runBeam)
 import Control.Monad.Freer.Extras.Beam.Sqlite qualified as Sqlite (runBeam)
+import Control.Monad.Freer.Extras.Delay (DelayEffect, handleDelayEffect)
 import Control.Monad.Freer.Extras.Modify qualified as Modify
 import Control.Monad.Freer.Reader (Reader, runReader)
 import Data.Aeson (FromJSON, ToJSON)

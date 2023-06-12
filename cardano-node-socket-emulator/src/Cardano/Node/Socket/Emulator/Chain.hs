@@ -10,7 +10,7 @@
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeOperators       #-}
 
-module Cardano.Chain where
+module Cardano.Node.Socket.Emulator.Chain where
 
 import Cardano.Node.Emulator.Internal.Node (Params)
 import Cardano.Node.Emulator.Internal.Node.Chain qualified as EC
@@ -56,7 +56,7 @@ emptyChainState = do
 getChannel :: MonadIO m => MVar MockNodeServerChainState -> m (TChan Block)
 getChannel mv = liftIO (readMVar mv) <&> view channel
 
--- | Build a PAB ChainState from a emulator ChainState
+-- | Build a CNSE ChainState from a emulator ChainState
 fromEmulatorChainState :: MonadIO m => EC.ChainState -> m MockNodeServerChainState
 fromEmulatorChainState EC.ChainState {EC._txPool, EC._index, EC._chainCurrentSlot, EC._chainNewestFirst} = do
     ch <- liftIO $ atomically newTChan

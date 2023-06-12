@@ -7,14 +7,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies      #-}
 
-module Cardano.Protocol.Socket.Mock.Server where
+module Cardano.Node.Socket.Emulator.Server (ServerHandler, runServerNode, processBlock, modifySlot, addTx) where
 
 import Cardano.BM.Data.Trace (Trace)
-import Cardano.Node.Types (PABServerLogMsg (..))
 import Data.ByteString.Lazy qualified as LBS
 import Data.List (intersect)
 import Data.Maybe (listToMaybe)
-import Data.Text (Text)
 import Data.Void (Void)
 
 import Control.Concurrent
@@ -49,18 +47,16 @@ import Cardano.Api qualified as C
 
 import Cardano.Protocol.Socket.Type
 
-import Cardano.Chain (MockNodeServerChainState (..), addTxToPool, chainNewestFirst, channel, currentSlot, getChannel,
-                      getTip, handleControlChain, tip, txPool)
-import Cardano.Node.Emulator.Internal.Node (Params)
+import Cardano.Node.Emulator.Internal.Node (ChainEvent, Params)
 import Cardano.Node.Emulator.Internal.Node.Chain qualified as Chain
+import Cardano.Node.Socket.Emulator.Chain (MockNodeServerChainState (..), addTxToPool, chainNewestFirst, channel,
+                                           currentSlot, getChannel, getTip, handleControlChain, tip, txPool)
 import Ledger (Block, CardanoTx (..), Slot (..))
 
 data CommandChannel = CommandChannel
   { ccCommand  :: TQueue ServerCommand
   , ccResponse :: TQueue ServerResponse
   }
-
-type Error a = Either Text a
 
 {- | Clone the original channel for each connected client, then use
      this wrapper to make sure that no data is consumed from the
@@ -145,7 +141,7 @@ pruneChain k original = do
 
 handleCommand ::
     MonadIO m
- => Trace IO PABServerLogMsg
+ => Trace IO ChainEvent
  -> CommandChannel
  -> MVar MockNodeServerChainState
  -> Params
@@ -153,12 +149,12 @@ handleCommand ::
 handleCommand trace CommandChannel {ccCommand, ccResponse} mvChainState params =
     liftIO (atomically $ readTQueue ccCommand) >>= \case
         AddTx tx     -> do
-            liftIO $ modifyMVar_ mvChainState (pure . over txPool ((CardanoEmulatorEraTx tx) :))
+            liftIO $ modifyMVar_ mvChainState (pure . over txPool (CardanoEmulatorEraTx tx :))
         ModifySlot f -> liftIO $ do
             state <- liftIO $ takeMVar mvChainState
             (s, nextState') <- liftIO $ Chain.modifySlot f
                   & interpret (handleControlChain params)
-                  & interpret (LM.handleLogMsgTraceMap ProcessingChainEvent trace)
+                  & interpret (LM.handleLogMsgTrace trace)
                   & runState state
                   & runM
             putMVar mvChainState nextState'
@@ -168,7 +164,7 @@ handleCommand trace CommandChannel {ccCommand, ccResponse} mvChainState params =
             state <- liftIO $ takeMVar mvChainState
             (block, nextState') <- liftIO $ Chain.processBlock
                   & interpret (handleControlChain params)
-                  & interpret (LM.handleLogMsgTraceMap ProcessingChainEvent trace)
+                  & interpret (LM.handleLogMsgTrace trace)
                   & runState state
                   & runM
             putMVar mvChainState nextState'
@@ -179,7 +175,7 @@ handleCommand trace CommandChannel {ccCommand, ccResponse} mvChainState params =
      used to control the server -}
 runServerNode ::
     MonadIO m
- => Trace IO PABServerLogMsg
+ => Trace IO ChainEvent
  -> FilePath
  -> Integer
  -> MockNodeServerChainState
@@ -456,7 +452,7 @@ getChainPoints :: MonadIO m => TChan Block -> MockNodeServerChainState -> m [Poi
 getChainPoints ch st = do
   chain <- chainNewestFirst ch
   pure $ zipWith mkPoint
-    [(st ^. currentSlot) .. 0]
+    [st ^. currentSlot, st ^. currentSlot - 1 .. 0]
     chain
   where
     mkPoint :: Slot -> Block -> Point Block

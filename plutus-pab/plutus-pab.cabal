@@ -55,20 +55,13 @@ library
   import:          lang
   ghc-options:     -Wunused-packages
   exposed-modules:
-    Cardano.Api.NetworkId.Extra
     Cardano.BM.Data.Tracer.Extras
-    Cardano.Chain
     Cardano.ChainIndex.ChainIndex
     Cardano.ChainIndex.Server
     Cardano.ChainIndex.Types
-    Cardano.Node.API
     Cardano.Node.Client
-    Cardano.Node.Mock
-    Cardano.Node.Params
-    Cardano.Node.Server
     Cardano.Node.Types
     Cardano.Protocol.Socket.Mock.Client
-    Cardano.Protocol.Socket.Mock.Server
     Cardano.Wallet.LocalClient
     Cardano.Wallet.LocalClient.ExportTx
     Cardano.Wallet.Mock.API
@@ -81,7 +74,6 @@ library
     Control.Concurrent.Availability
     Control.Concurrent.STM.Extras
     Control.Concurrent.STM.Extras.Stream
-    Control.Monad.Freer.Delay
     Plutus.PAB.App
     Plutus.PAB.Arbitrary
     Plutus.PAB.Core
@@ -127,16 +119,17 @@ library
   -- Local components
   --------------------
   build-depends:
-    , cardano-node-emulator    >=1.2.0
-    , freer-extras             >=1.2.0
-    , marconi-core             >=1.2.0
-    , pab-blockfrost           >=1.2.0
-    , plutus-chain-index       >=1.2.0
-    , plutus-chain-index-core  >=1.2.0
-    , plutus-contract          >=1.2.0
-    , plutus-ledger            >=1.2.0
-    , plutus-script-utils      >=1.2.0
-    , plutus-tx-constraints    >=1.2.0
+    , cardano-node-emulator         >=1.2.0
+    , cardano-node-socket-emulator  >=1.2.0
+    , freer-extras                  >=1.2.0
+    , marconi-core                  >=1.2.0
+    , pab-blockfrost                >=1.2.0
+    , plutus-chain-index            >=1.2.0
+    , plutus-chain-index-core       >=1.2.0
+    , plutus-contract               >=1.2.0
+    , plutus-ledger                 >=1.2.0
+    , plutus-script-utils           >=1.2.0
+    , plutus-tx-constraints         >=1.2.0
 
   --------------------------
   -- Other IOG dependencies
@@ -234,7 +227,6 @@ test-suite plutus-pab-test-light
   type:               exitcode-stdio-1.0
   main-is:            Spec.hs
   other-modules:
-    Cardano.Api.NetworkId.ExtraSpec
     Cardano.Wallet.LocalClient.ExportTxSpec
     Cardano.Wallet.RemoteClientSpec
     Cardano.Wallet.ServerSpec
@@ -273,10 +265,8 @@ test-suite plutus-pab-test-light
     , hedgehog-quickcheck
     , QuickCheck
     , quickcheck-instances
-    , smallcheck
     , stm
     , tasty
     , tasty-hedgehog
     , tasty-hunit
     , tasty-quickcheck
-    , tasty-smallcheck

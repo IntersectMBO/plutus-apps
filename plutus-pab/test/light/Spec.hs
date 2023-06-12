@@ -2,7 +2,6 @@ module Main
     ( main
     ) where
 
-import Cardano.Api.NetworkId.ExtraSpec qualified
 import Cardano.Wallet.LocalClient.ExportTxSpec qualified
 import Cardano.Wallet.RemoteClientSpec qualified
 import Cardano.Wallet.ServerSpec qualified
@@ -15,8 +14,7 @@ main =
     defaultMain $
     testGroup
         "all tests"
-        [ Cardano.Api.NetworkId.ExtraSpec.tests
-        , Cardano.Wallet.LocalClient.ExportTxSpec.tests
+        [ Cardano.Wallet.LocalClient.ExportTxSpec.tests
         , Cardano.Wallet.RemoteClientSpec.tests
         , Cardano.Wallet.ServerSpec.tests
         , Control.Concurrent.STM.ExtrasSpec.tests

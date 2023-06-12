@@ -4,6 +4,7 @@
 module Cardano.Node.Emulator
   ( -- * Emulator contracts
     module Cardano.Node.Emulator.API
+  , module Params
     -- * Contract helpers
   , module Gen
     -- * Tests
@@ -16,3 +17,4 @@ import Cardano.Node.Emulator.Test
 import Cardano.Node.Emulator.Generators as Gen (alwaysSucceedPolicy, alwaysSucceedPolicyId, emptyTxBodyContent,
                                                 knownAddresses, knownPaymentKeys, knownPaymentPrivateKeys,
                                                 knownPaymentPublicKeys, someTokenValue)
+import Cardano.Node.Emulator.Internal.Node.Params as Params (Params)

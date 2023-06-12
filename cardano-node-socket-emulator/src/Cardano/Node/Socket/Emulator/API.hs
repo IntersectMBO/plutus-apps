@@ -1,14 +1,14 @@
 {-# LANGUAGE DataKinds     #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Cardano.Node.API
+module Cardano.Node.Socket.Emulator.API
     ( API
     , NodeAPI
     ) where
 
 import Servant.API (Get, JSON, NoContent, Post, (:<|>), (:>))
 
-import Cardano.Node.Types (PABServerLogMsg)
+import Cardano.Node.Socket.Emulator.Types (CNSEServerLogMsg)
 import Control.Monad.Freer.Extras.Log (LogMessage)
 
 type API
@@ -17,4 +17,4 @@ type API
 
 -- Routes that are not guaranteed to exist on the real node
 type NodeAPI
-     = "consume-event-history" :> Post '[JSON] [LogMessage PABServerLogMsg]
+     = "consume-event-history" :> Post '[JSON] [LogMessage CNSEServerLogMsg]

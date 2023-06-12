@@ -12,7 +12,6 @@
 module Plutus.PAB.LocalCluster.Run where
 
 import Cardano.Api qualified as CAPI
-import Cardano.Api.NetworkId.Extra (NetworkIdWrapper (NetworkIdWrapper))
 import Cardano.BM.Backend.EKGView qualified as EKG
 import Cardano.BM.Data.Severity (Severity (Notice))
 import Cardano.BM.Data.Tracer (HasPrivacyAnnotation, HasSeverityAnnotation)
@@ -25,8 +24,8 @@ import Cardano.Launcher.Node (nodeSocketFile)
 import Cardano.Mnemonic (SomeMnemonic (SomeMnemonic))
 import Cardano.Node.Emulator.Internal.Node (SlotConfig (SlotConfig))
 import Cardano.Node.Emulator.Internal.Node.TimeSlot qualified as TimeSlot
-import Cardano.Node.Types (NodeMode (AlonzoNode),
-                           PABServerConfig (pscKeptBlocks, pscNetworkId, pscNodeMode, pscSlotConfig, pscSocketPath))
+import Cardano.Node.Socket.Emulator.Types (NodeServerConfig (..))
+import Cardano.Node.Types (NodeMode (AlonzoNode), PABServerConfig (pscNodeMode, pscNodeServerConfig))
 import Cardano.Startup (installSignalHandlers, setDefaultFilePermissions, withUtf8Encoding)
 import Cardano.Wallet.Api.Client qualified as WalletClient
 import Cardano.Wallet.Api.Server (Listen (ListenOnPort))
@@ -273,7 +272,7 @@ launchPAB userContractHandler
                        , cmd = PABWebserver
                        , PAB.Command.passphrase = Just passPhrase
                        }
-        networkID = NetworkIdWrapper CAPI.Mainnet
+        networkID = CAPI.Mainnet
         -- TODO: Remove when PAB queries local node for slot config
         slotConfig = slotConfigOfNetworkParameters networkParameters
         -- TODO: Remove when PAB queries local node for security param
@@ -284,11 +283,13 @@ launchPAB userContractHandler
         config =
             PAB.Config.defaultConfig
                 { nodeServerConfig = def
-                    { pscSocketPath = nodeSocketFile socketPath
-                    , pscNodeMode = AlonzoNode
-                    , pscNetworkId = networkID
-                    , pscSlotConfig = slotConfig
-                    , pscKeptBlocks = securityParam
+                    { pscNodeMode = AlonzoNode
+                    , pscNodeServerConfig = def
+                        { nscSocketPath = nodeSocketFile socketPath
+                        , nscNetworkId = networkID
+                        , nscSlotConfig = slotConfig
+                        , nscKeptBlocks = securityParam
+                        }
                     }
                 , dbConfig = SqliteDB def{ dbConfigFile = T.pack (dir </> "plutus-pab.db") }
                 , chainQueryConfig = ChainIndexConfig def{PAB.CI.ciBaseUrl = PAB.CI.ChainIndexUrl $ BaseUrl Http "localhost" chainIndexPort ""}
