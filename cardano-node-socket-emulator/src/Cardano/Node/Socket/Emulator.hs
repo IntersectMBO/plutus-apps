@@ -14,7 +14,7 @@ import Cardano.Node.Socket.Emulator.API (API)
 import Cardano.Node.Socket.Emulator.Mock (consumeEventHistory, healthcheck, processChainEffects, slotCoordinator)
 import Cardano.Node.Socket.Emulator.Params qualified as Params
 import Cardano.Node.Socket.Emulator.Server qualified as Server
-import Cardano.Node.Socket.Emulator.Types (AppState (..), NodeServerConfig (..), PABServerLogMsg (..),
+import Cardano.Node.Socket.Emulator.Types (AppState (..), CNSEServerLogMsg (..), NodeServerConfig (..),
                                            initialChainState)
 import Control.Concurrent (MVar, forkIO, newMVar)
 import Control.Monad (void)
@@ -34,7 +34,7 @@ import Servant.Client (BaseUrl (baseUrlPort))
 import Wallet.Emulator.Wallet (fromWalletNumber)
 
 app ::
-    Trace IO PABServerLogMsg
+    Trace IO CNSEServerLogMsg
  -> Params
  -> MVar AppState
  -> Application
@@ -47,10 +47,10 @@ app trace params stateVar =
 
 data Ctx = Ctx { serverHandler :: Server.ServerHandler
                , serverState   :: MVar AppState
-               , mockTrace     :: Trace IO PABServerLogMsg
+               , mockTrace     :: Trace IO CNSEServerLogMsg
                }
 
-main :: Trace IO PABServerLogMsg -> NodeServerConfig -> IO () -> IO ()
+main :: Trace IO CNSEServerLogMsg -> NodeServerConfig -> IO () -> IO ()
 main trace nodeServerConfig@NodeServerConfig { nscBaseUrl
                             , nscSlotConfig
                             , nscKeptBlocks
@@ -76,7 +76,7 @@ main trace nodeServerConfig@NodeServerConfig { nscBaseUrl
 
     runSlotCoordinator ctx
 
-    logInfo $ StartingPABServer $ baseUrlPort nscBaseUrl
+    logInfo $ StartingCNSEServer $ baseUrlPort nscBaseUrl
     liftIO $ Warp.runSettings warpSettings $ app trace params serverState
 
         where

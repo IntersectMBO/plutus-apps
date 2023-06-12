@@ -19,7 +19,7 @@ import Servant (NoContent, (:<|>) (..))
 import Servant.Client (ClientM, client)
 
 import Cardano.Node.Socket.Emulator.API (API)
-import Cardano.Node.Socket.Emulator.Types (NodeServerConfig (..), PABServerLogMsg)
+import Cardano.Node.Socket.Emulator.Types (CNSEServerLogMsg, NodeServerConfig (..))
 import Cardano.Node.Types (ChainSyncHandle, NodeMode (..), PABServerConfig (..))
 import Cardano.Protocol.Socket.Client qualified as Client
 import Cardano.Protocol.Socket.Mock.Client qualified as MockClient
@@ -28,7 +28,7 @@ import Plutus.PAB.Types (PABError (..))
 import Wallet.Effects (NodeClientEffect (..))
 
 healthcheck :: ClientM NoContent
-consumeEventHistory :: ClientM [LogMessage PABServerLogMsg]
+consumeEventHistory :: ClientM [LogMessage CNSEServerLogMsg]
 (healthcheck, consumeEventHistory) =
     ( healthcheck_
     , consumeEventHistory_

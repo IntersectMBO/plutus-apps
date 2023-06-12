@@ -137,18 +137,18 @@ initialChainState =
 -- Logging ------------------------------------------------------------------------------------------------------------
 
 -- | Top-level logging data type for structural logging
--- inside the PAB server.
-data PABServerLogMsg =
+-- inside the CNSE server.
+data CNSEServerLogMsg =
     StartingSlotCoordination UTCTime Millisecond
-    | StartingPABServer Int
+    | StartingCNSEServer Int
     | ProcessingChainEvent ChainEvent
     deriving (Generic, Show, ToJSON, FromJSON)
 
-instance Pretty PABServerLogMsg where
+instance Pretty CNSEServerLogMsg where
     pretty = \case
-        StartingPABServer p      -> "Starting PAB Server on port" <+> pretty p
         StartingSlotCoordination initialSlotTime slotLength  ->
             "Starting slot coordination thread."
             <+> "Initial slot time:" <+> pretty (F.iso8601Show initialSlotTime)
             <+> "Slot length:" <+> viaShow slotLength
-        ProcessingChainEvent e    -> "Processing chain event" <+> pretty e
+        StartingCNSEServer p   -> "Starting Cardano Node Emulator on port" <+> pretty p
+        ProcessingChainEvent e -> "Processing chain event" <+> pretty e

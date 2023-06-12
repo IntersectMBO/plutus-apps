@@ -308,7 +308,7 @@ toChainIndexLog = LM.convertLog $ LM.PABMsg . LM.SChainIndexServerMsg
 toWalletLog :: Trace m (LM.AppMsg (Builtin a)) -> Trace m WalletMsg
 toWalletLog = LM.convertLog $ LM.PABMsg . LM.SWalletMsg
 
-toMockNodeServerLog :: Trace m (LM.AppMsg (Builtin a)) -> Trace m LM.PABServerLogMsg
+toMockNodeServerLog :: Trace m (LM.AppMsg (Builtin a)) -> Trace m LM.CNSEServerLogMsg
 toMockNodeServerLog = LM.convertLog $ LM.PABMsg . LM.SMockserverLogMsg
 
 -- | Wait for some time to allow all log messages to be printed to
