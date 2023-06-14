@@ -102,7 +102,6 @@ import Control.Monad.State (MonadState (get, put), StateT, execStateT, gets)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Either (partitionEithers)
 import Data.Foldable (traverse_)
-import Data.Functor.Compose (Compose (Compose))
 import Data.List qualified as List
 import Data.Map (Map)
 import Data.Map qualified as Map
@@ -951,8 +950,8 @@ mkTxWithParams params lookups txc = mkSomeTx params [SomeLookupsAndConstraints l
 
 -- | Each transaction output should contain a minimum amount of Ada (this is a
 -- restriction on the real Cardano network).
-adjustUnbalancedTx :: PParams -> UnbalancedTx -> Either Tx.ToCardanoError ([C.Lovelace], UnbalancedTx)
-adjustUnbalancedTx params = alaf Compose (tx . txOuts . traverse) (adjustTxOut params)
+adjustUnbalancedTx :: PParams -> UnbalancedTx -> ([C.Lovelace], UnbalancedTx)
+adjustUnbalancedTx params = tx . txOuts . traverse $ adjustTxOut params
 
 updateUtxoIndex
     :: ( MonadReader (ScriptLookups a) m

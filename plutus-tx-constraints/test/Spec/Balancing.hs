@@ -60,7 +60,7 @@ mkTx params lookups constraints =
   Constraints.mkTx params lookups constraints
   & either (error . show) id
   & Constraints.adjustUnbalancedTx (E.emulatorPParams params)
-  & either (error . show) snd
+  & snd
 
 submitTxConfirmed :: MonadEmulator m => CardanoAddress -> Constraints.UnbalancedTx -> m CardanoTx
 submitTxConfirmed addr (Constraints.UnbalancedCardanoTx utx utxoIndex) = do
