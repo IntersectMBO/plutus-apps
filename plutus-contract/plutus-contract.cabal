@@ -243,6 +243,7 @@ test-suite plutus-contract-test
     Spec.Contract.Tx.Constraints.Spec
     Spec.Contract.Tx.Constraints.TimeValidity
     Spec.Emulator
+    Spec.InlineDatum
     Spec.Plutus.Contract.Oracle
     Spec.Rows
     Spec.Secrets

@@ -359,7 +359,7 @@ data InvalidStateReason
     deriving (Haskell.Show)
 
 stablecoinStateMachine :: Stablecoin -> StateMachine BankState Input
-stablecoinStateMachine sc = SM.mkStateMachine Nothing (transition sc) isFinal
+stablecoinStateMachine sc = SM.mkStateMachine Nothing (transition sc) isFinal False
     -- the state machine never stops (OK for the prototype but we probably need
     -- to add a final state to the real thing)
     where isFinal _ = False

@@ -242,7 +242,7 @@ auctionTransition AuctionParams{apOwner, apAsset, apEndTime, apPayoutTime} State
 {-# INLINABLE auctionStateMachine #-}
 auctionStateMachine :: AuctionParams -> AuctionMachine
 auctionStateMachine auctionParams =
-    SM.mkStateMachine Nothing (auctionTransition auctionParams) isFinal
+    SM.mkStateMachine Nothing (auctionTransition auctionParams) isFinal False
   where
     isFinal Finished = True
     isFinal _        = False

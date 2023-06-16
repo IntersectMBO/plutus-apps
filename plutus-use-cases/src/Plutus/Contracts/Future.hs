@@ -305,7 +305,7 @@ futureStateMachine
     :: Future
     -> FutureAccounts
     -> StateMachine FutureState FutureAction
-futureStateMachine ft fos = SM.mkStateMachine Nothing (transition ft fos) isFinal where
+futureStateMachine ft fos = SM.mkStateMachine Nothing (transition ft fos) isFinal False where
     isFinal Finished = True
     isFinal _        = False
 

@@ -222,7 +222,7 @@ type GameStateMachine = SM.StateMachine GameState GameInput
 
 {-# INLINABLE machine #-}
 machine :: GameParam -> GameStateMachine
-machine gameParam = SM.mkStateMachine Nothing (transition gameParam) isFinal where
+machine gameParam = SM.mkStateMachine Nothing (transition gameParam) isFinal False where
     isFinal Finished = True
     isFinal _        = False
 

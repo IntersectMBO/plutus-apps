@@ -149,7 +149,7 @@ type GovernanceMachine = StateMachine GovState GovInput
 
 {-# INLINABLE machine #-}
 machine :: Params -> GovernanceMachine
-machine params = SM.mkStateMachine Nothing (transition params) isFinal where
+machine params = SM.mkStateMachine Nothing (transition params) isFinal False where
     {-# INLINABLE isFinal #-}
     isFinal _ = False
 

@@ -68,8 +68,9 @@ import Ledger (POSIXTime, Slot, TxOutRef)
 import Ledger qualified
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.Constraints (ScriptLookups, TxConstraints (txOwnInputs, txOwnOutputs), UnbalancedTx,
-                              mustMintValueWithRedeemer, mustPayToTheScriptWithDatumInTx, mustSpendOutputFromTheScript,
-                              mustSpendPubKeyOutput, plutusV2MintingPolicy)
+                              mustMintValueWithRedeemer, mustPayToTheScriptWithDatumInTx,
+                              mustPayToTheScriptWithInlineDatum, mustSpendOutputFromTheScript, mustSpendPubKeyOutput,
+                              plutusV2MintingPolicy)
 import Ledger.Tx.Constraints.OffChain qualified as Constraints
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.ChainIndex (ChainIndexTx (_citxInputs, _citxRedeemers))
@@ -437,9 +438,14 @@ runInitialiseWith customLookups customConstraints StateMachineClient{scInstance}
       utxo <- ownUtxos
       let StateMachineInstance{stateMachine, typedValidator} = scInstance
           constraints =
-              mustPayToTheScriptWithDatumInTx
-                initialState
-                (initialValue <> SM.threadTokenValueOrZero scInstance)
+              (if SM.smInlineDatum stateMachine then
+                mustPayToTheScriptWithInlineDatum
+                    initialState
+                    (initialValue <> SM.threadTokenValueOrZero scInstance)
+              else
+                mustPayToTheScriptWithDatumInTx
+                    initialState
+                    (initialValue <> SM.threadTokenValueOrZero scInstance))
               <> foldMap ttConstraints (smThreadToken stateMachine)
               <> customConstraints
           red = Ledger.Redeemer (PlutusTx.toBuiltinData (Scripts.validatorHash typedValidator, Mint))
@@ -541,6 +547,7 @@ mkStep client@StateMachineClient{scInstance} input = do
             case smTransition oldState input of
                 Just (newConstraints, newState)  ->
                     let isFinal = smFinal stateMachine (stateData newState)
+                        inlineDatum = SM.smInlineDatum stateMachine
                         lookups =
                             Constraints.typedValidatorLookups typedValidator
                             <> Constraints.unspentOutputs utxo
@@ -549,7 +556,12 @@ mkStep client@StateMachineClient{scInstance} input = do
                         unmint = if isFinal then mustMintValueWithRedeemer red (inv $ SM.threadTokenValueOrZero scInstance) else mempty
                         -- Add the thread token value back to the output
                         valueWithToken = stateValue newState <> SM.threadTokenValueOrZero scInstance
-                        outputConstraints = if isFinal then mempty else mustPayToTheScriptWithDatumInTx (stateData newState) valueWithToken
+                        outputConstraints = if isFinal then
+                                                mempty
+                                            else if inlineDatum then
+                                                mustPayToTheScriptWithInlineDatum (stateData newState) valueWithToken
+                                            else
+                                                mustPayToTheScriptWithDatumInTx (stateData newState) valueWithToken
                     in pure
                         $ Right
                         $ StateMachineTransition
