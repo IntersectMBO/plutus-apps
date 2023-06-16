@@ -101,6 +101,8 @@ test-suite cardano-node-emulator-test
   other-modules:
     Cardano.Node.Emulator.GeneratorsSpec
     Cardano.Node.Emulator.MTLSpec
+    Plutus.Example.Game
+    Plutus.Example.GameSpec
 
   --------------------
   -- Local components
@@ -133,6 +135,7 @@ test-suite cardano-node-emulator-test
     , mtl
     , QuickCheck
     , quickcheck-contractmodel
+    , quickcheck-dynamic
     , tasty
     , tasty-golden
     , tasty-hedgehog

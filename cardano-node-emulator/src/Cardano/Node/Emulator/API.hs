@@ -9,6 +9,7 @@ module Cardano.Node.Emulator.API (
   , currentSlot
   , awaitSlot
   -- * Querying the blockchain
+  , utxosAt'
   , utxosAt
   , utxoAtTxOutRef
   , fundsAt
@@ -111,6 +112,11 @@ awaitSlot s = do
     nextSlot
     awaitSlot s
 
+
+utxosAt' :: MonadEmulator m => CardanoAddress -> m UtxoIndex
+utxosAt' addr = do
+  es <- get
+  pure $ C.UTxO $ Map.map (toCtxUTxOTxOut . snd) $ es ^. esAddressMap . AM.fundsAt addr
 
 -- | Query the unspent transaction outputs at the given address.
 utxosAt :: MonadEmulator m => CardanoAddress -> m (Map TxOutRef DecoratedTxOut)

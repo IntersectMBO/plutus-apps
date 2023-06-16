@@ -1,9 +1,11 @@
-{-# LANGUAGE DataKinds          #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE NamedFieldPuns     #-}
-{-# LANGUAGE TemplateHaskell    #-}
-{-# LANGUAGE TypeApplications   #-}
-{-# LANGUAGE TypeFamilies       #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE DerivingStrategies    #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns        #-}
+{-# LANGUAGE TemplateHaskell       #-}
+{-# LANGUAGE TupleSections         #-}
+{-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE TypeFamilies          #-}
 
 -- | A guessing game. A simplified version of 'Plutus.Contract.GameStateMachine'
 -- using 'Cardano.Node.Emulator.MTL'.
@@ -11,26 +13,27 @@ module Plutus.Example.Game
     ( GameParam(..)
     , LockArgs (..)
     , GuessArgs (..)
+    , submitLockTx
+    , submitGuessTx
     , mkLockTx
     , mkGuessTx
     , mkGameAddress
     ) where
 
-import Cardano.Node.Emulator.Internal.Node qualified as E
+import Cardano.Api qualified as C
+import Cardano.Api.Shelley qualified as C
+import Cardano.Node.Emulator qualified as E
 import Cardano.Node.Emulator.Internal.Node.Params (testnet)
-import Data.Bifunctor (first)
+import Control.Monad (void)
 import Data.ByteString.Char8 qualified as C
-import Data.Map (Map)
+import Data.Map qualified as Map
 import GHC.Generics (Generic)
-import Ledger (CardanoAddress, POSIXTime, TxOutRef)
-import Ledger.Tx (DecoratedTxOut)
+import Ledger (CardanoAddress, POSIXTime, PaymentPrivateKey, UtxoIndex, getValidator)
+import Ledger.Address (mkValidatorCardanoAddress)
 import Ledger.Tx.CardanoAPI qualified as C
-import Ledger.Tx.Constraints qualified as Constraints
 import Ledger.Typed.Scripts qualified as Scripts
-import Plutus.Script.Utils.Typed (ScriptContextV2)
-import Plutus.Script.Utils.V2.Address (mkValidatorCardanoAddress)
+import Plutus.Script.Utils.Typed (ScriptContextV2, Versioned)
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
-import Plutus.Script.Utils.Value (Value)
 import Plutus.V2.Ledger.Api (Address, Validator)
 import Plutus.V2.Ledger.Contexts qualified as V2
 import PlutusTx (FromData, ToData)
@@ -58,11 +61,6 @@ newtype ClearString = ClearString PlutusTx.BuiltinByteString
 
 PlutusTx.makeLift ''ClearString
 
-data GameError =
-      MkTxError !Constraints.MkTxError
-    | ToCardanoError !C.ToCardanoError
-    deriving (Show)
-
 data Game
 instance Scripts.ValidatorTypes Game where
     type instance RedeemerType Game = ClearString
@@ -73,8 +71,8 @@ mkGameAddress :: GameParam -> CardanoAddress
 mkGameAddress = mkValidatorCardanoAddress testnet . mkGameValidator
 
 -- | The validator script of the game.
-mkGameValidator :: GameParam -> Validator
-mkGameValidator = Scripts.validatorScript . mkGameInstance
+mkGameValidator :: GameParam -> Versioned Validator
+mkGameValidator = Scripts.vValidatorScript . mkGameInstance
 
 mkGameInstance :: GameParam -> V2.TypedValidator Game
 mkGameInstance = V2.mkTypedValidatorParam @Game
@@ -111,7 +109,7 @@ data LockArgs =
         -- ^ The parameters for parameterizing the validator.
         , lockArgsSecret    :: !String
         -- ^ The secret
-        , lockArgsValue     :: !Value
+        , lockArgsValue     :: !C.Value
         -- ^ Value that is locked by the contract initially
         } deriving stock (Show, Generic)
 
@@ -125,26 +123,45 @@ data GuessArgs =
         } deriving stock (Show, Generic)
 
 -- | The "lock" contract
--- TODO Replace use of 'Params' as it's only used for emulator
-mkLockTx :: E.Params -> LockArgs -> Either GameError Constraints.UnbalancedTx
-mkLockTx params LockArgs { lockArgsGameParam, lockArgsSecret, lockArgsValue } = do
-    let lookups = Constraints.typedValidatorLookups (mkGameInstance lockArgsGameParam)
-        constraints = Constraints.mustPayToTheScriptWithDatumInTx (hashString lockArgsSecret) lockArgsValue
-    tx <- first MkTxError $ Constraints.mkTx params lookups constraints
-    adjustedTx <- first ToCardanoError $ Constraints.adjustUnbalancedTx (E.emulatorPParams params) tx
-    pure $ snd adjustedTx
+mkLockTx :: LockArgs -> (C.CardanoBuildTx, UtxoIndex)
+mkLockTx LockArgs { lockArgsGameParam, lockArgsSecret, lockArgsValue } =
+    let gameAddr = mkGameAddress lockArgsGameParam
+        datum = C.fromPlutusData $ PlutusTx.toData $ hashString lockArgsSecret
+        txOut = C.TxOut
+            gameAddr
+            (C.toCardanoTxOutValue lockArgsValue)
+            (C.TxOutDatumInline C.ReferenceTxInsScriptsInlineDatumsInBabbageEra datum)
+            C.ReferenceScriptNone
+        tx = E.emptyTxBodyContent
+            { C.txOuts = [txOut]
+            }
+    in (C.CardanoBuildTx tx, mempty)
 
 -- | The "guess" contract
 mkGuessTx
-    :: E.Params
-    -> Map TxOutRef DecoratedTxOut -- ^ Script utxos to spend
+    :: UtxoIndex -- ^ Script utxos to spend
     -> GuessArgs
-    -> Either GameError Constraints.UnbalancedTx
-mkGuessTx params utxos GuessArgs { guessArgsGameParam, guessArgsSecret } = do
-    let lookups = Constraints.typedValidatorLookups (mkGameInstance guessArgsGameParam)
-               <> Constraints.unspentOutputs utxos
-        redeemer = clearString guessArgsSecret
-        constraints = Constraints.spendUtxosFromTheScript utxos redeemer
-    tx <- first MkTxError $ Constraints.mkTx params lookups constraints
-    adjustedTx <- first ToCardanoError $ Constraints.adjustUnbalancedTx (E.emulatorPParams params) tx
-    pure $ snd adjustedTx
+    -> (C.CardanoBuildTx, UtxoIndex)
+mkGuessTx utxos GuessArgs { guessArgsGameParam, guessArgsSecret } =
+    let witnessHeader = either (error . show) id $ C.toCardanoTxInScriptWitnessHeader (getValidator <$> mkGameValidator guessArgsGameParam)
+        redeemer = C.fromPlutusData $ PlutusTx.toData $ clearString guessArgsSecret
+        witness = C.BuildTxWith $ C.ScriptWitness C.ScriptWitnessForSpending $
+            witnessHeader C.InlineScriptDatum redeemer C.zeroExecutionUnits
+        txIns = (, witness) <$> Map.keys (C.unUTxO utxos)
+        tx = E.emptyTxBodyContent
+            { C.txIns = txIns
+            }
+    in (C.CardanoBuildTx tx, utxos)
+
+submitLockTx :: E.MonadEmulator m => CardanoAddress -> PaymentPrivateKey -> LockArgs -> m ()
+submitLockTx wallet privateKey lockArgs@LockArgs { lockArgsValue } = do
+    E.logInfo @String $ "Pay " <> show lockArgsValue <> " to the script"
+    let (utx, utxoIndex) = mkLockTx lockArgs
+    void $ E.submitTxConfirmed utxoIndex wallet [privateKey] utx
+
+submitGuessTx :: E.MonadEmulator m => CardanoAddress -> PaymentPrivateKey -> GuessArgs -> m ()
+submitGuessTx wallet privateKey guessArgs@GuessArgs { guessArgsGameParam } = do
+    E.logInfo @String "Taking a guess"
+    utxos <- E.utxosAt' (mkGameAddress guessArgsGameParam)
+    let (utx, utxoIndex) = mkGuessTx utxos guessArgs
+    void $ E.submitTxConfirmed utxoIndex wallet [privateKey] utx

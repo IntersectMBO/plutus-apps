@@ -18,22 +18,17 @@
 module Plutus.Example.GameSpec (tests) where
 
 import Cardano.Node.Emulator qualified as E
-import Cardano.Node.Emulator.API (EmulatorM, MonadEmulator, getParams, logInfo, submitTxConfirmed, utxosAt)
 import Cardano.Node.Emulator.Internal.Node.TimeSlot qualified as TimeSlot
 import Cardano.Node.Emulator.Test (propRunActions_, propSanityCheckAssertions, propSanityCheckModel)
 import Control.Lens (makeLenses, (.=), (^.))
-import Control.Monad (void, when)
+import Control.Monad (when)
 import Control.Monad.Trans (lift)
 import Data.Default (def)
 import GHC.Generics (Generic)
 import Ledger (CardanoAddress)
 import Ledger qualified
 import Ledger.CardanoWallet qualified as W
-import Ledger.Tx.Constraints qualified as Constraints
 import Ledger.Value.CardanoAPI qualified as Value
-import Plutus.Example.Game (GameParam (GameParam), GuessArgs (GuessArgs, guessArgsGameParam, guessArgsSecret),
-                            LockArgs (LockArgs, lockArgsGameParam, lockArgsSecret, lockArgsValue), mkGameAddress,
-                            mkGuessTx, mkLockTx)
 import Plutus.Script.Utils.Ada qualified as Ada
 import PlutusTx.Prelude ()
 import Test.QuickCheck qualified as QC
@@ -42,6 +37,10 @@ import Test.QuickCheck.ContractModel qualified as QCCM
 import Test.QuickCheck.DynamicLogic (chooseQ, elementsQ, forAllQ)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperty, withMaxSuccess)
+
+import Plutus.Example.Game (GameParam (GameParam), GuessArgs (GuessArgs, guessArgsGameParam, guessArgsSecret),
+                            LockArgs (LockArgs, lockArgsGameParam, lockArgsSecret, lockArgsValue), submitGuessTx,
+                            submitLockTx)
 
 w1 :: CardanoAddress
 w1 = W.mockWalletAddress $ W.fromWalletNumber 1
@@ -115,18 +114,20 @@ instance ContractModel GameModel where
     shrinkAction _s (Guess w guess) =
         [Guess w' guess | w' <- shrinkWallet w]
 
-instance RunModel GameModel EmulatorM where
+instance RunModel GameModel E.EmulatorM where
     -- 'perform' gets a state, which includes the GameModel state, but also contract handles for the
     -- wallets and what the model thinks the current balances are.
     perform _ cmd _ = case cmd of
         Lock w secret val -> do
-            lift $ submitLockTx (E.knownAddresses !! (pred $ fromIntegral w))
+            let wIx = pred $ fromIntegral w
+            lift $ submitLockTx (E.knownAddresses !! wIx) (E.knownPaymentPrivateKeys !! wIx)
                 LockArgs { lockArgsGameParam = gameParamTest
                          , lockArgsSecret = secret
-                         , lockArgsValue = Ada.lovelaceValueOf val
+                         , lockArgsValue = Value.lovelaceValueOf val
                          }
         Guess w secret -> do
-            lift $ submitGuessTx (E.knownAddresses !! (pred $ fromIntegral w))
+            let wIx = pred $ fromIntegral w
+            lift $ submitGuessTx (E.knownAddresses !! wIx) (E.knownPaymentPrivateKeys !! wIx)
                 GuessArgs { guessArgsGameParam = gameParamTest
                           , guessArgsSecret = secret
                           }
@@ -180,25 +181,6 @@ noLockedFunds = do
 -- | Check that we can always get the money out of the guessing game (by guessing correctly).
 prop_NoLockedFunds :: QC.Property
 prop_NoLockedFunds = forAllDL noLockedFunds propRunActions_
-
-submitLockTx :: MonadEmulator m => CardanoAddress -> LockArgs -> m ()
-submitLockTx wallet lockArgs@LockArgs { lockArgsValue } = do
-    logInfo @String $ "Pay " <> show lockArgsValue <> " to the script"
-    params <- getParams
-    -- TODO How to throw custom errors?
-    (Constraints.UnbalancedCardanoTx utx utxoIndex) <- either (error . show) pure $ mkLockTx params lockArgs
-    let privateKey = lookup wallet $ zip E.knownAddresses E.knownPaymentPrivateKeys
-    void $ submitTxConfirmed utxoIndex wallet privateKey utx
-
-submitGuessTx :: MonadEmulator m => CardanoAddress -> GuessArgs -> m ()
-submitGuessTx wallet guessArgs@GuessArgs { guessArgsGameParam } = do
-    logInfo @String "Waiting for script to have a UTxO of at least 1 lovelace"
-    utxos <- utxosAt (mkGameAddress guessArgsGameParam)
-    params <- getParams
-    -- TODO How to throw custom errors?
-    (Constraints.UnbalancedCardanoTx utx utxoIndex) <- either (error . show) pure $ mkGuessTx params utxos guessArgs
-    let privateKey = lookup wallet $ zip E.knownAddresses E.knownPaymentPrivateKeys
-    void $ submitTxConfirmed utxoIndex wallet privateKey utx
 
 tests :: TestTree
 tests =
