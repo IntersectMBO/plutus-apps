@@ -162,6 +162,6 @@ submitLockTx wallet privateKey lockArgs@LockArgs { lockArgsValue } = do
 submitGuessTx :: E.MonadEmulator m => CardanoAddress -> PaymentPrivateKey -> GuessArgs -> m ()
 submitGuessTx wallet privateKey guessArgs@GuessArgs { guessArgsGameParam } = do
     E.logInfo @String "Taking a guess"
-    utxos <- E.utxosAt' (mkGameAddress guessArgsGameParam)
+    utxos <- E.utxosAt (mkGameAddress guessArgsGameParam)
     let (utx, utxoIndex) = mkGuessTx utxos guessArgs
     void $ E.submitTxConfirmed utxoIndex wallet [privateKey] utx

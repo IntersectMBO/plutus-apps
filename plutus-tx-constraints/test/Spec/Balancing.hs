@@ -10,7 +10,7 @@ module Spec.Balancing(tests) where
 import Cardano.Api qualified as C
 import Cardano.Node.Emulator (EmulatorError, EmulatorLogs, EmulatorM, MonadEmulator, emptyEmulatorStateWithInitialDist,
                               hasValidatedTransactionCountOfTotal, knownAddresses, knownPaymentPrivateKeys, nextSlot,
-                              renderLogs, submitUnbalancedTx, utxosAt)
+                              renderLogs, submitUnbalancedTx, utxosAtPlutus)
 import Cardano.Node.Emulator.Internal.Node qualified as E
 import Control.Lens ((&))
 import Control.Monad (void)
@@ -137,7 +137,7 @@ balanceTxnMinAda =
         void $ submitTxConstraints w1 mempty constraints1
 
         params <- ask
-        utxo <- utxosAt (someCardanoAddress (E.pNetworkId params))
+        utxo <- utxosAtPlutus (someCardanoAddress (E.pNetworkId params))
         let
           txOutRef = head (Map.keys utxo)
           constraints2 =
@@ -177,7 +177,7 @@ balanceTxnMinAda2 =
 
       wallet2Contract = do
         params <- ask
-        utxos <- utxosAt $ someCardanoAddress (E.pNetworkId params)
+        utxos <- utxosAtPlutus $ someCardanoAddress (E.pNetworkId params)
         let txOutRef = case Map.keys utxos of
                           (x:_) -> x
                           []    -> error $ "there's no utxo at the address " <> show someAddress
@@ -226,7 +226,7 @@ balanceTxnCollateralTest name count outputLovelace =
         vHash = Scripts.validatorHash someValidator
 
         contract = do
-          utxos <- utxosAt w1
+          utxos <- utxosAtPlutus w1
           let constraints1 =
                   Constraints.mustPayToOtherScriptWithDatumInTx
                       vHash
