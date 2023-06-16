@@ -42,6 +42,7 @@ import PlutusTx qualified
 import PlutusTx.Prelude hiding (check)
 import Prelude qualified as Haskell
 
+import Ledger.Tx.Constraints.TxConstraints qualified
 import Plutus.Contract.StateMachine.ThreadToken qualified as TT
 
 data State s = State { stateData :: s, stateValue :: Value }
@@ -67,7 +68,10 @@ data StateMachine s i = StateMachine {
       -- | The 'ThreadToken' that identifies the contract instance.
       --   Make one with 'getThreadToken' and pass it on to 'mkStateMachine'.
       --   Initialising the machine will then mint a thread token value.
-      smThreadToken :: Maybe TT.ThreadToken
+      smThreadToken :: Maybe TT.ThreadToken,
+
+      -- | Whether or not the datum is inline
+      smInlineDatum :: Bool
     }
 
 {-# INLINABLE threadTokenValueInner #-}
@@ -86,13 +90,15 @@ mkStateMachine
     :: Maybe TT.ThreadToken
     -> (State s -> i -> Maybe (TxConstraints Void Void, State s))
     -> (s -> Bool)
+    -> Bool
     -> StateMachine s i
-mkStateMachine smThreadToken smTransition smFinal =
+mkStateMachine smThreadToken smTransition smFinal smInlineDatum =
     StateMachine
         { smTransition
         , smFinal
         , smCheck = \_ _ _ -> True
         , smThreadToken
+        , smInlineDatum
         }
 
 instance ValidatorTypes (StateMachine s i) where
@@ -114,7 +120,7 @@ machineAddress = validatorCardanoAddress testnet . typedValidator
 {-# INLINABLE mkValidator #-}
 -- | Turn a state machine into a validator script.
 mkValidator :: forall s i. (PlutusTx.ToData s) => StateMachine s i -> ValidatorType (StateMachine s i)
-mkValidator (StateMachine step isFinal check threadToken) currentState input ptx =
+mkValidator (StateMachine step isFinal check threadToken inlineDatum) currentState input ptx =
     let vl = maybe (traceError "S0" {-"Can't find validation input"-}) (PV2.txOutValue . txInInfoResolved) (findOwnInput ptx)
         checkOk =
             traceIfFalse "S1" {-"State transition invalid - checks failed"-} (check currentState input ptx)
@@ -134,7 +140,11 @@ mkValidator (StateMachine step isFinal check threadToken) currentState input ptx
                         valueWithToken = newValue <> threadTokenValueInner threadToken (ownHash ptx)
                         -- Type annotation is required to compile validator when profiling is activated.
                         -- If 'Void' is not explicitly set, the plutus plugin can't handle the free type variable.
-                        constraint = mustPayToTheScriptWithDatumInTx @s @Void newData valueWithToken
+                        constraint =
+                            if inlineDatum then
+                                Ledger.Tx.Constraints.TxConstraints.mustPayToTheScriptWithInlineDatum @s @Void newData valueWithToken
+                            else
+                                mustPayToTheScriptWithDatumInTx @s @Void newData valueWithToken
                         txc = newConstraints { txOwnOutputs = txOwnOutputs constraint }
                     in traceIfFalse "S5" {-"State transition invalid - constraints not satisfied by ScriptContext"-} (checkScriptContext @_ @s txc ptx)
             Nothing -> trace "S6" {-"State transition invalid - input is not a valid transition at the current state"-} False

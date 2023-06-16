@@ -5,8 +5,8 @@
 {-# LANGUAGE TemplateHaskell       #-}
 {-# LANGUAGE TypeApplications      #-}
 
--- | Reduced example of the SM contract to reproduce the token handling in and around 'runStep'.
-module Spec.ThreadToken where
+
+module Spec.InlineDatum where
 
 import PlutusTx.Prelude hiding (Eq)
 import Prelude (Show, String, show)
@@ -24,7 +24,6 @@ import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
 import Plutus.Trace (EmulatorTrace, activateContractWallet)
 import Plutus.Trace qualified as Trace
 import PlutusTx qualified
-
 import Test.Tasty
 
 -- * Very simple plutus state machine using a thread token
@@ -50,7 +49,7 @@ transition oldState _ = Just (mempty, oldState{stateData = Second})
 {-# INLINEABLE stateMachine #-}
 stateMachine :: ThreadToken -> StateMachine State Input
 stateMachine threadToken =
-  mkStateMachine (Just threadToken) transition isFinal False
+  mkStateMachine (Just threadToken) transition isFinal True
  where
   isFinal = const False
 
@@ -93,7 +92,7 @@ testTrace = do
   void $ Trace.waitNSlots 10
 
 tests :: TestTree
-tests = testGroup "Thread Token"
+tests = testGroup "Inline Datum"
     [ checkPredicate "Runs successfully"
         (assertDone contract (Trace.walletInstanceTag w1) (const True) "No errors"
          .&&. assertNoFailedTransactions)

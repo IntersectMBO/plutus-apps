@@ -241,7 +241,7 @@ type MultiSigSym = StateMachine MSState Input
 
 {-# INLINABLE machine #-}
 machine :: Params -> MultiSigSym
-machine params = SM.mkStateMachine Nothing (transition params) isFinal where
+machine params = SM.mkStateMachine Nothing (transition params) isFinal False where
     isFinal Finished = True
     isFinal _        = False
 

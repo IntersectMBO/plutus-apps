@@ -11,6 +11,7 @@ module Main(main) where
 import Spec.Contract qualified
 import Spec.Contract.Tx.Constraints.Spec qualified
 import Spec.Emulator qualified
+import Spec.InlineDatum qualified
 import Spec.Plutus.Contract.Oracle qualified
 import Spec.Rows qualified
 import Spec.Secrets qualified
@@ -31,4 +32,5 @@ tests = testGroup "plutus-contract"
     , Spec.Contract.Tx.Constraints.Spec.tests
     , Spec.Secrets.tests
     , Spec.Plutus.Contract.Oracle.tests
+    , Spec.InlineDatum.tests
     ]
