@@ -53,7 +53,6 @@ import PlutusTx.Prelude
 
 import Ledger (Address, POSIXTime, PaymentPubKey, PaymentPubKeyHash)
 import Ledger.Scripts (unitDatum)
-import Ledger.Tokens
 import Ledger.Tx.Constraints (TxConstraints)
 import Ledger.Tx.Constraints qualified as Constraints
 import Ledger.Tx.Constraints.ValidityInterval qualified as Interval
@@ -283,8 +282,8 @@ mkAccounts long short =
 {-# INLINABLE tokenFor #-}
 tokenFor :: Role -> FutureAccounts -> Value
 tokenFor = \case
-    Long  -> \case FutureAccounts{ftoLong=Account cur} -> token cur
-    Short -> \case FutureAccounts{ftoShort=Account cur} -> token cur
+    Long  -> \case FutureAccounts{ftoLong=Account cur} -> Value.assetClassValue cur 1
+    Short -> \case FutureAccounts{ftoShort=Account cur} -> Value.assetClassValue cur 1
 
 {-# INLINABLE adjustMargin #-}
 -- | Change the margin account of the role by the given amount.
