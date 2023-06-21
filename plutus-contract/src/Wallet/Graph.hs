@@ -29,6 +29,7 @@ import Ledger.Address
 import Ledger.Blockchain
 import Ledger.Credential (Credential (..))
 import Ledger.Crypto
+import Ledger.Index qualified as Index
 import Ledger.Tx
 
 -- | The owner of an unspent transaction output.
@@ -103,7 +104,8 @@ txnFlows keys bc = catMaybes (utxoLinks ++ foldMap extract bc')
     knownKeys :: Set.Set PubKey
     knownKeys = Set.fromList keys
 
-    utxos = Map.keys $ C.unUTxO $ unspentOutputs bc
+    index = Index.initialise bc
+    utxos = Map.keys $ C.unUTxO index
     utxoLinks = uncurry (flow Nothing) <$> zip (utxoTargets <$> utxos) utxos
 
     extract :: (UtxoLocation, OnChainTx) -> [Maybe FlowLink]
@@ -114,7 +116,7 @@ txnFlows keys bc = catMaybes (utxoLinks ++ foldMap extract bc')
 
     flow :: Maybe UtxoLocation -> TxRef -> C.TxIn -> Maybe FlowLink
     flow tgtLoc tgtRef rf@(C.TxIn txId _) = do
-      src <- out bc rf
+      src <- Index.lookup rf index
       sourceLoc <- Map.lookup rf sourceLocations
       let sourceRef = mkRef txId
       pure FlowLink

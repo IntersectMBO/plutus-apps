@@ -48,7 +48,7 @@ import Cardano.Api.Shelley qualified as C
 import Cardano.Node.Emulator.Internal.API (EmulatorError (BalancingError, ToCardanoError, ValidationError),
                                            EmulatorLogs, EmulatorM, EmulatorState (EmulatorState), EmulatorT,
                                            MonadEmulator, esAddressMap, esChainState, esDatumMap, handleChain)
-import Control.Lens (view, (%~), (&), (<>~), (^.))
+import Control.Lens ((%~), (&), (<>~), (^.))
 import Control.Monad (void)
 import Control.Monad.Error.Class (throwError)
 import Control.Monad.Freer.Extras.Log qualified as L
@@ -60,8 +60,8 @@ import Ledger (CardanoAddress, CardanoTx (CardanoEmulatorEraTx), Datum, DatumHas
                PaymentPrivateKey (unPaymentPrivateKey), Slot, TxOutRef, UtxoIndex)
 import Ledger.AddressMap qualified as AM
 import Ledger.Index (createGenesisTransaction, insertBlock)
-import Ledger.Tx (TxOut, addCardanoTxSignature, cardanoTxOutValue, decoratedTxOutValue, getCardanoTxData,
-                  getCardanoTxId, toCtxUTxOTxOut, toDecoratedTxOut)
+import Ledger.Tx (TxOut, addCardanoTxSignature, cardanoTxOutValue, getCardanoTxData, getCardanoTxId, toCtxUTxOTxOut,
+                  toDecoratedTxOut)
 import Ledger.Tx.CardanoAPI (CardanoBuildTx (CardanoBuildTx), fromCardanoTxIn, toCardanoTxIn, toCardanoTxOutValue)
 
 import Cardano.Node.Emulator.Generators qualified as G
@@ -130,7 +130,7 @@ utxosAtPlutus addr = do
 utxoAtTxOutRef :: MonadEmulator m => C.TxIn -> m (Maybe TxOut)
 utxoAtTxOutRef txIn = do
   es <- get
-  pure $ snd <$> Map.lookup txIn (AM.outRefMap (es ^. esAddressMap))
+  pure $ AM.lookupOutRef txIn (es ^. esAddressMap)
 
 -- | Resolve the transaction output reference (using Plutus types).
 utxoAtTxOutRefPlutus :: MonadEmulator m => TxOutRef -> m (Maybe DecoratedTxOut)
@@ -138,7 +138,7 @@ utxoAtTxOutRefPlutus ref = either (const $ pure Nothing) findTxOut (toCardanoTxI
   where
     findTxOut txIn = do
       es <- get
-      let mTxOut = snd <$> Map.lookup txIn (AM.outRefMap (es ^. esAddressMap))
+      let mTxOut = AM.lookupOutRef txIn (es ^. esAddressMap)
       pure $ mTxOut >>= toDecoratedTxOut
 
 -- | Query the total value of the unspent transaction outputs at the given address.

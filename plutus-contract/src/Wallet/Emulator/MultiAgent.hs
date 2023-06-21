@@ -38,7 +38,7 @@ import Data.Maybe (fromMaybe, isNothing)
 import Data.Text qualified as T
 import Data.Text.Extras (tshow)
 import GHC.Generics (Generic)
-import Ledger hiding (to, value)
+import Ledger hiding (to)
 import Ledger.AddressMap qualified as AM
 import Ledger.Index qualified as Index
 import Ledger.Tx qualified as Tx

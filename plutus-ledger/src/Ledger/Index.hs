@@ -46,14 +46,15 @@ import Cardano.Ledger.Babbage.PParams qualified as Babbage
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Shelley.API qualified as C.Ledger
 import Control.Lens ((&), (.~), (<&>))
-import Control.Monad.Except (MonadError (..))
 import Data.Foldable (foldl')
 import Data.Map qualified as Map
+import Data.Set qualified as Set
 import Ledger.Address (CardanoAddress)
 import Ledger.Blockchain
 import Ledger.Index.Internal
 import Ledger.Orphans ()
-import Ledger.Tx (CardanoTx (..), TxOut (..), outValue, txOutValue, updateUtxoCollateral)
+import Ledger.Tx (CardanoTx (..), TxOut (..), getCardanoTxCollateralInputs, getCardanoTxProducedOutputs,
+                  getCardanoTxProducedReturnCollateral, getCardanoTxSpentOutputs, outValue, txOutValue)
 import Ledger.Tx.CardanoAPI (fromPlutusTxOut, toCardanoTxOutValue)
 import Ledger.Tx.Internal qualified as Tx
 import Ledger.Value.CardanoAPI (Value, lovelaceToValue)
@@ -64,30 +65,34 @@ import PlutusTx.Lattice ((\/))
 
 -- | Create an index of all UTxOs on the chain.
 initialise :: Blockchain -> UtxoIndex
-initialise = unspentOutputs
+initialise = (`insertBlock` mempty) . concat
 
 -- | Update the index for the addition of a transaction.
 insert :: CardanoTx -> UtxoIndex -> UtxoIndex
-insert = updateUtxo
+insert tx (C.UTxO unspent) = C.UTxO $
+  (unspent `Map.withoutKeys` getCardanoTxSpentOutputs tx)
+  `Map.union` (Tx.toCtxUTxOTxOut <$> getCardanoTxProducedOutputs tx)
 
 -- | Update the index for the addition of only the collateral inputs of a failed transaction.
 insertCollateral :: CardanoTx -> UtxoIndex -> UtxoIndex
-insertCollateral = updateUtxoCollateral
+insertCollateral tx (C.UTxO unspent) = C.UTxO $
+    (unspent `Map.withoutKeys` (Set.fromList $ getCardanoTxCollateralInputs tx))
+    `Map.union` (Tx.toCtxUTxOTxOut <$> getCardanoTxProducedReturnCollateral tx)
 
 -- | Update the index for the addition of a block.
 insertBlock :: Block -> UtxoIndex -> UtxoIndex
 insertBlock blck i = foldl' (flip (eitherTx insertCollateral insert)) i blck
 
 -- | Find an unspent transaction output by the 'TxOutRef' that spends it.
-lookup :: MonadError ValidationError m => C.TxIn -> UtxoIndex -> m TxOut
+lookup :: C.TxIn -> UtxoIndex -> Maybe TxOut
 lookup i index = case Map.lookup i $ C.unUTxO index of
     Just (C.TxOut aie tov tod rs) ->
         let tod' = case tod of
                     C.TxOutDatumNone                    -> C.TxOutDatumNone
                     C.TxOutDatumHash era scriptDataHash -> C.TxOutDatumHash era scriptDataHash
                     C.TxOutDatumInline era scriptData   -> C.TxOutDatumInline era scriptData
-        in pure $ TxOut (C.TxOut aie tov tod' rs)
-    Nothing -> throwError $ TxOutRefNotFound i
+        in Just $ TxOut (C.TxOut aie tov tod' rs)
+    Nothing -> Nothing
 
 {- note [Minting of Ada]
 
