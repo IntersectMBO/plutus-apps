@@ -2,4 +2,4 @@
 
 { inputs, cell }:
 
-cell.library.plutus-apps-project.index-state
+cell.library.plutus-apps-project.index-state-max
