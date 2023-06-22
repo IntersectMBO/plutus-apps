@@ -9,6 +9,7 @@
 {-# LANGUAGE NamedFieldPuns           #-}
 {-# LANGUAGE OverloadedLists          #-}
 {-# LANGUAGE OverloadedStrings        #-}
+{-# LANGUAGE TypeApplications         #-}
 
 module Ledger.Tx.Internal
     ( module Ledger.Tx.Internal
@@ -47,8 +48,8 @@ import Plutus.Script.Utils.Scripts
 import Plutus.V1.Ledger.Api (Credential, DCert, dataToBuiltinData)
 import Plutus.V1.Ledger.Scripts
 import Plutus.V1.Ledger.Tx hiding (TxIn (..), TxInType (..), TxOut (..), inRef, inType, pubKeyTxIn, scriptTxIn)
+import PlutusTx (FromData (..))
 import PlutusTx.Prelude qualified as PlutusTx
-
 import Prettyprinter (Pretty (..), viaShow)
 
 cardanoTxOutValue :: C.TxOut ctx era -> C.Value
@@ -130,6 +131,19 @@ txOutDatumHash (TxOut (C.TxOut _aie _tov tod _rs)) =
       Just $ datumHash $ Datum $ dataToBuiltinData $ C.toPlutusData scriptData
     C.TxOutDatumInTx _era scriptData ->
       Just $ datumHash $ Datum $ dataToBuiltinData $ C.toPlutusData scriptData
+
+txOutDatum :: forall d . FromData d => TxOut -> Maybe d
+txOutDatum (TxOut (C.TxOut _aie _tov tod _rs)) =
+  case tod of
+    C.TxOutDatumNone ->
+      Nothing
+    C.TxOutDatumHash _era _scriptDataHash ->
+      Nothing
+    C.TxOutDatumInline _era scriptData ->
+      fromBuiltinData @d  $ dataToBuiltinData $ C.toPlutusData scriptData
+    C.TxOutDatumInTx _era scriptData ->
+      fromBuiltinData @d  $ dataToBuiltinData $ C.toPlutusData scriptData
+
 
 cardanoTxOutDatumHash :: C.TxOutDatum C.CtxUTxO C.BabbageEra -> Maybe (C.Hash C.ScriptData)
 cardanoTxOutDatumHash = \case
