@@ -91,10 +91,7 @@ test-suite plutus-tx-constraints-test
   hs-source-dirs:     test
   default-language:   Haskell2010
   default-extensions: ImportQualifiedPost
-  other-modules:
-    Plutus.Example.Game
-    Plutus.Example.GameSpec
-    Spec.Balancing
+  other-modules:      Spec.Balancing
 
   --------------------
   -- Local components

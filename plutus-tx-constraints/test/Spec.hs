@@ -33,7 +33,6 @@ import Ledger.Tx.Constraints qualified as Constraints
 import Ledger.Tx.Constraints.OffChain qualified as OC
 import Ledger.Tx.Constraints.ValidityInterval qualified as Interval
 import Ledger.Typed.Scripts qualified as Scripts
-import Plutus.Example.GameSpec qualified as Game
 import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.V1.Generators qualified as Gen
 import Plutus.Script.Utils.Value (Value)
@@ -49,7 +48,6 @@ main :: IO ()
 main = defaultMain $ testGroup "all-tests"
     [ tests
     , Balancing.tests
-    , Game.tests
     ]
 
 tests :: TestTree

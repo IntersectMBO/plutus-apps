@@ -168,7 +168,7 @@ handleBalanceTx params (C.UTxO txUtxo) cChangeAddr utxoProvider errorReporter fe
         right = lovelaceToValue fees <> foldMap (Tx.txOutValue . Tx.TxOut) (C.txOuts filteredUnbalancedTxTx)
         balance = left <> C.negateValue right
 
-    ((neg, newInputs), (pos, mNewTxOut)) <- calculateTxChanges params cChangeAddr utxoProvider errorReporter $ split balance
+    ((neg, newInputs), (pos, mNewTxOut)) <- calculateTxChanges params cChangeAddr utxoProvider $ split balance
 
     let newTxIns = map (, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending) $ Map.keys $ C.unUTxO newInputs
 
@@ -195,7 +195,7 @@ handleBalanceTx params (C.UTxO txUtxo) cChangeAddr utxoProvider errorReporter fe
             collFees = (fees * collateralPercent + 99 {- make sure to round up -}) `div` 100
             collBalance = fold collateral <> lovelaceToValue (-collFees)
 
-        ((negColl, newColInputs@(C.UTxO newColInputsMap)), (_, mNewTxOutColl)) <- calculateTxChanges params collAddr utxoProvider errorReporter $ split collBalance
+        ((negColl, newColInputs@(C.UTxO newColInputsMap)), (_, mNewTxOutColl)) <- calculateTxChanges params collAddr utxoProvider $ split collBalance
 
         case C.Api.protocolParamMaxCollateralInputs $ pProtocolParams params of
             Just maxInputs
@@ -228,20 +228,19 @@ calculateTxChanges
     => Params
     -> C.AddressInEra C.BabbageEra -- ^ The address for the change output
     -> UtxoProvider m -- ^ The utxo provider
-    -> (forall a. CardanoLedgerError -> m a) -- ^ How to handle errors
     -> (C.Value, C.Value) -- ^ The unbalanced tx's negative and positive balance.
     -> m ((C.Value, UtxoIndex), (C.Value, Maybe TxOut))
-calculateTxChanges params addr utxoProvider errorReporter (neg, pos) = do
+calculateTxChanges params addr utxoProvider (neg, pos) = do
 
     -- Calculate the change output with minimal ada
-    (newNeg, newPos, mExtraTxOut) <- either (errorReporter . Right) pure $ if isZero pos
-        then pure (neg, pos, Nothing)
-        else do
+    let (newNeg, newPos, mExtraTxOut) = if isZero pos
+        then (neg, pos, Nothing)
+        else
             let txOut = C.TxOut addr (CardanoAPI.toCardanoTxOutValue pos) C.TxOutDatumNone C.Api.ReferenceScriptNone
-            (missing, extraTxOut) <- adjustTxOut (emulatorPParams params) (Tx.TxOut txOut)
-            let missingValue = lovelaceToValue (fold missing)
+                (missing, extraTxOut) = adjustTxOut (emulatorPParams params) (Tx.TxOut txOut)
+                missingValue = lovelaceToValue (fold missing)
             -- Add the missing ada to both sides to keep the balance.
-            pure (neg <> missingValue, pos <> missingValue, Just extraTxOut)
+            in (neg <> missingValue, pos <> missingValue, Just extraTxOut)
 
     -- Calculate the extra inputs needed
     (spend, change) <- if isZero newNeg
@@ -256,11 +255,11 @@ calculateTxChanges params addr utxoProvider errorReporter (neg, pos) = do
             -- We have change so we need an extra output, if we didn't have that yet,
             -- first make one with an estimated minimal amount of ada
             -- which then will calculate a more exact set of inputs
-            then calculateTxChanges params addr utxoProvider errorReporter (neg <> CardanoAPI.adaToCardanoValue minAdaTxOutEstimated, CardanoAPI.adaToCardanoValue minAdaTxOutEstimated)
+            then calculateTxChanges params addr utxoProvider (neg <> CardanoAPI.adaToCardanoValue minAdaTxOutEstimated, CardanoAPI.adaToCardanoValue minAdaTxOutEstimated)
             -- Else recalculate with the change added to both sides
             -- Ideally this creates the same inputs and outputs and then the change will be zero
             -- But possibly the minimal Ada increases and then we also want to compute a new set of inputs
-            else calculateTxChanges params addr utxoProvider errorReporter (newNeg <> change, newPos <> change)
+            else calculateTxChanges params addr utxoProvider (newNeg <> change, newPos <> change)
 
 
 data BalancingError

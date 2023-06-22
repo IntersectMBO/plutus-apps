@@ -46,7 +46,6 @@ import Control.Monad.Freer.NonDet qualified as NonDet
 import Control.Monad.Freer.Reader (Reader, ask)
 import Data.Monoid (Alt (Alt), Ap (Ap))
 import Data.Text (Text)
-import Data.Traversable (forM)
 import Plutus.Contract.Resumable (Request (Request, itID, rqID, rqRequest),
                                   Response (Response, rspItID, rspResponse, rspRqID))
 
@@ -56,7 +55,6 @@ import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg, LogObserve, logDebug,
 import Data.List.NonEmpty (NonEmpty)
 import Ledger (CardanoAddress, POSIXTime, POSIXTimeRange, Slot (..), SlotRange)
 import Ledger.Tx (CardanoTx)
-import Ledger.Tx.CardanoAPI (ToCardanoError)
 import Ledger.Tx.Constraints (UnbalancedTx)
 import Ledger.Tx.Constraints qualified as Constraints
 import Plutus.ChainIndex (ChainIndexQueryEffect)
@@ -303,14 +301,14 @@ handleAdjustUnbalancedTx ::
     , Member (LogMsg RequestHandlerLogMsg) effs
     , Member NodeClientEffect effs
     )
-    => RequestHandler effs UnbalancedTx (Either ToCardanoError UnbalancedTx)
+    => RequestHandler effs UnbalancedTx UnbalancedTx
 handleAdjustUnbalancedTx =
     RequestHandler $ \utx ->
         surroundDebug @Text "handleAdjustUnbalancedTx" $ do
             params <- getClientParams
-            forM (Constraints.adjustUnbalancedTx (emulatorPParams params) utx) $ \(missingAdaCosts, adjusted) -> do
-                logDebug $ AdjustingUnbalancedTx missingAdaCosts
-                pure adjusted
+            let (missingAdaCosts, adjusted) = Constraints.adjustUnbalancedTx (emulatorPParams params) utx
+            logDebug $ AdjustingUnbalancedTx missingAdaCosts
+            pure adjusted
 
 handleGetParams ::
     forall effs.

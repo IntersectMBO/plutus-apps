@@ -10,7 +10,9 @@ module Cardano.Node.Emulator.API (
   , awaitSlot
   -- * Querying the blockchain
   , utxosAt
+  , utxosAtPlutus
   , utxoAtTxOutRef
+  , utxoAtTxOutRefPlutus
   , fundsAt
   , lookupDatum
   -- * Transactions
@@ -58,8 +60,8 @@ import Ledger (CardanoAddress, CardanoTx (CardanoEmulatorEraTx), Datum, DatumHas
                PaymentPrivateKey (unPaymentPrivateKey), Slot, TxOutRef, UtxoIndex)
 import Ledger.AddressMap qualified as AM
 import Ledger.Index (createGenesisTransaction, insertBlock)
-import Ledger.Tx (addCardanoTxSignature, decoratedTxOutValue, getCardanoTxData, getCardanoTxId, toCtxUTxOTxOut,
-                  toDecoratedTxOut)
+import Ledger.Tx (TxOut, addCardanoTxSignature, cardanoTxOutValue, decoratedTxOutValue, getCardanoTxData,
+                  getCardanoTxId, toCtxUTxOTxOut, toDecoratedTxOut)
 import Ledger.Tx.CardanoAPI (CardanoBuildTx (CardanoBuildTx), fromCardanoTxIn, toCardanoTxIn, toCardanoTxOutValue)
 
 import Cardano.Node.Emulator.Generators qualified as G
@@ -113,14 +115,26 @@ awaitSlot s = do
 
 
 -- | Query the unspent transaction outputs at the given address.
-utxosAt :: MonadEmulator m => CardanoAddress -> m (Map TxOutRef DecoratedTxOut)
+utxosAt :: MonadEmulator m => CardanoAddress -> m UtxoIndex
 utxosAt addr = do
+  es <- get
+  pure $ C.UTxO $ Map.map (toCtxUTxOTxOut . snd) $ es ^. esAddressMap . AM.fundsAt addr
+
+-- | Query the unspent transaction outputs at the given address (using Plutus types).
+utxosAtPlutus :: MonadEmulator m => CardanoAddress -> m (Map TxOutRef DecoratedTxOut)
+utxosAtPlutus addr = do
   es <- get
   pure $ Map.mapKeys fromCardanoTxIn $ Map.mapMaybe (toDecoratedTxOut . snd) $ es ^. esAddressMap . AM.fundsAt addr
 
 -- | Resolve the transaction output reference.
-utxoAtTxOutRef :: MonadEmulator m => TxOutRef -> m (Maybe DecoratedTxOut)
-utxoAtTxOutRef ref = either (const $ pure Nothing) findTxOut (toCardanoTxIn ref)
+utxoAtTxOutRef :: MonadEmulator m => C.TxIn -> m (Maybe TxOut)
+utxoAtTxOutRef txIn = do
+  es <- get
+  pure $ snd <$> Map.lookup txIn (AM.outRefMap (es ^. esAddressMap))
+
+-- | Resolve the transaction output reference (using Plutus types).
+utxoAtTxOutRefPlutus :: MonadEmulator m => TxOutRef -> m (Maybe DecoratedTxOut)
+utxoAtTxOutRefPlutus ref = either (const $ pure Nothing) findTxOut (toCardanoTxIn ref)
   where
     findTxOut txIn = do
       es <- get
@@ -129,7 +143,7 @@ utxoAtTxOutRef ref = either (const $ pure Nothing) findTxOut (toCardanoTxIn ref)
 
 -- | Query the total value of the unspent transaction outputs at the given address.
 fundsAt :: MonadEmulator m => CardanoAddress -> m C.Value
-fundsAt addr = foldMap (view decoratedTxOutValue) <$> utxosAt addr
+fundsAt addr = foldMap cardanoTxOutValue . C.unUTxO <$> utxosAt addr
 
 -- | Resolve a datum hash to an actual datum, if known.
 lookupDatum :: MonadEmulator m => DatumHash -> m (Maybe Datum)
