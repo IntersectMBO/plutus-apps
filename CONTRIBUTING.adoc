@@ -211,6 +211,39 @@ Specifically, you will probably want to say `nix flake lock --update-input <inpu
 
 Do *not* use `nix flake update`, as that will update all the inputs, which we typically don't want to do.
 
+[[update-ghc]]
+=== How to upgrade GHC
+
+Using Nix, we build all packages in `marconi` using the GHC version specified in link:nix/cells/marconi/ghc-compiler-nix-name.nix[].
+Eventually, you might want to upgrade GHC to a later version.
+
+The first thing to do is to change the GHC version in link:nix/cells/marconi/ghc-compiler-nix-name.nix[] (ex. change `ghc8107` to `ghc927`).
+Then, you should update the constraints specified in link:nix/cells/marconi/library/haskell-language-server-project.nix[].
+For example, when updating from `ghc8107` to `ghc927`, we needed to change:
+
+```
+  cabalProjectLocal = ''
+    constraints: stylish-haskell==0.13.0.0, hlint==3.2.8
+  '';
+```
+
+to
+
+```
+  cabalProjectLocal = ''
+    constraints: stylish-haskell==0.14.2.0, hlint==3.4.1
+  '';
+```
+
+Afterwards, you need to restart your Nix shell.
+Doing so *will* rebuild GHC and all of the Haskell packages.
+That is inevitable, and it takes around 24h.
+
+Then, you need to compile all of the Cabal projects in the repository, and fix any compilation warnings and errors.
+
+Finally, you can submit a PR and CI system will also rebuild GHC.
+Once it's done, it will cache the compiled packages, so that they can be reused when users open a Nix shell.
+
 === How to build the code with profiling
 
 TODO: Currently not available, coming soon
