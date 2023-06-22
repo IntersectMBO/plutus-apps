@@ -201,9 +201,7 @@ adjustUnbalancedTx ::
     )
     => UnbalancedTx
     -> Contract w s e UnbalancedTx
-adjustUnbalancedTx utx =
-  let req = pabReq (AdjustUnbalancedTxReq utx) E._AdjustUnbalancedTxResp in
-  req >>= either (throwError . review _ToCardanoConvertContractError) pure
+adjustUnbalancedTx utx = pabReq (AdjustUnbalancedTxReq utx) E._AdjustUnbalancedTxResp
 
 -- | Wait until the slot
 awaitSlot ::

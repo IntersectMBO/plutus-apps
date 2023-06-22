@@ -53,7 +53,7 @@ import Ledger.Address (CardanoAddress)
 import Ledger.Blockchain
 import Ledger.Index.Internal
 import Ledger.Orphans ()
-import Ledger.Tx (CardanoTx (..), ToCardanoError, TxOut (..), outValue, txOutValue, updateUtxoCollateral)
+import Ledger.Tx (CardanoTx (..), TxOut (..), outValue, txOutValue, updateUtxoCollateral)
 import Ledger.Tx.CardanoAPI (fromPlutusTxOut, toCardanoTxOutValue)
 import Ledger.Tx.Internal qualified as Tx
 import Ledger.Value.CardanoAPI (Value, lovelaceToValue)
@@ -102,7 +102,7 @@ the blockchain.
 
 -- | Adjust a single transaction output so it contains at least the minimum amount of Ada
 -- and return the adjustment (if any) and the updated TxOut.
-adjustTxOut :: Babbage.PParams (Babbage.BabbageEra StandardCrypto) -> TxOut -> Either ToCardanoError ([C.Lovelace], Tx.TxOut)
+adjustTxOut :: Babbage.PParams (Babbage.BabbageEra StandardCrypto) -> TxOut -> ([C.Lovelace], Tx.TxOut)
 adjustTxOut params txOut = do
     -- Increasing the ada amount can also increase the size in bytes, so start with a rough estimated amount of ada
     let withMinAdaValue = toCardanoTxOutValue $ txOutValue txOut \/ lovelaceToValue (minAdaTxOut params txOut)
@@ -112,8 +112,8 @@ adjustTxOut params txOut = do
     if missingLovelace > 0
     then
       let adjustedLovelace = toCardanoTxOutValue $ txOutValue txOut <> lovelaceToValue missingLovelace
-      in pure ([missingLovelace], txOut & outValue .~ adjustedLovelace)
-    else pure ([], txOut)
+      in ([missingLovelace], txOut & outValue .~ adjustedLovelace)
+    else ([], txOut)
 
 -- | Exact computation of the mimimum Ada required for a given TxOut.
 -- TODO: Should be moved to cardano-api-extended once created
@@ -128,8 +128,6 @@ minAdaTxOut params txOut = let
      then minAdaTxOut params . flip (outValue .~) txOut
             $ toCardanoTxOutValue $ lovelaceToValue firstEstimate \/ initialValue
      else firstEstimate
-
--- minAdaTxOutParams
 
 {-# INLINABLE minAdaTxOutEstimated #-}
 {- | Provide a reasonable estimate of the mimimum of Ada required for a TxOut.
