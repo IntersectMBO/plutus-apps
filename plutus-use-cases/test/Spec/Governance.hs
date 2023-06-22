@@ -30,7 +30,6 @@ import Data.Default (Default (..))
 import Data.Foldable (traverse_)
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Data.Maybe (listToMaybe)
 import Data.Semigroup (Sum (..))
 
 import Cardano.Api hiding (Value)
@@ -50,7 +49,7 @@ import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Value (TokenName)
 import Plutus.Trace.Emulator (EmulatorTrace)
 import Plutus.Trace.Emulator qualified as Trace
-import PlutusTx (fromData, toData)
+import PlutusTx (fromBuiltinData, fromData, toData)
 import PlutusTx.Prelude (BuiltinByteString)
 
 import Test.QuickCheck qualified as QC
@@ -315,17 +314,32 @@ tests =
     testGroup "governance tests"
     [ checkPredicateOptions options "vote all in favor, 2 rounds - SUCCESS"
         (assertNoFailedTransactions
-        .&&. dataAtAddress validatorAddress (maybe False ((== lawv3) . Gov.law) . listToMaybe))
+        .&&. dataAtAddress validatorAddress (\datum -> case datum of
+            [(Ledger.Datum d)] ->
+                (maybe False ((== lawv3) . Gov.law) ((fromBuiltinData d) :: Maybe Gov.GovState))
+            _ ->
+                False
+                ))
         (doVoting 10 0 2)
 
     , checkPredicateOptions options "vote 60/40, accepted - SUCCESS"
         (assertNoFailedTransactions
-        .&&. dataAtAddress validatorAddress (maybe False ((== lawv2) . Gov.law) . listToMaybe))
+        .&&. dataAtAddress validatorAddress (\datum -> case datum of
+            [(Ledger.Datum d)] ->
+                (maybe False ((== lawv2) . Gov.law) ((fromBuiltinData d) :: Maybe Gov.GovState))
+            _ ->
+                False
+                ))
         (doVoting 6 4 1)
 
     , checkPredicateOptions options "vote 50/50, rejected - SUCCESS"
         (assertNoFailedTransactions
-        .&&. dataAtAddress validatorAddress (maybe False ((== lawv1) . Gov.law) . listToMaybe ))
+        .&&. dataAtAddress validatorAddress (\datum -> case datum of
+            [(Ledger.Datum d)] ->
+                (maybe False ((== lawv1) . Gov.law) ((fromBuiltinData d) :: Maybe Gov.GovState))
+            _ ->
+                False
+                ) )
         (doVoting 5 5 1)
 
     -- TODO: turn this on again when reproducibility issue in core is fixed

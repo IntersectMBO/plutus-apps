@@ -131,6 +131,19 @@ txOutDatumHash (TxOut (C.TxOut _aie _tov tod _rs)) =
     C.TxOutDatumInTx _era scriptData ->
       Just $ datumHash $ Datum $ dataToBuiltinData $ C.toPlutusData scriptData
 
+cardanoTxOutDatum :: TxOut -> Maybe Datum
+cardanoTxOutDatum (TxOut (C.TxOut _aie _tov tod _rs)) =
+  case tod of
+    C.TxOutDatumNone ->
+      Nothing
+    C.TxOutDatumHash _era _scriptDataHash ->
+      Nothing
+    C.TxOutDatumInline _era scriptData ->
+      Just $ Datum $ dataToBuiltinData $ C.toPlutusData scriptData
+    C.TxOutDatumInTx _era _scriptData ->
+      Nothing
+
+
 cardanoTxOutDatumHash :: C.TxOutDatum C.CtxUTxO C.BabbageEra -> Maybe (C.Hash C.ScriptData)
 cardanoTxOutDatumHash = \case
   C.TxOutDatumNone ->

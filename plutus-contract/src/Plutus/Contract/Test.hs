@@ -84,7 +84,6 @@ module Plutus.Contract.Test(
     ) where
 
 import Control.Applicative (liftA2)
-import Control.Arrow ((>>>))
 import Control.Foldl (FoldM)
 import Control.Foldl qualified as L
 import Control.Lens (_1, _Left, anyOf, at, folded, ix, makeLenses, makePrisms, over, preview, (&), (.~), (^.))
@@ -98,7 +97,6 @@ import Control.Monad.IO.Class (MonadIO (liftIO))
 import Data.Default (Default (..))
 import Data.Foldable (fold, toList, traverse_)
 import Data.IORef
-import Data.Map qualified as Map
 import Data.Maybe (fromJust, mapMaybe)
 import Data.OpenUnion
 import Data.Proxy (Proxy (..))
@@ -127,6 +125,7 @@ import Ledger.Address (CardanoAddress, toPlutusAddress)
 import Ledger.Index (ValidationError)
 import Ledger.Slot (Slot)
 import Ledger.Tx.Constraints.OffChain (UnbalancedTx)
+import Ledger.Tx.Internal
 import Ledger.Value.CardanoAPI (fromCardanoValue, lovelaceToValue, toCardanoValue)
 import Plutus.Contract.Effects qualified as Requests
 import Plutus.Contract.Request qualified as Request
@@ -141,7 +140,7 @@ import Plutus.Trace.Emulator.Types (ContractConstraints, ContractInstanceLog, Co
                                     ContractInstanceTag, UserThreadMsg)
 import Plutus.V1.Ledger.Scripts qualified as PV1
 import Plutus.V1.Ledger.Value qualified as Plutus
-import PlutusTx (CompiledCode, FromData (..), getPir)
+import PlutusTx (CompiledCode, getPir)
 import PlutusTx.Coverage
 import Streaming qualified as S
 import Streaming.Prelude qualified as S
@@ -419,22 +418,12 @@ valueAtAddress address check = TracePredicate $
 plutusValueAtAddress :: CardanoAddress -> (Plutus.Value -> Bool) -> TracePredicate
 plutusValueAtAddress addr p = valueAtAddress addr (p . fromCardanoValue)
 
--- | Get a datum of a given type 'd' out of a Transaction Output.
-getTxOutDatum ::
-  forall d.
-  (FromData d) =>
-  Ledger.CardanoTx ->
-  Ledger.TxOut ->
-  Maybe d
-getTxOutDatum tx' txOut = Ledger.txOutDatumHash txOut >>= go
-    where
-        go datumHash = Map.lookup datumHash (Ledger.getCardanoTxData tx') >>= (Ledger.getDatum >>> fromBuiltinData @d)
 
-dataAtAddress :: forall d . FromData d => CardanoAddress -> ([d] -> Bool) -> TracePredicate
+dataAtAddress :: CardanoAddress -> ([PV1.Datum] -> Bool) -> TracePredicate
 dataAtAddress address check = TracePredicate $
     flip postMapM (L.generalize $ Folds.utxoAtAddress address) $ \utxo -> do
       let
-        datums = mapMaybe (uncurry $ getTxOutDatum @d) $ toList utxo
+        datums = mapMaybe (\(_txId, txOut) -> Ledger.Tx.Internal.cardanoTxOutDatum txOut) $ toList utxo
         result = check datums
       unless result $ do
           tell @(Doc Void) ("Data at address" <+> pretty (toPlutusAddress address) <+> "was"
