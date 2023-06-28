@@ -45,9 +45,8 @@ library
   -- Local components
   --------------------
   build-depends:
-    , freer-extras         >=1.2.0
-    , plutus-ledger        >=1.2.0
-    , plutus-script-utils  >=1.2.0
+    , freer-extras   >=1.2.0
+    , plutus-ledger  >=1.2.0
 
   --------------------------
   -- Other IOG dependencies

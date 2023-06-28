@@ -26,11 +26,10 @@ import Control.Monad.Freer.Extras.Log (LogMsg, logDebug, logInfo, logWarn)
 import Control.Monad.Freer.State (State, gets, modify)
 import Control.Monad.State qualified as S
 import Data.Aeson (FromJSON, ToJSON)
-import Data.Either (fromRight)
 import Data.Foldable (traverse_)
 import Data.List ((\\))
 import Data.Map qualified as Map
-import Data.Maybe (mapMaybe)
+import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Monoid (Ap (Ap))
 import Data.Text (Text)
 import Data.Traversable (for)
@@ -180,7 +179,7 @@ validateBlock params slot@(Slot s) idx txns =
 getCollateral :: Index.UtxoIndex -> CardanoTx -> C.Value
 getCollateral idx tx = case getCardanoTxTotalCollateral tx of
     Just v -> lovelaceToValue v
-    Nothing -> fromRight (lovelaceToValue $ getCardanoTxFee tx) $
+    Nothing -> fromMaybe (lovelaceToValue $ getCardanoTxFee tx) $
         alaf Ap foldMap (fmap txOutValue . (`Index.lookup` idx)) (getCardanoTxCollateralInputs tx)
 
 -- | Check whether the given transaction can be validated in the given slot.
