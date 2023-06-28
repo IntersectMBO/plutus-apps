@@ -75,7 +75,6 @@ library
     Ledger.Scripts.Orphans
     Ledger.Slot
     Ledger.Test
-    Ledger.Tokens
     Ledger.Tx
     Ledger.Tx.CardanoAPI
     Ledger.Tx.CardanoAPI.Internal

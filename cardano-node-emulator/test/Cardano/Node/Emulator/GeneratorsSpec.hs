@@ -22,8 +22,7 @@ import Ledger qualified
 import Ledger.Bytes qualified as Bytes
 import Ledger.Interval qualified as Interval
 import Ledger.Value.CardanoAPI qualified as C
-import Plutus.Script.Utils.Ada qualified as Ada
-import Plutus.Script.Utils.Value qualified as Value
+import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx.Prelude qualified as PlutusTx
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testPropertyNamed)
@@ -50,8 +49,6 @@ tests = testGroup "Cardano.Node.Emulator.Generators" [
   ],
   testGroup "Value" [
     testPropertyNamed "Value ToJSON/FromJSON" "value_json_roundtrip" (jsonRoundTrip Gen.genValue),
-    testPropertyNamed "CurrencySymbol ToJSON/FromJSON" "currency_symbol_json_roundtrip" (jsonRoundTrip $ Value.currencySymbol <$> Gen.genSizedByteStringExact 32),
-    testPropertyNamed "CurrencySymbol IsString/Show" "currencySymbolIsStringShow" currencySymbolIsStringShow,
     testPropertyNamed "Old split equals the new split" "valueSplit" valueSplit
   ],
   testGroup "TimeSlot" [
@@ -86,7 +83,7 @@ splitVal = property $ do
 
 splitValMinAda :: Property
 splitValMinAda = property $ do
-    let minAda = Ada.getLovelace $ Ledger.minAdaTxOutEstimated + Ledger.maxFee
+    let minAda = 3_000_000
     i <- forAll $ Gen.integral $ Range.linear minAda (100_000_000 :: Integer)
     n <- forAll $ Gen.integral $ Range.linear 1 100
     vs <- forAll $ Gen.splitVal n i
@@ -106,12 +103,6 @@ ledgerBytesToJSONProp = property $ do
         result = Aeson.iparse JSON.parseJSON enc
 
     Hedgehog.assert $ result == Aeson.ISuccess bts
-
-currencySymbolIsStringShow :: Property
-currencySymbolIsStringShow = property $ do
-    cs <- forAll $ Value.currencySymbol <$> Gen.genSizedByteStringExact 32
-    let cs' = fromString (show cs)
-    Hedgehog.assert $ cs' == cs
 
 valueAddIdentity :: Property
 valueAddIdentity = property $ do

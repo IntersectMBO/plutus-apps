@@ -67,8 +67,6 @@ module Ledger.Tx
     , ToCardanoError(..)
     , addCardanoTxSignature
     , pubKeyTxOut
-    , updateUtxo
-    , updateUtxoCollateral
     -- * TxBodyContent functions
     , getTxBodyContentInputs
     , getTxBodyContentCollateralInputs
@@ -406,20 +404,6 @@ getCardanoTxExtraKeyWitnesses :: CardanoTx -> [C.Hash C.PaymentKey]
 getCardanoTxExtraKeyWitnesses (CardanoEmulatorEraTx (C.Tx (C.TxBody C.TxBodyContent {..}) _)) = case txExtraKeyWits of
   C.Api.TxExtraKeyWitnessesNone      -> mempty
   C.Api.TxExtraKeyWitnesses _ txwits -> txwits
-
--- | Update a map of unspent transaction outputs and signatures based on the inputs
---   and outputs of a transaction.
-updateUtxo :: CardanoTx -> UtxoIndex -> UtxoIndex
-updateUtxo tx (C.UTxO unspent) = C.UTxO $
-  (unspent `Map.withoutKeys` getCardanoTxSpentOutputs tx)
-  `Map.union` (toCtxUTxOTxOut <$> getCardanoTxProducedOutputs tx)
-
--- | Update a map of unspent transaction outputs and signatures based
---   on the collateral inputs of a transaction (for when it is invalid).
-updateUtxoCollateral :: CardanoTx -> UtxoIndex -> UtxoIndex
-updateUtxoCollateral tx (C.UTxO unspent) = C.UTxO $
-    (unspent `Map.withoutKeys` (Set.fromList $ getCardanoTxCollateralInputs tx))
-    `Map.union` (toCtxUTxOTxOut <$> getCardanoTxProducedReturnCollateral tx)
 
 -- | Create a transaction output locked by a public payment key and optionnaly a public stake key.
 pubKeyTxOut :: C.Value -> PaymentPubKey -> Maybe V1.StakingCredential -> Either ToCardanoError TxOut

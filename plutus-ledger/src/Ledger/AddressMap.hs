@@ -1,7 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia   #-}
 {-# LANGUAGE Rank2Types    #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies  #-}
 -- | 'AddressMap's and functions for working on them.
 --
@@ -13,30 +12,25 @@ module Ledger.AddressMap(
     UtxoMap,
     addAddress,
     addAddresses,
-    filterRefs,
     fundsAt,
     values,
     traverseWithKey,
     singleton,
-    fromTxOutputs,
-    knownAddresses,
     updateAddresses,
     updateAllAddresses,
-    restrict,
-    addressesTouched,
-    outRefMap,
-    outputsMapFromTxForAddress,
+    lookupOutRef,
     fromChain
     ) where
 
 import Codec.Serialise.Class (Serialise)
-import Control.Lens (At (..), Index, IxValue, Ixed (..), Lens', at, lens, non, (&), (.~), (^.))
+import Control.Lens (At (..), Index, IxValue, Ixed (..), Lens', alaf, at, lens, non, (&), (.~), (^.))
 import Control.Monad (join)
 import Data.Aeson (FromJSON (..), ToJSON (..))
 import Data.Foldable (fold)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (mapMaybe)
+import Data.Monoid (First (..))
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
 
@@ -57,13 +51,9 @@ newtype AddressMap = AddressMap { getAddressMap :: Map CardanoAddress UtxoMap }
 singleton :: (CardanoAddress, C.TxIn, CardanoTx, TxOut) -> AddressMap
 singleton (addr, ref, tx, ot) = AddressMap $ Map.singleton addr (Map.singleton ref (tx, ot))
 
-outRefMap :: AddressMap -> Map C.TxIn (CardanoTx, TxOut)
-outRefMap (AddressMap am) = Map.unions (snd <$> Map.toList am)
-
--- | Filter the transaction output references in the map
-filterRefs :: (C.TxIn -> (CardanoTx, TxOut) -> Bool) -> AddressMap -> AddressMap
-filterRefs flt =
-    AddressMap . Map.map (Map.filterWithKey flt) . getAddressMap
+-- | Determine the unspent output that an input refers to
+lookupOutRef :: C.TxIn -> AddressMap -> Maybe TxOut
+lookupOutRef outRef = fmap snd . alaf First foldMap (Map.lookup outRef) . getAddressMap
 
 instance Semigroup AddressMap where
     (AddressMap l) <> (AddressMap r) = AddressMap (Map.unionWith add l r) where
@@ -111,12 +101,6 @@ traverseWithKey ::
   -> f AddressMap
 traverseWithKey f (AddressMap m) = AddressMap <$> Map.traverseWithKey f m
 
-outputsMapFromTxForAddress :: CardanoAddress -> OnChainTx -> Map C.TxIn (CardanoTx, TxOut)
-outputsMapFromTxForAddress addr tx =
-    fmap (unOnChain tx ,)
-    $ Map.filter ((==) addr . txOutAddress)
-    $ outputsProduced tx
-
 -- | Create an 'AddressMap' with the unspent outputs of a single transaction.
 fromTxOutputs :: OnChainTx -> AddressMap
 fromTxOutputs tx =
@@ -140,15 +124,15 @@ updateAddresses tx utxo = AddressMap $ Map.mapWithKey upd (getAddressMap utxo) w
     -- adds the newly produced outputs, and removes the consumed outputs, for
     -- an address `adr`
     upd :: CardanoAddress -> Map C.TxIn (CardanoTx, TxOut) -> Map C.TxIn (CardanoTx, TxOut)
-    upd adr mp = Map.union (producedAt adr) mp `Map.difference` consumedFrom adr
+    upd adr mp = Map.union (producedAt adr) mp `Map.withoutKeys` consumedFrom adr
 
     -- The TxOutRefs produced by the transaction, for a given address
     producedAt :: CardanoAddress -> Map C.TxIn (CardanoTx, TxOut)
-    producedAt adr = Map.findWithDefault Map.empty adr outputs
+    producedAt adr = Map.findWithDefault mempty adr outputs
 
     -- The TxOutRefs consumed by the transaction, for a given address
-    consumedFrom :: CardanoAddress -> Map C.TxIn ()
-    consumedFrom adr = maybe Map.empty (Map.fromSet (const ())) $ Map.lookup adr consumedInputs
+    consumedFrom :: CardanoAddress -> Set.Set C.TxIn
+    consumedFrom adr = Map.findWithDefault mempty adr consumedInputs
 
     AddressMap outputs = fromTxOutputs tx
 
@@ -173,19 +157,8 @@ inputs addrs = Map.fromListWith Set.union
     . mapMaybe (\a -> sequence (a, Map.lookup a addrs))
     . consumableInputs
 
--- | Restrict an 'AddressMap' to a set of addresses.
-restrict :: AddressMap -> Set.Set CardanoAddress -> AddressMap
-restrict (AddressMap mp) = AddressMap . Map.restrictKeys mp
-
 swap :: (a, b) -> (b, a)
 swap (x, y) = (y, x)
-
--- | Get the set of all addresses that the transaction spends outputs from
---   or produces outputs to
-addressesTouched :: AddressMap -> OnChainTx -> Set.Set CardanoAddress
-addressesTouched utxo t = ins <> outs where
-    ins = Map.keysSet (inputs (knownAddresses utxo) t)
-    outs = Map.keysSet (getAddressMap (fromTxOutputs t))
 
 -- | The unspent transaction outputs of the ledger as a whole.
 fromChain :: Blockchain -> AddressMap

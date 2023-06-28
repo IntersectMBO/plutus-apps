@@ -42,7 +42,6 @@ module Cardano.Node.Emulator.Generators(
     genValue,
     genValueNonNegative,
     genSizedByteString,
-    genSizedByteStringExact,
     genSeed,
     genPassphrase,
     splitVal,
@@ -90,15 +89,14 @@ import Hedgehog.Range qualified as Range
 import Ledger (CardanoTx (CardanoEmulatorEraTx), Interval, MintingPolicy (getMintingPolicy),
                POSIXTime (POSIXTime, getPOSIXTime), POSIXTimeRange, Passphrase (Passphrase),
                PaymentPrivateKey (unPaymentPrivateKey), PaymentPubKey, Slot (Slot), SlotRange, TxOut,
-               ValidationErrorInPhase, addCardanoTxSignature, createGenesisTransaction, maxFee, minAdaTxOutEstimated,
-               minLovelaceTxOutEstimated, pubKeyAddress, pubKeyTxOut, txOutValue)
+               ValidationErrorInPhase, addCardanoTxSignature, createGenesisTransaction, minLovelaceTxOutEstimated,
+               pubKeyAddress, pubKeyTxOut, txOutValue)
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI (fromCardanoPlutusScript, fromPlutusIndex)
 import Ledger.Tx.CardanoAPI qualified as C hiding (makeTransactionBody)
 import Ledger.Value.CardanoAPI qualified as Value
 import Numeric.Natural (Natural)
-import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.V1.Ledger.Interval qualified as Interval
 import Plutus.V1.Ledger.Scripts qualified as Script
 import PlutusTx (toData)
@@ -346,12 +344,6 @@ genSizedByteString s =
     let range = Range.linear 0 s
     in Gen.bytes range
 
--- | Generate a 'ByteString s' of exactly @s@ bytes.
-genSizedByteStringExact :: forall m. MonadGen m => Int -> m BS.ByteString
-genSizedByteStringExact s =
-    let range = Range.singleton s
-    in Gen.bytes range
-
 -- Copied from Gen.Cardano.Api.Typed, because it's not exported.
 genPolicyId :: Gen C.PolicyId
 genPolicyId =
@@ -420,7 +412,7 @@ splitVal mx init' = go 0 0 [] where
             if v + c == init'
             then pure $ v : l
             else go (succ i) (v + c) (v : l)
-    minAda = fromIntegral $ Ada.getLovelace $ Ledger.minAdaTxOutEstimated + Ledger.maxFee
+    minAda = 3_000_000 -- For fee and min Ada for tx outs
 
 knownXPrvs :: [Crypto.XPrv]
 knownXPrvs = unPaymentPrivateKey <$> CW.knownPaymentPrivateKeys
