@@ -114,7 +114,7 @@ import Prettyprinter (Pretty (pretty), colon, hang, nest, viaShow, vsep, (<+>))
 import Ledger.Index.Internal (UtxoIndex)
 import Ledger.Tx.Internal as Export
 import Plutus.V1.Ledger.Tx as Export hiding (TxId (..), TxIn (..), TxInType (..), TxOut (..), inRef, inType, outAddress,
-                                      outValue, pubKeyTxIn, scriptTxIn, txOutPubKey)
+                                      outValue, pubKeyTxIn, scriptTxIn, txOutDatum, txOutPubKey)
 import Plutus.V1.Ledger.Value (Value)
 
 

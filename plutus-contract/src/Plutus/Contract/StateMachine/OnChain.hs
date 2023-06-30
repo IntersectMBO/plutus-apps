@@ -30,7 +30,7 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Void (Void)
 import GHC.Generics (Generic)
 import Ledger (CardanoAddress)
-import Ledger.Tx.Constraints (TxConstraints (txOwnOutputs), mustPayToTheScriptWithDatumInTx)
+import Ledger.Tx.Constraints (TxConstraints (txOwnOutputs), mustPayToTheScriptWithInlineDatum)
 import Ledger.Tx.Constraints.OnChain.V2 (checkScriptContext)
 import Ledger.Typed.Scripts (DatumType, RedeemerType, ValidatorTypes, validatorCardanoAddress, validatorHash)
 import Plutus.Script.Utils.V2.Typed.Scripts (TypedValidator, ValidatorType)
@@ -134,7 +134,7 @@ mkValidator (StateMachine step isFinal check threadToken) currentState input ptx
                         valueWithToken = newValue <> threadTokenValueInner threadToken (ownHash ptx)
                         -- Type annotation is required to compile validator when profiling is activated.
                         -- If 'Void' is not explicitly set, the plutus plugin can't handle the free type variable.
-                        constraint = mustPayToTheScriptWithDatumInTx @s @Void newData valueWithToken
+                        constraint = mustPayToTheScriptWithInlineDatum @s @Void newData valueWithToken
                         txc = newConstraints { txOwnOutputs = txOwnOutputs constraint }
                     in traceIfFalse "S5" {-"State transition invalid - constraints not satisfied by ScriptContext"-} (checkScriptContext @_ @s txc ptx)
             Nothing -> trace "S6" {-"State transition invalid - input is not a valid transition at the current state"-} False

@@ -68,8 +68,8 @@ import Ledger (POSIXTime, Slot, TxOutRef)
 import Ledger qualified
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.Constraints (ScriptLookups, TxConstraints (txOwnInputs, txOwnOutputs), UnbalancedTx,
-                              mustMintValueWithRedeemer, mustPayToTheScriptWithDatumInTx, mustSpendOutputFromTheScript,
-                              mustSpendPubKeyOutput, plutusV2MintingPolicy)
+                              mustMintValueWithRedeemer, mustPayToTheScriptWithInlineDatum,
+                              mustSpendOutputFromTheScript, mustSpendPubKeyOutput, plutusV2MintingPolicy)
 import Ledger.Tx.Constraints.OffChain qualified as Constraints
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.ChainIndex (ChainIndexTx (_citxInputs, _citxRedeemers))
@@ -437,7 +437,7 @@ runInitialiseWith customLookups customConstraints StateMachineClient{scInstance}
       utxo <- ownUtxos
       let StateMachineInstance{stateMachine, typedValidator} = scInstance
           constraints =
-              mustPayToTheScriptWithDatumInTx
+              mustPayToTheScriptWithInlineDatum
                 initialState
                 (initialValue <> SM.threadTokenValueOrZero scInstance)
               <> foldMap ttConstraints (smThreadToken stateMachine)
@@ -549,7 +549,7 @@ mkStep client@StateMachineClient{scInstance} input = do
                         unmint = if isFinal then mustMintValueWithRedeemer red (inv $ SM.threadTokenValueOrZero scInstance) else mempty
                         -- Add the thread token value back to the output
                         valueWithToken = stateValue newState <> SM.threadTokenValueOrZero scInstance
-                        outputConstraints = if isFinal then mempty else mustPayToTheScriptWithDatumInTx (stateData newState) valueWithToken
+                        outputConstraints = if isFinal then mempty else mustPayToTheScriptWithInlineDatum (stateData newState) valueWithToken
                     in pure
                         $ Right
                         $ StateMachineTransition
