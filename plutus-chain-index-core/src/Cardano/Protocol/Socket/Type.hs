@@ -13,13 +13,15 @@ module Cardano.Protocol.Socket.Type where
 import Codec.Serialise.Class (Serialise)
 import Control.Monad (forever)
 import Control.Monad.Class.MonadST (MonadST)
-import Control.Monad.Class.MonadTimer
+import Control.Monad.Class.MonadTimer (MonadDelay (threadDelay), MonadTimer)
 import Crypto.Hash (SHA256, hash)
 import Data.Aeson.Extras qualified as JSON
 import Data.ByteArray qualified as BA
-import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as BSL
+import Data.ByteString.Short qualified as BS
+import Data.Foldable (toList)
 import Data.Map ((!))
+import Data.Sequence.Strict (fromList)
 import Data.Text qualified as Text
 import Data.Time.Units.Extra ()
 import Data.Void (Void)
@@ -27,70 +29,60 @@ import Data.Void (Void)
 import GHC.Generics
 import NoThunks.Class (NoThunks (noThunks, showTypeOf, wNoThunks))
 
-import Cardano.Api qualified as C
 import Cardano.Chain.Slotting (EpochSlots (..))
+import Cardano.Ledger.Block qualified as CL
+import Cardano.Ledger.Era qualified as CL
+import Cardano.Ledger.Shelley.API (extractTx, unsafeMakeValidated)
 import Codec.Serialise (DeserialiseFailure)
 import Codec.Serialise qualified as CBOR
-import Network.TypedProtocol.Codec
+import Network.TypedProtocol.Codec (Codec)
 import Ouroboros.Consensus.Byron.Ledger qualified as Byron
 import Ouroboros.Consensus.Cardano.Block (CardanoBlock, CodecConfig (..))
-import Ouroboros.Consensus.Network.NodeToClient (ClientCodecs, clientCodecs)
+import Ouroboros.Consensus.Cardano.Block qualified as OC
+import Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr)
+import Ouroboros.Consensus.Network.NodeToClient (ClientCodecs, cChainSyncCodec, cTxSubmissionCodec, clientCodecs)
 import Ouroboros.Consensus.Node.NetworkProtocolVersion (BlockNodeToClientVersion, supportedNodeToClientVersions)
+import Ouroboros.Consensus.Protocol.Praos.Header qualified as Praos
 import Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 import Ouroboros.Consensus.Shelley.Ledger qualified as Shelley
-import Ouroboros.Network.Block (HeaderHash, Point, StandardHash)
+import Ouroboros.Network.Block (Point)
+import Ouroboros.Network.Block qualified as Ouroboros
 import Ouroboros.Network.Mux
 import Ouroboros.Network.NodeToClient (NodeToClientVersion (..), NodeToClientVersionData (..))
-import Ouroboros.Network.Protocol.ChainSync.Codec qualified as ChainSync
 import Ouroboros.Network.Protocol.ChainSync.Type qualified as ChainSync
-import Ouroboros.Network.Protocol.LocalTxSubmission.Codec qualified as TxSubmission
 import Ouroboros.Network.Protocol.LocalTxSubmission.Type qualified as TxSubmission
 import Ouroboros.Network.Util.ShowProxy
 
 import PlutusTx.Builtins qualified as PlutusTx
-import Prettyprinter.Extras
+import Prettyprinter.Extras (Pretty, PrettyShow (PrettyShow))
 
 import Ledger (Block, OnChainTx (..), TxId (..))
 import Ledger.Test (testNetworkMagic)
 
--- | Tip of the block chain type (used by node protocols).
-type Tip = Block
+type Tip = Ouroboros.Tip (CardanoBlock StandardCrypto)
 
 -- | The node protocols require a block header type.
-newtype BlockId = BlockId { getBlockId :: BS.ByteString }
+newtype BlockId = BlockId { getBlockId :: BS.ShortByteString }
   deriving (Eq, Ord, Generic)
   deriving newtype (Serialise, NoThunks)
   deriving Pretty via (PrettyShow BlockId)
 
 instance Show BlockId where
-    show = Text.unpack . JSON.encodeByteString . getBlockId
+    show = Text.unpack . JSON.encodeByteString . BS.fromShort . getBlockId
 
 -- | A hash of the block's contents.
 blockId :: Block -> BlockId
 blockId = BlockId
+        . BS.toShort
         . BA.convert
         . hash @_ @SHA256
         . BSL.toStrict
         . CBOR.serialise
 
--- | Explains why our (plutus) data structures are hashable.
-type instance HeaderHash (C.Tx C.BabbageEra) = TxId
-type instance HeaderHash Block = BlockId
-deriving instance StandardHash (C.Tx C.BabbageEra)
-
--- TODO: Is this the best place for these instances?
-instance ShowProxy Char
-instance ShowProxy (C.Tx C.BabbageEra) where
-instance ShowProxy OnChainTx where
-instance ShowProxy a => ShowProxy [a] where
-  showProxy _ = "[" ++ showProxy (Proxy @a) ++ "]"
-
-deriving instance StandardHash Block
-
 instance NoThunks PlutusTx.BuiltinByteString where
   noThunks ctx b = noThunks ctx (PlutusTx.fromBuiltin b)
   wNoThunks ctx b = wNoThunks ctx (PlutusTx.fromBuiltin b)
-  showTypeOf _ = showTypeOf (Proxy @BS.ByteString)
+  showTypeOf _ = showTypeOf (Proxy @BS.ShortByteString)
 
 deriving newtype instance NoThunks TxId
 
@@ -108,7 +100,6 @@ nodeToClientVersion = NodeToClientV_13
 -- | A temporary definition of the protocol version. This will be moved as an
 -- argument to the client connection function in a future PR (the network magic
 -- number matches the one in the test net created by scripts)
-
 nodeToClientVersionData :: NodeToClientVersionData
 nodeToClientVersionData = NodeToClientVersionData { networkMagic = testNetworkMagic }
 
@@ -160,30 +151,22 @@ nodeToClientCodecs =
 -- | These codecs are currently used in the mock nodes and will
 --   probably soon get removed as the mock nodes are phased out.
 chainSyncCodec
-  :: forall block.
-     ( Serialise block
-     , Serialise (HeaderHash block)
-     )
+  :: (block ~ CardanoBlock StandardCrypto)
   => Codec (ChainSync.ChainSync block (Point block) Tip)
            DeserialiseFailure
            IO BSL.ByteString
-chainSyncCodec =
-    ChainSync.codecChainSync
-      CBOR.encode             CBOR.decode
-      CBOR.encode             CBOR.decode
-      CBOR.encode             CBOR.decode
+chainSyncCodec = cChainSyncCodec nodeToClientCodecs
 
-txSubmissionCodec :: Codec (TxSubmission.LocalTxSubmission (C.Tx C.BabbageEra) String)
-                           DeserialiseFailure
-                           IO BSL.ByteString
-txSubmissionCodec =
-    TxSubmission.codecLocalTxSubmission
-      (CBOR.encode . C.serialiseToCBOR) decodeTx
-      CBOR.encode CBOR.decode
-    where
-        decodeTx = do
-          bs <- CBOR.decode
-          either
-              (const $ fail "Can't deserialize tx")
-              pure
-              (C.deserialiseFromCBOR (C.AsTx C.AsBabbageEra) bs)
+txSubmissionCodec
+  :: (block ~ CardanoBlock StandardCrypto)
+  => Codec (TxSubmission.LocalTxSubmission (Shelley.GenTx block) (ApplyTxErr block))
+           DeserialiseFailure IO BSL.ByteString
+txSubmissionCodec = cTxSubmissionCodec nodeToClientCodecs
+
+toCardanoBlock :: Praos.Header StandardCrypto -> Block -> CardanoBlock StandardCrypto
+toCardanoBlock header block = OC.BlockBabbage (Shelley.mkShelleyBlock $ CL.Block header $ CL.toTxSeq $ fromList $ extractTx . getOnChainTx <$> block)
+
+fromCardanoBlock :: CardanoBlock StandardCrypto -> Block
+fromCardanoBlock (OC.BlockBabbage (Shelley.ShelleyBlock (CL.Block _ txSeq) _)) = map (OnChainTx . unsafeMakeValidated) . toList $ CL.fromTxSeq txSeq
+fromCardanoBlock _ = []
+

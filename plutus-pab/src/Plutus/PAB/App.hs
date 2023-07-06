@@ -287,7 +287,7 @@ mkEnv appTrace appConfig@Config
     dbPool <- dbConnect dbConfig appTrace
     txSendHandle <-
       case pscNodeMode of
-        MockNode -> liftIO $ Just <$> MockClient.runTxSender nscSocketPath
+        MockNode -> liftIO $ Just <$> MockClient.runTxSender nscSocketPath nscNetworkId
         _        -> pure Nothing
     -- This is for access to the slot number in the interpreter
     chainSyncHandle <- runChainSyncWithCfg $ nodeServerConfig appConfig
