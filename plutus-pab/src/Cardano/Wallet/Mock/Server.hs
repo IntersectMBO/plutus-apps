@@ -69,7 +69,7 @@ main trace LocalWalletSettings { baseUrl } serverSocket params (ChainIndexUrl ch
     chainIndexEnv <- buildEnv chainUrl defaultManagerSettings
     let knownWallets = Map.fromList $ zip (Wallet.getWalletId <$> Wallet.knownWallets) (Wallet.fromMockWallet <$> CW.knownMockWallets)
     mVarState <- liftIO $ newMVar knownWallets
-    txSendHandle    <- liftIO $ MockClient.runTxSender serverSocket
+    txSendHandle    <- liftIO $ MockClient.runTxSender serverSocket (pNetworkId params)
     chainSyncHandle <- Left <$> (liftIO $ MockClient.runChainSync' serverSocket $ pSlotConfig params)
     logInfo $ StartingWallet (Port servicePort)
     liftIO $ Warp.runSettings warpSettings

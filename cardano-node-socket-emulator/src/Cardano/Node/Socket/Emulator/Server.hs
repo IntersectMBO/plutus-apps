@@ -11,8 +11,10 @@ module Cardano.Node.Socket.Emulator.Server (ServerHandler, runServerNode, proces
 
 import Cardano.BM.Data.Trace (Trace)
 import Data.ByteString.Lazy qualified as LBS
+import Data.Coerce (coerce)
 import Data.List (intersect)
 import Data.Maybe (listToMaybe)
+import Data.SOP.Strict (NS (S, Z))
 import Data.Void (Void)
 
 import Control.Concurrent
@@ -32,7 +34,14 @@ import Ouroboros.Network.Protocol.LocalTxSubmission.Type qualified as TxSubmissi
 import Plutus.Monitoring.Util qualified as LM
 
 import Cardano.Slotting.Slot (SlotNo (..), WithOrigin (..))
+import Ouroboros.Consensus.Cardano.Block (CardanoBlock)
+import Ouroboros.Consensus.HardFork.Combinator qualified as Consensus
+import Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr)
+import Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
+import Ouroboros.Consensus.Shelley.Ledger qualified as Consensus
+import Ouroboros.Consensus.Shelley.Ledger qualified as Shelley
 import Ouroboros.Network.Block (Point (..), pointSlot)
+import Ouroboros.Network.Block qualified as O
 import Ouroboros.Network.IOManager
 import Ouroboros.Network.Mux
 import Ouroboros.Network.NodeToClient (NodeToClientProtocols (..), nodeToClientCodecCBORTerm,
@@ -44,13 +53,14 @@ import Ouroboros.Network.Snocket
 import Ouroboros.Network.Socket
 
 import Cardano.Api qualified as C
+import Cardano.Api.Shelley qualified as C
 
 import Cardano.Protocol.Socket.Type
 
 import Cardano.Node.Emulator.Internal.Node (ChainEvent, Params)
 import Cardano.Node.Emulator.Internal.Node.Chain qualified as Chain
 import Cardano.Node.Socket.Emulator.Chain (MockNodeServerChainState (..), addTxToPool, chainNewestFirst, channel,
-                                           currentSlot, getChannel, getTip, handleControlChain, tip, txPool)
+                                           currentSlot, getChannel, getTip, handleControlChain, txPool)
 import Ledger (Block, CardanoTx (..), Slot (..))
 
 data CommandChannel = CommandChannel
@@ -206,9 +216,10 @@ runChainSync = flip runReaderT
    intersection. -}
 idleState ::
     ( MonadReader (MVar MockNodeServerChainState) m
-    , MonadIO m )
+    , MonadIO m
+    , block ~ CardanoBlock StandardCrypto)
  => LocalChannel
- -> m (ServerStIdle Block (Point Block) Tip m ())
+ -> m (ServerStIdle block (Point block) Tip m ())
 idleState channel' =
     pure ServerStIdle {
         recvMsgRequestNext = nextState channel',
@@ -221,22 +232,24 @@ idleState channel' =
    next block (Nothing/Right branch) -}
 nextState ::
     ( MonadReader (MVar MockNodeServerChainState) m
-    , MonadIO m )
+    , MonadIO m
+    , block ~ CardanoBlock StandardCrypto)
  => LocalChannel
- -> m (Either (ServerStNext Block (Point Block) Tip m ())
-              (m (ServerStNext Block (Point Block) Tip m ())))
+ -> m (Either (ServerStNext block (Point block) Tip m ())
+              (m (ServerStNext block (Point block) Tip m ())))
 nextState localChannel@(LocalChannel channel') = do
     chainState <- ask
     tip' <- getTip chainState
+    let blockHeader = undefined -- TODO
     (liftIO . atomically $ tryReadTChan channel') >>= \case
         Nothing -> do
             Right . pure <$> do
                 nextBlock <- liftIO . atomically $ readTChan channel'
-                liftIO $ modifyMVar_ chainState (pure . (tip ?~ nextBlock))
-                sendRollForward localChannel tip' nextBlock
+                -- liftIO $ modifyMVar_ chainState (pure . (tip ?~ nextBlock))
+                sendRollForward localChannel tip' $ toCardanoBlock blockHeader nextBlock
         Just nextBlock -> do
-            liftIO $ modifyMVar_ chainState (pure . (tip ?~ nextBlock))
-            Left <$> sendRollForward localChannel tip' nextBlock
+            -- liftIO $ modifyMVar_ chainState (pure . (tip ?~ nextBlock))
+            Left <$> sendRollForward localChannel tip' (toCardanoBlock blockHeader nextBlock)
 
 {- This protocol state will search for a block intersection
    with some client provided blocks. When an intersection is found
@@ -244,9 +257,10 @@ nextState localChannel@(LocalChannel channel') = do
    or to the genesis block if no intersection was found. -}
 findIntersect ::
     ( MonadReader (MVar MockNodeServerChainState) m
-    , MonadIO m )
- => [Point Block]
- -> m (ServerStIntersect Block (Point Block) Tip m ())
+    , MonadIO m
+    , block ~ CardanoBlock StandardCrypto)
+ => [Point block]
+ -> m (ServerStIntersect block (Point block) Tip m ())
 findIntersect clientPoints = do
     mvState <- ask
     chainState <- liftIO $ readMVar mvState
@@ -258,7 +272,7 @@ findIntersect clientPoints = do
     pure $ case point of
         Nothing ->
           SendMsgIntersectNotFound
-            tip'
+            O.TipGenesis
             -- No intersection found. Resume from origin.
             (ChainSyncServer $ cloneChainFrom 0 >>= idleState)
         Just point' ->
@@ -271,11 +285,12 @@ findIntersect clientPoints = do
 {- This is a wrapper around the creation of a `ServerStNext` -}
 sendRollForward ::
     ( MonadReader (MVar MockNodeServerChainState) m
-    , MonadIO m )
+    , MonadIO m
+    , block ~ CardanoBlock StandardCrypto)
  => LocalChannel
- -> Block -- tip
- -> Block -- current
- -> m (ServerStNext Block (Point Block) Tip m ())
+ -> Tip -- tip
+ -> block -- current
+ -> m (ServerStNext block (Point block) Tip m ())
 sendRollForward channel' tip' current = pure $
     SendMsgRollForward
         current
@@ -287,8 +302,9 @@ sendRollForward channel' tip' current = pure $
    makes more sense to start in the `StIntersect` state. -}
 chainSyncServer ::
     ( MonadReader (MVar MockNodeServerChainState) m
-    , MonadIO m )
- => ChainSyncServer Block (Point Block) Tip m ()
+    , MonadIO m
+    , block ~ CardanoBlock StandardCrypto)
+ => ChainSyncServer block (Point block) Tip m ()
 chainSyncServer =
     ChainSyncServer (cloneChainFrom 0 >>= idleState)
 
@@ -325,8 +341,8 @@ cloneChainFrom offset = LocalChannel <$> go
 
 hoistChainSync ::
     MonadReader (MVar MockNodeServerChainState) m
- => ChainSyncServer Block (Point Block) Tip ChainSyncMonad a
- -> m (ChainSyncServer Block (Point Block) Tip IO a)
+ => ChainSyncServer block (Point block) Tip ChainSyncMonad a
+ -> m (ChainSyncServer block (Point block) Tip IO a)
 hoistChainSync machine = do
     internalState <- ask
     pure ChainSyncServer {
@@ -339,8 +355,8 @@ hoistChainSync machine = do
 
 hoistStIdle ::
     MonadReader (MVar MockNodeServerChainState) m
- => ServerStIdle Block (Point Block) Tip ChainSyncMonad a
- -> m (ServerStIdle Block (Point Block) Tip IO a)
+ => ServerStIdle block (Point block) Tip ChainSyncMonad a
+ -> m (ServerStIdle block (Point block) Tip IO a)
 hoistStIdle (ServerStIdle nextState' findIntersect' done) = do
     internalState <- ask
     pure ServerStIdle {
@@ -357,8 +373,8 @@ hoistStIdle (ServerStIdle nextState' findIntersect' done) = do
 
 hoistStIntersect ::
     MonadReader (MVar MockNodeServerChainState) m
- => ServerStIntersect Block (Point Block) Tip ChainSyncMonad a
- -> m (ServerStIntersect Block (Point Block) Tip IO a)
+ => ServerStIntersect block (Point block) Tip ChainSyncMonad a
+ -> m (ServerStIntersect block (Point block) Tip IO a)
 hoistStIntersect (SendMsgIntersectFound point tip' nextState') =
     SendMsgIntersectFound point tip' <$> hoistChainSync nextState'
 hoistStIntersect (SendMsgIntersectNotFound tip' nextState') =
@@ -366,8 +382,8 @@ hoistStIntersect (SendMsgIntersectNotFound tip' nextState') =
 
 hoistStNext ::
     MonadReader (MVar MockNodeServerChainState) m
- => ServerStNext Block (Point Block) Tip ChainSyncMonad a
- -> m (ServerStNext Block (Point Block) Tip IO a)
+ => ServerStNext block (Point block) Tip ChainSyncMonad a
+ -> m (ServerStNext block (Point block) Tip IO a)
 hoistStNext (SendMsgRollForward header tip' nextState') =
     SendMsgRollForward header tip' <$> hoistChainSync nextState'
 hoistStNext (SendMsgRollBackward header tip' nextState') =
@@ -440,7 +456,7 @@ txSubmission mvChainState =
 -- * Computing intersections
 
 -- Given a `Point` find its offset into the chain.
-pointOffset :: Point Block
+pointOffset :: Point block
             -> Integer
 pointOffset pt =
   case pointSlot pt of
@@ -448,17 +464,19 @@ pointOffset pt =
     At (SlotNo s) -> fromIntegral s
 
 -- Currently selects all points from the blockchain.
-getChainPoints :: MonadIO m => TChan Block -> MockNodeServerChainState -> m [Point Block]
+getChainPoints
+    :: forall m block. (MonadIO m, block ~ CardanoBlock StandardCrypto)
+    => TChan Block -> MockNodeServerChainState -> m [Point block]
 getChainPoints ch st = do
   chain <- chainNewestFirst ch
   pure $ zipWith mkPoint
     [st ^. currentSlot, st ^. currentSlot - 1 .. 0]
     chain
   where
-    mkPoint :: Slot -> Block -> Point Block
-    mkPoint (Slot s) block =
-      Point (At (OP.Block (SlotNo $ fromIntegral s)
-                          (blockId block)))
+    mkPoint :: Slot -> Block -> Point block
+    mkPoint s block =
+      Point (At (OP.Block (fromIntegral s)
+                          (coerce $ blockId block)))
 
 -- * TxSubmission protocol
 
@@ -466,17 +484,23 @@ getChainPoints ch st = do
    for the `ChainSync`. This protocol has only one state and
    it is much simpler. -}
 
-txSubmissionServer ::
-    MVar MockNodeServerChainState
- -> TxSubmission.LocalTxSubmissionServer (C.Tx C.BabbageEra) String IO ()
+txSubmissionServer :: forall block. (block ~ CardanoBlock StandardCrypto)
+    => MVar MockNodeServerChainState
+    -> TxSubmission.LocalTxSubmissionServer (Shelley.GenTx block) (ApplyTxErr block) IO ()
 txSubmissionServer state = txSubmissionState
     where
-      txSubmissionState :: TxSubmission.LocalTxSubmissionServer (C.Tx C.BabbageEra) String IO ()
+      txSubmissionState :: TxSubmission.LocalTxSubmissionServer (Shelley.GenTx block) (ApplyTxErr block) IO ()
       txSubmissionState =
         TxSubmission.LocalTxSubmissionServer {
           TxSubmission.recvMsgSubmitTx =
             \tx -> do
-                modifyMVar_ state (pure . over txPool (addTxToPool (CardanoEmulatorEraTx tx)))
+                case tx of
+                    (Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (S (S (S (S (Z tx')))))))) -> do
+                        let Consensus.ShelleyTx _txid shelleyEraTx = tx'
+                        let ctx = CardanoEmulatorEraTx (C.ShelleyTx C.ShelleyBasedEraBabbage shelleyEraTx)
+                        _ <- modifyMVar_ state (pure . over txPool (addTxToPool ctx))
+                        pure ()
+                    _ -> pure ()
                 return (TxSubmission.SubmitSuccess, txSubmissionState)
         , TxSubmission.recvMsgDone     = ()
         }

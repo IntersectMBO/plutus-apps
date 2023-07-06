@@ -25,7 +25,6 @@ import Cardano.Api qualified as C
 
 import Ouroboros.Network.Block (Point (..))
 import Ouroboros.Network.Protocol.ChainSync.Client qualified as ChainSync
-import Ouroboros.Network.Protocol.LocalTxSubmission.Client qualified as TxSubmission
 
 import Cardano.Node.Emulator.Internal.Node (SlotConfig, currentSlot)
 import Ouroboros.Network.IOManager
@@ -107,22 +106,22 @@ runChainSync socketPath slotConfig onNewBlock = do
             nullTracer
             chainSyncCodec
             (ChainSync.chainSyncClientPeer
-               (chainSyncClient slotConfig onNewBlock'))
+               (chainSyncClient slotConfig (onNewBlock' . fromCardanoBlock)))
 
 -- | The client updates the application state when the protocol state changes.
-chainSyncClient :: SlotConfig
-                -> (Block -> Slot -> IO ())
-                -> ChainSync.ChainSyncClient Block (Point Block) Tip IO ()
+chainSyncClient :: forall block. SlotConfig
+                -> (block -> Slot -> IO ())
+                -> ChainSync.ChainSyncClient block (Point block) Tip IO ()
 chainSyncClient slotConfig onNewBlock =
     ChainSync.ChainSyncClient $ pure requestNext
     where
-      requestNext :: ChainSync.ClientStIdle Block (Point Block) Tip IO ()
+      requestNext :: ChainSync.ClientStIdle block (Point block) Tip IO ()
       requestNext =
         ChainSync.SendMsgRequestNext
           handleNext
           (return handleNext)
 
-      handleNext :: ChainSync.ClientStNext Block (Point Block) Tip IO ()
+      handleNext :: ChainSync.ClientStNext block (Point block) Tip IO ()
       handleNext =
         ChainSync.ClientStNext
         {
@@ -135,8 +134,9 @@ chainSyncClient slotConfig onNewBlock =
         }
 
 runTxSender :: FilePath
+            -> C.NetworkId
             -> IO TxSendHandle
-runTxSender socketPath = do
+runTxSender socketPath networkId = do
     inputQueue  <- newTQueueIO
     let handle = TxSendHandle { tshQueue = inputQueue }
 
@@ -145,51 +145,14 @@ runTxSender socketPath = do
     where
       loop :: TimeUnit a => a -> TxSendHandle -> IOManager -> IO ()
       loop timeout ch@TxSendHandle{ tshQueue } iocp = do
-        catchAll
-          (connectTo
-            (localSnocket iocp)
-            nullNetworkConnectTracers
-            (versionedNodeToClientProtocols
-              nodeToClientVersion
-              nodeToClientVersionData
-              (\_ _ -> nodeToClientProtocols tshQueue))
-            socketPath)
-          {- If we receive any error or disconnect, try to reconnect.
-             This happens a lot on startup, until the server starts. -}
-          (\_ -> do
-               threadDelay (fromIntegral $ toMicroseconds timeout)
-               loop timeout ch iocp)
 
-      nodeToClientProtocols
-        :: TQueue (C.Tx C.BabbageEra)
-        -> NodeToClientProtocols 'InitiatorMode LBS.ByteString IO () Void
-      nodeToClientProtocols sendQueue =
-        NodeToClientProtocols
-          { localChainSyncProtocol = doNothingInitiatorProtocol
-          , localTxSubmissionProtocol = txSubmission sendQueue
-          , localStateQueryProtocol = doNothingInitiatorProtocol
-          , localTxMonitorProtocol = doNothingInitiatorProtocol
-          }
+        tx <- atomically $ readTQueue tshQueue
+        _ <- C.submitTxToNodeLocal localNodeConnectInfo $ C.TxInMode tx C.BabbageEraInCardanoMode
 
-      txSubmission :: TQueue (C.Tx C.BabbageEra)
-                   -> RunMiniProtocol 'InitiatorMode LBS.ByteString IO () Void
-      txSubmission inputQueue =
-          InitiatorProtocolOnly $
-          MuxPeer
-            nullTracer
-            txSubmissionCodec
-            (TxSubmission.localTxSubmissionClientPeer
-               (txSubmissionClient inputQueue))
+        threadDelay (fromIntegral $ toMicroseconds timeout)
+        loop timeout ch iocp
 
--- | The client updates the application state when the protocol state changes.
-txSubmissionClient :: TQueue (C.Tx C.BabbageEra)
-                   -> TxSubmission.LocalTxSubmissionClient (C.Tx C.BabbageEra) String IO ()
-txSubmissionClient txQueue =
-    TxSubmission.LocalTxSubmissionClient pushTxs
-    where
-      pushTxs :: IO (TxSubmission.LocalTxClientStIdle (C.Tx C.BabbageEra) String IO ())
-      pushTxs = do
-        header <- atomically $ readTQueue txQueue
-        return $ TxSubmission.SendMsgSubmitTx
-                   header
-                   (const pushTxs) -- ignore rejects for now
+      localNodeConnectInfo = C.LocalNodeConnectInfo {
+        C.localConsensusModeParams = C.CardanoModeParams epochSlots,
+        C.localNodeNetworkId = networkId,
+        C.localNodeSocketPath = socketPath }
