@@ -63,10 +63,15 @@ data ChainState = ChainState {
     _chainCurrentSlot :: !Slot -- ^ The current slot number
 } deriving (Show, Generic)
 
+makeLenses ''ChainState
+
 emptyChainState :: ChainState
 emptyChainState = ChainState [] [] mempty 0
 
-makeLenses ''ChainState
+fromBlockchain :: Blockchain -> ChainState
+fromBlockchain bc = emptyChainState
+    & chainNewestFirst .~ bc
+    & index .~ Index.initialise bc
 
 data ChainControlEffect r where
     ProcessBlock :: ChainControlEffect Block

@@ -268,8 +268,7 @@ emptyEmulatorState = EmulatorState {
 -- | Initialise the emulator state with a blockchain.
 emulatorState :: Blockchain -> EmulatorState
 emulatorState bc = emptyEmulatorState
-    & chainState . Chain.chainNewestFirst .~ bc
-    & chainState . Chain.index .~ Index.initialise bc
+    & chainState .~ Chain.fromBlockchain bc
 
 -- | Initialise the emulator state with a pool of pending transactions.
 emulatorStatePool :: Chain.TxPool -> EmulatorState

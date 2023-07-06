@@ -26,12 +26,12 @@ import Data.Map.Strict qualified as Map
 import Data.Proxy (Proxy (Proxy))
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Data.Time.Units (Millisecond, Second)
+import Ledger.CardanoWallet (knownAddresses)
 import Ledger.Value.CardanoAPI qualified as CardanoAPI
 import Network.Wai.Handler.Warp qualified as Warp
 import Plutus.Monitoring.Util qualified as LM
 import Servant (Application, hoistServer, serve, (:<|>) ((:<|>)))
 import Servant.Client (BaseUrl (baseUrlPort))
-import Wallet.Emulator.Wallet (fromWalletNumber)
 
 app ::
     Trace IO CNSEServerLogMsg
@@ -58,7 +58,8 @@ main trace nodeServerConfig@NodeServerConfig { nscBaseUrl
                             , nscSocketPath } whenStarted = LM.runLogEffects trace $ do
 
     -- make initial distribution of 1 billion Ada to all configured wallets
-    let dist = Map.fromList $ zip (fromWalletNumber <$> nscInitialTxWallets) (repeat (CardanoAPI.adaValueOf 1_000_000_000))
+    let getAddress n = knownAddresses !! (fromIntegral n - 1)
+        dist = Map.fromList $ zip (getAddress <$> nscInitialTxWallets) (repeat (CardanoAPI.adaValueOf 1_000_000_000))
     initialState <- initialChainState dist
     let appState = AppState
             { _chainState = initialState
