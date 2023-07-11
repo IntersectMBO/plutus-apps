@@ -27,7 +27,7 @@ module Wallet.Emulator.Stream(
     , foldEmulatorStreamM
     ) where
 
-import Cardano.Node.Emulator.Internal.Node (ChainControlEffect, ChainEffect, _SlotAdd)
+import Cardano.Node.Emulator.Internal.Node (ChainControlEffect, ChainEffect, _SlotAdd, unsafeMakeValid)
 import Control.Foldl qualified as L
 import Control.Lens (filtered, makeLenses, preview, view)
 import Control.Monad.Freer (Eff, Member, interpret, reinterpret, run, subsume, type (~>))
@@ -44,7 +44,7 @@ import Data.Map qualified as Map
 import Data.Maybe (fromMaybe)
 import Data.Set qualified as Set
 import Ledger.AddressMap qualified as AM
-import Ledger.Blockchain (Block, OnChainTx (Valid))
+import Ledger.Blockchain (Block)
 import Ledger.Slot (Slot)
 import Ledger.Tx (CardanoTx)
 import Plutus.ChainIndex (ChainIndexError)
@@ -144,7 +144,7 @@ type InitialChainState = Either InitialDistribution [CardanoTx]
 
 -- | The wallets' initial funds
 initialDist :: EmulatorConfig -> InitialDistribution
-initialDist EmulatorConfig{..} = either id (walletFunds . map Valid) _initialChainState where
+initialDist EmulatorConfig{..} = either id (walletFunds . map unsafeMakeValid) _initialChainState where
     walletFunds :: Block -> Map Wallet C.Value
     walletFunds theBlock =
         let values = AM.values $ AM.fromChain [theBlock]

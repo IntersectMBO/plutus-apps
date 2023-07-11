@@ -43,7 +43,7 @@ module Plutus.Contract.Test.ContractModel.Internal
   ) where
 
 import Cardano.Node.Emulator (chainStateToChainIndex, chainStateToContractModelChainState)
-import Cardano.Node.Emulator.Internal.Node (ChainEvent (TxnValidationFail))
+import Cardano.Node.Emulator.Internal.Node (ChainEvent (TxnValidation), unsafeMakeValid)
 import Cardano.Node.Emulator.Internal.Node.Params
 import Control.DeepSeq
 import Control.Monad.Freer.Reader (Reader, ask, runReader)
@@ -617,5 +617,5 @@ checkErrorWhitelistWithOptions opts copts whitelist =
     checkEvent _ = False
 
     checkEvents :: [ChainEvent] -> Bool
-    checkEvents events = all checkEvent [ f | (TxnValidationFail _ _ _ (ScriptFailure f) _ _) <- events ]
+    checkEvents events = all checkEvent [ f | TxnValidation (Index.FailPhase1 _ (ScriptFailure f)) <- events ]
 

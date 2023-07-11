@@ -5,11 +5,11 @@
 {-# LANGUAGE GADTs              #-}
 {-# LANGUAGE OverloadedLists    #-}
 {-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE PatternSynonyms    #-}
 {-# LANGUAGE RankNTypes         #-}
 {-# LANGUAGE RecordWildCards    #-}
 {-# LANGUAGE TupleSections      #-}
 {-# LANGUAGE ViewPatterns       #-}
-
 {-# OPTIONS_GHC -Wno-orphans    #-}
 
 {-|
@@ -20,6 +20,8 @@ Interface to the transaction types from 'cardano-api'
 module Ledger.Tx.CardanoAPI.Internal(
   CardanoBuildTx(..)
   , CardanoTx(..)
+  , getEmulatorEraTx
+  , pattern CardanoEmulatorEraTx
   , txOutRefs
   , unspentOutputsTx
   , fromCardanoTxId
@@ -376,6 +378,16 @@ deriving instance ToJSON (C.TxBodyContent C.BuildTx C.BabbageEra)
 -- | Cardano tx from any era.
 data CardanoTx where
   CardanoTx :: C.IsCardanoEra era => C.Tx era -> C.EraInMode era C.CardanoMode -> CardanoTx
+
+getEmulatorEraTx :: CardanoTx -> C.Tx C.BabbageEra
+getEmulatorEraTx (CardanoTx tx C.BabbageEraInCardanoMode) = tx
+getEmulatorEraTx _                                        = error "getEmulatorEraTx: Expected a Babbage tx"
+
+pattern CardanoEmulatorEraTx :: C.Tx C.BabbageEra -> CardanoTx
+pattern CardanoEmulatorEraTx tx <- (getEmulatorEraTx -> tx) where
+    CardanoEmulatorEraTx tx = CardanoTx tx C.BabbageEraInCardanoMode
+
+{-# COMPLETE CardanoEmulatorEraTx #-}
 
 instance Eq CardanoTx where
   (CardanoTx tx1 C.ByronEraInCardanoMode) == (CardanoTx tx2 C.ByronEraInCardanoMode)     = tx1 == tx2

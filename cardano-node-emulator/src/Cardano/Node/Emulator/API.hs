@@ -56,7 +56,7 @@ import Control.Monad.RWS.Class (ask, get, tell)
 import Data.Aeson (ToJSON (toJSON))
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Ledger (CardanoAddress, CardanoTx (CardanoEmulatorEraTx), Datum, DatumHash, DecoratedTxOut, OnChainTx (Valid),
+import Ledger (CardanoAddress, CardanoTx (CardanoEmulatorEraTx), Datum, DatumHash, DecoratedTxOut,
                PaymentPrivateKey (unPaymentPrivateKey), Slot, TxOutRef, UtxoIndex)
 import Ledger.AddressMap qualified as AM
 import Ledger.Index (createGenesisTransaction, insertBlock)
@@ -70,6 +70,7 @@ import Cardano.Node.Emulator.Internal.Node.Chain qualified as E (chainNewestFirs
 import Cardano.Node.Emulator.Internal.Node.Fee qualified as E (makeAutoBalancedTransactionWithUtxoProvider,
                                                                utxoProviderFromWalletOutputs)
 import Cardano.Node.Emulator.Internal.Node.Params qualified as E (Params)
+import Cardano.Node.Emulator.Internal.Node.Validation (unsafeMakeValid)
 import Cardano.Node.Emulator.LogMessages (EmulatorMsg (ChainEvent, GenericMsg, TxBalanceMsg),
                                           TxBalanceMsg (BalancingUnbalancedTx, FinishedBalancing, SigningTx, SubmittingTx))
 
@@ -79,10 +80,11 @@ emptyEmulatorState = EmulatorState E.emptyChainState mempty mempty
 emptyEmulatorStateWithInitialDist :: Map CardanoAddress C.Value -> EmulatorState
 emptyEmulatorStateWithInitialDist initialDist =
   let tx = createGenesisTransaction initialDist
+      vtx = unsafeMakeValid tx
   in emptyEmulatorState
-    & esChainState . E.chainNewestFirst %~ ([Valid tx] :)
-    & esChainState . E.index %~ insertBlock [Valid tx]
-    & esAddressMap %~ AM.updateAllAddresses (Valid tx)
+    & esChainState . E.chainNewestFirst %~ ([vtx] :)
+    & esChainState . E.index %~ insertBlock [vtx]
+    & esAddressMap %~ AM.updateAllAddresses vtx
     & esDatumMap <>~ getCardanoTxData tx
 
 getParams :: MonadEmulator m => m E.Params

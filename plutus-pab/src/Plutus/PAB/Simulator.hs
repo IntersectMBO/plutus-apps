@@ -81,7 +81,7 @@ import Cardano.Wallet.Mock.Handlers qualified as MockWallet
 import Control.Concurrent (forkIO)
 import Control.Concurrent.STM (STM, TQueue, TVar)
 import Control.Concurrent.STM qualified as STM
-import Control.Lens (_Just, at, makeLenses, makeLensesFor, preview, set, view, (&), (.~), (?~), (^.))
+import Control.Lens (_Just, at, makeLenses, makeLensesFor, preview, set, unto, view, (&), (.~), (?~), (^.))
 import Control.Monad (forM_, forever, guard, void, when)
 import Control.Monad.Freer (Eff, LastMember, Member, interpret, reinterpret, reinterpret2, reinterpretN, run, send,
                             type (~>))
@@ -135,7 +135,7 @@ import Wallet.API qualified as WAPI
 import Wallet.Effects (NodeClientEffect (GetClientParams, GetClientSlot, PublishTx), WalletEffect)
 import Wallet.Emulator qualified as Emulator
 import Wallet.Emulator.LogMessages (TxBalanceMsg)
-import Wallet.Emulator.MultiAgent (EmulatorEvent' (ChainEvent, ChainIndexEvent), _singleton)
+import Wallet.Emulator.MultiAgent (EmulatorEvent' (ChainEvent, ChainIndexEvent))
 import Wallet.Emulator.Stream qualified as Emulator
 import Wallet.Emulator.Wallet (Wallet, knownWallet, knownWallets)
 import Wallet.Emulator.Wallet qualified as Wallet
@@ -496,7 +496,7 @@ runChainEffects params action = do
                         let ((a, newState), logs) =
                                 run
                                 $ runWriter @[LogMessage Chain.ChainEvent]
-                                $ reinterpret @(LogMsg Chain.ChainEvent) @(Writer [LogMessage Chain.ChainEvent]) (handleLogWriter _singleton)
+                                $ reinterpret @(LogMsg Chain.ChainEvent) @(Writer [LogMessage Chain.ChainEvent]) (handleLogWriter $ unto (:[]))
                                 $ runState oldState
                                 $ interpret (Chain.handleControlChain params)
                                 $ interpret (Chain.handleChain params) action
@@ -522,7 +522,7 @@ runChainIndexEffects action = do
                             run
                             $ runError
                             $ runWriter @[LogMessage ChainIndexLog]
-                            $ reinterpret @(LogMsg ChainIndexLog) @(Writer [LogMessage ChainIndexLog]) (handleLogWriter _singleton)
+                            $ reinterpret @(LogMsg ChainIndexLog) @(Writer [LogMessage ChainIndexLog]) (handleLogWriter $ unto (:[]))
                             $ runState oldState
                             $ interpret ChainIndex.handleControl
                             $ interpret ChainIndex.handleQuery action

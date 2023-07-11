@@ -132,8 +132,7 @@ txnFlows keys bc = catMaybes (utxoLinks ++ foldMap extract bc')
 
 -- | Annotate the 'TxOutRef's produced by a transaction with the location of the transaction.
 outRefsWithLoc :: UtxoLocation -> OnChainTx -> [(C.TxIn, UtxoLocation)]
-outRefsWithLoc loc (Valid tx) = (\txo -> (snd txo, loc)) <$> getCardanoTxOutRefs tx
-outRefsWithLoc _ (Invalid _)  = []
+outRefsWithLoc loc = eitherTx (const []) (fmap (\txo -> (snd txo, loc)) . getCardanoTxOutRefs)
 
 -- | Create a 'TxRef' from a 'TxOutRef'.
 utxoTargets :: C.TxIn -> TxRef

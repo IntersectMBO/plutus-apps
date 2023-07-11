@@ -22,9 +22,9 @@ import Control.Monad.State (StateT, evalStateT, runState)
 import Data.List (groupBy)
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Ledger (Block, Blockchain, OnChainTx (..), TxOut, ValidationPhase (..), consumableInputs, onChainTxIsValid,
-               outputsProduced, txOutValue, unOnChain)
-import Ledger.Index (genesisTxIn)
+import Ledger (Block, Blockchain, OnChainTx (..), TxOut, consumableInputs, onChainTxIsValid, outputsProduced,
+               txOutValue, unOnChain)
+import Ledger.Index (genesisTxIn, toOnChain)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI (fromCardanoValue)
 import Plutus.V1.Ledger.Value (Value)
@@ -107,10 +107,8 @@ getAnnotatedTransactions = groupBy (equating (slotIndex . sequenceId)) . reverse
 
 handleChainEvent :: RollupState -> ChainEvent -> RollupState
 handleChainEvent s = \case
-    SlotAdd _                           -> s & over currentSequenceId (set txIndexL 0 . over slotIndexL succ)
-    TxnValidate _ tx _                  -> addTx s (Valid tx)
-    TxnValidationFail Phase2 _ tx _ _ _ -> addTx s (Invalid tx)
-    _                                   -> s
+    SlotAdd _         -> s & over currentSequenceId (set txIndexL 0 . over slotIndexL succ)
+    TxnValidation res -> maybe s (addTx s) (toOnChain res)
 
 addTx :: RollupState -> OnChainTx -> RollupState
 addTx s tx =

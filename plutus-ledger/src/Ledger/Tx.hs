@@ -101,7 +101,7 @@ import Ledger.Address (Address, CardanoAddress, PaymentPubKey, cardanoAddressCre
                        pubKeyAddress)
 import Ledger.Orphans ()
 import Ledger.Slot (SlotRange)
-import Ledger.Tx.CardanoAPI (CardanoTx (CardanoTx), ToCardanoError (..))
+import Ledger.Tx.CardanoAPI (CardanoTx (CardanoTx), ToCardanoError (..), pattern CardanoEmulatorEraTx)
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
 
 import Plutus.Script.Utils.Scripts (scriptHash)
@@ -270,16 +270,6 @@ instance Pretty DecoratedTxOut where
     pretty p =
       hang 2 $ vsep [ "-" <+> pretty (p ^. decoratedTxOutValue) <+> "addressed to"
                     , pretty (p ^. decoratedTxOutAddress)]
-
-getEmulatorEraTx :: CardanoTx -> C.Tx C.BabbageEra
-getEmulatorEraTx (CardanoTx tx C.BabbageEraInCardanoMode) = tx
-getEmulatorEraTx _                                        = error "getEmulatorEraTx: Expected a Babbage tx"
-
-pattern CardanoEmulatorEraTx :: C.Tx C.BabbageEra -> CardanoTx
-pattern CardanoEmulatorEraTx tx <- (getEmulatorEraTx -> tx) where
-    CardanoEmulatorEraTx tx = CardanoTx tx C.BabbageEraInCardanoMode
-
-{-# COMPLETE CardanoEmulatorEraTx #-}
 
 instance Pretty CardanoTx where
     pretty tx =

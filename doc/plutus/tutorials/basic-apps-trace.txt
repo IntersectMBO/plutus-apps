@@ -1,4 +1,5 @@
-[INFO] Slot 0: TxnValidate d0f5b08cc20688becb8eceba9770a18ea49a49d5df159715b899736bd1d1121d [  ]
+[INFO] Slot 0: TxnValidation d0f5b08cc20688becb8eceba9770a18ea49a49d5df159715b899736bd1d1121d
+Validation success
 [INFO] Slot 1: 00000000-0000-4000-8000-000000000000 {Wallet W[1]}:
                  Contract instance started
 [INFO] Slot 1: 00000000-0000-4000-8000-000000000000 {Wallet W[1]}:
@@ -53,7 +54,8 @@
 [INFO] Slot 1: W[1]: Signing tx: 3aed0c9c37edee742d00559de3471f4ad6b791522ba224c17fe188a0efcdcda5
 [INFO] Slot 1: W[1]: Submitting tx: 3aed0c9c37edee742d00559de3471f4ad6b791522ba224c17fe188a0efcdcda5
 [INFO] Slot 1: W[1]: TxSubmit: 3aed0c9c37edee742d00559de3471f4ad6b791522ba224c17fe188a0efcdcda5
-[INFO] Slot 1: TxnValidate 3aed0c9c37edee742d00559de3471f4ad6b791522ba224c17fe188a0efcdcda5 [  ]
+[INFO] Slot 1: TxnValidation 3aed0c9c37edee742d00559de3471f4ad6b791522ba224c17fe188a0efcdcda5
+Validation success
 [INFO] Slot 2: 00000000-0000-4000-8000-000000000000 {Wallet W[1]}:
                  Receive endpoint call on 'unlock' for Object (fromList [("contents",Array [Object (fromList [("getEndpointDescription",String "unlock")]),Object (fromList [("unEndpointValue",Object (fromList [("recipient1Address",String "addr_test1vz3vyrrh3pavu8xescvnunn4h27cny70645etn2ulnnqnssrz8utc"),("recipient2Address",String "addr_test1vzq2fazm26ug6yfemg3mcnpuwhkx6v558sy87fgtscvnefckqs3wk"),("totalAda",Object (fromList [("getLovelace",Number 1.0e7)]))]))])]),("tag",String "ExposeEndpointResp")])
 [INFO] Slot 2: W[1]: Balancing an unbalanced transaction:
@@ -122,9 +124,11 @@
 [INFO] Slot 2: W[1]: Signing tx: 6156586126d719203a5e22e67360550c8dd3d1565c2afeee576349b7ea84bc09
 [INFO] Slot 2: W[1]: Submitting tx: 6156586126d719203a5e22e67360550c8dd3d1565c2afeee576349b7ea84bc09
 [INFO] Slot 2: W[1]: TxSubmit: 6156586126d719203a5e22e67360550c8dd3d1565c2afeee576349b7ea84bc09
-[INFO] Slot 2: TxnValidate 6156586126d719203a5e22e67360550c8dd3d1565c2afeee576349b7ea84bc09 [ Data decoded successfully
-                                                                                            , Redeemer decoded successfully
-                                                                                            , Script context decoded successfully ]
+[INFO] Slot 2: TxnValidation 6156586126d719203a5e22e67360550c8dd3d1565c2afeee576349b7ea84bc09
+Validation success
+  Data decoded successfully
+  Redeemer decoded successfully
+  Script context decoded successfully
 Final balances
 Wallet 7: 100000000 lovelace
 Wallet 8: 100000000 lovelace

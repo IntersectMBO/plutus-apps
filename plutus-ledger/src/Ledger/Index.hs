@@ -16,13 +16,22 @@ module Ledger.Index(
     insertBlock,
     initialise,
     lookup,
+    getCollateral,
     ValidationError(..),
     _TxOutRefNotFound,
     _ScriptFailure,
     _CardanoLedgerValidationError,
+    ValidationResult(..),
+    _Success,
+    _FailPhase1,
+    _FailPhase2,
+    cardanoTxFromValidationResult,
+    toOnChain,
+    getEvaluationLogs,
     ValidationSuccess,
     ValidationErrorInPhase,
     ValidationPhase(..),
+    RedeemerReport,
     maxFee,
     adjustTxOut,
     minAdaTxOut,
@@ -45,16 +54,19 @@ import Cardano.Ledger.Babbage qualified as Babbage
 import Cardano.Ledger.Babbage.PParams qualified as Babbage
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Shelley.API qualified as C.Ledger
-import Control.Lens ((&), (.~), (<&>))
+import Control.Lens (alaf, (&), (.~), (<&>))
 import Data.Foldable (foldl')
 import Data.Map qualified as Map
+import Data.Maybe (fromMaybe)
+import Data.Monoid (Ap (..))
 import Data.Set qualified as Set
 import Ledger.Address (CardanoAddress)
 import Ledger.Blockchain
 import Ledger.Index.Internal
 import Ledger.Orphans ()
-import Ledger.Tx (CardanoTx (..), TxOut (..), getCardanoTxCollateralInputs, getCardanoTxProducedOutputs,
-                  getCardanoTxProducedReturnCollateral, getCardanoTxSpentOutputs, outValue, txOutValue)
+import Ledger.Tx (CardanoTx (..), TxOut (..), getCardanoTxCollateralInputs, getCardanoTxFee,
+                  getCardanoTxProducedOutputs, getCardanoTxProducedReturnCollateral, getCardanoTxSpentOutputs,
+                  getCardanoTxTotalCollateral, outValue, txOutValue)
 import Ledger.Tx.CardanoAPI (fromPlutusTxOut, toCardanoTxOutValue)
 import Ledger.Tx.Internal qualified as Tx
 import Ledger.Value.CardanoAPI (Value, lovelaceToValue)
@@ -94,16 +106,11 @@ lookup i index = case Map.lookup i $ C.unUTxO index of
         in Just $ TxOut (C.TxOut aie tov tod' rs)
     Nothing -> Nothing
 
-{- note [Minting of Ada]
-
-'checkMintingAuthorised' will never allow a transaction that mints Ada.
-Ada's currency symbol is the empty bytestring, and it can never be matched by a
-validator script whose hash is its symbol.
-
-Therefore 'checkMintingAuthorised' should not be applied to the first transaction in
-the blockchain.
-
--}
+getCollateral :: UtxoIndex -> CardanoTx -> C.Value
+getCollateral idx tx = case getCardanoTxTotalCollateral tx of
+    Just v -> lovelaceToValue v
+    Nothing -> fromMaybe (lovelaceToValue $ getCardanoTxFee tx) $
+        alaf Ap foldMap (fmap txOutValue . (`lookup` idx)) (getCardanoTxCollateralInputs tx)
 
 -- | Adjust a single transaction output so it contains at least the minimum amount of Ada
 -- and return the adjustment (if any) and the updated TxOut.
@@ -192,4 +199,3 @@ createGenesisTransaction vals =
            }
         txBody = either (error . ("createGenesisTransaction: Can't create TxBody: " <>) . show) id $ C.makeTransactionBody txBodyContent
     in CardanoEmulatorEraTx $ C.Tx txBody []
-

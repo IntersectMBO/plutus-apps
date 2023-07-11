@@ -69,7 +69,6 @@ import Control.Monad (guard, replicateM)
 import Data.Bifunctor (Bifunctor (first))
 import Data.ByteString qualified as BS
 import Data.Default (Default (def), def)
-import Data.Either.Combinators (leftToMaybe)
 import Data.Foldable (fold, foldl')
 import Data.Functor (($>))
 import Data.List (sort)
@@ -89,11 +88,12 @@ import Hedgehog.Range qualified as Range
 import Ledger (CardanoTx (CardanoEmulatorEraTx), Interval, MintingPolicy (getMintingPolicy),
                POSIXTime (POSIXTime, getPOSIXTime), POSIXTimeRange, Passphrase (Passphrase),
                PaymentPrivateKey (unPaymentPrivateKey), PaymentPubKey, Slot (Slot), SlotRange, TxOut,
-               ValidationErrorInPhase, addCardanoTxSignature, createGenesisTransaction, minLovelaceTxOutEstimated,
-               pubKeyAddress, pubKeyTxOut, txOutValue)
+               ValidationErrorInPhase, ValidationPhase (Phase1, Phase2), ValidationResult (FailPhase1, FailPhase2),
+               addCardanoTxSignature, createGenesisTransaction, minLovelaceTxOutEstimated, pubKeyAddress, pubKeyTxOut,
+               txOutValue)
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Tx qualified as Tx
-import Ledger.Tx.CardanoAPI (fromCardanoPlutusScript, fromPlutusIndex)
+import Ledger.Tx.CardanoAPI (fromCardanoPlutusScript)
 import Ledger.Tx.CardanoAPI qualified as C hiding (makeTransactionBody)
 import Ledger.Value.CardanoAPI qualified as Value
 import Numeric.Natural (Natural)
@@ -298,8 +298,11 @@ genValidTransactionBodySpending' g ins totalVal = do
 -- | Validate a transaction in a mockchain.
 validateMockchain :: Mockchain -> CardanoTx -> Maybe Ledger.ValidationErrorInPhase
 validateMockchain (Mockchain _ utxo params) tx = result where
-    cUtxoIndex = fromPlutusIndex (C.UTxO $ Tx.toCtxUTxOTxOut <$> utxo)
-    result = leftToMaybe $ validateCardanoTx params 1 cUtxoIndex tx
+    cUtxoIndex = C.UTxO $ Tx.toCtxUTxOTxOut <$> utxo
+    result = case validateCardanoTx params 1 cUtxoIndex tx of
+        FailPhase1 _ err   -> Just (Phase1, err)
+        FailPhase2 _ err _ -> Just (Phase2, err)
+        _                  -> Nothing
 
 -- | Generate an 'Interval where the lower bound if less or equal than the
 -- upper bound.

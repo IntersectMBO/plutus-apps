@@ -33,10 +33,10 @@ import System.Signal (installHandler, sigINT)
 import Text.Pretty.Simple (pPrint)
 
 import Cardano.Api qualified as C
+import Cardano.Node.Emulator.Internal.Node (unsafeMakeValid)
 import Cardano.Node.Socket.Emulator.Types (NodeServerConfig (..))
 import Cardano.Node.Types (PABServerConfig (..))
 import Cardano.Protocol.Socket.Mock.Client (TxSendHandle (..), queueTx, runTxSender)
-import Ledger.Blockchain (OnChainTx (..))
 import Ledger.Index (UtxoIndex, createGenesisTransaction, insertBlock)
 import Ledger.Slot (Slot (..))
 import Ledger.Tx (CardanoTx (..))
@@ -73,7 +73,7 @@ initialUtxoIndex config =
                zip (config & nodeServerConfig & pscNodeServerConfig & nscInitialTxWallets & fmap (mockWalletAddress . fromWalletNumber))
                    (repeat (CardanoAPI.adaValueOf 1_000_000_000))
       initialTx = createGenesisTransaction dist
-  in insertBlock [Valid initialTx] mempty
+  in insertBlock [unsafeMakeValid initialTx] mempty
 
 -- | Starts the producer thread
 runProducer :: AppEnv -> IO ThreadId
@@ -87,7 +87,7 @@ runProducer AppEnv{txQueue, stats, utxoIndex} = do
       -- boundaries. We don't currently use boundaries for our generated
       -- transactions, so we chose the random number.
       tx <- generateTx rng (Slot 4) utxo
-      let utxo' = insertBlock [Valid $ CardanoEmulatorEraTx tx] utxo
+      let utxo' = insertBlock [unsafeMakeValid $ CardanoEmulatorEraTx tx] utxo
       atomically $ do
         writeTBQueue txQueue tx
         modifyTVar' stats $ \s -> s { stUtxoSize = Map.size $ C.unUTxO utxo' }

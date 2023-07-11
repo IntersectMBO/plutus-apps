@@ -9,6 +9,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE PatternSynonyms       #-}
 {-# LANGUAGE Rank2Types            #-}
 {-# LANGUAGE TemplateHaskell       #-}
 {-# LANGUAGE TupleSections         #-}
@@ -22,31 +23,38 @@ import Cardano.Api.Shelley qualified as C
 import Cardano.Node.Emulator.Generators (alwaysSucceedPolicy, alwaysSucceedPolicyId, signAll)
 import Cardano.Node.Emulator.Internal.Node.Chain qualified as Chain
 import Cardano.Node.Emulator.Internal.Node.Params (Params (..))
-import Control.Lens (AReview, Getter, Lens', Prism', anon, at, folded, makeLenses, prism', reversed, review, to, unto,
-                     view, (&), (.~), (^.), (^..))
-import Control.Monad (join)
+import Control.Lens (AReview, Getter, Lens', Prism', anon, at, folded, makeLenses, prism', reversed, review, to, view,
+                     (&), (.~), (^..))
 import Control.Monad.Freer (Eff, Member, Members, interpret, send, subsume, type (~>))
-import Control.Monad.Freer.Error (Error, throwError)
+import Control.Monad.Freer.Error (Error)
 import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg, LogObserve, handleObserveLog, mapLog)
 import Control.Monad.Freer.Extras.Modify (handleZoomedState, raiseEnd, writeIntoState)
-import Control.Monad.Freer.State (State, get)
+import Control.Monad.Freer.State (State)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Foldable (fold)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe, isNothing)
 import Data.Text qualified as T
-import Data.Text.Extras (tshow)
 import GHC.Generics (Generic)
-import Ledger hiding (to)
+import Ledger.Address (PaymentPubKeyHash, pubKeyHashAddress)
 import Ledger.AddressMap qualified as AM
+import Ledger.Blockchain (Blockchain)
+import Ledger.Index (minAdaTxOut)
 import Ledger.Index qualified as Index
-import Ledger.Tx qualified as Tx
-import Ledger.Tx.CardanoAPI qualified as C hiding (makeTransactionBody)
-import Ledger.Tx.CardanoAPI qualified as CardanoAPI
+import Ledger.Scripts (MintingPolicy (getMintingPolicy))
+import Ledger.Slot (Slot)
+import Ledger.Tx.CardanoAPI (ToCardanoError, pattern CardanoEmulatorEraTx)
+import Ledger.Tx.CardanoAPI.Internal qualified as C (toCardanoPlutusScript, toCardanoValidityRange, zeroExecutionUnits)
+import Ledger.Tx.CardanoAPI.Internal qualified as CardanoAPI (toCardanoAddressInEra, toCardanoTxOutValue)
+import Ledger.Tx.Internal (TxOut (TxOut), emptyTxBodyContent, txOutValue)
+import Ledger.Tx.Internal qualified as Tx (TxOut (getTxOut))
+import Ledger.Value.CardanoAPI (lovelaceToValue)
 import Ledger.Value.CardanoAPI qualified as CardanoAPI
-import Plutus.ChainIndex.Emulator qualified as ChainIndex
-import Plutus.Contract.Error (AssertionError (GenericAssertion))
+import Plutus.ChainIndex.ChainIndexError qualified as ChainIndex (ChainIndexError)
+import Plutus.ChainIndex.ChainIndexLog qualified as ChainIndex (ChainIndexLog)
+import Plutus.ChainIndex.Effects qualified as ChainIndex (ChainIndexControlEffect, ChainIndexQueryEffect)
+import Plutus.ChainIndex.Emulator.Handlers qualified as ChainIndex (handleControl, handleQuery)
 import Plutus.Trace.Emulator.Types (ContractInstanceLog, EmulatedWalletEffects, EmulatedWalletEffects', UserThreadMsg)
 import Plutus.Trace.Scheduler qualified as Scheduler
 import Plutus.V1.Ledger.Scripts qualified as Script
@@ -57,11 +65,6 @@ import Wallet.Emulator.LogMessages (RequestHandlerLogMsg, TxBalanceMsg)
 import Wallet.Emulator.NodeClient qualified as NC
 import Wallet.Emulator.Wallet (Wallet)
 import Wallet.Emulator.Wallet qualified as Wallet
-
--- | Assertions which will be checked during execution of the emulator.
-data Assertion
-  = IsValidated CardanoTx -- ^ Assert that the given transaction is validated.
-  | OwnFundsEqual Wallet C.Value -- ^ Assert that the funds belonging to a wallet's public-key address are equal to a value.
 
 -- | An event with a timestamp measured in emulator time
 --   (currently: 'Slot')
@@ -179,8 +182,6 @@ data MultiAgentEffect r where
 data MultiAgentControlEffect r where
     -- | An action affecting the emulated parts of a wallet (only available in emulator - see note [Control effects].)
     WalletControlAction :: Wallet -> Eff EmulatedWalletControlEffects r -> MultiAgentControlEffect r
-    -- | An assertion in the event stream, which can inspect the current state.
-    Assertion :: Assertion -> MultiAgentControlEffect ()
 
 -- | Run an action in the context of a wallet (ie. agent)
 walletAction
@@ -222,17 +223,6 @@ walletControlAction
     -> Eff EmulatedWalletControlEffects r
     -> Eff effs r
 walletControlAction wallet = send . WalletControlAction wallet
-
-assertion :: (Member MultiAgentControlEffect effs) => Assertion -> Eff effs ()
-assertion a = send (Assertion a)
-
--- | Issue an assertion that the funds for a given wallet have the given value.
-assertOwnFundsEq :: (Member MultiAgentControlEffect effs) => Wallet -> C.Value -> Eff effs ()
-assertOwnFundsEq wallet = assertion . OwnFundsEqual wallet
-
--- | Issue an assertion that the given transaction has been validated.
-assertIsValidated :: (Member MultiAgentControlEffect effs) => CardanoTx -> Eff effs ()
-assertIsValidated = assertion . IsValidated
 
 -- | The state of the emulator itself.
 data EmulatorState = EmulatorState {
@@ -348,7 +338,6 @@ type MultiAgentEffs =
      , LogMsg EmulatorEvent'
      , Error WAPI.WalletAPIError
      , Error ChainIndex.ChainIndexError
-     , Error AssertionError
      , Chain.ChainEffect
      , Chain.ChainControlEffect
      ]
@@ -382,7 +371,6 @@ handleMultiAgentControl = interpret $ \case
             & interpret (mapLog (review p3))
             & interpret (handleZoomedState (walletState wallet . Wallet.signingProcess))
             & interpret (writeIntoState emulatorLog)
-    Assertion a -> assert a
 
 handleMultiAgent
     :: forall effs. Members MultiAgentEffs effs
@@ -421,28 +409,3 @@ handleMultiAgent = interpret $ \case
             & interpret (mapLog (review p3))
             & interpret (handleZoomedState (walletState wallet . Wallet.signingProcess))
             & interpret (writeIntoState emulatorLog)
-
--- | Issue an 'Assertion'.
-assert :: (Members MultiAgentEffs effs) => Assertion -> Eff effs ()
-assert (IsValidated txn)            = isValidated txn
-assert (OwnFundsEqual wallet value) = ownFundsEqual wallet value
-
--- | Issue an assertion that the funds for a given wallet have the given value.
-ownFundsEqual :: (Members MultiAgentEffs effs) => Wallet -> C.Value -> Eff effs ()
-ownFundsEqual wallet value = do
-    es <- get
-    let total = foldMap (txOutValue . snd) $ es ^. chainUtxo . AM.fundsAt (Wallet.mockWalletAddress wallet)
-    if value == total
-    then pure ()
-    else throwError $ GenericAssertion $ T.unwords ["Funds in wallet", tshow wallet, "were", tshow total, ". Expected:", tshow value]
-
--- | Issue an assertion that the given transaction has been validated.
-isValidated :: (Members MultiAgentEffs effs) => CardanoTx -> Eff effs ()
-isValidated txn = do
-    emState <- get
-    if notElem (Valid txn) (join $ emState ^. chainState . Chain.chainNewestFirst)
-        then throwError $ GenericAssertion $ "Txn not validated: " <> T.pack (show txn)
-        else pure ()
-
-_singleton :: AReview [a] a
-_singleton = unto return

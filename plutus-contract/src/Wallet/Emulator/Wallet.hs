@@ -328,7 +328,7 @@ handleBalance utx = do
                  $ fmap (Tx.CardanoEmulatorEraTx . C.makeSignedTransaction [])
                           . CardanoAPI.makeTransactionBody Nothing mempty
                  $ U.unBalancedCardanoBuildTx utx'
-            logWarn $ ValidationFailed ph (Ledger.getCardanoTxId tx') tx' ve mempty []
+            logWarn $ ValidationFailed ph tx' ve mempty
             throwError $ WAPI.ValidationError ve
         handleError _ (Left (Right ce)) = throwError $ WAPI.ToCardanoError ce
         handleError _ (Right v) = pure v
