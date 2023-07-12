@@ -43,7 +43,7 @@ module Plutus.Contract.Test.ContractModel.Internal
   ) where
 
 import Cardano.Node.Emulator (chainStateToChainIndex, chainStateToContractModelChainState)
-import Cardano.Node.Emulator.Internal.Node (ChainEvent (TxnValidation), unsafeMakeValid)
+import Cardano.Node.Emulator.Internal.Node (ChainEvent (TxnValidation))
 import Cardano.Node.Emulator.Internal.Node.Params
 import Control.DeepSeq
 import Control.Monad.Freer.Reader (Reader, ask, runReader)
