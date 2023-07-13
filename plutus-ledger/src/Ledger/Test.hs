@@ -109,3 +109,9 @@ asDatum a = Ledger.Datum $ PlutusTx.dataToBuiltinData $ PlutusTx.toData a
 
 coinMintingPolicyId :: Language -> C.PolicyId
 coinMintingPolicyId = policyId . coinMintingPolicy
+
+testNetworkMagic :: C.NetworkMagic
+testNetworkMagic = C.NetworkMagic 1097911063
+
+testnet :: C.NetworkId
+testnet = C.Testnet testNetworkMagic

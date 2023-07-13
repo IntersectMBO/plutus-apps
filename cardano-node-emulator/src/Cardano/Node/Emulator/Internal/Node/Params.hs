@@ -53,6 +53,7 @@ import Data.Ratio ((%))
 import Data.SOP.Strict (K (K), NP (Nil, (:*)))
 import GHC.Generics (Generic)
 import GHC.Natural (Natural)
+import Ledger.Test (testnet)
 import Ouroboros.Consensus.HardFork.History qualified as Ouroboros
 import Ouroboros.Consensus.Util.Counting qualified as Ouroboros
 import Plutus.V1.Ledger.Api (POSIXTime (POSIXTime))
@@ -137,11 +138,6 @@ increaseTransactionLimits' size steps mem = over protocolParamsL fixParams
       { C.protocolParamMaxTxSize = size * C.protocolParamMaxTxSize pp
       , C.protocolParamMaxTxExUnits = C.protocolParamMaxTxExUnits pp >>= (\C.ExecutionUnits {executionSteps, executionMemory} -> pure $ C.ExecutionUnits {executionSteps = steps * executionSteps, executionMemory = mem * executionMemory})
       }
-
-
--- | The network id used by default by 'Param'
-testnet :: C.NetworkId
-testnet = C.Testnet $ C.NetworkMagic 1
 
 instance Default Params where
   def = Params def (pParamsFromProtocolParams def) testnet

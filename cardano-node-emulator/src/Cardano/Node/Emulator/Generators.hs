@@ -61,7 +61,7 @@ module Cardano.Node.Emulator.Generators(
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
 import Cardano.Crypto.Wallet qualified as Crypto
-import Cardano.Node.Emulator.Internal.Node.Params (Params (pSlotConfig))
+import Cardano.Node.Emulator.Internal.Node.Params (Params (pSlotConfig), testnet)
 import Cardano.Node.Emulator.Internal.Node.TimeSlot (SlotConfig)
 import Cardano.Node.Emulator.Internal.Node.TimeSlot qualified as TimeSlot
 import Cardano.Node.Emulator.Internal.Node.Validation (validateCardanoTx)
@@ -89,14 +89,14 @@ import Ledger (CardanoTx (CardanoEmulatorEraTx), Interval, MintingPolicy (getMin
                POSIXTime (POSIXTime, getPOSIXTime), POSIXTimeRange, Passphrase (Passphrase),
                PaymentPrivateKey (unPaymentPrivateKey), PaymentPubKey, Slot (Slot), SlotRange, TxOut,
                ValidationErrorInPhase, ValidationPhase (Phase1, Phase2), ValidationResult (FailPhase1, FailPhase2),
-               addCardanoTxSignature, createGenesisTransaction, minLovelaceTxOutEstimated, pubKeyAddress, pubKeyTxOut,
-               txOutValue)
+               addCardanoTxSignature, createGenesisTransaction, minLovelaceTxOutEstimated, pubKeyAddress, txOutValue)
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Tx qualified as Tx
-import Ledger.Tx.CardanoAPI (fromCardanoPlutusScript)
+import Ledger.Tx.CardanoAPI (ToCardanoError, fromCardanoPlutusScript)
 import Ledger.Tx.CardanoAPI qualified as C hiding (makeTransactionBody)
 import Ledger.Value.CardanoAPI qualified as Value
 import Numeric.Natural (Natural)
+import Plutus.V1.Ledger.Api qualified as V1
 import Plutus.V1.Ledger.Interval qualified as Interval
 import Plutus.V1.Ledger.Scripts qualified as Script
 import PlutusTx (toData)
@@ -174,7 +174,7 @@ genInitialTransaction ::
        GeneratorModel
     -> Gen (CardanoTx, [TxOut])
 genInitialTransaction GeneratorModel{..} = do
-    let pkAddr pk = either (error . show) id $ C.toCardanoAddressInEra (C.Testnet $ C.NetworkMagic 1) $ pubKeyAddress pk Nothing
+    let pkAddr pk = either (error . show) id $ C.toCardanoAddressInEra testnet $ pubKeyAddress pk Nothing
         initialDist = Map.mapKeys pkAddr $ fmap Value.lovelaceToValue gmInitialBalance
     let tx@(CardanoEmulatorEraTx (C.Tx (C.TxBody txBodyContent) _)) = createGenesisTransaction initialDist
         txOuts = Tx.TxOut <$> C.txOuts txBodyContent
@@ -294,6 +294,12 @@ genValidTransactionBodySpending' g ins totalVal = do
            , C.txFee = C.toCardanoFee fee'
            , C.txOuts = Tx.getTxOut <$> txOutputs
            }
+
+-- | Create a transaction output locked by a public payment key and optionnaly a public stake key.
+pubKeyTxOut :: C.Value -> PaymentPubKey -> Maybe V1.StakingCredential -> Either ToCardanoError TxOut
+pubKeyTxOut v pk sk = do
+  aie <- C.toCardanoAddressInEra testnet $ pubKeyAddress pk sk
+  pure $ Tx.TxOut $ C.TxOut aie (C.toCardanoTxOutValue v) C.TxOutDatumNone C.ReferenceScriptNone
 
 -- | Validate a transaction in a mockchain.
 validateMockchain :: Mockchain -> CardanoTx -> Maybe Ledger.ValidationErrorInPhase
