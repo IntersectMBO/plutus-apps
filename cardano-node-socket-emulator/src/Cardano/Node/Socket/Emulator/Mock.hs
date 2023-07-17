@@ -29,7 +29,7 @@ import Cardano.Node.Emulator.Internal.Node (ChainEvent, Params (..), SlotConfig 
 import Cardano.Node.Emulator.Internal.Node.Chain qualified as Chain
 import Cardano.Node.Socket.Emulator.Chain (handleChain, handleControlChain)
 import Cardano.Node.Socket.Emulator.Server qualified as Server
-import Cardano.Node.Socket.Emulator.Types
+import Cardano.Node.Socket.Emulator.Types (AppState, NodeServerEffects, chainState, eventHistory)
 import Plutus.Monitoring.Util qualified as LM
 
 healthcheck :: Monad m => m NoContent

@@ -21,7 +21,7 @@ import Cardano.Slotting.Slot (SlotNo (..))
 import Ledger.Test (testnet)
 
 -- | We only need to know the location of the socket.
---   We can get the protocol versions from Cardano.Protocol.Socket.Type
+--   We can get the protocol versions from Cardano.Node.Socket.Emulator.Types
 data Configuration = Configuration
   { cSocketPath :: !String
   , cResumeHash :: !ChainPoint

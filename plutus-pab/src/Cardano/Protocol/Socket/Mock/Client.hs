@@ -33,8 +33,9 @@ import Ouroboros.Network.NodeToClient (NodeToClientProtocols (..), connectTo, ve
 import Ouroboros.Network.Snocket
 import Ouroboros.Network.Socket
 
+import Cardano.Node.Socket.Emulator.Types (Tip, chainSyncCodec, doNothingInitiatorProtocol, epochSlots,
+                                           fromCardanoBlock, nodeToClientVersion, nodeToClientVersionData)
 import Cardano.Protocol.Socket.Client (ChainSyncHandle (..))
-import Cardano.Protocol.Socket.Type
 import Ledger (Block, Slot (..))
 
 newtype TxSendHandle = TxSendHandle
