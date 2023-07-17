@@ -1,12 +1,10 @@
 {-# LANGUAGE DataKinds           #-}
-{-# LANGUAGE DeriveAnyClass      #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE GADTs               #-}
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeOperators       #-}
 
@@ -14,7 +12,8 @@ module Cardano.Node.Socket.Emulator.Chain where
 
 import Cardano.Node.Emulator.Internal.Node (Params)
 import Cardano.Node.Emulator.Internal.Node.Chain qualified as EC
-import Cardano.Protocol.Socket.Type (BlockId (..), Tip, blockId)
+import Cardano.Node.Socket.Emulator.Types (BlockId (..), MockNodeServerChainState (..), Tip, TxPool, blockId, channel,
+                                           currentSlot, index, tip, txPool)
 import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Lens hiding (index)
@@ -24,32 +23,9 @@ import Control.Monad.Freer.State (State, gets, modify)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Coerce (coerce)
 import Data.Foldable (traverse_)
-import Data.Functor (void)
-import GHC.Generics (Generic)
-import Ledger (Block, CardanoTx, Slot (..))
-import Ledger.Index qualified as Index
+import Ledger (Block, CardanoTx)
 import Ouroboros.Consensus.HardFork.Combinator.AcrossEras (OneEraHash (..))
 import Ouroboros.Network.Block qualified as O
-
-type TxPool = [CardanoTx]
-
-data MockNodeServerChainState = MockNodeServerChainState
-  { _txPool      :: TxPool
-  , _index       :: Index.UtxoIndex
-  , _currentSlot :: Slot
-  , _channel     :: TChan Block
-  , _tip         :: Tip
-  } deriving (Generic)
-
-makeLenses ''MockNodeServerChainState
-
-instance Show MockNodeServerChainState where
-    -- Skip showing the full chain
-    show MockNodeServerChainState {_txPool, _index, _currentSlot, _tip} =
-        "MockNodeServerChainState { " <> show _txPool
-                        <> ", " <> show _index
-                        <> ", " <> show _currentSlot
-                        <> ", " <> show _tip <> " }"
 
 emptyChainState :: MonadIO m => m MockNodeServerChainState
 emptyChainState = do
@@ -58,19 +34,6 @@ emptyChainState = do
 
 getChannel :: MonadIO m => MVar MockNodeServerChainState -> m (TChan Block)
 getChannel mv = liftIO (readMVar mv) <&> view channel
-
--- | Build a CNSE ChainState from a emulator ChainState
-fromEmulatorChainState :: MonadIO m => EC.ChainState -> m MockNodeServerChainState
-fromEmulatorChainState EC.ChainState {EC._txPool, EC._index, EC._chainCurrentSlot, EC._chainNewestFirst} = do
-    ch <- liftIO $ atomically newTChan
-    void $ liftIO $
-        mapM_ (atomically . writeTChan ch) _chainNewestFirst
-    pure $ MockNodeServerChainState { _channel     = ch
-                      , _txPool      = _txPool
-                      , _index       = _index
-                      , _currentSlot = _chainCurrentSlot
-                      , _tip         = O.TipGenesis
-                      }
 
 -- Get the current tip.
 getTip :: forall m. MonadIO m => MVar MockNodeServerChainState -> m Tip

@@ -35,37 +35,48 @@ library
     Cardano.Node.Socket.Emulator.Params
     Cardano.Node.Socket.Emulator.Server
     Cardano.Node.Socket.Emulator.Types
+    Plutus.Monitoring.Util
 
   --------------------
   -- Local components
   --------------------
   build-depends:
-    , cardano-node-emulator    >=1.2.0
-    , freer-extras             >=1.2.0
-    , plutus-chain-index-core  >=1.2.0
-    , plutus-ledger            >=1.2.0
-    , plutus-script-utils      >=1.2.0
+    , cardano-node-emulator  >=1.2.0
+    , freer-extras           >=1.2.0
+    , plutus-ledger          >=1.2.0
+    , plutus-script-utils    >=1.2.0
 
   --------------------------
   -- Other IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api                  >=1.35
+    , cardano-api                   >=1.35
     , cardano-ledger-alonzo
+    , cardano-ledger-byron
     , cardano-ledger-core
     , cardano-ledger-shelley
     , cardano-ledger-shelley-ma
     , cardano-slotting
+    , cryptonite
+    , exceptions
+    , io-classes
     , iohk-monitoring
+    , memory
     , ouroboros-consensus
+    , ouroboros-consensus-byron
     , ouroboros-consensus-cardano
+    , ouroboros-consensus-protocol
     , ouroboros-consensus-shelley
     , ouroboros-network
     , ouroboros-network-framework
-    , plutus-core                  >=1.0.0
-    , plutus-ledger-api            >=1.0.0
-    , plutus-tx                    >=1.0.0
-    , quickcheck-contractmodel     >=0.1.4.0
+    , plutus-core                   >=1.0.0
+    , plutus-ledger-api             >=1.0.0
+    , plutus-tx                     >=1.0.0
+    , quickcheck-contractmodel      >=0.1.4.0
+    , serialise
+    , strict-containers
+    , text-class
+    , typed-protocols
 
   ------------------------
   -- Non-IOG dependencies
@@ -96,10 +107,7 @@ executable cardano-node-socket-emulator
   main-is:          Main.hs
   hs-source-dirs:   app
   default-language: Haskell2010
-  build-depends:
-    , cardano-node-socket-emulator  >=1.2.0
-    , plutus-chain-index-core       >=1.2.0
-
+  build-depends:    cardano-node-socket-emulator >=1.2.0
   build-depends:    iohk-monitoring
   build-depends:
     , base           >=4.9 && <5

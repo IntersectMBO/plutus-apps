@@ -61,8 +61,8 @@ import Cardano.BM.Configuration.Model qualified as CM
 import Cardano.BM.Setup (setupTrace_)
 import Cardano.BM.Trace (Trace, logDebug, nullTracer)
 
+import Cardano.Node.Socket.Emulator.Types (epochSlots)
 import Cardano.Protocol.Socket.Client qualified as C
-import Cardano.Protocol.Socket.Type (epochSlots)
 import Control.Concurrent.STM (atomically, newTVarIO)
 import Control.Concurrent.STM.TBMQueue (TBMQueue, writeTBMQueue)
 import Database.Beam.Sqlite (Sqlite)

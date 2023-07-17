@@ -26,9 +26,8 @@ import Cardano.BM.Data.Trace (Trace)
 import Cardano.ChainIndex.Server qualified as ChainIndex
 import Cardano.Node.Socket.Emulator qualified as NodeServer
 import Cardano.Node.Socket.Emulator.Params qualified as Params
-import Cardano.Node.Socket.Emulator.Types (NodeServerConfig (..))
+import Cardano.Node.Socket.Emulator.Types (NodeServerConfig (..), epochSlots)
 import Cardano.Node.Types (NodeMode (MockNode), PABServerConfig (pscNodeMode, pscNodeServerConfig), _AlonzoNode)
-import Cardano.Protocol.Socket.Type (epochSlots)
 import Cardano.Wallet.Mock.Server qualified as WalletServer
 import Cardano.Wallet.Mock.Types (WalletMsg)
 import Cardano.Wallet.Types (WalletConfig (LocalWalletConfig, RemoteWalletConfig))

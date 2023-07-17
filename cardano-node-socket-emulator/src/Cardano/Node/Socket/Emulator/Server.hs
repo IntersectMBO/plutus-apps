@@ -55,12 +55,12 @@ import Ouroboros.Network.Socket
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
 
-import Cardano.Protocol.Socket.Type
-
 import Cardano.Node.Emulator.Internal.Node (ChainEvent, Params)
 import Cardano.Node.Emulator.Internal.Node.Chain qualified as Chain
-import Cardano.Node.Socket.Emulator.Chain (MockNodeServerChainState (..), addTxToPool, chainNewestFirst, channel,
-                                           currentSlot, getChannel, getTip, handleControlChain, txPool)
+import Cardano.Node.Socket.Emulator.Chain (addTxToPool, chainNewestFirst, getChannel, getTip, handleControlChain)
+import Cardano.Node.Socket.Emulator.Types (BlockId (BlockId), MockNodeServerChainState, Tip, blockId, chainSyncCodec,
+                                           channel, currentSlot, doNothingResponderProtocol, nodeToClientVersion,
+                                           nodeToClientVersionData, toCardanoBlock, txPool, txSubmissionCodec)
 import Ledger (Block, CardanoTx (..), Slot (..))
 
 data CommandChannel = CommandChannel
