@@ -82,7 +82,7 @@ data MockWallet =
 -- | Wrapper for config files and APIs
 newtype WalletNumber = WalletNumber { getWallet :: Integer }
     deriving (Show, Eq, Ord, Generic)
-    deriving newtype (ToHttpApiData, FromHttpApiData, Num)
+    deriving newtype (ToHttpApiData, FromHttpApiData, Num, Enum, Real, Integral)
     deriving anyclass (FromJSON, ToJSON)
 
 fromWalletNumber :: WalletNumber -> MockWallet

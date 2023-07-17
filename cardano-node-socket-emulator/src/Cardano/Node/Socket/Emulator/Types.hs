@@ -18,11 +18,11 @@
 -}
 module Cardano.Node.Socket.Emulator.Types where
 
-import Cardano.Api (NetworkId)
-import Cardano.Node.Emulator.Internal.Node (ChainControlEffect, ChainEffect, ChainEvent, SlotConfig, testnet,
-                                            unsafeMakeValid)
+import Cardano.Api (NetworkId, Value)
+import Cardano.Node.Emulator.Internal.Node (ChainControlEffect, ChainEffect, ChainEvent, SlotConfig, fromBlockchain,
+                                            testnet, unsafeMakeValid)
 import Cardano.Node.Socket.Emulator.Chain (MockNodeServerChainState, fromEmulatorChainState)
-import Control.Lens (makeLenses, view)
+import Control.Lens (makeLenses)
 import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg)
 import Control.Monad.Freer.State qualified as Eff
 import Control.Monad.IO.Class (MonadIO)
@@ -34,12 +34,11 @@ import Data.Time.Format.ISO8601 qualified as F
 import Data.Time.Units (Millisecond)
 import Data.Time.Units.Extra ()
 import GHC.Generics (Generic)
+import Ledger.Address (CardanoAddress)
+import Ledger.CardanoWallet
 import Ledger.Index (createGenesisTransaction)
-import Plutus.Contract.Trace qualified as Trace
 import Prettyprinter (Pretty, pretty, viaShow, vsep, (<+>))
 import Servant.Client (BaseUrl (BaseUrl, baseUrlPort), Scheme (Http))
-import Wallet.Emulator (Wallet, WalletNumber (WalletNumber))
-import Wallet.Emulator qualified as EM
 
 
 -- | Node server configuration
@@ -117,21 +116,10 @@ data AppState =
 
 makeLenses 'AppState
 
--- | 'AppState' with an initial transaction that pays some Ada to
---   the wallets.
-initialAppState :: MonadIO m => [Wallet] -> m AppState
-initialAppState wallets = do
-    initialState <- initialChainState (Trace.defaultDistFor wallets)
-    pure $ AppState
-        { _chainState = initialState
-        , _eventHistory = mempty
-        }
-
 -- | 'ChainState' with initial values
-initialChainState :: MonadIO m => Trace.InitialDistribution -> m MockNodeServerChainState
+initialChainState :: MonadIO m => Map.Map CardanoAddress Value -> m MockNodeServerChainState
 initialChainState =
-    fromEmulatorChainState . view EM.chainState . EM.emulatorState . pure . pure . unsafeMakeValid .
-    createGenesisTransaction . Map.mapKeys EM.mockWalletAddress
+    fromEmulatorChainState . fromBlockchain . pure . pure . unsafeMakeValid . createGenesisTransaction
 
 
 -- Logging ------------------------------------------------------------------------------------------------------------
