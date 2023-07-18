@@ -167,7 +167,7 @@ logMessage lvl = prism' (LogMessage lvl) (\case { LogMessage lvl' a | lvl' == lv
 
 instance Pretty a => Pretty (LogMessage a) where
     pretty LogMessage{_logLevel, _logMessageContent} =
-        pretty _logLevel <+> pretty _logMessageContent
+        pretty _logLevel <+> hang 0 (pretty _logMessageContent)
 
 logDebug :: forall a effs. Member (LogMsg a) effs => a -> Eff effs ()
 logDebug m = send $ LMessage (LogMessage Debug m)
