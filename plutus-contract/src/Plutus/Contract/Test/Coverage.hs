@@ -18,6 +18,7 @@ import Data.Set qualified as Set
 import Data.Text qualified as Text
 
 import Cardano.Node.Emulator.Internal.Node
+import Ledger.Index (getEvaluationLogs)
 import Plutus.Trace.Emulator.Types
 import PlutusTx.Coverage
 import Wallet.Emulator.MultiAgent (EmulatorEvent, EmulatorEvent' (..), EmulatorTimeEvent (..), eteEvent)
@@ -40,9 +41,8 @@ getInvokedEndpoints es =
 getCoverageData :: [EmulatorEvent] -> CoverageData
 getCoverageData es =
   let extractLog e = case e of
-        ChainEvent (TxnValidate _ _ logs)             -> logs
-        ChainEvent (TxnValidationFail _ _ _ _ _ logs) -> logs
-        _                                             -> []
+        ChainEvent (TxnValidation res) -> getEvaluationLogs res
+        _                              -> []
 
   in fold $ do
     event <- es

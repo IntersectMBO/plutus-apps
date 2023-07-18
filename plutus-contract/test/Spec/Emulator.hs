@@ -12,7 +12,7 @@ module Spec.Emulator(tests) where
 import Cardano.Api qualified as C
 import Cardano.Node.Emulator.Generators (Mockchain (Mockchain))
 import Cardano.Node.Emulator.Generators qualified as Gen
-import Cardano.Node.Emulator.Internal.Node (selectCoin)
+import Cardano.Node.Emulator.Internal.Node (selectCoin, unsafeMakeValid)
 import Cardano.Node.Emulator.Internal.Node.Chain qualified as Chain
 import Control.Lens ((&), (.~))
 import Control.Monad (void)
@@ -29,7 +29,7 @@ import Hedgehog (Property, forAll, property)
 import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-import Ledger (CardanoTx (..), OnChainTx (Valid), PaymentPubKeyHash, toCtxUTxOTxOut)
+import Ledger (CardanoTx (..), PaymentPubKeyHash, toCtxUTxOTxOut)
 import Ledger.Index qualified as Index
 import Ledger.Value.CardanoAPI qualified as Value
 import Plutus.Contract.Test hiding (not)
@@ -112,7 +112,7 @@ pubKey3 = mockWalletPaymentPubKeyHash wallet3
 utxo :: Property
 utxo = property $ do
     Mockchain txPool o _params <- forAll Gen.genMockchain
-    Hedgehog.assert (Index.initialise [map Valid txPool] == C.UTxO (fmap toCtxUTxOTxOut o))
+    Hedgehog.assert (Index.initialise [map unsafeMakeValid txPool] == C.UTxO (fmap toCtxUTxOTxOut o))
 
 txnValid :: Property
 txnValid = property $ do
@@ -141,10 +141,10 @@ txnUpdateUtxo = property $ do
             Trace.liftWallet wallet1 (submitTxn txn)
             Trace.liftWallet wallet1 (submitTxn txn)
         pred = \case
-            [ Chain.TxnValidate{}
+            [ Chain.TxnValidation Index.Success{}
                 , Chain.SlotAdd _
-                , Chain.TxnValidate _ _ _
-                , Chain.TxnValidationFail _ _ _ (Index.CardanoLedgerValidationError msg) _ _
+                , Chain.TxnValidation Index.Success{}
+                , Chain.TxnValidation (Index.FailPhase1 _ (Index.CardanoLedgerValidationError msg))
                 , Chain.SlotAdd _
                 ] -> "ApplyTxError [UtxowFailure (UtxoFailure (FromAlonzoUtxoFail (ValueNotConserved" `Text.isInfixOf` msg
                      || "[CollectErrors [BadTranslation (TranslationLogicMissingInput" `Text.isInfixOf` msg

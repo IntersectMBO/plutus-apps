@@ -30,7 +30,8 @@
            redeemers:
 [INFO] Signing tx: 4f54ed37832dae6b107c2a0ec1df8ae2718fe1419d0efd414dd124d2fb4d689b
 [INFO] Submitting tx: 4f54ed37832dae6b107c2a0ec1df8ae2718fe1419d0efd414dd124d2fb4d689b
-[INFO] TxnValidate 4f54ed37832dae6b107c2a0ec1df8ae2718fe1419d0efd414dd124d2fb4d689b [  ]
+[INFO] TxnValidation 4f54ed37832dae6b107c2a0ec1df8ae2718fe1419d0efd414dd124d2fb4d689b
+Validation success
 [DEBUG] SlotAdd Slot 1
 [INFO] Balancing an unbalanced transaction:
          Tx 2ecd70166c531e5f30ac25fe72912106225a228243b0324959edbd9867fd416a:
@@ -64,5 +65,6 @@
            redeemers:
 [INFO] Signing tx: a3db788dff556e9152c385257adbcc24ddbbcfd8e083ea70fd110741babb94c3
 [INFO] Submitting tx: a3db788dff556e9152c385257adbcc24ddbbcfd8e083ea70fd110741babb94c3
-[INFO] TxnValidate a3db788dff556e9152c385257adbcc24ddbbcfd8e083ea70fd110741babb94c3 [  ]
+[INFO] TxnValidation a3db788dff556e9152c385257adbcc24ddbbcfd8e083ea70fd110741babb94c3
+Validation success
 [DEBUG] SlotAdd Slot 2

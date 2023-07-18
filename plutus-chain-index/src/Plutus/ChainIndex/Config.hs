@@ -23,14 +23,15 @@ module Plutus.ChainIndex.Config(
   appendTransactionQueueSize
   ) where
 
-import Cardano.Api (BlockNo (BlockNo), NetworkId (Testnet))
+import Cardano.Api (BlockNo (BlockNo), NetworkId)
 import Cardano.Node.Emulator.Internal.Node.TimeSlot (SlotConfig (SlotConfig, scSlotLength, scSlotZeroTime))
 import Control.Exception (Exception)
 import Control.Lens (makeLensesFor)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
+import Ledger.Test (testnet)
 import Numeric.Natural (Natural)
-import Ouroboros.Network.Magic (NetworkMagic (NetworkMagic))
+import Ouroboros.Network.Magic (NetworkMagic)
 import Prettyprinter (Pretty (pretty), viaShow, vsep, (<+>))
 
 data ChainIndexConfig = ChainIndexConfig
@@ -61,7 +62,7 @@ defaultConfig = ChainIndexConfig
   { cicSocketPath = "testnet/node.sock"
   , cicDbPath     = "/tmp/chain-index.db"
   , cicPort       = 9083
-  , cicNetworkId  = Testnet $ NetworkMagic 1097911063
+  , cicNetworkId  = testnet
   , cicSecurityParam = 2160
   , cicSlotConfig =
       SlotConfig

@@ -27,7 +27,6 @@ import Data.Void (Void)
 import GHC.Generics
 import NoThunks.Class (NoThunks (noThunks, showTypeOf, wNoThunks))
 
-import Cardano.Api (NetworkId (..))
 import Cardano.Api qualified as C
 import Cardano.Chain.Slotting (EpochSlots (..))
 import Codec.Serialise (DeserialiseFailure)
@@ -40,7 +39,6 @@ import Ouroboros.Consensus.Node.NetworkProtocolVersion (BlockNodeToClientVersion
 import Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 import Ouroboros.Consensus.Shelley.Ledger qualified as Shelley
 import Ouroboros.Network.Block (HeaderHash, Point, StandardHash)
-import Ouroboros.Network.Magic (NetworkMagic (..))
 import Ouroboros.Network.Mux
 import Ouroboros.Network.NodeToClient (NodeToClientVersion (..), NodeToClientVersionData (..))
 import Ouroboros.Network.Protocol.ChainSync.Codec qualified as ChainSync
@@ -53,6 +51,7 @@ import PlutusTx.Builtins qualified as PlutusTx
 import Prettyprinter.Extras
 
 import Ledger (Block, OnChainTx (..), TxId (..))
+import Ledger.Test (testNetworkMagic)
 
 -- | Tip of the block chain type (used by node protocols).
 type Tip = Block
@@ -109,14 +108,9 @@ nodeToClientVersion = NodeToClientV_13
 -- | A temporary definition of the protocol version. This will be moved as an
 -- argument to the client connection function in a future PR (the network magic
 -- number matches the one in the test net created by scripts)
-cfgNetworkMagic :: NetworkMagic
-cfgNetworkMagic = NetworkMagic 1097911063
-
-cfgNetworkId :: NetworkId
-cfgNetworkId    = Testnet cfgNetworkMagic
 
 nodeToClientVersionData :: NodeToClientVersionData
-nodeToClientVersionData = NodeToClientVersionData { networkMagic = cfgNetworkMagic }
+nodeToClientVersionData = NodeToClientVersionData { networkMagic = testNetworkMagic }
 
 -- | A protocol client that will never leave the initial state.
 doNothingInitiatorProtocol

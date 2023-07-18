@@ -1,4 +1,5 @@
-Slot 0: TxnValidate d0f5b08cc20688becb8eceba9770a18ea49a49d5df159715b899736bd1d1121d [  ]
+Slot 0: TxnValidation d0f5b08cc20688becb8eceba9770a18ea49a49d5df159715b899736bd1d1121d
+Validation success
 Slot 1: 00000000-0000-4000-8000-000000000000 {Wallet W[1]}:
           Contract instance started
 Slot 1: 00000000-0000-4000-8000-000000000000 {Wallet W[1]}:
@@ -142,9 +143,12 @@ Slot 1: W[4]: Finished balancing:
 Slot 1: W[4]: Signing tx: 4219625e5c8cbb7aac9cd02a8fe6abba627e11289cc9cae55c273aa0b713eee8
 Slot 1: W[4]: Submitting tx: 4219625e5c8cbb7aac9cd02a8fe6abba627e11289cc9cae55c273aa0b713eee8
 Slot 1: W[4]: TxSubmit: 4219625e5c8cbb7aac9cd02a8fe6abba627e11289cc9cae55c273aa0b713eee8
-Slot 1: TxnValidate 4219625e5c8cbb7aac9cd02a8fe6abba627e11289cc9cae55c273aa0b713eee8 [  ]
-Slot 1: TxnValidate 2cf42b87d8872ad340b26fb4926eb29b40fffddfeb8745cdd970ea6f51762287 [  ]
-Slot 1: TxnValidate 454b0dec735648cb9923b835b48f4ff8e9e80bf99ad081c2d905d801c6ce3328 [  ]
+Slot 1: TxnValidation 4219625e5c8cbb7aac9cd02a8fe6abba627e11289cc9cae55c273aa0b713eee8
+Validation success
+Slot 1: TxnValidation 2cf42b87d8872ad340b26fb4926eb29b40fffddfeb8745cdd970ea6f51762287
+Validation success
+Slot 1: TxnValidation 454b0dec735648cb9923b835b48f4ff8e9e80bf99ad081c2d905d801c6ce3328
+Validation success
 Slot 20: 00000000-0000-4000-8000-000000000000 {Wallet W[1]}:
            Contract log: String "Collecting funds"
 Slot 20: W[1]: Balancing an unbalanced transaction:
@@ -226,12 +230,14 @@ Slot 20: W[1]: Submitting tx: 0f1c069771f164f1a8a13e20bf8f6ee125b349c0780b54c7ca
 Slot 20: W[1]: TxSubmit: 0f1c069771f164f1a8a13e20bf8f6ee125b349c0780b54c7ca899c1a87237263
 Slot 20: 00000000-0000-4000-8000-000000000000 {Wallet W[1]}:
            Contract instance stopped (no errors)
-Slot 20: TxnValidate 0f1c069771f164f1a8a13e20bf8f6ee125b349c0780b54c7ca899c1a87237263 [ Data decoded successfully
-                                                                                      , Redeemer decoded successfully
-                                                                                      , Script context decoded successfully
-                                                                                      , Data decoded successfully
-                                                                                      , Redeemer decoded successfully
-                                                                                      , Script context decoded successfully
-                                                                                      , Data decoded successfully
-                                                                                      , Redeemer decoded successfully
-                                                                                      , Script context decoded successfully ]
+Slot 20: TxnValidation 0f1c069771f164f1a8a13e20bf8f6ee125b349c0780b54c7ca899c1a87237263
+Validation success
+  Data decoded successfully
+  Redeemer decoded successfully
+  Script context decoded successfully
+  Data decoded successfully
+  Redeemer decoded successfully
+  Script context decoded successfully
+  Data decoded successfully
+  Redeemer decoded successfully
+  Script context decoded successfully

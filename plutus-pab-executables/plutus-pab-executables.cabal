@@ -404,6 +404,7 @@ executable sync-client
   build-depends:
     , cardano-node-emulator    >=1.2.0
     , plutus-chain-index-core  >=1.2.0
+    , plutus-ledger            >=1.2.0
 
   --------------------------
   -- Other IOG dependencies

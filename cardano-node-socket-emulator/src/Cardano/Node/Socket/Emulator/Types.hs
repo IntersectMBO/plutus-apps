@@ -19,7 +19,8 @@
 module Cardano.Node.Socket.Emulator.Types where
 
 import Cardano.Api (NetworkId)
-import Cardano.Node.Emulator.Internal.Node (ChainControlEffect, ChainEffect, ChainEvent, SlotConfig, testnet)
+import Cardano.Node.Emulator.Internal.Node (ChainControlEffect, ChainEffect, ChainEvent, SlotConfig, testnet,
+                                            unsafeMakeValid)
 import Cardano.Node.Socket.Emulator.Chain (MockNodeServerChainState, fromEmulatorChainState)
 import Control.Lens (makeLenses, view)
 import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg)
@@ -33,7 +34,6 @@ import Data.Time.Format.ISO8601 qualified as F
 import Data.Time.Units (Millisecond)
 import Data.Time.Units.Extra ()
 import GHC.Generics (Generic)
-import Ledger.Blockchain (OnChainTx (..))
 import Ledger.Index (createGenesisTransaction)
 import Plutus.Contract.Trace qualified as Trace
 import Prettyprinter (Pretty, pretty, viaShow, vsep, (<+>))
@@ -130,7 +130,7 @@ initialAppState wallets = do
 -- | 'ChainState' with initial values
 initialChainState :: MonadIO m => Trace.InitialDistribution -> m MockNodeServerChainState
 initialChainState =
-    fromEmulatorChainState . view EM.chainState . EM.emulatorState . pure . pure . Valid .
+    fromEmulatorChainState . view EM.chainState . EM.emulatorState . pure . pure . unsafeMakeValid .
     createGenesisTransaction . Map.mapKeys EM.mockWalletAddress
 
 

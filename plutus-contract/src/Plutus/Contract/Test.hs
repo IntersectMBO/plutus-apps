@@ -685,7 +685,7 @@ assertFailedTransaction predicate = TracePredicate $
         [] -> do
             tell @(Doc Void) $ "No transactions failed to validate."
             pure False
-        xs -> pure (all (\(_, t, e, _, _) -> predicate t e) xs)
+        xs -> pure (all (\(t, e, _) -> predicate t e) xs)
 
 -- | Assert that at least one transaction failed to validate with an EvaluationError
 -- containing the given text.
@@ -701,7 +701,7 @@ assertNoFailedTransactions = TracePredicate $
     flip postMapM (L.generalize $ Folds.failedTransactions Nothing) $ \case
         [] -> pure True
         xs -> do
-            let prettyTxFail (i, _, err, _, _) = pretty i <> colon <+> pretty err
+            let prettyTxFail (tx, err, _) = pretty (Ledger.getCardanoTxId tx) <> colon <+> pretty err
             tell @(Doc Void) $ vsep ("Transactions failed to validate:" : fmap prettyTxFail xs)
             pure False
 

@@ -29,9 +29,6 @@ module Wallet.Emulator.Types(
     Cardano.Node.Emulator.Internal.Node.TxPool,
     -- * Emulator
     EmulatorEffs,
-    Wallet.Emulator.MultiAgent.Assertion(OwnFundsEqual, IsValidated),
-    Wallet.Emulator.MultiAgent.assert,
-    Wallet.Emulator.MultiAgent.assertIsValidated,
     Plutus.Contract.Error.AssertionError(..),
     Plutus.Contract.Error.AsAssertionError(..),
     Wallet.Emulator.NodeClient.ChainClientNotification(..),
@@ -45,9 +42,6 @@ module Wallet.Emulator.Types(
     Wallet.Emulator.Wallet.ownAddress,
     -- ** Traces
     Wallet.Emulator.MultiAgent.walletAction,
-    Wallet.Emulator.MultiAgent.assertion,
-    Wallet.Emulator.MultiAgent.assertOwnFundsEq,
-    Wallet.Emulator.MultiAgent.ownFundsEqual,
     -- * Emulator internals
     Wallet.Emulator.MultiAgent.EmulatorState(..),
     Wallet.Emulator.MultiAgent.emptyEmulatorState,
@@ -92,7 +86,6 @@ type EmulatorEffs = '[MultiAgentEffect, ChainEffect, ChainControlEffect]
 processEmulated :: forall effs.
     ( Member (Error WalletAPIError) effs
     , Member (Error ChainIndexError) effs
-    , Member (Error AssertionError) effs
     , Member (State EmulatorState) effs
     , Member (LogMsg EmulatorEvent') effs
     )

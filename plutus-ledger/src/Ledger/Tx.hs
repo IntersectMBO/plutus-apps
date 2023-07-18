@@ -66,7 +66,6 @@ module Ledger.Tx
     , CardanoTx(.., CardanoEmulatorEraTx)
     , ToCardanoError(..)
     , addCardanoTxSignature
-    , pubKeyTxOut
     -- * TxBodyContent functions
     , getTxBodyContentInputs
     , getTxBodyContentCollateralInputs
@@ -97,11 +96,10 @@ import Data.Set qualified as Set
 import Data.Tuple (swap)
 import GHC.Generics (Generic)
 
-import Ledger.Address (Address, CardanoAddress, PaymentPubKey, cardanoAddressCredential, cardanoStakingCredential,
-                       pubKeyAddress)
+import Ledger.Address (Address, CardanoAddress, cardanoAddressCredential, cardanoStakingCredential)
 import Ledger.Orphans ()
 import Ledger.Slot (SlotRange)
-import Ledger.Tx.CardanoAPI (CardanoTx (CardanoTx), ToCardanoError (..))
+import Ledger.Tx.CardanoAPI (CardanoTx (CardanoTx), ToCardanoError (..), pattern CardanoEmulatorEraTx)
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
 
 import Plutus.Script.Utils.Scripts (scriptHash)
@@ -271,16 +269,6 @@ instance Pretty DecoratedTxOut where
       hang 2 $ vsep [ "-" <+> pretty (p ^. decoratedTxOutValue) <+> "addressed to"
                     , pretty (p ^. decoratedTxOutAddress)]
 
-getEmulatorEraTx :: CardanoTx -> C.Tx C.BabbageEra
-getEmulatorEraTx (CardanoTx tx C.BabbageEraInCardanoMode) = tx
-getEmulatorEraTx _                                        = error "getEmulatorEraTx: Expected a Babbage tx"
-
-pattern CardanoEmulatorEraTx :: C.Tx C.BabbageEra -> CardanoTx
-pattern CardanoEmulatorEraTx tx <- (getEmulatorEraTx -> tx) where
-    CardanoEmulatorEraTx tx = CardanoTx tx C.BabbageEraInCardanoMode
-
-{-# COMPLETE CardanoEmulatorEraTx #-}
-
 instance Pretty CardanoTx where
     pretty tx =
         let
@@ -404,12 +392,6 @@ getCardanoTxExtraKeyWitnesses :: CardanoTx -> [C.Hash C.PaymentKey]
 getCardanoTxExtraKeyWitnesses (CardanoEmulatorEraTx (C.Tx (C.TxBody C.TxBodyContent {..}) _)) = case txExtraKeyWits of
   C.Api.TxExtraKeyWitnessesNone      -> mempty
   C.Api.TxExtraKeyWitnesses _ txwits -> txwits
-
--- | Create a transaction output locked by a public payment key and optionnaly a public stake key.
-pubKeyTxOut :: C.Value -> PaymentPubKey -> Maybe V1.StakingCredential -> Either ToCardanoError TxOut
-pubKeyTxOut v pk sk = do
-  aie <- CardanoAPI.toCardanoAddressInEra (C.Testnet $ C.NetworkMagic 1) $ pubKeyAddress pk sk
-  pure $ TxOut $ C.TxOut aie (CardanoAPI.toCardanoTxOutValue v) C.TxOutDatumNone C.Api.ReferenceScriptNone
 
 type PrivateKey = Crypto.XPrv
 

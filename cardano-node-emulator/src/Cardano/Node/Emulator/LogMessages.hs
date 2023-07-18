@@ -11,7 +11,6 @@ import Cardano.Node.Emulator.Internal.Node.Chain (ChainEvent)
 import Control.Lens.TH (makePrisms)
 import Data.Aeson (FromJSON, ToJSON, Value)
 import Data.Map qualified as Map
-import Data.Text (Text)
 import GHC.Generics (Generic)
 import Ledger (CardanoTx, getCardanoTxId)
 import Ledger.Index (UtxoIndex, ValidationError, ValidationPhase)
@@ -38,11 +37,9 @@ data TxBalanceMsg =
     | SubmittingTx CardanoTx
     | ValidationFailed
         ValidationPhase
-        C.TxId
         CardanoTx
         ValidationError
         C.Value -- ^ The amount of collateral stored in the transaction.
-        [Text]
     deriving stock (Eq, Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
 
@@ -52,9 +49,9 @@ instance Pretty TxBalanceMsg where
             [ hang 2 $ vsep ["Balancing an unbalanced transaction:", pretty tx]
             , hang 2 $ vsep $ "Utxo index:" : (pretty <$> Map.toList utxo)
             ]
-        FinishedBalancing tx         -> hang 2 $ vsep ["Finished balancing:", pretty tx]
-        SigningTx tx                 -> "Signing tx:" <+> pretty (getCardanoTxId tx)
-        SubmittingTx tx              -> "Submitting tx:" <+> pretty (getCardanoTxId tx)
-        ValidationFailed p i _ e _ _ -> "Validation error:" <+> pretty p <+> pretty i <> colon <+> pretty e
+        FinishedBalancing tx      -> hang 2 $ vsep ["Finished balancing:", pretty tx]
+        SigningTx tx              -> "Signing tx:" <+> pretty (getCardanoTxId tx)
+        SubmittingTx tx           -> "Submitting tx:" <+> pretty (getCardanoTxId tx)
+        ValidationFailed p tx e _ -> "Validation error:" <+> pretty p <+> pretty (getCardanoTxId tx) <> colon <+> pretty e
 
 makePrisms ''TxBalanceMsg

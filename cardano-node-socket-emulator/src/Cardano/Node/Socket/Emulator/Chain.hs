@@ -18,7 +18,7 @@ import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Lens hiding (index)
 import Control.Monad.Freer
-import Control.Monad.Freer.Extras.Log (LogMsg, logDebug, logInfo, logWarn)
+import Control.Monad.Freer.Extras.Log (LogMsg)
 import Control.Monad.Freer.State (State, gets, modify)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Foldable (traverse_)
@@ -97,7 +97,7 @@ handleControlChain params = \case
         modify $ tip    ?~ block
         modify $ index  .~ idx'
 
-        traverse_ logEvent events
+        traverse_ EC.logEvent events
 
         liftIO $ atomically $ writeTChan chan block
         pure block
@@ -111,12 +111,6 @@ handleChain params = \case
     EC.QueueTx tx     -> modify $ over txPool (addTxToPool tx)
     EC.GetCurrentSlot -> gets _currentSlot
     EC.GetParams      -> pure params
-
-logEvent :: Member (LogMsg EC.ChainEvent) effs => EC.ChainEvent -> Eff effs ()
-logEvent e = case e of
-    EC.SlotAdd{}           -> logDebug e
-    EC.TxnValidationFail{} -> logWarn e
-    _                      -> logInfo e
 
 addTxToPool :: CardanoTx -> TxPool -> TxPool
 addTxToPool = (:)

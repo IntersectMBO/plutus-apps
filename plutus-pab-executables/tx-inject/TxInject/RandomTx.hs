@@ -23,10 +23,9 @@ import Cardano.Node.Emulator.Internal.Node (Params (pSlotConfig))
 import Cardano.Node.Emulator.Internal.Node.Validation qualified as Validation
 import Ledger.Address (CardanoAddress)
 import Ledger.CardanoWallet qualified as CW
-import Ledger.Index (UtxoIndex)
+import Ledger.Index (UtxoIndex, ValidationResult (Success))
 import Ledger.Slot (Slot (..))
 import Ledger.Tx (CardanoTx (CardanoEmulatorEraTx), cardanoTxOutValue)
-import Ledger.Tx.CardanoAPI (fromPlutusIndex)
 import Ledger.Value.CardanoAPI (isAdaOnlyValue)
 
 -- $randomTx
@@ -88,11 +87,10 @@ generateTx gen slot utxo = do
     slotCfg <- Gen.sample Generators.genSlotConfig
     let
       params = def { pSlotConfig = slotCfg }
-      utxoIndex = fromPlutusIndex utxo
-      validationResult = Validation.validateCardanoTx params slot utxoIndex txn
+      validationResult = Validation.validateCardanoTx params slot utxo txn
     case validationResult of
-      Left _  -> generateTx gen slot utxo
-      Right _ -> pure cTx
+      Success{} -> pure cTx
+      _         -> generateTx gen slot utxo
 
 keyPairs :: NonEmpty CardanoAddress
 keyPairs = fmap CW.mockWalletAddress (CW.knownMockWallet 1 :| drop 1 CW.knownMockWallets)

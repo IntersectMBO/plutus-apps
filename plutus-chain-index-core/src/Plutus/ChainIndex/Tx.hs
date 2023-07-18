@@ -2,13 +2,13 @@
 {-# LANGUAGE DerivingVia         #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE GADTs               #-}
-{-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE PolyKinds           #-}
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections       #-}
+{-# LANGUAGE ViewPatterns        #-}
 {-| The chain index' version of a transaction
 -}
 module Plutus.ChainIndex.Tx(
@@ -43,11 +43,11 @@ module Plutus.ChainIndex.Tx(
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Tuple (swap)
-import Ledger (CardanoTx (CardanoTx), OnChainTx (..), TxOutRef (..))
+import Ledger (CardanoTx (CardanoTx), OnChainTx (..), TxOutRef (..), unOnChain)
 import Ledger.Address (CardanoAddress)
 import Ledger.Scripts (Redeemer, RedeemerHash)
 import Plutus.ChainIndex.Types
-import Plutus.Contract.CardanoAPI (fromCardanoTx, setValidity)
+import Plutus.Contract.CardanoAPI (fromCardanoTx)
 import Plutus.Script.Utils.Scripts (redeemerHash)
 import Plutus.V2.Ledger.Api (Address (..), OutputDatum (..), Value (..))
 
@@ -84,13 +84,8 @@ validityFromChainIndex tx =
 -- | Convert a 'OnChainTx' to a 'ChainIndexTx'. An invalid 'OnChainTx' will not
 -- produce any 'ChainIndexTx' outputs and the collateral inputs of the
 -- 'OnChainTx' will be the inputs of the 'ChainIndexTx'.
---
--- Cardano api transactions store validity internally. Our emulated blockchain stores validity outside of the transactions,
--- so we need to make sure these match up.
 fromOnChainTx :: OnChainTx -> ChainIndexTx
-fromOnChainTx = \case
-    Valid (CardanoTx tx era)   -> fromCardanoTx era $ setValidity True tx
-    Invalid (CardanoTx tx era) -> fromCardanoTx era $ setValidity False tx
+fromOnChainTx (unOnChain -> CardanoTx tx era) = fromCardanoTx era tx
 
 txRedeemersWithHash :: ChainIndexTx -> Map RedeemerHash Redeemer
 txRedeemersWithHash ChainIndexTx{_citxRedeemers} = Map.fromList

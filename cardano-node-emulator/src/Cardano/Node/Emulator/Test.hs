@@ -67,9 +67,10 @@ import Test.QuickCheck.StateModel (Realized)
 hasValidatedTransactionCountOfTotal :: Int -> Int -> EmulatorLogs -> Maybe String
 hasValidatedTransactionCountOfTotal valid total lg =
   let count = \case
-        LogMessage _ (ChainEvent E.TxnValidate{})       -> (Sum 1, Sum 0)
-        LogMessage _ (ChainEvent E.TxnValidationFail{}) -> (Sum 0, Sum 1)
-        _otherLogMsg                                    -> mempty
+        LogMessage _ (ChainEvent (E.TxnValidation Index.Success{}))    -> (Sum 1, Sum 0)
+        LogMessage _ (ChainEvent (E.TxnValidation Index.FailPhase1{})) -> (Sum 0, Sum 1)
+        LogMessage _ (ChainEvent (E.TxnValidation Index.FailPhase2{})) -> (Sum 0, Sum 1)
+        _otherLogMsg                                                   -> mempty
       (Sum validCount, Sum invalidCount) = foldMap count lg
   in
     if valid /= validCount then Just $ "Unexpected number of valid transactions: " ++ show validCount

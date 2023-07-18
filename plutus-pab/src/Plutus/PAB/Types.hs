@@ -314,7 +314,6 @@ data ChainOverview =
         , chainOverviewUtxoIndex      :: UtxoIndex
         }
     deriving (Show, Eq, Generic)
-    deriving anyclass (ToJSON, FromJSON)
 
 mkChainOverview :: Blockchain -> ChainOverview
 mkChainOverview = foldl reducer emptyChainOverview

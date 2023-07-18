@@ -16,8 +16,9 @@ import Cardano.Api (Block (..), BlockHeader (..), BlockInMode (..), ChainPoint (
                     deserialiseFromRawBytesHex, serialiseToRawBytesHexText)
 import Cardano.Node.Emulator.Internal.Node.TimeSlot (SlotConfig (..))
 import Cardano.Protocol.Socket.Client (ChainSyncEvent (..), runChainSync)
-import Cardano.Protocol.Socket.Type (cfgNetworkId)
 import Cardano.Slotting.Slot (SlotNo (..))
+
+import Ledger.Test (testnet)
 
 -- | We only need to know the location of the socket.
 --   We can get the protocol versions from Cardano.Protocol.Socket.Type
@@ -88,7 +89,7 @@ main = do
   _ <- runChainSync (cSocketPath cfg)
                     nullTracer
                     slotConfig
-                    cfgNetworkId
+                    testnet
                     [(cResumeHash cfg)]
                     processBlock
   _ <- forever $ threadDelay 1000000
