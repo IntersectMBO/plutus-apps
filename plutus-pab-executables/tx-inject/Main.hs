@@ -188,8 +188,10 @@ initializeInterruptHandler stats = do
 -- | Build a client environment for servant.
 initializeClient :: Config -> IO TxSendHandle
 initializeClient cfg = do
-    let serverSocket = nscSocketPath $ pscNodeServerConfig $ nodeServerConfig cfg
-    runTxSender serverSocket
+  let nsc = pscNodeServerConfig $ nodeServerConfig cfg
+      serverSocket = nscSocketPath nsc
+      networkId = nscNetworkId nsc
+  runTxSender serverSocket networkId
 
 main :: IO ()
 main = do

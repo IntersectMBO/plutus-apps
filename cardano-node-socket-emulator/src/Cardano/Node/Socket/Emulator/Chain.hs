@@ -14,6 +14,7 @@ module Cardano.Node.Socket.Emulator.Chain where
 
 import Cardano.Node.Emulator.Internal.Node (Params)
 import Cardano.Node.Emulator.Internal.Node.Chain qualified as EC
+import Cardano.Protocol.Socket.Type (BlockId (..), Tip, blockId)
 import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Lens hiding (index)
@@ -21,12 +22,15 @@ import Control.Monad.Freer
 import Control.Monad.Freer.Extras.Log (LogMsg)
 import Control.Monad.Freer.State (State, gets, modify)
 import Control.Monad.IO.Class (MonadIO, liftIO)
+import Data.Coerce (coerce)
 import Data.Foldable (traverse_)
 import Data.Functor (void)
 import Data.Maybe (listToMaybe)
 import GHC.Generics (Generic)
 import Ledger (Block, CardanoTx, Slot (..))
 import Ledger.Index qualified as Index
+import Ouroboros.Consensus.HardFork.Combinator.AcrossEras (OneEraHash (..))
+import Ouroboros.Network.Block qualified as O
 
 type TxPool = [CardanoTx]
 
@@ -35,7 +39,7 @@ data MockNodeServerChainState = MockNodeServerChainState
   , _index       :: Index.UtxoIndex
   , _currentSlot :: Slot
   , _channel     :: TChan Block
-  , _tip         :: Maybe Block
+  , _tip         :: Tip
   } deriving (Generic)
 
 makeLenses ''MockNodeServerChainState
@@ -51,7 +55,7 @@ instance Show MockNodeServerChainState where
 emptyChainState :: MonadIO m => m MockNodeServerChainState
 emptyChainState = do
     chan <- liftIO . atomically $ newTChan
-    pure $ MockNodeServerChainState [] mempty 0 chan Nothing
+    pure $ MockNodeServerChainState [] mempty 0 chan O.TipGenesis
 
 getChannel :: MonadIO m => MVar MockNodeServerChainState -> m (TChan Block)
 getChannel mv = liftIO (readMVar mv) <&> view channel
@@ -66,17 +70,15 @@ fromEmulatorChainState EC.ChainState {EC._txPool, EC._index, EC._chainCurrentSlo
                       , _txPool      = _txPool
                       , _index       = _index
                       , _currentSlot = _chainCurrentSlot
-                      , _tip         = listToMaybe _chainNewestFirst
+                      , _tip         = case listToMaybe _chainNewestFirst of
+                                        Nothing -> O.TipGenesis
+                                        Just block -> O.Tip (fromIntegral _chainCurrentSlot) (coerce $ blockId block) (fromIntegral _chainCurrentSlot)
                       }
 
--- Get the current tip or wait for one if there are no blocks.
-getTip :: forall m. MonadIO m => MVar MockNodeServerChainState -> m Block
+-- Get the current tip.
+getTip :: forall m. MonadIO m => MVar MockNodeServerChainState -> m Tip
 getTip mvChainState = liftIO $ readMVar mvChainState >>= \case
-    MockNodeServerChainState { _tip = Just tip' } -> pure tip'
-    MockNodeServerChainState { _channel }         -> do
-        -- Wait for the initial block.
-        void $ liftIO $ atomically $ peekTChan _channel
-        getTip mvChainState
+    MockNodeServerChainState { _tip } -> pure _tip
 
 handleControlChain ::
      ( Member (State MockNodeServerChainState) effs
@@ -94,7 +96,7 @@ handleControlChain params = \case
         let EC.ValidatedBlock block events idx' = EC.validateBlock params slot idx pool
 
         modify $ txPool .~ []
-        modify $ tip    ?~ block
+        modify $ tip    .~ O.Tip (fromIntegral slot) (coerce $ blockId block) (fromIntegral slot)
         modify $ index  .~ idx'
 
         traverse_ EC.logEvent events
@@ -117,12 +119,12 @@ addTxToPool = (:)
 
 -- | Fetch the currently stored chain by iterating over the channel until
 --   there is nothing left to be returned.
-chainNewestFirst :: forall m. MonadIO m => TChan Block -> m [Block]
+chainNewestFirst :: forall m b. MonadIO m => TChan b -> m [b]
 chainNewestFirst ch = do
     localChannel <- liftIO $ atomically $ cloneTChan ch
     go localChannel []
     where
-    go :: TChan Block -> [Block] -> m [Block]
+    go :: TChan b -> [b] -> m [b]
     go local acc =
         (liftIO $ atomically $ tryReadTChan local) >>= \case
             Nothing    -> pure acc

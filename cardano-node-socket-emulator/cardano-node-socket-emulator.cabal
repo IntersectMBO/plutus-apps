@@ -53,13 +53,14 @@ library
   build-depends:
     , cardano-api                  >=1.35
     , cardano-ledger-alonzo
-    , cardano-ledger-babbage
     , cardano-ledger-core
     , cardano-ledger-shelley
     , cardano-ledger-shelley-ma
     , cardano-slotting
     , iohk-monitoring
     , ouroboros-consensus
+    , ouroboros-consensus-cardano
+    , ouroboros-consensus-shelley
     , ouroboros-network
     , ouroboros-network-framework
     , plutus-core                  >=1.0.0

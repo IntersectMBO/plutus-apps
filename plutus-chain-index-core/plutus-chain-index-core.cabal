@@ -84,20 +84,22 @@ library
   -- Other IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api                  >=1.35
+    , cardano-api                   >=1.35
     , cardano-ledger-byron
     , cardano-ledger-core
+    , cardano-ledger-shelley
     , io-classes
     , iohk-monitoring
     , ouroboros-consensus
     , ouroboros-consensus-byron
     , ouroboros-consensus-cardano
+    , ouroboros-consensus-protocol
     , ouroboros-consensus-shelley
     , ouroboros-network
     , ouroboros-network-framework
-    , plutus-core                  >=1.0.0
-    , plutus-ledger-api            >=1.0.0
-    , plutus-tx                    >=1.0.0
+    , plutus-core                   >=1.0.0
+    , plutus-ledger-api             >=1.0.0
+    , plutus-tx                     >=1.0.0
     , typed-protocols
 
   ------------------------
@@ -139,6 +141,7 @@ library
     , servant-swagger-ui
     , sqlite-simple
     , stm
+    , strict-containers
     , text
     , text-class
     , unordered-containers
