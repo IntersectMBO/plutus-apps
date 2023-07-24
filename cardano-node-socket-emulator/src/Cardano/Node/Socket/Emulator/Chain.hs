@@ -25,6 +25,7 @@ import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Coerce (coerce)
 import Data.Foldable (traverse_)
 import Data.Functor (void)
+import Data.Maybe (listToMaybe)
 import GHC.Generics (Generic)
 import Ledger (Block, CardanoTx, Slot (..))
 import Ledger.Index qualified as Index
@@ -69,7 +70,9 @@ fromEmulatorChainState EC.ChainState {EC._txPool, EC._index, EC._chainCurrentSlo
                       , _txPool      = _txPool
                       , _index       = _index
                       , _currentSlot = _chainCurrentSlot
-                      , _tip         = O.TipGenesis
+                      , _tip         = case listToMaybe _chainNewestFirst of
+                                        Nothing -> O.TipGenesis
+                                        Just block -> O.Tip (fromIntegral _chainCurrentSlot) (coerce $ blockId block) (fromIntegral _chainCurrentSlot)
                       }
 
 -- Get the current tip.
