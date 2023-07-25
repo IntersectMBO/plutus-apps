@@ -54,7 +54,7 @@ module Plutus.PAB.Core.ContractInstance.STM(
 import Control.Applicative (Alternative (empty))
 import Control.Concurrent.STM (STM, TMVar, TVar)
 import Control.Concurrent.STM qualified as STM
-import Control.Monad (guard)
+import Control.Monad (guard, void)
 import Data.Aeson (Value)
 import Data.Foldable (fold)
 import Data.IORef (IORef)
@@ -402,11 +402,11 @@ finalResult InstanceState{issStatus} = do
 
 -- | Insert an 'InstanceState' value into the 'InstancesState'
 insertInstance :: ContractInstanceId -> InstanceState -> InstancesState -> IO ()
-insertInstance instanceID state (InstancesState m) = IORef.modifyIORef' m (Map.insert instanceID state)
+insertInstance instanceID state (InstancesState m) = void $ IORef.atomicModifyIORef' m (Map.insert instanceID state)
 
 -- | Delete an instance from the 'InstancesState'
 removeInstance :: ContractInstanceId -> InstancesState -> IO ()
-removeInstance instanceID (InstancesState m) = IORef.modifyIORef' m (Map.delete instanceID)
+removeInstance instanceID (InstancesState m) = void $ IORef.atomicModifyIORef' m (Map.delete instanceID)
 
 -- | Wait for the status of a transaction to change.
 waitForTxStatusChange
