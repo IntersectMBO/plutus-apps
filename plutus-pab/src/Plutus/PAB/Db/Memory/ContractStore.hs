@@ -67,7 +67,7 @@ handleContractStore = \case
             -- adding new entry
             stateTVar <- liftIO (STM.newTVarIO state)
             let instState = InMemContractInstanceState{_contractDef = definition, _contractState = stateTVar}
-            liftIO $ IORef.modifyIORef' instancesTVar (Map.insert instanceId instState)
+            liftIO $ IORef.atomicModifyIORef' instancesTVar (\s -> (Map.insert instanceId instState s, ()))
           Just oldInstState -> do
             -- only update state
             liftIO $ STM.atomically $ do
@@ -88,4 +88,4 @@ handleContractStore = \case
     Contract.PutStopInstance{} -> pure ()
     Contract.DeleteState i -> do
       instancesTVar <- unInMemInstances <$> ask @(InMemInstances t)
-      liftIO (IORef.modifyIORef' instancesTVar (Map.delete i))
+      liftIO (IORef.atomicModifyIORef' instancesTVar (\s -> (Map.delete i s, ())))
