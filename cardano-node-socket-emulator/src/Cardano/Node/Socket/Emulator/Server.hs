@@ -7,11 +7,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies      #-}
 
-module Cardano.Node.Socket.Emulator.Server (ServerHandler, runServerNode, processBlock, modifySlot, addTx) where
+module Cardano.Node.Socket.Emulator.Server (ServerHandler, runServerNode, processBlock, modifySlot, addTx, processChainEffects) where
 
 import Cardano.BM.Data.Trace (Trace)
 import Data.ByteString.Lazy qualified as LBS
 import Data.Coerce (coerce)
+import Data.Foldable (traverse_)
 import Data.List (intersect)
 import Data.Maybe (listToMaybe)
 import Data.SOP.Strict (NS (S, Z))
@@ -20,9 +21,12 @@ import Data.Void (Void)
 import Control.Concurrent
 import Control.Concurrent.Async
 import Control.Concurrent.STM
-import Control.Lens hiding (index, ix)
-import Control.Monad.Freer (interpret, runM)
-import Control.Monad.Freer.State (runState)
+import Control.Exception (throwIO)
+import Control.Lens (over, (^.))
+import Control.Monad.Except (runExceptT)
+import Control.Monad.Freer (send)
+import Control.Monad.RWS.Strict (runRWST)
+
 import Control.Monad.Reader
 import Control.Tracer
 
@@ -55,12 +59,16 @@ import Ouroboros.Network.Socket
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
 
-import Cardano.Protocol.Socket.Type
-
-import Cardano.Node.Emulator.Internal.Node (ChainEvent, Params)
+import Cardano.Node.Emulator.API qualified as E
+import Cardano.Node.Emulator.Internal.API (EmulatorError, EmulatorLogs, EmulatorMsg, EmulatorT)
+import Cardano.Node.Emulator.Internal.API qualified as E
 import Cardano.Node.Emulator.Internal.Node.Chain qualified as Chain
-import Cardano.Node.Socket.Emulator.Chain (MockNodeServerChainState (..), addTxToPool, chainNewestFirst, channel,
-                                           currentSlot, getChannel, getTip, handleControlChain, txPool)
+import Cardano.Node.Emulator.Internal.Node.Params (Params)
+import Cardano.Node.Socket.Emulator.Types (AppState (..), BlockId (BlockId), SocketEmulatorState (..), Tip, blockId,
+                                           chainSyncCodec, doNothingResponderProtocol, emulatorState, getChannel,
+                                           getTip, nodeToClientVersion, nodeToClientVersionData, setTip,
+                                           socketEmulatorState, toCardanoBlock, txSubmissionCodec)
+import Control.Monad.Freer.Extras.Log (LogMsg (LMessage))
 import Ledger (Block, CardanoTx (..), Slot (..))
 
 data CommandChannel = CommandChannel
@@ -149,46 +157,62 @@ pruneChain k original = do
        else do
            go (k' - 1) localChannel
 
+-- | Run all chain effects in the IO Monad
+runChainEffects
+    :: Params
+    -> MVar AppState
+    -> EmulatorT IO a
+    -> IO (EmulatorLogs, Either EmulatorError a)
+runChainEffects params stateVar eff = do
+    AppState (SocketEmulatorState oldState chan tip) events <- liftIO $ takeMVar stateVar
+    (a, newState, newEvents) <- runRWST (runExceptT eff) params oldState
+    liftIO $ putMVar stateVar $ AppState (SocketEmulatorState newState chan tip) (events <> newEvents)
+    pure (newEvents, a)
+
+processChainEffects ::
+    Trace IO EmulatorMsg
+    -> Params
+    -> MVar AppState
+    -> EmulatorT IO a
+    -> IO a
+processChainEffects trace params stateVar eff = do
+    (events, result) <- runChainEffects params stateVar eff
+    LM.runLogEffects trace $ traverse_ (send . LMessage) events
+    either throwIO pure result
+
 handleCommand ::
     MonadIO m
- => Trace IO ChainEvent
+ => Trace IO EmulatorMsg
  -> CommandChannel
- -> MVar MockNodeServerChainState
+ -> MVar AppState
  -> Params
  -> m ()
-handleCommand trace CommandChannel {ccCommand, ccResponse} mvChainState params =
-    liftIO (atomically $ readTQueue ccCommand) >>= \case
-        AddTx tx     -> do
-            liftIO $ modifyMVar_ mvChainState (pure . over txPool (CardanoEmulatorEraTx tx :))
-        ModifySlot f -> liftIO $ do
-            state <- liftIO $ takeMVar mvChainState
-            (s, nextState') <- liftIO $ Chain.modifySlot f
-                  & interpret (handleControlChain params)
-                  & interpret (LM.handleLogMsgTrace trace)
-                  & runState state
-                  & runM
-            putMVar mvChainState nextState'
-            atomically $ do
-                writeTQueue ccResponse (SlotChanged s)
-        ProcessBlock -> liftIO $ do
-            state <- liftIO $ takeMVar mvChainState
-            (block, nextState') <- liftIO $ Chain.processBlock
-                  & interpret (handleControlChain params)
-                  & interpret (LM.handleLogMsgTrace trace)
-                  & runState state
-                  & runM
-            putMVar mvChainState nextState'
-            atomically $
-                writeTQueue ccResponse (BlockAdded block)
+handleCommand trace CommandChannel {ccCommand, ccResponse} mvAppState params = liftIO $
+    atomically (readTQueue ccCommand) >>= \case
+            AddTx tx     -> process $ E.queueTx $ CardanoEmulatorEraTx tx
+            ModifySlot f -> do
+                s <- process $ E.modifySlot f
+                atomically $
+                    writeTQueue ccResponse (SlotChanged s)
+            ProcessBlock -> do
+                block <- process E.processBlock
+                setTip mvAppState block
+                ch <- getChannel mvAppState
+                atomically $ do
+                    writeTChan ch block
+                    writeTQueue ccResponse (BlockAdded block)
+    where
+        process :: EmulatorT IO a -> IO a
+        process = processChainEffects trace params mvAppState
 
 {- | Start the server in a new thread, and return a server handler
      used to control the server -}
 runServerNode ::
     MonadIO m
- => Trace IO ChainEvent
+ => Trace IO EmulatorMsg
  -> FilePath
  -> Integer
- -> MockNodeServerChainState
+ -> AppState
  -> Params
  -> m ServerHandler
 runServerNode trace shSocketPath k initialState params = liftIO $ do
@@ -206,16 +230,16 @@ runServerNode trace shSocketPath k initialState params = liftIO $ do
    transition is invoked. It makes the implementation of
    state transitions easier to read. -}
 
-type ChainSyncMonad = ReaderT (MVar MockNodeServerChainState) IO
+type ChainSyncMonad = ReaderT (MVar AppState) IO
 
-runChainSync :: MVar MockNodeServerChainState -> ChainSyncMonad a -> IO a
+runChainSync :: MVar AppState -> ChainSyncMonad a -> IO a
 runChainSync = flip runReaderT
 
 {- The initial state of the protocol. You can move into
    requesting the next block or reset state by searching for an
    intersection. -}
 idleState ::
-    ( MonadReader (MVar MockNodeServerChainState) m
+    ( MonadReader (MVar AppState) m
     , MonadIO m
     , block ~ CardanoBlock StandardCrypto)
  => LocalChannel
@@ -231,7 +255,7 @@ idleState channel' =
    or within a monad (IO, in our case) where you can wait for the
    next block (Nothing/Right branch) -}
 nextState ::
-    ( MonadReader (MVar MockNodeServerChainState) m
+    ( MonadReader (MVar AppState) m
     , MonadIO m
     , block ~ CardanoBlock StandardCrypto)
  => LocalChannel
@@ -245,10 +269,8 @@ nextState localChannel@(LocalChannel channel') = do
         Nothing -> do
             Right . pure <$> do
                 nextBlock <- liftIO . atomically $ readTChan channel'
-                -- liftIO $ modifyMVar_ chainState (pure . (tip ?~ nextBlock))
                 sendRollForward localChannel tip' $ toCardanoBlock blockHeader nextBlock
         Just nextBlock -> do
-            -- liftIO $ modifyMVar_ chainState (pure . (tip ?~ nextBlock))
             Left <$> sendRollForward localChannel tip' (toCardanoBlock blockHeader nextBlock)
 
 {- This protocol state will search for a block intersection
@@ -256,15 +278,18 @@ nextState localChannel@(LocalChannel channel') = do
    the client state is reset to the new offset (the Just branch)
    or to the genesis block if no intersection was found. -}
 findIntersect ::
-    ( MonadReader (MVar MockNodeServerChainState) m
+    ( MonadReader (MVar AppState) m
     , MonadIO m
     , block ~ CardanoBlock StandardCrypto)
  => [Point block]
  -> m (ServerStIntersect block (Point block) Tip m ())
 findIntersect clientPoints = do
     mvState <- ask
-    chainState <- liftIO $ readMVar mvState
-    serverPoints <- getChainPoints (view channel chainState) chainState
+    appState <- liftIO $ readMVar mvState
+    let chainState = appState ^. socketEmulatorState . emulatorState . E.esChainState
+        blocks = Chain._chainNewestFirst chainState
+        slot = Chain._chainCurrentSlot chainState
+    serverPoints <- getChainPoints blocks slot
     let point = listToMaybe
               $ intersect serverPoints
                           clientPoints
@@ -284,7 +309,7 @@ findIntersect clientPoints = do
 
 {- This is a wrapper around the creation of a `ServerStNext` -}
 sendRollForward ::
-    ( MonadReader (MVar MockNodeServerChainState) m
+    ( MonadReader (MVar AppState) m
     , MonadIO m
     , block ~ CardanoBlock StandardCrypto)
  => LocalChannel
@@ -301,7 +326,7 @@ sendRollForward channel' tip' current = pure $
    slot 0, and in idleState. This will probably change, since it
    makes more sense to start in the `StIntersect` state. -}
 chainSyncServer ::
-    ( MonadReader (MVar MockNodeServerChainState) m
+    ( MonadReader (MVar AppState) m
     , MonadIO m
     , block ~ CardanoBlock StandardCrypto)
  => ChainSyncServer block (Point block) Tip m ()
@@ -311,7 +336,7 @@ chainSyncServer =
 {- Use a `TChan` to model a broadcast channel of which we
    clone (with potentially varying offsets) for clients. -}
 cloneChainFrom :: forall m.
-    ( MonadReader (MVar MockNodeServerChainState) m
+    ( MonadReader (MVar AppState) m
     , MonadIO m )
  => Integer
  -> m LocalChannel
@@ -340,7 +365,7 @@ cloneChainFrom offset = LocalChannel <$> go
    into IO. -}
 
 hoistChainSync ::
-    MonadReader (MVar MockNodeServerChainState) m
+    MonadReader (MVar AppState) m
  => ChainSyncServer block (Point block) Tip ChainSyncMonad a
  -> m (ChainSyncServer block (Point block) Tip IO a)
 hoistChainSync machine = do
@@ -354,7 +379,7 @@ hoistChainSync machine = do
     }
 
 hoistStIdle ::
-    MonadReader (MVar MockNodeServerChainState) m
+    MonadReader (MVar AppState) m
  => ServerStIdle block (Point block) Tip ChainSyncMonad a
  -> m (ServerStIdle block (Point block) Tip IO a)
 hoistStIdle (ServerStIdle nextState' findIntersect' done) = do
@@ -372,7 +397,7 @@ hoistStIdle (ServerStIdle nextState' findIntersect' done) = do
    }
 
 hoistStIntersect ::
-    MonadReader (MVar MockNodeServerChainState) m
+    MonadReader (MVar AppState) m
  => ServerStIntersect block (Point block) Tip ChainSyncMonad a
  -> m (ServerStIntersect block (Point block) Tip IO a)
 hoistStIntersect (SendMsgIntersectFound point tip' nextState') =
@@ -381,7 +406,7 @@ hoistStIntersect (SendMsgIntersectNotFound tip' nextState') =
     SendMsgIntersectNotFound tip'    <$> hoistChainSync nextState'
 
 hoistStNext ::
-    MonadReader (MVar MockNodeServerChainState) m
+    MonadReader (MVar AppState) m
  => ServerStNext block (Point block) Tip ChainSyncMonad a
  -> m (ServerStNext block (Point block) Tip IO a)
 hoistStNext (SendMsgRollForward header tip' nextState') =
@@ -396,7 +421,7 @@ hoistStNext (SendMsgRollBackward header tip' nextState') =
 protocolLoop ::
     MonadIO m
  => FilePath
- -> MVar MockNodeServerChainState
+ -> MVar AppState
  -> m Void
 protocolLoop socketPath internalState = liftIO $ withIOManager $ \iocp -> do
     networkState <- newNetworkMutableState
@@ -420,7 +445,7 @@ protocolLoop socketPath internalState = liftIO $ withIOManager $ \iocp -> do
       $ \_ serverAsync -> wait serverAsync
 
 nodeToClientProtocols
-  :: MVar MockNodeServerChainState
+  :: MVar AppState
   -> NodeToClientProtocols 'ResponderMode LBS.ByteString IO Void ()
 nodeToClientProtocols internalState =
   NodeToClientProtocols
@@ -431,7 +456,7 @@ nodeToClientProtocols internalState =
     }
 
 chainSync
-  :: MVar MockNodeServerChainState
+  :: MVar AppState
   -> RunMiniProtocol 'ResponderMode LBS.ByteString IO Void ()
 chainSync mvChainState =
      ResponderProtocolOnly $
@@ -443,7 +468,7 @@ chainSync mvChainState =
                       mvChainState))
 
 txSubmission
-  :: MVar MockNodeServerChainState
+  :: MVar AppState
   -> RunMiniProtocol 'ResponderMode LBS.ByteString IO Void ()
 txSubmission mvChainState =
     ResponderProtocolOnly $
@@ -466,12 +491,9 @@ pointOffset pt =
 -- Currently selects all points from the blockchain.
 getChainPoints
     :: forall m block. (MonadIO m, block ~ CardanoBlock StandardCrypto)
-    => TChan Block -> MockNodeServerChainState -> m [Point block]
-getChainPoints ch st = do
-  chain <- chainNewestFirst ch
-  pure $ zipWith mkPoint
-    [st ^. currentSlot, st ^. currentSlot - 1 .. 0]
-    chain
+    => [Block] -> Slot -> m [Point block]
+getChainPoints chain slot = do
+  pure $ zipWith mkPoint [slot, slot - 1 .. 0] chain
   where
     mkPoint :: Slot -> Block -> Point block
     mkPoint s block =
@@ -485,7 +507,7 @@ getChainPoints ch st = do
    it is much simpler. -}
 
 txSubmissionServer :: forall block. (block ~ CardanoBlock StandardCrypto)
-    => MVar MockNodeServerChainState
+    => MVar AppState
     -> TxSubmission.LocalTxSubmissionServer (Shelley.GenTx block) (ApplyTxErr block) IO ()
 txSubmissionServer state = txSubmissionState
     where
@@ -498,7 +520,7 @@ txSubmissionServer state = txSubmissionState
                     (Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (S (S (S (S (Z tx')))))))) -> do
                         let Consensus.ShelleyTx _txid shelleyEraTx = tx'
                         let ctx = CardanoEmulatorEraTx (C.ShelleyTx C.ShelleyBasedEraBabbage shelleyEraTx)
-                        _ <- modifyMVar_ state (pure . over txPool (addTxToPool ctx))
+                        _ <- modifyMVar_ state (pure . over (socketEmulatorState . emulatorState . E.esChainState) (Chain.addTxToPool ctx))
                         pure ()
                     _ -> pure ()
                 return (TxSubmission.SubmitSuccess, txSubmissionState)

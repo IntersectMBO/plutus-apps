@@ -10,7 +10,7 @@
 [DEBUG] Slot 0: Thread 10 {W d3eddd0d37989746b029a0e050386bc425363901}: Started (Normal)
 [DEBUG] Slot 0: Thread 11 {block maker}: Started (Normal)
 [INFO] Slot 0: TxnValidation d0f5b08cc20688becb8eceba9770a18ea49a49d5df159715b899736bd1d1121d
-Validation success
+       Validation success
 [DEBUG] Slot 0: SlotAdd Slot 1
 [DEBUG] Slot 1: W[7]: InsertionSuccess: New tip is Tip(Slot 1, BlockId 6d2a690deb1abec3d8d2cb77ddeee68cc6c3d5b81dc373920b2f8b211862e07c, BlockNumber 0). UTxO state was added to the end.
 [DEBUG] Slot 1: W[8]: InsertionSuccess: New tip is Tip(Slot 1, BlockId 6d2a690deb1abec3d8d2cb77ddeee68cc6c3d5b81dc373920b2f8b211862e07c, BlockNumber 0). UTxO state was added to the end.

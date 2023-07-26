@@ -26,7 +26,7 @@ import Control.Tracer (nullTracer)
 import Ouroboros.Network.IOManager
 import Ouroboros.Network.Protocol.ChainSync.Client qualified as ChainSync
 
-import Cardano.Protocol.Socket.Type hiding (Tip)
+import Cardano.Node.Socket.Emulator.Types (epochSlots)
 import Ledger (Slot (..))
 import Plutus.ChainIndex.Compatibility (fromCardanoPoint, fromCardanoTip)
 import Plutus.ChainIndex.Types (Point, Tip)

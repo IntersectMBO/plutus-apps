@@ -143,8 +143,8 @@ instance (StructuredLog (ContractDef t), ToJSON (ContractDef t)) => ToObject (PA
         SMultiAgent m          -> toObject v m
         SMockserverLogMsg m    -> case m of
             StartingSlotCoordination i l -> mkObjectStr "Starting slot coordination thread" (Tagged @"initial-slot-time" (F.iso8601Show  i), Tagged @"slot-length" l)
-            StartingCNSEServer p   -> mkObjectStr "Starting Cardano Node Emulator on port " (Tagged @"port" p)
-            ProcessingChainEvent e -> mkObjectStr "Processing chain event" (Tagged @"event" e)
+            StartingCNSEServer p    -> mkObjectStr "Starting Cardano Node Emulator on port " (Tagged @"port" p)
+            ProcessingEmulatorMsg e -> mkObjectStr "Processing chain event" (Tagged @"event" e)
 
 
 -- | FIXME: Redundant?

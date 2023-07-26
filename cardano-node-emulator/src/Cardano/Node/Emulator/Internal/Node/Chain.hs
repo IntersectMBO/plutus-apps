@@ -63,10 +63,15 @@ data ChainState = ChainState {
     _chainCurrentSlot :: !Slot -- ^ The current slot number
 } deriving (Show, Generic)
 
+makeLenses ''ChainState
+
 emptyChainState :: ChainState
 emptyChainState = ChainState [] [] mempty 0
 
-makeLenses ''ChainState
+fromBlockchain :: Blockchain -> ChainState
+fromBlockchain bc = emptyChainState
+    & chainNewestFirst .~ bc
+    & index .~ Index.initialise bc
 
 data ChainControlEffect r where
     ProcessBlock :: ChainControlEffect Block
@@ -124,7 +129,7 @@ logEvent e = case e of
 
 handleChain :: (Members ChainEffs effs) => Params -> ChainEffect ~> Eff effs
 handleChain params = \case
-    QueueTx tx     -> modify $ over txPool (addTxToPool tx)
+    QueueTx tx     -> modify (addTxToPool tx)
     GetCurrentSlot -> gets _chainCurrentSlot
     GetParams      -> pure params
 
@@ -188,7 +193,7 @@ addBlock blk st =
      -- `txPool` which will get ignored
      & txPool %~ (\\ map unOnChain blk)
 
-addTxToPool :: CardanoTx -> TxPool -> TxPool
-addTxToPool = (:)
+addTxToPool :: CardanoTx -> ChainState -> ChainState
+addTxToPool tx = over txPool (tx :)
 
 makePrisms ''ChainEvent
