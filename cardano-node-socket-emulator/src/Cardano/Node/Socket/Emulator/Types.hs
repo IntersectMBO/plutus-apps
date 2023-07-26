@@ -23,18 +23,19 @@ import Cardano.Chain.Slotting (EpochSlots (..))
 import Cardano.Ledger.Block qualified as CL
 import Cardano.Ledger.Era qualified as CL
 import Cardano.Ledger.Shelley.API (extractTx, unsafeMakeValidated)
-import Cardano.Node.Emulator.Internal.Node (ChainControlEffect, ChainEffect, ChainEvent, SlotConfig, fromBlockchain,
-                                            testnet, unsafeMakeValid)
+import Cardano.Node.Emulator.API (EmulatorLogs, EmulatorMsg, EmulatorState, emptyEmulatorStateWithInitialDist,
+                                  esChainState)
 import Cardano.Node.Emulator.Internal.Node.Chain qualified as EC
+import Cardano.Node.Emulator.Internal.Node.Params (testnet)
+import Cardano.Node.Emulator.Internal.Node.TimeSlot (SlotConfig)
 import Codec.Serialise (DeserialiseFailure)
 import Codec.Serialise qualified as CBOR
+import Control.Concurrent (MVar, modifyMVar_, readMVar)
 import Control.Concurrent.STM
-import Control.Lens (makeLenses)
+import Control.Lens (makeLenses, view, (&), (.~), (^.))
 import Control.Monad (forever)
 import Control.Monad.Class.MonadST (MonadST)
 import Control.Monad.Class.MonadTimer (MonadDelay (threadDelay), MonadTimer)
-import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg)
-import Control.Monad.Freer.State qualified as Eff
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Crypto.Hash (SHA256, hash)
 import Data.Aeson (FromJSON, ToJSON)
@@ -45,7 +46,7 @@ import Data.ByteString.Short qualified as BS
 import Data.Coerce (coerce)
 import Data.Default (Default, def)
 import Data.Foldable (toList)
-import Data.Functor (void)
+import Data.Functor (void, (<&>))
 import Data.Map qualified as Map
 import Data.Maybe (listToMaybe)
 import Data.Sequence.Strict (fromList)
@@ -56,10 +57,9 @@ import Data.Time.Units (Millisecond)
 import Data.Time.Units.Extra ()
 import Data.Void (Void)
 import GHC.Generics (Generic)
-import Ledger (Block, CardanoTx, OnChainTx (..), Slot (..))
+import Ledger (Block, CardanoTx, OnChainTx (..))
 import Ledger.Address (CardanoAddress)
 import Ledger.CardanoWallet
-import Ledger.Index (UtxoIndex, createGenesisTransaction)
 import Ledger.Test (testNetworkMagic)
 import Network.TypedProtocol.Codec (Codec)
 import Ouroboros.Consensus.Byron.Ledger qualified as Byron
@@ -87,22 +87,18 @@ type Tip = Ouroboros.Tip (CardanoBlock StandardCrypto)
 
 type TxPool = [CardanoTx]
 
-data MockNodeServerChainState = MockNodeServerChainState
-  { _txPool      :: TxPool
-  , _index       :: UtxoIndex
-  , _currentSlot :: Slot
-  , _channel     :: TChan Block
-  , _tip         :: Tip
+data SocketEmulatorState = SocketEmulatorState
+  { _emulatorState :: EmulatorState
+  , _channel       :: TChan Block
+  , _tip           :: Tip
   } deriving (Generic)
 
-makeLenses ''MockNodeServerChainState
+makeLenses ''SocketEmulatorState
 
-instance Show MockNodeServerChainState where
+instance Show SocketEmulatorState where
     -- Skip showing the full chain
-    show MockNodeServerChainState {_txPool, _index, _currentSlot, _tip} =
-        "MockNodeServerChainState { " <> show _txPool
-                        <> ", " <> show _index
-                        <> ", " <> show _currentSlot
+    show SocketEmulatorState {_emulatorState, _tip} =
+        "SocketEmulatorState { " <> show _emulatorState
                         <> ", " <> show _tip <> " }"
 
 -- | Node server configuration
@@ -161,45 +157,47 @@ instance Pretty NodeServerConfig where
          , "Security Param:" <+> pretty nscKeptBlocks
          ]
 
-
-type NodeServerEffects m
-     = '[ ChainControlEffect
-        , ChainEffect
-        , Eff.State MockNodeServerChainState
-        , Eff.State AppState
-        , LogMsg ChainEvent
-        , m]
-
 -- | Application State
 data AppState =
     AppState
-        { _chainState   :: MockNodeServerChainState -- ^ blockchain state
-        , _eventHistory :: [LogMessage ChainEvent] -- ^ history of all log messages
+        { _socketEmulatorState :: SocketEmulatorState -- ^ blockchain state
+        , _emulatorLogs        :: EmulatorLogs -- ^ history of all log messages
         }
     deriving (Show)
 
 makeLenses 'AppState
 
--- | Build a CNSE ChainState from a emulator ChainState
-fromEmulatorChainState :: MonadIO m => EC.ChainState -> m MockNodeServerChainState
-fromEmulatorChainState EC.ChainState {EC._txPool, EC._index, EC._chainCurrentSlot, EC._chainNewestFirst} = do
+fromEmulatorChainState :: MonadIO m => EmulatorState -> m SocketEmulatorState
+fromEmulatorChainState state = do
     ch <- liftIO $ atomically newTChan
+    let chainNewestFirst = view (esChainState . EC.chainNewestFirst) state
+    let currentSlot = view (esChainState . EC.chainCurrentSlot) state
     void $ liftIO $
-        mapM_ (atomically . writeTChan ch) _chainNewestFirst
-    pure $ MockNodeServerChainState { _channel     = ch
-                      , _txPool      = _txPool
-                      , _index       = _index
-                      , _currentSlot = _chainCurrentSlot
-                      , _tip         = case listToMaybe _chainNewestFirst of
-                                        Nothing -> Ouroboros.TipGenesis
-                                        Just block -> Ouroboros.Tip (fromIntegral _chainCurrentSlot) (coerce $ blockId block) (fromIntegral _chainCurrentSlot)
-                      }
+        mapM_ (atomically . writeTChan ch) chainNewestFirst
+    pure $ SocketEmulatorState
+        { _channel       = ch
+        , _emulatorState = state
+        , _tip           = case listToMaybe chainNewestFirst of
+                              Nothing -> Ouroboros.TipGenesis
+                              Just block -> Ouroboros.Tip (fromIntegral currentSlot) (coerce $ blockId block) (fromIntegral currentSlot)
+        }
 
 -- | 'ChainState' with initial values
-initialChainState :: MonadIO m => Map.Map CardanoAddress Value -> m MockNodeServerChainState
-initialChainState =
-    fromEmulatorChainState . fromBlockchain . pure . pure . unsafeMakeValid . createGenesisTransaction
+initialChainState :: MonadIO m => Map.Map CardanoAddress Value -> m SocketEmulatorState
+initialChainState = fromEmulatorChainState . emptyEmulatorStateWithInitialDist
 
+getChannel :: MonadIO m => MVar AppState -> m (TChan Block)
+getChannel mv = liftIO (readMVar mv) <&> view (socketEmulatorState . channel)
+
+-- Get the current tip.
+getTip :: MonadIO m => MVar AppState -> m Tip
+getTip mv = liftIO (readMVar mv) <&> view (socketEmulatorState . tip)
+
+-- Set the new tip
+setTip :: MonadIO m => MVar AppState -> Block -> m ()
+setTip mv block = liftIO $ modifyMVar_ mv $ \oldState -> do
+  let slot = oldState ^. socketEmulatorState . emulatorState . esChainState . EC.chainCurrentSlot
+  pure $ oldState & socketEmulatorState . tip .~ Ouroboros.Tip (fromIntegral slot) (coerce $ blockId block) (fromIntegral slot)
 
 -- Logging ------------------------------------------------------------------------------------------------------------
 
@@ -208,7 +206,7 @@ initialChainState =
 data CNSEServerLogMsg =
     StartingSlotCoordination UTCTime Millisecond
     | StartingCNSEServer Int
-    | ProcessingChainEvent ChainEvent
+    | ProcessingEmulatorMsg EmulatorMsg
     deriving (Generic, Show, ToJSON, FromJSON)
 
 instance Pretty CNSEServerLogMsg where
@@ -218,7 +216,7 @@ instance Pretty CNSEServerLogMsg where
             <+> "Initial slot time:" <+> pretty (F.iso8601Show initialSlotTime)
             <+> "Slot length:" <+> viaShow slotLength
         StartingCNSEServer p   -> "Starting Cardano Node Emulator on port" <+> pretty p
-        ProcessingChainEvent e -> "Processing chain event" <+> pretty e
+        ProcessingEmulatorMsg e -> "Processing emulator event:" <+> pretty e
 
 -- | The node protocols require a block header type.
 newtype BlockId = BlockId { getBlockId :: BS.ShortByteString }

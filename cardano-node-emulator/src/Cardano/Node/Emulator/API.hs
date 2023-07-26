@@ -47,7 +47,8 @@ import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
 import Cardano.Node.Emulator.Internal.API (EmulatorError (BalancingError, ToCardanoError, ValidationError),
                                            EmulatorLogs, EmulatorM, EmulatorState (EmulatorState), EmulatorT,
-                                           MonadEmulator, esAddressMap, esChainState, esDatumMap, handleChain)
+                                           MonadEmulator, esAddressMap, esChainState, esDatumMap, handleChain,
+                                           modifySlot, processBlock)
 import Control.Lens ((%~), (&), (<>~), (^.))
 import Control.Monad (void)
 import Control.Monad.Error.Class (throwError)
@@ -66,7 +67,7 @@ import Ledger.Tx.CardanoAPI (CardanoBuildTx (CardanoBuildTx), fromCardanoTxIn, t
 
 import Cardano.Node.Emulator.Generators qualified as G
 import Cardano.Node.Emulator.Internal.Node.Chain qualified as E (chainNewestFirst, emptyChainState, getCurrentSlot,
-                                                                 index, modifySlot, processBlock, queueTx)
+                                                                 index, queueTx)
 import Cardano.Node.Emulator.Internal.Node.Fee qualified as E (makeAutoBalancedTransactionWithUtxoProvider,
                                                                utxoProviderFromWalletOutputs)
 import Cardano.Node.Emulator.Internal.Node.Params qualified as E (Params)
@@ -98,9 +99,9 @@ queueTx tx = do
 
 -- | Process the queued transactions and increase the slot number.
 nextSlot :: MonadEmulator m => m ()
-nextSlot = handleChain $ do
-  void E.processBlock
-  void $ E.modifySlot succ
+nextSlot = do
+  void $ processBlock
+  void $ modifySlot succ
 
 -- | Get the current slot number of the emulated node.
 currentSlot :: MonadEmulator m => m Slot

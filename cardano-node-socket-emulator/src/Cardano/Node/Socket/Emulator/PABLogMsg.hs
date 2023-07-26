@@ -144,7 +144,7 @@ instance (StructuredLog (ContractDef t), ToJSON (ContractDef t)) => ToObject (PA
         SMockserverLogMsg m    -> case m of
             StartingCNSEServer p      ->  mkObjectStr "Starting Cardano Node Emulator on port " (Tagged @"port" p)
             StartingSlotCoordination i l  -> mkObjectStr "Starting slot coordination thread" (Tagged @"initial-slot-time" (F.iso8601Show  i), Tagged @"slot-length" l)
-            ProcessingChainEvent e    ->  mkObjectStr "Processing chain event" (Tagged @"event" e)
+            ProcessingEmulatorMsg e    ->  mkObjectStr "Processing chain event" (Tagged @"event" e)
 
 
 -- | FIXME: Redundant?

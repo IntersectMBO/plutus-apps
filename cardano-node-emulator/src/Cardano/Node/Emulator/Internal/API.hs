@@ -20,10 +20,13 @@ module Cardano.Node.Emulator.Internal.API (
   , EmulatorM
   -- * Running Eff chain effects in MTL
   , handleChain
+  , processBlock
+  , modifySlot
 ) where
 
 import Cardano.Node.Emulator.Internal.Node qualified as E
 import Cardano.Node.Emulator.LogMessages (EmulatorMsg (ChainEvent, GenericMsg))
+import Control.Exception (Exception)
 import Control.Lens (makeLenses, (&))
 import Control.Monad (void)
 import Control.Monad.Error.Class (MonadError)
@@ -38,7 +41,7 @@ import Control.Monad.RWS.Class (MonadRWS, ask, get, put, tell)
 import Control.Monad.RWS.Strict (RWST)
 import Data.Map (Map)
 import Data.Sequence (Seq)
-import Ledger (Datum, DatumHash, ToCardanoError, ValidationErrorInPhase, eitherTx, getCardanoTxData)
+import Ledger (Block, Datum, DatumHash, Slot, ToCardanoError, ValidationErrorInPhase, eitherTx, getCardanoTxData)
 import Ledger.AddressMap qualified as AM
 
 
@@ -56,6 +59,8 @@ data EmulatorError
   | ValidationError !ValidationErrorInPhase
   | ToCardanoError !ToCardanoError
   deriving (Show)
+
+instance Exception EmulatorError
 
 type EmulatorLogs = Seq (L.LogMessage EmulatorMsg)
 type MonadEmulator m = (MonadRWS E.Params EmulatorLogs EmulatorState m, MonadError EmulatorError m)
@@ -91,3 +96,9 @@ handleChain eff = do
         void $ modify $ AM.updateAllAddresses tx
         void $ modify $ ((<>) . eitherTx getCardanoTxData getCardanoTxData) tx
         )
+
+processBlock :: MonadEmulator m => m Block
+processBlock = handleChain E.processBlock
+
+modifySlot :: MonadEmulator m => (Slot -> Slot) -> m Slot
+modifySlot f = handleChain $ E.modifySlot f

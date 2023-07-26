@@ -11,7 +11,7 @@ module Cardano.Node.Socket.Emulator
 import Cardano.BM.Data.Trace (Trace)
 import Cardano.Node.Emulator.Internal.Node (Params (..), SlotConfig (SlotConfig, scSlotLength, scSlotZeroTime))
 import Cardano.Node.Socket.Emulator.API (API)
-import Cardano.Node.Socket.Emulator.Mock (consumeEventHistory, healthcheck, processChainEffects, slotCoordinator)
+import Cardano.Node.Socket.Emulator.Mock (consumeEventHistory, healthcheck, slotCoordinator)
 import Cardano.Node.Socket.Emulator.Params qualified as Params
 import Cardano.Node.Socket.Emulator.Server qualified as Server
 import Cardano.Node.Socket.Emulator.Types (AppState (..), CNSEServerLogMsg (..), NodeServerConfig (..),
@@ -42,8 +42,8 @@ app trace params stateVar =
     serve (Proxy @API) $
     hoistServer
         (Proxy @API)
-        (liftIO . processChainEffects (LM.convertLog ProcessingChainEvent trace) params stateVar)
-        (healthcheck :<|> (fmap (fmap ProcessingChainEvent) <$> consumeEventHistory stateVar))
+        (liftIO . Server.processChainEffects (LM.convertLog ProcessingEmulatorMsg trace) params stateVar)
+        (healthcheck :<|> consumeEventHistory stateVar)
 
 data Ctx = Ctx { serverHandler :: Server.ServerHandler
                , serverState   :: MVar AppState
@@ -61,12 +61,9 @@ main trace nodeServerConfig@NodeServerConfig { nscBaseUrl
     let getAddress n = knownAddresses !! (fromIntegral n - 1)
         dist = Map.fromList $ zip (getAddress <$> nscInitialTxWallets) (repeat (CardanoAPI.adaValueOf 1_000_000_000))
     initialState <- initialChainState dist
-    let appState = AppState
-            { _chainState = initialState
-            , _eventHistory = mempty
-            }
+    let appState = AppState initialState mempty
     params <- liftIO $ Params.fromNodeServerConfig nodeServerConfig
-    serverHandler <- liftIO $ Server.runServerNode (LM.convertLog ProcessingChainEvent trace) nscSocketPath nscKeptBlocks (_chainState appState) params
+    serverHandler <- liftIO $ Server.runServerNode (LM.convertLog ProcessingEmulatorMsg trace) nscSocketPath nscKeptBlocks appState params
     serverState   <- liftIO $ newMVar appState
     handleDelayEffect $ delayThread (2 :: Second)
 

@@ -18,17 +18,17 @@ import Ledger (CardanoTx (CardanoEmulatorEraTx))
 import Servant (NoContent, (:<|>) (..))
 import Servant.Client (ClientM, client)
 
+import Cardano.Node.Emulator (EmulatorLogs)
 import Cardano.Node.Socket.Emulator.API (API)
-import Cardano.Node.Socket.Emulator.Types (CNSEServerLogMsg, NodeServerConfig (..))
+import Cardano.Node.Socket.Emulator.Types (NodeServerConfig (..))
 import Cardano.Node.Types (ChainSyncHandle, NodeMode (..), PABServerConfig (..))
 import Cardano.Protocol.Socket.Client qualified as Client
 import Cardano.Protocol.Socket.Mock.Client qualified as MockClient
-import Control.Monad.Freer.Extras.Log (LogMessage)
 import Plutus.PAB.Types (PABError (..))
 import Wallet.Effects (NodeClientEffect (..))
 
 healthcheck :: ClientM NoContent
-consumeEventHistory :: ClientM [LogMessage CNSEServerLogMsg]
+consumeEventHistory :: ClientM EmulatorLogs
 (healthcheck, consumeEventHistory) =
     ( healthcheck_
     , consumeEventHistory_
