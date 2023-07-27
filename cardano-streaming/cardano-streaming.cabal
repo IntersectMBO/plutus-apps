@@ -38,7 +38,7 @@ library
   -- Other IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api        >=1.35
+    , cardano-api        ^>=8.2
     , ouroboros-network
 
   ------------------------
@@ -76,7 +76,7 @@ executable cardano-streaming-example-1
   --------------------------
   -- Other IOG dependencies
   --------------------------
-  build-depends:  cardano-api >=1.35
+  build-depends:  cardano-api ^>=8.2
 
   ------------------------
   -- Non-IOG dependencies
@@ -107,7 +107,7 @@ executable cardano-streaming-example-2
   --------------------------
   -- Other IOG dependencies
   --------------------------
-  build-depends:  cardano-api >=1.35
+  build-depends:  cardano-api ^>=8.2
 
   ------------------------
   -- Non-IOG dependencies

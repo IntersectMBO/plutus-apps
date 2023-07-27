@@ -67,7 +67,7 @@ library
   -- Other IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api        >=1.35
+    , cardano-api        ^>=8.2
     , plutus-ledger-api  >=1.0.0
     , plutus-tx          >=1.0.0
 
@@ -106,7 +106,7 @@ test-suite plutus-tx-constraints-test
   -- Other IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api:{cardano-api, gen}  >=1.35
+    , cardano-api:{cardano-api, gen}  ^>=8.2
     , plutus-ledger-api               >=1.0.0
     , plutus-tx                       >=1.0.0
     , plutus-tx-plugin                >=1.0.0
