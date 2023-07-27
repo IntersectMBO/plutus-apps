@@ -114,24 +114,24 @@ library
   -- Other IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api                  ^>=8.2
+    , cardano-api        ^>=8.2
     , cardano-binary
-    , cardano-crypto
-    , cardano-crypto-class
-    , cardano-ledger-alonzo
-    , cardano-ledger-babbage
-    , cardano-ledger-byron
-    , cardano-ledger-core
-    , cardano-ledger-shelley
-    , cardano-ledger-shelley-ma
     , cardano-slotting
     , data-default
     , iohk-monitoring
-    , ouroboros-consensus-shelley
-    , plutus-core                  >=1.0.0
-    , plutus-ledger-api            >=1.0.0
-    , plutus-tx                    >=1.0.0
+    , plutus-core        >=1.0.0
+    , plutus-ledger-api  >=1.0.0
+    , plutus-tx          >=1.0.0
 
+  -- , cardano-crypto
+  -- , cardano-crypto-class
+  -- , cardano-ledger-alonzo
+  -- , cardano-ledger-babbage
+  -- , cardano-ledger-byron
+  -- , cardano-ledger-core
+  -- , cardano-ledger-shelley
+  -- , cardano-ledger-shelley-ma
+  -- , ouroboros-consensus-shelley
   ------------------------
   -- Non-IOG dependencies
   ------------------------
@@ -140,12 +140,12 @@ library
   -- defined there.
   build-depends:
     , aeson
-    , base                      >=4.9     && <5
+    , base               >=4.9  && <5
     , base16-bytestring
     , bytestring
     , cborg
     , containers
-    , cryptonite                >=0.25
+    , cryptonite         >=0.25
     , flat
     , hashable
     , http-api-data
@@ -154,7 +154,6 @@ library
     , mtl
     , newtype-generics
     , prettyprinter
-    , quickcheck-contractmodel  >=0.1.4.0
     , scientific
     , serialise
     , servant
@@ -196,10 +195,10 @@ test-suite plutus-ledger-test
   --------------------------
   build-depends:
     , cardano-api:{cardano-api, gen}  ^>=8.2
-    , cardano-crypto-class            >=2.0.0
     , plutus-ledger-api               >=1.0.0
     , plutus-tx                       >=1.0.0
 
+  -- , cardano-crypto-class            >=2.0.0
   ------------------------
   -- Non-IOG dependencies
   ------------------------
