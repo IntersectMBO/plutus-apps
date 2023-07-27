@@ -128,8 +128,8 @@ import Ledger.Typed.Scripts (Any, ConnectionError (UnknownRef), TypedValidator (
 import Plutus.Script.Utils.Scripts (datumHash, scriptHash)
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as Typed
 import Plutus.Script.Utils.Value qualified as Value
-import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash, StakingCredential, Validator, Value, getMintingPolicy)
-import Plutus.V1.Ledger.Scripts (MintingPolicy (MintingPolicy), MintingPolicyHash (MintingPolicyHash), Script,
+import PlutusLedgerApi.V1 (Datum (Datum), DatumHash, StakingCredential, Validator, Value, getMintingPolicy)
+import PlutusLedgerApi.V1.Scripts (MintingPolicy (MintingPolicy), MintingPolicyHash (MintingPolicyHash), Script,
                                  ScriptHash (ScriptHash), Validator (Validator), ValidatorHash (ValidatorHash))
 import PlutusTx (FromData, ToData (toBuiltinData))
 import PlutusTx.Lattice (BoundedMeetSemiLattice (top), JoinSemiLattice ((\/)), MeetSemiLattice ((/\)))
@@ -365,7 +365,7 @@ actual values we encounter on either side of the transaction. Then we
 compute the missing value on both sides, and add an input with the
 join of the positive parts [1] of the missing values.
 
-[1] See 'Plutus.V1.Ledger.Value.split'
+[1] See 'PlutusLedgerApi.V1.Value.split'
 
 -}
 

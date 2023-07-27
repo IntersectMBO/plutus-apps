@@ -4,7 +4,7 @@ module Plutus.Script.Utils.V2.Tx
 
 import Plutus.Script.Utils.V2.Address (mkValidatorAddress)
 import Plutus.Script.Utils.V2.Scripts (scriptHash)
-import Plutus.V2.Ledger.Api (OutputDatum, TxOut (TxOut), Validator, Value, unValidatorScript)
+import PlutusLedgerApi.V2 (OutputDatum, TxOut (TxOut), Validator, Value, unValidatorScript)
 
 type HasReferenceScript = Bool
 

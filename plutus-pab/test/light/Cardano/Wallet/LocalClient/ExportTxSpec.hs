@@ -22,7 +22,7 @@ import Hedgehog.Range qualified as Range
 import Ledger (TxOutRef (TxOutRef))
 import Ledger.Scripts qualified as Script
 import Ledger.Tx.CardanoAPI (fromCardanoPolicyId, fromCardanoTxId)
-import Plutus.V1.Ledger.Scripts (MintingPolicyHash)
+import PlutusLedgerApi.V1.Scripts (MintingPolicyHash)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testProperty)
 

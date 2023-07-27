@@ -63,7 +63,7 @@ import Plutus.ChainIndex.TxOutBalance qualified as TxOutBalance
 import Plutus.ChainIndex.TxUtxoBalance qualified as TxUtxoBalance
 import Plutus.ChainIndex.Types (BlockId (BlockId), BlockNumber (BlockNumber),
                                 Tip (Tip, tipBlockId, tipBlockNo, tipSlot), TxIdState, TxOutBalance, TxUtxoBalance)
-import Plutus.V1.Ledger.Api (TxId (..))
+import PlutusLedgerApi.V1 (TxId (..))
 import PlutusTx.Prelude qualified as PlutusTx
 
 -- | Generate a random tx id

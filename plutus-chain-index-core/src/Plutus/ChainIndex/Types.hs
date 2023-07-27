@@ -96,9 +96,9 @@ import Ledger.Blockchain (BlockId (..))
 import Ledger.Blockchain qualified as Ledger
 import Ledger.Slot (Slot (Slot))
 import Ledger.Tx.CardanoAPI (fromCardanoScriptInAnyLang)
-import Plutus.V1.Ledger.Scripts (Datum (Datum), DatumHash (DatumHash), Script, ScriptHash (..))
-import Plutus.V1.Ledger.Tx (RedeemerPtr, Redeemers, ScriptTag, TxId (TxId))
-import Plutus.V2.Ledger.Api (CurrencySymbol (CurrencySymbol), Extended, Interval (..), LowerBound, OutputDatum (..),
+import PlutusLedgerApi.V1.Scripts (Datum (Datum), DatumHash (DatumHash), Script, ScriptHash (..))
+import PlutusLedgerApi.V1.Tx (RedeemerPtr, Redeemers, ScriptTag, TxId (TxId))
+import PlutusLedgerApi.V2 (CurrencySymbol (CurrencySymbol), Extended, Interval (..), LowerBound, OutputDatum (..),
                              Redeemer (Redeemer), TokenName (TokenName), UpperBound, Validator (Validator), Value (..))
 import PlutusCore.Data
 import PlutusTx.AssocMap qualified as AssocMap

@@ -103,17 +103,17 @@ import Ledger.Tx.CardanoAPI (CardanoTx (CardanoTx), ToCardanoError (..), pattern
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
 
 import Plutus.Script.Utils.Scripts (scriptHash)
-import Plutus.V1.Ledger.Api qualified as V1
-import Plutus.V2.Ledger.Api qualified as V2
-import Plutus.V2.Ledger.Tx qualified as V2.Tx hiding (TxId (..), TxIn (..), TxInType (..))
+import PlutusLedgerApi.V1 qualified as V1
+import PlutusLedgerApi.V2 qualified as V2
+import PlutusLedgerApi.V2.Tx qualified as V2.Tx hiding (TxId (..), TxIn (..), TxInType (..))
 
 import Prettyprinter (Pretty (pretty), colon, hang, nest, viaShow, vsep, (<+>))
 -- for re-export
 import Ledger.Index.Internal (UtxoIndex)
 import Ledger.Tx.Internal as Export
-import Plutus.V1.Ledger.Tx as Export hiding (TxId (..), TxIn (..), TxInType (..), TxOut (..), inRef, inType, outAddress,
+import PlutusLedgerApi.V1.Tx as Export hiding (TxId (..), TxIn (..), TxInType (..), TxOut (..), inRef, inType, outAddress,
                                       outValue, pubKeyTxIn, scriptTxIn, txOutDatum, txOutPubKey)
-import Plutus.V1.Ledger.Value (Value)
+import PlutusLedgerApi.V1.Value (Value)
 
 
 -- | A datum in a transaction output that comes from a chain index query.

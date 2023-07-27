@@ -109,9 +109,9 @@ import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), QueryResponse (Qu
                               TxosResponse (TxosResponse), UtxosResponse (UtxosResponse))
 import Plutus.ChainIndex.Tx (ChainIndexTx (_citxTxId))
 import Plutus.ChainIndex.Types (Tip, TxOutStatus, TxStatus)
-import Plutus.V1.Ledger.Api (Datum, DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, RedeemerHash, StakeValidator,
+import PlutusLedgerApi.V1 (Datum, DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, RedeemerHash, StakeValidator,
                              StakeValidatorHash, TxId, TxOutRef, ValidatorHash)
-import Plutus.V1.Ledger.Value (AssetClass)
+import PlutusLedgerApi.V1.Value (AssetClass)
 import Prettyprinter (Pretty (pretty), hsep, indent, viaShow, vsep, (<+>))
 import Wallet.Error (WalletAPIError)
 import Wallet.Types (ContractInstanceId, EndpointDescription, EndpointValue)

@@ -23,9 +23,9 @@ import Plutus.Contract.Oracle qualified as Oracle
 import Plutus.Script.Utils.Ada (Ada)
 import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Value (Value)
-import Plutus.V1.Ledger.Address (toPubKeyHash)
-import Plutus.V2.Ledger.Api qualified as V2
-import Plutus.V2.Ledger.Contexts qualified as V2
+import PlutusLedgerApi.V1.Address (toPubKeyHash)
+import PlutusLedgerApi.V2 qualified as V2
+import PlutusLedgerApi.V2.Contexts qualified as V2
 import PlutusTx qualified
 import PlutusTx.Prelude
 

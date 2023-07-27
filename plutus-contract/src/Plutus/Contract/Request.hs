@@ -160,9 +160,9 @@ import Plutus.Contract.Schema (Input, Output)
 import Plutus.Contract.Types (Contract (Contract), MatchingError (WrongVariantError), Promise (Promise), mapError,
                               runError, throwError)
 import Plutus.Contract.Util (loopM)
-import Plutus.V1.Ledger.Api (Datum, DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, RedeemerHash, StakeValidator,
+import PlutusLedgerApi.V1 (Datum, DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, RedeemerHash, StakeValidator,
                              StakeValidatorHash, TxId, Validator)
-import Plutus.V1.Ledger.Value (AssetClass)
+import PlutusLedgerApi.V1.Value (AssetClass)
 import PlutusTx qualified
 import Wallet.Emulator.Error (WalletAPIError (NoPaymentPubKeyHashError))
 import Wallet.Types (ContractInstanceId, EndpointDescription (EndpointDescription),

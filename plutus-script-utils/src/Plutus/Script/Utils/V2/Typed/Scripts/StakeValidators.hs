@@ -15,12 +15,12 @@ module Plutus.Script.Utils.V2.Typed.Scripts.StakeValidators
     ) where
 
 import Plutus.Script.Utils.Typed (mkUntypedStakeValidator)
-import Plutus.V2.Ledger.Api (Address (Address, addressCredential), Credential (ScriptCredential), StakeValidator,
+import PlutusLedgerApi.V2 (Address (Address, addressCredential), Credential (ScriptCredential), StakeValidator,
                              ValidatorHash, mkStakeValidatorScript)
-import Plutus.V2.Ledger.Contexts (ScriptContext (ScriptContext, scriptContextPurpose, scriptContextTxInfo),
+import PlutusLedgerApi.V2.Contexts (ScriptContext (ScriptContext, scriptContextPurpose, scriptContextTxInfo),
                                   ScriptPurpose (Certifying, Rewarding), TxInfo (TxInfo, txInfoInputs))
-import Plutus.V2.Ledger.Contexts qualified as PV2
-import Plutus.V2.Ledger.Tx (TxOut (TxOut, txOutAddress))
+import PlutusLedgerApi.V2.Contexts qualified as PV2
+import PlutusLedgerApi.V2.Tx (TxOut (TxOut, txOutAddress))
 import PlutusTx qualified
 import PlutusTx.Prelude (Bool (False), any, ($), (.), (==))
 

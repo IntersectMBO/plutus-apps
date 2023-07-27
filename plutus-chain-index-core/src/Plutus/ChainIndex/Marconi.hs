@@ -42,7 +42,7 @@ import Plutus.ChainIndex.Effects (ChainIndexControlEffect (AppendBlocks), ChainI
 import Plutus.ChainIndex.Types (ChainSyncBlock (..), Tip (TipAtGenesis), citxCardanoTx, tipAsPoint)
 import Plutus.Contract.CardanoAPI (fromCardanoTxId)
 import Plutus.Monitoring.Util (PrettyObject (PrettyObject), convertLog, runLogEffects)
-import Plutus.V2.Ledger.Api (TxOutRef (TxOutRef))
+import PlutusLedgerApi.V2 (TxOutRef (TxOutRef))
 
 {- Handling ChainIndexEffects with Marconi - Developer notes:
 

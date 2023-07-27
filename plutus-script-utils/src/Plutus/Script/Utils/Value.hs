@@ -9,7 +9,7 @@ module Plutus.Script.Utils.Value
   ) where
 
 import Plutus.Script.Utils.Ada qualified as Ada
-import Plutus.V1.Ledger.Value as Export (AssetClass (AssetClass, unAssetClass),
+import PlutusLedgerApi.V1.Value as Export (AssetClass (AssetClass, unAssetClass),
                                          CurrencySymbol (CurrencySymbol, unCurrencySymbol),
                                          TokenName (TokenName, unTokenName), Value (Value, getValue), adaSymbol,
                                          adaToken, assetClass, assetClassValue, assetClassValueOf, currencyMPSHash,

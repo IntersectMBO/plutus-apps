@@ -97,8 +97,8 @@ import Ledger.Tx.CardanoAPI qualified as C hiding (makeTransactionBody)
 import Ledger.Value.CardanoAPI qualified as Value
 import Numeric.Natural (Natural)
 import Plutus.V1.Ledger.Api qualified as V1
-import Plutus.V1.Ledger.Interval qualified as Interval
-import Plutus.V1.Ledger.Scripts qualified as Script
+import PlutusLedgerApi.V1.Interval qualified as Interval
+import PlutusLedgerApi.V1.Scripts qualified as Script
 import PlutusTx (toData)
 
 -- | Attach signatures of all known private keys to a transaction.

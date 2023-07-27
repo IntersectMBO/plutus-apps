@@ -43,9 +43,9 @@ import Plutus.Script.Utils.V2.Scripts qualified as PSU.V2
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as PV2
 import Plutus.Script.Utils.Value (TokenName (TokenName))
 import Plutus.Trace qualified as Trace
-import Plutus.V1.Ledger.Api (Address, MintingPolicyHash (MintingPolicyHash), Redeemer, TxOutRef)
-import Plutus.V1.Ledger.Value qualified as Value
-import Plutus.V2.Ledger.Api qualified as PV2
+import PlutusLedgerApi.V1 (Address, MintingPolicyHash (MintingPolicyHash), Redeemer, TxOutRef)
+import PlutusLedgerApi.V1.Value qualified as Value
+import PlutusLedgerApi.V2 qualified as PV2
 import PlutusTx qualified
 import Prelude hiding (not)
 

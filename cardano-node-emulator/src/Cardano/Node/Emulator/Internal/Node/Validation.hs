@@ -72,8 +72,8 @@ import Ledger.Index.Internal qualified as P
 import Ledger.Slot (Slot)
 import Ledger.Tx (CardanoTx (CardanoEmulatorEraTx))
 import Ledger.Tx.CardanoAPI qualified as P
-import Plutus.V1.Ledger.Api qualified as V1 hiding (TxOut (..))
-import Plutus.V1.Ledger.Scripts qualified as P
+import PlutusLedgerApi.V1 qualified as V1 hiding (TxOut (..))
+import PlutusLedgerApi.V1.Scripts qualified as P
 
 import Cardano.Node.Emulator.Internal.Node.Params (EmulatorEra, Params (emulatorPParams), emulatorGlobals,
                                                    emulatorPParams)

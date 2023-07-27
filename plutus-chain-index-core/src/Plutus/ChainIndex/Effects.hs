@@ -38,9 +38,9 @@ import Ledger.Tx (DecoratedTxOut, TxOutRef, Versioned)
 import Plutus.ChainIndex.Api (IsUtxoResponse, QueryResponse, TxosResponse, UtxosResponse)
 import Plutus.ChainIndex.Tx (ChainIndexTx)
 import Plutus.ChainIndex.Types (ChainSyncBlock, Diagnostics, Point, Tip)
-import Plutus.V1.Ledger.Api (Datum, DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, RedeemerHash, StakeValidator,
+import PlutusLedgerApi.V1 (Datum, DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, RedeemerHash, StakeValidator,
                              StakeValidatorHash, TxId, Validator, ValidatorHash)
-import Plutus.V1.Ledger.Value (AssetClass)
+import PlutusLedgerApi.V1.Value (AssetClass)
 
 data ChainIndexQueryEffect r where
 

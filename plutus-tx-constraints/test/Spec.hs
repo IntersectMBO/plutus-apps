@@ -37,7 +37,7 @@ import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.V1.Generators qualified as Gen
 import Plutus.Script.Utils.Value (Value)
 import Plutus.Script.Utils.Value qualified as Value
-import Plutus.V1.Ledger.Api qualified as Ledger
+import PlutusLedgerApi.V1 qualified as Ledger
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AMap
 import Spec.Balancing qualified as Balancing

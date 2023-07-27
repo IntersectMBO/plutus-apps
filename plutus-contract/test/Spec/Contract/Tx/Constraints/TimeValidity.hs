@@ -30,9 +30,9 @@ import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Api (POSIXTime, TxInfo, Validator)
 import Plutus.V1.Ledger.Api qualified as P
-import Plutus.V1.Ledger.Interval (contains, from)
-import Plutus.V1.Ledger.Interval qualified as I
-import Plutus.V1.Ledger.Scripts (unitDatum, unitRedeemer)
+import PlutusLedgerApi.V1.Interval (contains, from)
+import PlutusLedgerApi.V1.Interval qualified as I
+import PlutusLedgerApi.V1.Scripts (unitDatum, unitRedeemer)
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
 import Prelude hiding (not)

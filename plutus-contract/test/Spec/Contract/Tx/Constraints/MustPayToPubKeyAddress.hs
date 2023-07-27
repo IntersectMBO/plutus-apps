@@ -29,7 +29,7 @@ import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.V1.Scripts qualified as PSU.V1
 import Plutus.Script.Utils.V2.Scripts qualified as PSU.V2
 import Plutus.Trace qualified as Trace
-import Plutus.V1.Ledger.Value qualified as Value
+import PlutusLedgerApi.V1.Value qualified as Value
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
 

@@ -9,7 +9,7 @@ module Plutus.Script.Utils.V2.Generators
     , PV1.someTokenValue
     ) where
 
-import Plutus.V2.Ledger.Api qualified as PV2
+import PlutusLedgerApi.V2 qualified as PV2
 import PlutusTx qualified
 
 import Plutus.Script.Utils.V1.Generators qualified as PV1

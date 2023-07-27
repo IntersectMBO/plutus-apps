@@ -40,12 +40,12 @@ import Ledger.Tx (DecoratedTxOut)
 import Plutus.Script.Utils.V1.Address qualified as PV1
 import Plutus.Script.Utils.V2.Address qualified as PV2
 import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential), Datum, DatumHash, MintingPolicyHash,
-                             POSIXTime, POSIXTimeRange, Redeemer, StakingCredential, TxOutRef, Validator, ValidatorHash)
+       PlutusLedgerApi.V1      POSIXTime, POSIXTimeRange, Redeemer, StakingCredential, TxOutRef, Validator, ValidatorHash)
 import Plutus.V1.Ledger.Interval qualified as I
-import Plutus.V1.Ledger.Scripts (MintingPolicyHash (MintingPolicyHash), ScriptHash (ScriptHash),
+import PlutusLedgerApi.V1.Scripts (MintingPolicyHash (MintingPolicyHash), ScriptHash (ScriptHash),
                                  ValidatorHash (ValidatorHash), unitRedeemer)
-import Plutus.V1.Ledger.Value (TokenName, Value, isZero)
-import Plutus.V1.Ledger.Value qualified as Value
+import PlutusLedgerApi.V1.Value (TokenName, Value, isZero)
+import PlutusLedgerApi.V1.Value qualified as Value
 
 import Control.Lens (At (at), (^.))
 import Data.Function (const, flip)

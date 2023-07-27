@@ -40,8 +40,8 @@ import Data.String
 import GHC.Generics (Generic)
 import Ledger.Tx.Orphans.V1 ()
 import Plutus.V1.Ledger.Api (LedgerBytes (LedgerBytes), TxId (TxId), fromBuiltin, toBuiltin)
-import Plutus.V1.Ledger.Bytes qualified as KB
-import Plutus.V1.Ledger.Crypto as Export
+import PlutusLedgerApi.V1.Bytes qualified as KB
+import PlutusLedgerApi.V1.Crypto as Export
 import PlutusTx qualified as PlutusTx
 import PlutusTx.Lift (makeLift)
 import PlutusTx.Prelude qualified as PlutusTx

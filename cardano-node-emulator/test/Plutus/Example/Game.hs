@@ -34,8 +34,8 @@ import Ledger.Tx.CardanoAPI qualified as C
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Script.Utils.Typed (ScriptContextV2, Versioned)
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
-import Plutus.V2.Ledger.Api (Address, Validator)
-import Plutus.V2.Ledger.Contexts qualified as V2
+import PlutusLedgerApi.V2 (Address, Validator)
+import PlutusLedgerApi.V2.Contexts qualified as V2
 import PlutusTx (FromData, ToData)
 import PlutusTx qualified
 import PlutusTx.Prelude ()

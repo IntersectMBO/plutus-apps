@@ -46,8 +46,8 @@ import Plutus.Contract
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
 import Plutus.Script.Utils.Value (Value)
 import Plutus.Script.Utils.Value qualified as Value
-import Plutus.V2.Ledger.Api (ScriptContext (..), TxInfo (..), Validator)
-import Plutus.V2.Ledger.Contexts qualified as V2
+import PlutusLedgerApi.V2 (ScriptContext (..), TxInfo (..), Validator)
+import PlutusLedgerApi.V2.Contexts qualified as V2
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (Semigroup (..), fold)
 import Prelude qualified as Haskell

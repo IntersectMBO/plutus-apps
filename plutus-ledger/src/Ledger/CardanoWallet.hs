@@ -56,7 +56,7 @@ import Ledger.Crypto qualified as Crypto
 import Ledger.Test (testnet)
 import Ledger.Tx.CardanoAPI.Internal qualified as Tx
 import Plutus.V1.Ledger.Api (Address (Address), Credential (PubKeyCredential), StakingCredential (StakingHash))
-import Plutus.V1.Ledger.Bytes (LedgerBytes (getLedgerBytes))
+import PlutusLedgerApi.V1.Bytes (LedgerBytes (getLedgerBytes))
 import Servant.API (FromHttpApiData, ToHttpApiData)
 
 newtype MockPrivateKey = MockPrivateKey { unMockPrivateKey :: Crypto.XPrv }

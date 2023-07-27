@@ -16,7 +16,7 @@ import Cardano.Ledger.Shelley.UTxO qualified as Ledger
 import Cardano.Ledger.TxIn qualified as Ledger
 import Gen.Cardano.Api.Typed
 import Ledger qualified as Plutus
-import Plutus.V1.Ledger.Tx qualified as PV1
+import PlutusLedgerApi.V1.Tx qualified as PV1
 import PlutusExample.PlutusVersion1.RedeemerContextScripts
 import PlutusExample.ScriptContextChecker
 

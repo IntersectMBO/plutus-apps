@@ -27,7 +27,7 @@ import Ledger (Block, Blockchain, OnChainTx (..), TxOut, consumableInputs, onCha
 import Ledger.Index (genesisTxIn, toOnChain)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI (fromCardanoValue)
-import Plutus.V1.Ledger.Value (Value)
+import PlutusLedgerApi.V1.Value (Value)
 import Wallet.Rollup.Types
 
 ------------------------------------------------------------

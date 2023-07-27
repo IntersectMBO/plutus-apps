@@ -22,7 +22,7 @@ import Plutus.Script.Utils.Scripts qualified as Untyped
 import Plutus.Script.Utils.Typed as Export
 import Plutus.Script.Utils.V1.Typed.Scripts qualified as PV1
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as PV2
-import Plutus.V1.Ledger.Api (MintingPolicy, Validator)
+import PlutusLedgerApi.V1 (MintingPolicy, Validator)
 
 mkForwardingMintingPolicy :: Versioned Validator -> Versioned MintingPolicy
 mkForwardingMintingPolicy vl@(Versioned _ PlutusV1) = Versioned (PV1.mkForwardingMintingPolicy (Untyped.validatorHash vl)) PlutusV1

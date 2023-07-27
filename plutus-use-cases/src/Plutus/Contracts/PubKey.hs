@@ -31,8 +31,8 @@ import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.ChainIndex.Types (Tip (Tip, TipAtGenesis))
 import Plutus.Contract as Contract
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
-import Plutus.V2.Ledger.Api (Value)
-import Plutus.V2.Ledger.Contexts qualified as V2
+import PlutusLedgerApi.V2 (Value)
+import PlutusLedgerApi.V2.Contexts qualified as V2
 import PlutusTx qualified
 
 mkValidator :: PaymentPubKeyHash -> () -> () -> V2.ScriptContext -> Bool

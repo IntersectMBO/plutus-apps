@@ -22,7 +22,7 @@ import Ledger qualified
 import Ledger.Bytes qualified as Bytes
 import Ledger.Interval qualified as Interval
 import Ledger.Value.CardanoAPI qualified as C
-import Plutus.V1.Ledger.Value qualified as Value
+import PlutusLedgerApi.V1.Value qualified as Value
 import PlutusTx.Prelude qualified as PlutusTx
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testPropertyNamed)

@@ -40,7 +40,7 @@ import Ledger.Tx (Versioned)
 import Plutus.ChainIndex.Tx (ChainIndexTx, ChainIndexTxOut (..), citxData, citxScripts, citxTxId, txOutsWithRef,
                              txRedeemersWithHash)
 import Plutus.ChainIndex.Types (Diagnostics (..))
-import Plutus.V1.Ledger.Api (TxId)
+import PlutusLedgerApi.V1 (TxId)
 
 -- | Set of transaction output references for each address.
 newtype CredentialMap = CredentialMap { _unCredentialMap :: Map Credential (Set TxOutRef) }

@@ -34,7 +34,7 @@ import Plutus.Contract (Contract, Endpoint, Promise, endpoint, getParams, logInf
 import Plutus.Contract.Test (w1, w2)
 import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Trace.Emulator qualified as Trace
-import Plutus.V1.Ledger.Api (Address, ScriptContext (ScriptContext, scriptContextTxInfo), TxInfo (txInfoOutputs),
+import PlutusLedgerApi.V1 (Address, ScriptContext (ScriptContext, scriptContextTxInfo), TxInfo (txInfoOutputs),
                              TxOut (TxOut, txOutAddress, txOutValue), Value)
 import PlutusTx qualified
 import PlutusTx.Prelude (Bool, Maybe (Just, Nothing), Semigroup ((<>)), mapMaybe, mconcat, ($), (&&), (-), (.), (==),

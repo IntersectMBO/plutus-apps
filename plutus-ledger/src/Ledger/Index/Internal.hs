@@ -36,7 +36,7 @@ import Data.Text (Text)
 import GHC.Generics (Generic)
 import Ledger.Orphans ()
 import Ledger.Tx.CardanoAPI.Internal (CardanoTx, pattern CardanoEmulatorEraTx)
-import Plutus.V1.Ledger.Scripts qualified as Scripts
+import PlutusLedgerApi.V1.Scripts qualified as Scripts
 import Prettyprinter (Pretty (..), hang, vsep, (<+>))
 import Prettyprinter.Extras (PrettyShow (..))
 import Prettyprinter.Util (reflow)

@@ -70,7 +70,7 @@ import Ledger.Tx.Constraints.OnChain.V2 qualified as Constraints
 import Plutus.Script.Utils.Scripts qualified as Scripts
 import Plutus.V1.Ledger.Bytes (LedgerBytes (LedgerBytes))
 import Plutus.V1.Ledger.Time (POSIXTime)
-import Plutus.V2.Ledger.Contexts (ScriptContext)
+import PlutusLedgerApi.V2.Contexts (ScriptContext)
 
 import Prelude qualified as Haskell
 

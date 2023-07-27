@@ -29,7 +29,7 @@ Thus, we need to adapt our transaction constraint data type (``TxConstraints``) 
 Decision
 --------
 
-* We will replace the ``Datum`` parameter in ``TxConstraints``'s data constructor ``MustPayToPubKeyAddress`` with ``Plutus.V2.Ledger.Api.OutputDatum``.
+* We will replace the ``Datum`` parameter in ``TxConstraints``'s data constructor ``MustPayToPubKeyAddress`` with ``PlutusLedgerApi.V2.OutputDatum``.
   In the offchain implementation of the constraint, we will use this new data constructor parameter to support either adding the datum in the datum witness set (by using the datum lookups to resolve the hash) or inline it in the transaction output.
   In the PlutusV1 on-chain implementation of the constraint, we will return ``False`` if the datum value matches ``OutputDatum Datum`` because the ledger forbids using Babbage era features with PlutusV1.
   The PlutusV2 on-chain implementation of the constraint is trivial.
@@ -45,8 +45,8 @@ Argument
 --------
 
 The main decision was to find out which data type will replace ``Datum`` in the interface of ``MustPayToPubKeyAddress`` and ``MustPayToOtherScript``.
-The decision to use ``Plutus.V2.Ledger.Api.OutputDatum`` was mainly because of the constraint library's main design: the parameters of ``TxConstraints``'s data constructor must work with the on-chain as well as the off-chain implementation.
-Therefore, we decided to use ``OutputDatum`` which we know works in on-chain code because this type is used in ``Plutus.V2.Ledger.Api.ScriptContext``.
+The decision to use ``PlutusLedgerApi.V2.OutputDatum`` was mainly because of the constraint library's main design: the parameters of ``TxConstraints``'s data constructor must work with the on-chain as well as the off-chain implementation.
+Therefore, we decided to use ``OutputDatum`` which we know works in on-chain code because this type is used in ``PlutusLedgerApi.V2.ScriptContext``.
 
 Notes
 -----

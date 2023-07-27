@@ -42,7 +42,7 @@ Currently, provided a ``POSIXTimeRange``, ``plutus-contract`` does the following
   Cardano.Api.TxValidityUpperBound)`` (essentially a ``(Maybe Slot, Maybe Slot)``)
 
 The issue with these conversion is that the ``POSIXTimeRange`` and ``SlotRange`` intervals are
-type synonyms of the ``Plutus.V1.Ledger.Api.Interval.Interval a`` datatype which has has a "Closure"
+type synonyms of the ``PlutusLedgerApi.V1.Interval.Interval a`` datatype which has has a "Closure"
 flag for each of the bounds.
 
 Therefore, the conversions yields a discrepency when `cardano-ledger` converts the

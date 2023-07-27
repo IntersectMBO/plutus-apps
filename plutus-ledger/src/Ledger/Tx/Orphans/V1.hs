@@ -26,8 +26,8 @@ import Ledger.Builtins.Orphans ()
 import Ledger.Value.Orphans ()
 
 import Plutus.V1.Ledger.Api
-import Plutus.V1.Ledger.Bytes qualified as Bytes
-import Plutus.V1.Ledger.Tx
+import PlutusLedgerApi.V1.Bytes qualified as Bytes
+import PlutusLedgerApi.V1.Tx
 
 deriving newtype instance Serialise LedgerBytes
 deriving anyclass instance FromJSONKey LedgerBytes

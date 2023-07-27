@@ -39,9 +39,9 @@ import GHC.Generics (Generic)
 import Plutus.Script.Utils.Scripts (Versioned (Versioned, unversioned, version))
 import Plutus.Script.Utils.V1.Address qualified as PSU.PV1
 import Plutus.Script.Utils.V2.Address qualified as PSU.PV2
-import Plutus.V1.Ledger.Address qualified as PV1
-import Plutus.V1.Ledger.Api qualified as PV1
-import Plutus.V2.Ledger.Api qualified as PV2
+import PlutusLedgerApi.V1.Address qualified as PV1
+import PlutusLedgerApi.V1 qualified as PV1
+import PlutusLedgerApi.V2 qualified as PV2
 import PlutusTx.Prelude (BuiltinData, BuiltinString, check, trace)
 
 type UntypedValidator = BuiltinData -> BuiltinData -> BuiltinData -> ()
@@ -153,7 +153,7 @@ class PV1.UnsafeFromData sc => IsScriptContext sc where
     --
     -- @
     --   import PlutusTx qualified
-    --   import Plutus.V2.Ledger.Scripts qualified as Plutus
+    --   import PlutusLedgerApi.V2.Scripts qualified as Plutus
     --   import Plutus.Script.Utils.V2.Scripts (mkUntypedValidator)
     --
     --   newtype MyCustomDatum = MyCustomDatum Integer
@@ -175,7 +175,7 @@ class PV1.UnsafeFromData sc => IsScriptContext sc where
     --
     -- @
     --   import PlutusTx qualified
-    --   import Plutus.V2.Ledger.Scripts qualified as Plutus
+    --   import PlutusLedgerApi.V2.Scripts qualified as Plutus
     --   import Plutus.Script.Utils.V2.Scripts (mkUntypedValidator)
     --
     --   newtype MyCustomDatum = MyCustomDatum Integer
@@ -217,7 +217,7 @@ class PV1.UnsafeFromData sc => IsScriptContext sc where
     --
     -- @
     --   import PlutusTx qualified
-    --   import Plutus.V1.Ledger.Scripts qualified as Plutus
+    --   import PlutusLedgerApi.V1.Scripts qualified as Plutus
     --   import Plutus.Script.Utils.V1.Scripts (mkUntypedStakeValidator)
     --
     --   newtype MyCustomRedeemer = MyCustomRedeemer Integer
@@ -255,7 +255,7 @@ class PV1.UnsafeFromData sc => IsScriptContext sc where
     --
     -- @
     --   import PlutusTx qualified
-    --   import Plutus.V1.Ledger.Scripts qualified as Plutus
+    --   import PlutusLedgerApi.V1.Scripts qualified as Plutus
     --   import Plutus.Script.Utils.V1.Scripts (mkUntypedMintingPolicy)
     --
     --   newtype MyCustomRedeemer = MyCustomRedeemer Integer

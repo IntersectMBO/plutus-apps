@@ -26,7 +26,7 @@ import Plutus.Script.Utils.V1.Typed.Scripts.Validators qualified as V1
 import Plutus.Script.Utils.V2.Typed.Scripts.MonetaryPolicies hiding (forwardToValidator)
 import Plutus.Script.Utils.V2.Typed.Scripts.StakeValidators hiding (forwardToValidator)
 import Plutus.Script.Utils.V2.Typed.Scripts.Validators
-import Plutus.V2.Ledger.Api (Credential (PubKeyCredential, ScriptCredential), Datum, FromData, MintingPolicy,
+import PlutusLedgerApi.V2 (Credential (PubKeyCredential, ScriptCredential), Datum, FromData, MintingPolicy,
                              OutputDatum (OutputDatum, OutputDatumHash), StakeValidator, ToData (..),
                              TxOut (txOutAddress, txOutDatum), TxOutRef, Validator, addressCredential)
 

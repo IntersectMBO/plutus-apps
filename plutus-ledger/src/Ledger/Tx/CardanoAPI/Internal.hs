@@ -134,10 +134,10 @@ import Plutus.Script.Utils.Ada qualified as P
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
 import Plutus.Script.Utils.V2.Scripts qualified as PV2
 import Plutus.V1.Ledger.Api qualified as PV1
-import Plutus.V1.Ledger.Credential qualified as Credential
-import Plutus.V1.Ledger.Tx qualified as PV1
-import Plutus.V1.Ledger.Value qualified as Value
-import Plutus.V2.Ledger.Api qualified as PV2
+import PlutusLedgerApi.V1.Credential qualified as Credential
+import PlutusLedgerApi.V1.Tx qualified as PV1
+import PlutusLedgerApi.V1.Value qualified as Value
+import PlutusLedgerApi.V2 qualified as PV2
 import PlutusTx.Prelude qualified as PlutusTx
 import Prettyprinter (Pretty (pretty), colon, viaShow, (<+>))
 

@@ -19,5 +19,5 @@ import Ledger.Value.CardanoAPI as Export hiding (singleton)
 import Plutus.V1.Ledger.Api (Credential, DCert)
 import Plutus.V1.Ledger.Contexts as Export hiding (TxId (..), TxOut (..))
 import Plutus.V1.Ledger.Credential (StakingCredential)
-import Plutus.V1.Ledger.Interval as Export
-import Plutus.V1.Ledger.Time as Export
+import PlutusLedgerApi.V1.Interval as Export
+import PlutusLedgerApi.V1.Time as Export

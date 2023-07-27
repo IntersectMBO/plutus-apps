@@ -36,8 +36,8 @@ import Marconi.ChainIndex.Indexers.MintBurn qualified as MintBurn
 import Marconi.ChainIndex.Logging ()
 import Marconi.ChainIndex.Types (SecurityParam)
 import Marconi.Core.Storable qualified as Storable
-import Plutus.V1.Ledger.Api (MintingPolicy)
-import Plutus.V1.Ledger.Api qualified as PlutusV1
+import PlutusLedgerApi.V1 (MintingPolicy)
+import PlutusLedgerApi.V1 qualified as PlutusV1
 import PlutusTx qualified
 
 -- | The workhorse of the test: generate an indexer, then generate

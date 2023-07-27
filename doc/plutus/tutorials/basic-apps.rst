@@ -24,7 +24,7 @@ You start by defining some data types that you're going to need for the *Split* 
 
 ``SplitData`` describes the two recipients of the funds, and the total amount of the funds denoted in ada.
 
-You are using the :hsobj:`Plutus.V1.Ledger.Api.Address` type to identify the recipients.
+You are using the :hsobj:`PlutusLedgerApi.V1.Address` type to identify the recipients.
 When making the payment you can use the hashes to create two public key outputs.
 
 Instances for data types
@@ -60,13 +60,13 @@ You are going to use the validator script to lock a script output that contains 
 
 In this tutorial you only need a single validator.
 Its datum type is ``SplitData`` and its redeemer type is ``()`` (the unit type).
-The validator looks at the :hsobj:`Plutus.V1.Ledger.Api.ScriptContext` value to see if the conditions for making the payment are met:
+The validator looks at the :hsobj:`PlutusLedgerApi.V1.ScriptContext` value to see if the conditions for making the payment are met:
 
 .. literalinclude:: BasicApps.hs
    :start-after: BLOCK2
    :end-before: BLOCK3
 
-The validator checks that the transaction, represented by :hsobj:`Plutus.V1.Ledger.Api.scriptContextTxInfo`, pays half the specified amount to each recipient.
+The validator checks that the transaction, represented by :hsobj:`PlutusLedgerApi.V1.scriptContextTxInfo`, pays half the specified amount to each recipient.
 
 You then need some boilerplate to compile the validator to a Plutus script
 (see `Writing basic validator scripts <https://plutus.readthedocs.io/en/latest/tutorials/basic-validators.html>`_

@@ -41,7 +41,7 @@ import Cardano.BM.Trace (logError)
 import Cardano.BM.Tracing (defaultConfigStdout)
 import Cardano.Streaming (ChainSyncEventException (NoIntersectionFound), withChainSyncEventStream)
 import Gen.Cardano.Api.Typed qualified as CGen
-import Plutus.V1.Ledger.Scripts qualified as Plutus
+import PlutusLedgerApi.V1.Scripts qualified as Plutus
 import PlutusTx qualified
 import Prettyprinter (defaultLayoutOptions, layoutPretty, pretty, (<+>))
 import Prettyprinter.Render.Text (renderStrict)

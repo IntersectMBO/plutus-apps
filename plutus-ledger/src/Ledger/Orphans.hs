@@ -23,8 +23,8 @@ import Data.Text qualified as Text
 import GHC.Generics (Generic)
 import Ledger.Crypto (PrivateKey (PrivateKey, getPrivateKey))
 import Plutus.V1.Ledger.Api (LedgerBytes, POSIXTime (POSIXTime), TxId (TxId), fromBytes)
-import Plutus.V1.Ledger.Bytes (bytes)
-import Plutus.V1.Ledger.Scripts (ScriptError)
+import PlutusLedgerApi.V1.Bytes (bytes)
+import PlutusLedgerApi.V1.Scripts (ScriptError)
 import Web.HttpApiData (FromHttpApiData (parseUrlPiece), ToHttpApiData (toUrlPiece))
 
 -- TODO: remove this dependency here once the instance of Ord for AddressInEra

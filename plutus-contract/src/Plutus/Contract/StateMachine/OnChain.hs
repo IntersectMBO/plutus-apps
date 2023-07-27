@@ -35,9 +35,9 @@ import Ledger.Tx.Constraints.OnChain.V2 (checkScriptContext)
 import Ledger.Typed.Scripts (DatumType, RedeemerType, ValidatorTypes, validatorCardanoAddress, validatorHash)
 import Plutus.Script.Utils.V2.Typed.Scripts (TypedValidator, ValidatorType)
 import Plutus.Script.Utils.Value (Value, isZero)
-import Plutus.V2.Ledger.Api (ValidatorHash)
-import Plutus.V2.Ledger.Contexts (ScriptContext, TxInInfo (txInInfoResolved), findOwnInput, ownHash)
-import Plutus.V2.Ledger.Tx qualified as PV2
+import PlutusLedgerApi.V2 (ValidatorHash)
+import PlutusLedgerApi.V2.Contexts (ScriptContext, TxInInfo (txInInfoResolved), findOwnInput, ownHash)
+import PlutusLedgerApi.V2.Tx qualified as PV2
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (check)
 import Prelude qualified as Haskell

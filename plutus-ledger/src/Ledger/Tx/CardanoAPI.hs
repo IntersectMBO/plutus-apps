@@ -49,7 +49,7 @@ import Ledger.Index.Internal qualified as P
 import Ledger.Scripts qualified as P
 import Ledger.Tx.CardanoAPI.Internal
 import Ledger.Tx.Internal qualified as P
-import Plutus.V1.Ledger.Api qualified as PV1
+import PlutusLedgerApi.V1 qualified as PV1
 
 
 toCardanoMintWitness :: PV1.Redeemer -> Maybe (P.Versioned PV1.TxOutRef) -> Maybe (P.Versioned PV1.MintingPolicy) -> Either ToCardanoError (C.ScriptWitness C.WitCtxMint C.BabbageEra)

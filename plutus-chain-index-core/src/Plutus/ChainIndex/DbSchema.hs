@@ -42,11 +42,11 @@ import Plutus.ChainIndex.Tx (ChainIndexTx)
 import Plutus.ChainIndex.Tx qualified as CI
 import Plutus.ChainIndex.Types (BlockNumber (..), Tip (..))
 
-import Plutus.V1.Ledger.Api (Credential, Datum, DatumHash (..), MintingPolicy, MintingPolicyHash (..), Redeemer,
+import PlutusLedgerApi.V1 (Credential, Datum, DatumHash (..), MintingPolicy, MintingPolicyHash (..), Redeemer,
                              RedeemerHash (..), Script, StakeValidator, StakeValidatorHash (..), TxId (..),
                              TxOutRef (..), Validator, ValidatorHash (..))
-import Plutus.V1.Ledger.Scripts (ScriptHash (..))
-import Plutus.V1.Ledger.Value (AssetClass)
+import PlutusLedgerApi.V1.Scripts (ScriptHash (..))
+import PlutusLedgerApi.V1.Value (AssetClass)
 import PlutusTx.Builtins qualified as PlutusTx
 import PlutusTx.Builtins.Internal (BuiltinByteString (..), emptyByteString)
 

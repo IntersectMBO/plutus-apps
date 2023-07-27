@@ -92,15 +92,15 @@ library
     Prettyprinter.Extras
 
   reexported-modules:
-    Plutus.V1.Ledger.Bytes as Ledger.Bytes,
-    Plutus.V1.Ledger.Credential as Ledger.Credential,
-    Plutus.V1.Ledger.DCert as Ledger.DCert,
-    Plutus.V1.Ledger.Interval as Ledger.Interval,
-    Plutus.V1.Ledger.Time as Ledger.Time,
+    PlutusLedgerApi.V1.Bytes as Ledger.Bytes,
+    PlutusLedgerApi.V1.Credential as Ledger.Credential,
+    PlutusLedgerApi.V1.DCert as Ledger.DCert,
+    PlutusLedgerApi.V1.Interval as Ledger.Interval,
+    PlutusLedgerApi.V1.Time as Ledger.Time,
 
   -- The rest of the plutus-ledger-api modules are reexported from within
   -- the Haskell modules and not in the current cabal file.
-  -- For example: Plutus.V1.Ledger.Address is reexported by Ledger.Address
+  -- For example: PlutusLedgerApi.V1.Address is reexported by Ledger.Address
   other-modules:
     Codec.CBOR.Extras
     Ledger.Tx.CardanoAPITemp
@@ -166,6 +166,7 @@ library
     , transformers
     , vector
 
+  -- , quickcheck-contractmodel  >=0.1.4.0
   ghc-options:        -fprint-potential-instances
 
   if !(impl(ghcjs) || os(ghcjs))

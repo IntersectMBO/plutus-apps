@@ -15,10 +15,10 @@ import Plutus.Script.Utils.V1.Address qualified as PV1
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
 import Plutus.Script.Utils.V2.Address qualified as PV2
 import Plutus.Script.Utils.V2.Scripts qualified as PV2
-import Plutus.V1.Ledger.Api (Address, Validator)
-import Plutus.V1.Ledger.Api qualified as PV1
-import Plutus.V1.Ledger.Value qualified as Value
-import Plutus.V2.Ledger.Api qualified as PV2
+import PlutusLedgerApi.V1 (Address, Validator)
+import PlutusLedgerApi.V1 qualified as PV1
+import PlutusLedgerApi.V1.Value qualified as Value
+import PlutusLedgerApi.V2 qualified as PV2
 import PlutusTx qualified
 import Prelude hiding (not)
 

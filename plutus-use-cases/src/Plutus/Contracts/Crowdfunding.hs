@@ -70,8 +70,8 @@ import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2 hiding (validatorHas
 import Plutus.Trace.Effects.EmulatorControl (getSlotConfig)
 import Plutus.Trace.Emulator (ContractHandle, EmulatorTrace)
 import Plutus.Trace.Emulator qualified as Trace
-import Plutus.V2.Ledger.Api qualified as V2
-import Plutus.V2.Ledger.Contexts qualified as V2
+import PlutusLedgerApi.V2 qualified as V2
+import PlutusLedgerApi.V2.Contexts qualified as V2
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (Applicative (..), Semigroup (..), return, (<$>), (>>), (>>=))
 import Prelude (Semigroup (..), (<$>), (>>=))

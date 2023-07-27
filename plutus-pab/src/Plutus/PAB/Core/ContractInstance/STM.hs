@@ -75,7 +75,7 @@ import Plutus.ChainIndex.UtxoState (UtxoIndex, UtxoState (_usTxUtxoData), utxoSt
 import Plutus.Contract.Effects (ActiveEndpoint (ActiveEndpoint, aeDescription))
 import Plutus.Contract.Resumable (IterationID, Request (Request, itID, rqID, rqRequest), RequestID)
 import Plutus.PAB.Core.Indexer.TxConfirmationStatus (TCSIndex)
-import Plutus.V1.Ledger.Api (TxId)
+import PlutusLedgerApi.V1 (TxId)
 import Wallet.Types (ContractInstanceId, EndpointDescription, EndpointValue (EndpointValue),
                      NotificationError (EndpointNotAvailable, InstanceDoesNotExist, MoreThanOneEndpointAvailable))
 import Wallet.Types qualified as Wallet (ContractActivityStatus (Active, Done, Stopped))

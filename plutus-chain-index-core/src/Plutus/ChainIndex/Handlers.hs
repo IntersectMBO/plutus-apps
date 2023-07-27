@@ -66,7 +66,7 @@ import Plutus.ChainIndex.UtxoState qualified as UtxoState
 import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Scripts (datumHash)
 import Plutus.Script.Utils.Value (AssetClass (AssetClass), flattenValue)
-import Plutus.V2.Ledger.Api (Credential (..), TxId)
+import PlutusLedgerApi.V2 (Credential (..), TxId)
 import PlutusTx.Builtins.Internal (emptyByteString)
 
 type ChainIndexState = UtxoIndex TxUtxoBalance

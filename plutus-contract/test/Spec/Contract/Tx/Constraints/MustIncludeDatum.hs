@@ -25,10 +25,10 @@ import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Typed qualified as Typed
 import Plutus.Script.Utils.V1.Scripts qualified as PSU.V1
 import Plutus.Trace qualified as Trace
-import Plutus.V1.Ledger.Api (CurrencySymbol (CurrencySymbol), Datum (Datum), Redeemer (Redeemer),
+import PlutusLedgerApi.V1 (CurrencySymbol (CurrencySymbol), Datum (Datum), Redeemer (Redeemer),
                              ScriptContext (scriptContextTxInfo), ToData (toBuiltinData), TxInfo (txInfoData),
                              UnsafeFromData (unsafeFromBuiltinData), Validator, ValidatorHash)
-import Plutus.V1.Ledger.Value qualified as Value
+import PlutusLedgerApi.V1.Value qualified as Value
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
 

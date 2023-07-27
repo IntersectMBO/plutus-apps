@@ -57,7 +57,7 @@ import Plutus.ChainIndex.Effects qualified as ChainIndex (ChainIndexControlEffec
 import Plutus.ChainIndex.Emulator.Handlers qualified as ChainIndex (handleControl, handleQuery)
 import Plutus.Trace.Emulator.Types (ContractInstanceLog, EmulatedWalletEffects, EmulatedWalletEffects', UserThreadMsg)
 import Plutus.Trace.Scheduler qualified as Scheduler
-import Plutus.V1.Ledger.Scripts qualified as Script
+import PlutusLedgerApi.V1.Scripts qualified as Script
 import PlutusTx (toData)
 import Prettyprinter (Pretty (pretty), colon, (<+>))
 import Wallet.API qualified as WAPI

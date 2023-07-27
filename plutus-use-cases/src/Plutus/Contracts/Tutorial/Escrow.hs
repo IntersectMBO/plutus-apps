@@ -60,8 +60,8 @@ import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Script.Utils.V2.Contexts (ScriptContext (..), TxInfo (..), txSignedBy)
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
 import Plutus.Script.Utils.Value (Value, geq, lt)
-import Plutus.V2.Ledger.Api (Datum (Datum), DatumHash)
-import Plutus.V2.Ledger.Contexts (valuePaidTo)
+import PlutusLedgerApi.V2 (Datum (Datum), DatumHash)
+import PlutusLedgerApi.V2.Contexts (valuePaidTo)
 
 import Cardano.Node.Emulator.Internal.Node.Params qualified as Params
 import Plutus.Contract

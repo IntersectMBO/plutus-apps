@@ -16,12 +16,12 @@ module Plutus.Script.Utils.V1.Typed.Scripts.MonetaryPolicies
     ) where
 
 import Plutus.Script.Utils.Typed (mkUntypedMintingPolicy)
-import Plutus.V1.Ledger.Api (Address (Address, addressCredential), Credential (ScriptCredential), MintingPolicy,
+import PlutusLedgerApi.V1 (Address (Address, addressCredential), Credential (ScriptCredential), MintingPolicy,
                              ValidatorHash, mkMintingPolicyScript)
-import Plutus.V1.Ledger.Contexts (ScriptContext (ScriptContext, scriptContextPurpose, scriptContextTxInfo),
+import PlutusLedgerApi.V1.Contexts (ScriptContext (ScriptContext, scriptContextPurpose, scriptContextTxInfo),
                                   ScriptPurpose (Minting), TxInfo (TxInfo, txInfoInputs))
-import Plutus.V1.Ledger.Contexts qualified as PV1
-import Plutus.V1.Ledger.Tx (TxOut (TxOut, txOutAddress))
+import PlutusLedgerApi.V1.Contexts qualified as PV1
+import PlutusLedgerApi.V1.Tx (TxOut (TxOut, txOutAddress))
 import PlutusTx qualified
 import PlutusTx.Prelude (Bool (False), any, ($), (.), (==))
 

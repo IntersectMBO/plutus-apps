@@ -25,8 +25,8 @@ import Plutus.Script.Utils.Typed qualified as Scripts
 import Plutus.Script.Utils.V2.Scripts (mintingPolicyHash)
 import Plutus.Script.Utils.Value (TokenName, Value)
 import Plutus.Script.Utils.Value qualified as Value
-import Plutus.V2.Ledger.Api (MintingPolicy, ScriptContext (..), mkMintingPolicyScript)
-import Plutus.V2.Ledger.Contexts (txSignedBy)
+import PlutusLedgerApi.V2 (MintingPolicy, ScriptContext (..), mkMintingPolicyScript)
+import PlutusLedgerApi.V2.Contexts (txSignedBy)
 import PlutusTx qualified
 import PlutusTx.Prelude
 import Prelude qualified as Haskell

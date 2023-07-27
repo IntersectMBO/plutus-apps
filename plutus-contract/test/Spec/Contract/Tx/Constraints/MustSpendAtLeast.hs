@@ -25,7 +25,7 @@ import Plutus.Contract.Test (assertContractError, assertEvaluationError, assertV
 import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Typed qualified as Typed
 import Plutus.Trace.Emulator qualified as Trace (EmulatorTrace, activateContractWallet, nextSlot, walletInstanceTag)
-import Plutus.V1.Ledger.Api (Datum (Datum), ScriptContext, ValidatorHash)
+import PlutusLedgerApi.V1 (Datum (Datum), ScriptContext, ValidatorHash)
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
 import Prelude hiding (not)

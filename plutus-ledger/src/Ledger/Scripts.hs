@@ -12,7 +12,7 @@ import Cardano.Api (PlutusScriptVersion (PlutusScriptV1), Script (PlutusScript),
                     examplePlutusScriptAlwaysFails, examplePlutusScriptAlwaysSucceeds, hashScript, serialiseToRawBytes)
 import Ledger.Scripts.Orphans ()
 import Plutus.Script.Utils.Scripts as Export
-import Plutus.V1.Ledger.Scripts as Export
+import PlutusLedgerApi.V1.Scripts as Export
 import PlutusTx.Builtins (BuiltinByteString, toBuiltin)
 
 

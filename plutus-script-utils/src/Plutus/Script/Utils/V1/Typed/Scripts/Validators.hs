@@ -48,8 +48,8 @@ import Plutus.Script.Utils.Typed (DatumType, RedeemerType,
                                   vValidatorScript, validatorAddress, validatorHash, validatorScript)
 import Plutus.Script.Utils.V1.Scripts qualified as Scripts
 import Plutus.Script.Utils.V1.Typed.Scripts.MonetaryPolicies qualified as MPS
-import Plutus.V1.Ledger.Address qualified as PV1
-import Plutus.V1.Ledger.Api qualified as PV1
+import PlutusLedgerApi.V1.Address qualified as PV1
+import PlutusLedgerApi.V1 qualified as PV1
 import PlutusCore.Default (DefaultUni)
 import PlutusTx (CompiledCode, Lift, applyCode, liftCode)
 import Prettyprinter (Pretty (pretty), viaShow, (<+>))

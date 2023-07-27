@@ -20,8 +20,8 @@ import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as SBS
 
 import Plutus.Script.Utils.Typed as Scripts
-import Plutus.V2.Ledger.Api qualified as V2
-import Plutus.V2.Ledger.Contexts as V2
+import PlutusLedgerApi.V2 qualified as V2
+import PlutusLedgerApi.V2.Contexts as V2
 import PlutusTx qualified
 import PlutusTx.Builtins
 import PlutusTx.Prelude hiding (Semigroup (..), unless, (.))

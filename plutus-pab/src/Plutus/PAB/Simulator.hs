@@ -128,7 +128,7 @@ import Plutus.PAB.Webserver.Types (ContractActivationArgs)
 import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Value (Value, flattenValue)
 import Plutus.Trace.Emulator.System (appendNewTipBlock)
-import Plutus.V1.Ledger.Tx (TxId, TxOutRef)
+import PlutusLedgerApi.V1.Tx (TxId, TxOutRef)
 import Prettyprinter (Pretty (pretty), defaultLayoutOptions, layoutPretty)
 import Prettyprinter.Render.Text qualified as Render
 import Wallet.API qualified as WAPI

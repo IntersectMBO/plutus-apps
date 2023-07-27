@@ -45,9 +45,9 @@ import Ledger.Tx.Orphans ()
 import Ledger.Tx.Orphans.V2 ()
 
 import Plutus.Script.Utils.Scripts
-import Plutus.V1.Ledger.Api (Credential, DCert, dataToBuiltinData)
-import Plutus.V1.Ledger.Scripts
-import Plutus.V1.Ledger.Tx hiding (TxIn (..), TxInType (..), TxOut (..), inRef, inType, pubKeyTxIn, scriptTxIn)
+import PlutusLedgerApi.V1 (Credential, DCert, dataToBuiltinData)
+import PlutusLedgerApi.V1.Scripts
+import PlutusLedgerApi.V1.Tx hiding (TxIn (..), TxInType (..), TxOut (..), inRef, inType, pubKeyTxIn, scriptTxIn)
 import PlutusTx (FromData (..))
 import PlutusTx.Prelude qualified as PlutusTx
 import Prettyprinter (Pretty (..), viaShow)

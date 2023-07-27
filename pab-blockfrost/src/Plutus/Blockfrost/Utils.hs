@@ -25,11 +25,11 @@ import Ledger.Value.CardanoAPI qualified as Value
 import Money (Approximation (Round), DecimalConf (..), SomeDiscrete, UnitScale, defaultDecimalConf, discreteToDecimal,
               scale, someDiscreteAmount, someDiscreteCurrency)
 import Plutus.V1.Ledger.Address qualified as LA
-import Plutus.V1.Ledger.Api (Credential (..), TxId (TxId), fromBuiltin, toBuiltin, unCurrencySymbol, unTokenName)
-import Plutus.V1.Ledger.Api qualified (DatumHash, RedeemerHash)
-import Plutus.V1.Ledger.Interval (always, from, interval, to)
-import Plutus.V1.Ledger.Scripts qualified as PS
-import Plutus.V1.Ledger.Value (AssetClass, unAssetClass)
+import PlutusLedgerApi.V1 (Credential (..), TxId (TxId), fromBuiltin, toBuiltin, unCurrencySymbol, unTokenName)
+import PlutusLedgerApi.V1 qualified (DatumHash, RedeemerHash)
+import PlutusLedgerApi.V1.Interval (always, from, interval, to)
+import PlutusLedgerApi.V1.Scripts qualified as PS
+import PlutusLedgerApi.V1.Value (AssetClass, unAssetClass)
 
 
 class Show a => ToBlockfrostScriptHash a where
@@ -44,8 +44,8 @@ class Show a => ToBlockfrostDatumHash a where
   toBlockfrostDatumHash :: a -> Blockfrost.DatumHash
   toBlockfrostDatumHash = fromString . show
 
-instance ToBlockfrostDatumHash Plutus.V1.Ledger.Api.DatumHash
-instance ToBlockfrostDatumHash Plutus.V1.Ledger.Api.RedeemerHash
+instance ToBlockfrostDatumHash PlutusLedgerApi.V1.DatumHash
+instance ToBlockfrostDatumHash PlutusLedgerApi.V1.RedeemerHash
 
 toBlockfrostTxHash :: TxId -> TxHash
 toBlockfrostTxHash = TxHash . pack . show

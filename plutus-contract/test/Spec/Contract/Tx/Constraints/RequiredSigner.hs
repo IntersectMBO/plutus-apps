@@ -26,8 +26,8 @@ import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Typed qualified as Scripts
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as Scripts
 import Plutus.Trace.Emulator qualified as Trace (activateContractWallet, nextSlot, setSigningProcess)
-import Plutus.V1.Ledger.Scripts (unitDatum)
-import Plutus.V2.Ledger.Api qualified as PV2
+import PlutusLedgerApi.V1.Scripts (unitDatum)
+import PlutusLedgerApi.V2 qualified as PV2
 import PlutusTx qualified
 import Prelude
 import Spec.Contract.Error (cardanoLedgerErrorContaining)

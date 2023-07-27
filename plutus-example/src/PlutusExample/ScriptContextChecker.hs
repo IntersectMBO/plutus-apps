@@ -49,8 +49,8 @@ import Control.Monad.Trans.Except
 import Ouroboros.Consensus.HardFork.Combinator.AcrossEras qualified as Consensus
 import Ouroboros.Consensus.HardFork.History qualified as Consensus
 
-import Plutus.V1.Ledger.Api qualified as V1
-import Plutus.V2.Ledger.Api qualified as V2
+import PlutusLedgerApi.V1 qualified as V1
+import PlutusLedgerApi.V2 qualified as V2
 import PlutusTx.AssocMap qualified as PMap
 import PlutusTx.Prelude as PPrelude hiding (Eq, Semigroup (..), unless, (.))
 

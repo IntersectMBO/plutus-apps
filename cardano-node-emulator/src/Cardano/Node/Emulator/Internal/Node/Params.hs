@@ -56,7 +56,7 @@ import GHC.Natural (Natural)
 import Ledger.Test (testnet)
 import Ouroboros.Consensus.HardFork.History qualified as Ouroboros
 import Ouroboros.Consensus.Util.Counting qualified as Ouroboros
-import Plutus.V1.Ledger.Api (POSIXTime (POSIXTime))
+import PlutusLedgerApi.V1 (POSIXTime (POSIXTime))
 import PlutusCore (defaultCostModelParams)
 import Prettyprinter (Pretty (pretty), viaShow, vsep, (<+>))
 

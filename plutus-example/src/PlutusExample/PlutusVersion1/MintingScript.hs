@@ -19,7 +19,7 @@ import Data.ByteString.Lazy qualified as LB
 import Data.ByteString.Short qualified as SBS
 
 import Plutus.Script.Utils.Typed qualified as Scripts
-import Plutus.V1.Ledger.Api (MintingPolicy, Script, ScriptContext, Validator (Validator), mkMintingPolicyScript,
+import PlutusLedgerApi.V1 (MintingPolicy, Script, ScriptContext, Validator (Validator), mkMintingPolicyScript,
                              unMintingPolicyScript)
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (Semigroup (..), unless, (.))

@@ -66,7 +66,7 @@ import Plutus.ChainIndex qualified as ChainIndex
 import Plutus.ChainIndex.Api (collectQueryResponse)
 import Plutus.ChainIndex.Emulator (ChainIndexEmulatorState, ChainIndexQueryEffect)
 import Plutus.Contract.Checkpoint (CheckpointLogMsg)
-import Plutus.V1.Ledger.Api (ValidatorHash, Value)
+import PlutusLedgerApi.V1 (ValidatorHash, Value)
 import Prettyprinter (Pretty (pretty))
 import Servant.API (FromHttpApiData (parseUrlPiece), ToHttpApiData (toUrlPiece))
 import Wallet.Effects (NodeClientEffect,

@@ -8,7 +8,7 @@ import Data.Aeson (FromJSON, ToJSON)
 
 import Ledger.Credential.Orphans ()
 import Ledger.Scripts.Orphans ()
-import Plutus.V1.Ledger.Address
+import PlutusLedgerApi.V1.Address
 
 deriving anyclass instance ToJSON Address
 deriving anyclass instance FromJSON Address

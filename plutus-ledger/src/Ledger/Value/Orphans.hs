@@ -17,7 +17,7 @@ import Data.Text qualified as Text
 import Data.Text.Encoding qualified as E
 import GHC.Generics (Generic)
 import Plutus.V1.Ledger.Bytes qualified as Bytes
-import Plutus.V1.Ledger.Value
+import PlutusLedgerApi.V1.Value
 import PlutusTx.AssocMap qualified as Map
 import PlutusTx.Prelude qualified as PlutusTx
 import Prettyprinter (Pretty (pretty), (<+>))
@@ -63,7 +63,7 @@ instance ToJSON TokenName where
             (\bs -> Text.cons '\NUL' (asBase16 bs))
             (\t -> case Text.take 1 t of "\NUL" -> Text.concat ["\NUL\NUL", t]; _ -> t)
       where
-        -- copied from 'Plutus.V1.Ledger.Value' because not exported
+        -- copied from 'PlutusLedgerApi.V1.Value' because not exported
         asBase16 :: BS.ByteString -> Text.Text
         asBase16 bs = Text.concat ["0x", Bytes.encodeByteString bs]
 

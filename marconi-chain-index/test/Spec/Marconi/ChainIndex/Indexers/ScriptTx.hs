@@ -49,7 +49,7 @@ import Marconi.ChainIndex.Indexers qualified as M
 import Marconi.ChainIndex.Indexers.ScriptTx qualified as ScriptTx
 import Marconi.ChainIndex.Logging ()
 import Marconi.Core.Storable qualified as Storable
-import Plutus.V1.Ledger.Scripts qualified as Plutus
+import PlutusLedgerApi.V1.Scripts qualified as Plutus
 import PlutusTx qualified
 import Prettyprinter (defaultLayoutOptions, layoutPretty, pretty, (<+>))
 import Prettyprinter.Render.Text (renderStrict)

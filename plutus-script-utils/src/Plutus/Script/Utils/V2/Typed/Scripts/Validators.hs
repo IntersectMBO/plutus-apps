@@ -35,7 +35,7 @@ import Plutus.Script.Utils.Typed (DatumType, RedeemerType,
                                   validatorAddress, validatorHash, validatorScript)
 import Plutus.Script.Utils.V2.Scripts qualified as Scripts
 import Plutus.Script.Utils.V2.Typed.Scripts.MonetaryPolicies qualified as MPS
-import Plutus.V2.Ledger.Api qualified as PV2
+import PlutusLedgerApi.V2 qualified as PV2
 import PlutusCore.Default (DefaultUni)
 import PlutusTx (CompiledCode, Lift, applyCode, liftCode)
 

@@ -10,7 +10,7 @@ import Control.Newtype.Generics (Newtype)
 import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
 import Data.Hashable (Hashable)
 
-import Plutus.V1.Ledger.Crypto
+import PlutusLedgerApi.V1.Crypto
 
 deriving anyclass instance ToJSON PubKeyHash
 deriving anyclass instance FromJSON PubKeyHash

@@ -14,7 +14,7 @@ import Cardano.Api.Shelley (PlutusScript (..))
 import Codec.Serialise (serialise)
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as SBS
-import Plutus.V2.Ledger.Api qualified as PlutusV2
+import PlutusLedgerApi.V2 qualified as PlutusV2
 import PlutusTx qualified
 import PlutusTx.Builtins qualified as BI
 import PlutusTx.Prelude as P hiding (Semigroup (..), unless, (.))

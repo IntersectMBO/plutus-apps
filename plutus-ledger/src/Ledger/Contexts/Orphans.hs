@@ -4,6 +4,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 
 module Ledger.Contexts.Orphans where
-import Plutus.V1.Ledger.Contexts (ScriptPurpose (..))
+import PlutusLedgerApi.V1.Contexts (ScriptPurpose (..))
 
 deriving stock instance Ord ScriptPurpose

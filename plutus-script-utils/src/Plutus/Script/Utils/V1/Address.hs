@@ -8,7 +8,7 @@ module Plutus.Script.Utils.V1.Address
 import Cardano.Api qualified as Script
 
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
-import Plutus.V1.Ledger.Api (Address (Address), Credential (ScriptCredential), Script, Validator, getMintingPolicy,
+import PlutusLedgerApi.V1 (Address (Address), Credential (ScriptCredential), Script, Validator, getMintingPolicy,
                              getStakeValidator, getValidator)
 
 {-# INLINABLE mkValidatorAddress #-}

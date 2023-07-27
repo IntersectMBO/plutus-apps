@@ -7,8 +7,8 @@ module Plutus.Script.Utils.V1.Contexts
     , valuePaidTo
     ) where
 
-import Plutus.V1.Ledger.Api (Address, Value)
-import Plutus.V1.Ledger.Contexts as Contexts hiding (valuePaidTo)
+import PlutusLedgerApi.V1 (Address, Value)
+import PlutusLedgerApi.V1.Contexts as Contexts hiding (valuePaidTo)
 import PlutusTx.Prelude (Maybe (Just, Nothing), mapMaybe, mconcat, (==))
 
 {-# INLINABLE outputsAt #-}

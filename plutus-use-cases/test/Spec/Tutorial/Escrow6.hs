@@ -33,7 +33,7 @@ import Plutus.Contract.Test.ContractModel
 import Plutus.Contract.Test.ContractModel.CrashTolerance
 import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Value (Value, geq)
-import Plutus.V2.Ledger.Api (Datum, POSIXTime (POSIXTime))
+import PlutusLedgerApi.V2 (Datum, POSIXTime (POSIXTime))
 
 import Plutus.Contracts.Escrow hiding (Action (..))
 import Plutus.Trace.Emulator qualified as Trace

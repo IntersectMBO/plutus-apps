@@ -32,7 +32,7 @@ import GHC.Generics (Generic)
 import Plutus.ChainIndex.Types (BlockNumber (BlockNumber),
                                 TxConfirmedState (TxConfirmedState, blockAdded, timesConfirmed, validity),
                                 TxValidity (TxValid))
-import Plutus.V1.Ledger.Api (TxId)
+import PlutusLedgerApi.V1 (TxId)
 
 import Marconi.Core.Index.VSqlite (SqliteIndex)
 import Marconi.Core.Index.VSqlite qualified as Ix

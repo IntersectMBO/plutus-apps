@@ -72,7 +72,7 @@ import Ledger.Tx.Internal qualified as Tx
 import Ledger.Value.CardanoAPI (Value, lovelaceToValue)
 import Plutus.Script.Utils.Ada (Ada)
 import Plutus.Script.Utils.Ada qualified as Ada
-import Plutus.V1.Ledger.Api qualified as PV1
+import PlutusLedgerApi.V1 qualified as PV1
 import PlutusTx.Lattice ((\/))
 
 -- | Create an index of all UTxOs on the chain.

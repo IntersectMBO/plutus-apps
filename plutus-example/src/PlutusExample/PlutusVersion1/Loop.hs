@@ -17,7 +17,7 @@ import Codec.Serialise
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as SBS
 
-import Plutus.V1.Ledger.Scripts qualified as Plutus
+import PlutusLedgerApi.V1.Scripts qualified as Plutus
 import PlutusTx
 import PlutusTx.Builtins (unsafeDataAsI)
 import PlutusTx.Prelude hiding (Semigroup (..), unless, (.))

@@ -29,8 +29,8 @@ import Cardano.Api.Shelley qualified as Script
 import Codec.Serialise (serialise)
 import Data.ByteString.Lazy qualified as BSL
 import Data.ByteString.Short qualified as SBS
-import Plutus.V1.Ledger.Api qualified as PV1
-import Plutus.V1.Ledger.Scripts qualified as PV1
+import PlutusLedgerApi.V1 qualified as PV1
+import PlutusLedgerApi.V1.Scripts qualified as PV1
 import PlutusTx.Builtins qualified as Builtins
 
 -- | Hash a 'PV1.Validator' script.

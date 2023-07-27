@@ -71,9 +71,9 @@ import Plutus.Script.Utils.Scripts (datumHash)
 import Plutus.Script.Utils.V2.Contexts (ScriptContext (..), TxInfo (..), scriptOutputsAt, txInfoValidRange, txSignedBy)
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
 import Plutus.Script.Utils.Value (Value, geq, lt)
-import Plutus.V2.Ledger.Api (Datum (Datum), DatumHash, ValidatorHash)
-import Plutus.V2.Ledger.Contexts (valuePaidTo)
-import Plutus.V2.Ledger.Tx (OutputDatum (OutputDatumHash))
+import PlutusLedgerApi.V2 (Datum (Datum), DatumHash, ValidatorHash)
+import PlutusLedgerApi.V2.Contexts (valuePaidTo)
+import PlutusLedgerApi.V2.Tx (OutputDatum (OutputDatumHash))
 
 import Prelude (Semigroup (..), foldMap)
 import Prelude qualified as Haskell

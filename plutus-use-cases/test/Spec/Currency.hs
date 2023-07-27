@@ -5,12 +5,12 @@ module Spec.Currency(tests, currencyTrace) where
 import Control.Monad (void)
 import Plutus.Contract
 import Plutus.Contract.Test
-import Plutus.V1.Ledger.Scripts (scriptSize)
+import PlutusLedgerApi.V1.Scripts (scriptSize)
 
 import Plutus.Contracts.Currency (OneShotCurrency)
 import Plutus.Contracts.Currency qualified as Cur
 import Plutus.Trace.Emulator qualified as Trace
-import Plutus.V2.Ledger.Api qualified as V2
+import PlutusLedgerApi.V2 qualified as V2
 
 import Test.Tasty
 
