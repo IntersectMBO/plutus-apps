@@ -114,7 +114,7 @@ library
   -- Other IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api                  >=1.35
+    , cardano-api                  >=8.0
     , cardano-binary
     , cardano-crypto
     , cardano-crypto-class
@@ -194,7 +194,7 @@ test-suite plutus-ledger-test
   -- Other IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api:{cardano-api, gen}  >=1.35
+    , cardano-api:{cardano-api, gen}  >=8.0
     , cardano-crypto-class            >=2.0.0
     , plutus-ledger-api               >=1.0.0
     , plutus-tx                       >=1.0.0

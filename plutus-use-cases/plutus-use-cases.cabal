@@ -197,7 +197,7 @@ test-suite plutus-use-cases-test
   -- Other IOG dependencies
   --------------------------
   build-depends:
-      cardano-api                  >=1.35
+      cardano-api                  >=8.0
     , cardano-binary
     , cardano-ledger-alonzo
     , cardano-ledger-babbage
@@ -297,7 +297,7 @@ executable plutus-use-cases-scripts
   -- Other IOG dependencies
   --------------------------
   build-depends:
-      cardano-api        >=1.35
+      cardano-api        >=8.0
     , plutus-ledger-api  >=1.0.0
     , plutus-tx          >=1.0.0
 

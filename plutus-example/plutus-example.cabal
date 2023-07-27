@@ -78,8 +78,8 @@ library
   -- Other IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api             >=1.35
-    , cardano-cli             >=1.35
+    , cardano-api             >=8.0
+    , cardano-cli             >=8.0
     , cardano-ledger-alonzo
     , cardano-ledger-babbage
     , cardano-ledger-core
@@ -118,7 +118,7 @@ executable plutus-example
   --------------------------
   -- Other IOG dependencies
   --------------------------
-  build-depends:  cardano-api >=1.35
+  build-depends:  cardano-api >=8.0
 
   ------------------------
   -- Non-IOG dependencies
@@ -137,7 +137,7 @@ executable create-script-context
   -- Local components
   --------------------
   build-depends:
-    , cardano-api     >=1.35
+    , cardano-api     >=8.0
     , plutus-example
 
   --------------------------
@@ -168,8 +168,8 @@ test-suite plutus-example-test
   -- Other IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api:{cardano-api, gen}  >=1.35
-    , cardano-cli                     >=1.35
+    , cardano-api:{cardano-api, gen}  >=8.0
+    , cardano-cli                     >=8.0
     , cardano-ledger-alonzo
     , cardano-ledger-core
     , cardano-ledger-shelley
@@ -207,7 +207,7 @@ test-suite plutus-example-test
 
   ghc-options:        -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
   build-tool-depends:
-    , cardano-cli:cardano-cli                >=1.35
-    , cardano-node:cardano-node              >=1.35
-    , cardano-submit-api:cardano-submit-api  >=1.35
+    , cardano-cli:cardano-cli                >=8.0
+    , cardano-node:cardano-node              >=8.0
+    , cardano-submit-api:cardano-submit-api  >=8.0
     , plutus-example:create-script-context
