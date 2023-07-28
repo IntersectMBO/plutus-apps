@@ -402,11 +402,11 @@ finalResult InstanceState{issStatus} = do
 
 -- | Insert an 'InstanceState' value into the 'InstancesState'
 insertInstance :: ContractInstanceId -> InstanceState -> InstancesState -> IO ()
-insertInstance instanceID state (InstancesState m) = IORef.modifyIORef' m (Map.insert instanceID state)
+insertInstance instanceID state (InstancesState m) = IORef.atomicModifyIORef' m (\s -> (Map.insert instanceID state s, ()))
 
 -- | Delete an instance from the 'InstancesState'
 removeInstance :: ContractInstanceId -> InstancesState -> IO ()
-removeInstance instanceID (InstancesState m) = IORef.modifyIORef' m (Map.delete instanceID)
+removeInstance instanceID (InstancesState m) = IORef.atomicModifyIORef' m (\s -> (Map.delete instanceID s, ()))
 
 -- | Wait for the status of a transaction to change.
 waitForTxStatusChange
