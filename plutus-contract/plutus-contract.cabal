@@ -146,12 +146,13 @@ library
   -- Non-IOG dependencies
   ------------------------
   build-depends:
-    , aeson                 >=2
+    , aeson                      >=2
     , aeson-pretty
-    , base                  >=4.7     && <5
+    , base                       >=4.7     && <5
     , bytestring
+    , cardano-strict-containers
     , containers
-    , cryptonite            >=0.25
+    , cryptonite                 >=0.25
     , data-default
     , directory
     , filepath
@@ -167,16 +168,15 @@ library
     , mmorph
     , mtl
     , pretty
-    , prettyprinter         >=1.1.0.1
+    , prettyprinter              >=1.1.0.1
     , profunctors
     , QuickCheck
-    , row-types             >=1.0.1.0
+    , row-types                  >=1.0.1.0
     , semigroupoids
     , serialise
     , servant
     , stm
     , streaming
-    , strict-containers
     , template-haskell
     , text
     , text-class

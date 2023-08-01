@@ -140,12 +140,13 @@ library
   -- defined there.
   build-depends:
     , aeson
-    , base               >=4.9  && <5
+    , base                       >=4.9  && <5
     , base16-bytestring
     , bytestring
+    , cardano-strict-containers
     , cborg
     , containers
-    , cryptonite         >=0.25
+    , cryptonite                 >=0.25
     , flat
     , hashable
     , http-api-data
@@ -157,7 +158,6 @@ library
     , scientific
     , serialise
     , servant
-    , strict-containers
     , tagged
     , template-haskell
     , text

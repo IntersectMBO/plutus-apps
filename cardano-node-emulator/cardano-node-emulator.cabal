@@ -71,10 +71,11 @@ library
   -- Non-IOG dependencies
   ------------------------
   build-depends:
-    , aeson               >=2
+    , aeson                      >=2
     , array
-    , base                >=4.9     && <5
+    , base                       >=4.9     && <5
     , bytestring
+    , cardano-strict-containers
     , containers
     , data-default
     , either
@@ -82,11 +83,10 @@ library
     , hedgehog
     , lens
     , mtl
-    , prettyprinter       >=1.1.0.1
+    , prettyprinter              >=1.1.0.1
     , QuickCheck
     , quickcheck-dynamic
     , serialise
-    , strict-containers
     , text
     , time
 

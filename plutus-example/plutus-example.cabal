@@ -97,9 +97,9 @@ library
   build-depends:
     , aeson
     , bytestring
+    , cardano-strict-containers
     , containers
     , serialise
-    , strict-containers
     , text
     , transformers
     , transformers-except
