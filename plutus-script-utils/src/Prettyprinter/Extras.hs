@@ -10,11 +10,11 @@ module Prettyprinter.Extras(
     ) where
 
 import Data.Foldable (Foldable (toList))
-import Data.Proxy (Proxy (..))
-import Data.String (IsString (..))
-import Data.Tagged
+import Data.Proxy (Proxy (Proxy))
+import Data.String (IsString (fromString))
+import Data.Tagged (Tagged(Tagged))
 import GHC.TypeLits (KnownSymbol, symbolVal)
-import Prettyprinter
+import Prettyprinter (Pretty, Doc, pretty, viaShow, (<+>))
 
 -- | Newtype wrapper for deriving 'Pretty' via a 'Show' instance
 newtype PrettyShow a = PrettyShow { unPrettyShow :: a }

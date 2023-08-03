@@ -89,7 +89,6 @@ library
     Ledger.Typed.TypeUtils
     Ledger.Value.CardanoAPI
     Ledger.Value.Orphans
-    Prettyprinter.Extras
 
   reexported-modules:
     PlutusLedgerApi.V1.Bytes as Ledger.Bytes,
