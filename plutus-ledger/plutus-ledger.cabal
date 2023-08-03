@@ -92,11 +92,11 @@ library
     Prettyprinter.Extras
 
   reexported-modules:
-    Plutus.V1.Ledger.Bytes as Ledger.Bytes,
-    Plutus.V1.Ledger.Credential as Ledger.Credential,
-    Plutus.V1.Ledger.DCert as Ledger.DCert,
-    Plutus.V1.Ledger.Interval as Ledger.Interval,
-    Plutus.V1.Ledger.Time as Ledger.Time,
+    PlutusLedgerApi.V1.Bytes as Ledger.Bytes,
+    PlutusLedgerApi.V1.Credential as Ledger.Credential,
+    PlutusLedgerApi.V1.DCert as Ledger.DCert,
+    PlutusLedgerApi.V1.Interval as Ledger.Interval,
+    PlutusLedgerApi.V1.Time as Ledger.Time,
 
   -- The rest of the plutus-ledger-api modules are reexported from within
   -- the Haskell modules and not in the current cabal file.

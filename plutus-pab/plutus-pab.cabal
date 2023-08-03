@@ -136,31 +136,31 @@ library
   --------------------------
   build-depends:
     , cardano-addresses
-    , cardano-api                      >=8.0
+    , cardano-api                  >=8.0
     , cardano-crypto
     , cardano-crypto-class
     , cardano-ledger-alonzo
     , cardano-ledger-core
     , cardano-slotting
     , cardano-wallet
-    , cardano-wallet-cli
-    , cardano-wallet-core
-    , cardano-wallet-core-integration
     , cardano-wallet-launcher
     , iohk-monitoring
     , lobemo-backend-ekg
     , ouroboros-network
     , ouroboros-network-framework
-    , plutus-ledger-api                >=1.0.0
-    , plutus-tx                        >=1.0.0
-    , plutus-tx-plugin                 >=1.0.0
+    , plutus-ledger-api            >=1.0.0
+    , plutus-tx                    >=1.0.0
+    , plutus-tx-plugin             >=1.0.0
     , Win32-network
 
+  -- , cardano-wallet-cli
+  -- , cardano-wallet-core
+  -- , cardano-wallet-core-integration
   ------------------------
   -- Non-IOG dependencies
   ------------------------
   build-depends:
-    , aeson                      <2.0.3.0
+    , aeson
     , aeson-pretty
     , async
     , base                       >=4.7     && <5
