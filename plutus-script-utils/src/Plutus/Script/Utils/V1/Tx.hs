@@ -3,9 +3,9 @@ module Plutus.Script.Utils.V1.Tx
     , scriptAddressTxOut
     ) where
 
-import Plutus.Script.Utils.Scripts (datumHash)
+import Plutus.Script.Utils.Scripts (Validator, datumHash)
 import Plutus.Script.Utils.V1.Address (mkValidatorAddress)
-import PlutusLedgerApi.V1 (Address, Datum, TxOut (TxOut), Validator, Value)
+import PlutusLedgerApi.V1 (Address, Datum, TxOut (TxOut), Value)
 
 -- | Create a transaction output locked by a validator script and attach the given data
 -- script.

@@ -37,10 +37,11 @@ import Data.Kind (Type)
 import Data.Void (Void)
 import GHC.Generics (Generic)
 import Plutus.Script.Utils.Scripts (Versioned (Versioned, unversioned, version))
+import Plutus.Script.Utils.Scripts qualified as PV1
 import Plutus.Script.Utils.V1.Address qualified as PSU.PV1
 import Plutus.Script.Utils.V2.Address qualified as PSU.PV2
-import PlutusLedgerApi.V1.Address qualified as PV1
 import PlutusLedgerApi.V1 qualified as PV1
+import PlutusLedgerApi.V1.Address qualified as PV1
 import PlutusLedgerApi.V2 qualified as PV2
 import PlutusTx.Prelude (BuiltinData, BuiltinString, check, trace)
 

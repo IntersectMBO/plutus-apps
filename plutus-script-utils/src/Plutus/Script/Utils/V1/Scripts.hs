@@ -29,10 +29,10 @@ import Cardano.Api.Shelley qualified as Script
 import Codec.Serialise (serialise)
 import Data.ByteString.Lazy qualified as BSL
 import Data.ByteString.Short qualified as SBS
+import Plutus.Script.Utils.Scripts qualified as PV1
 import PlutusLedgerApi.V1 qualified as PV1
 import PlutusLedgerApi.V1.Scripts qualified as PV1
 import PlutusTx.Builtins qualified as Builtins
-import Plutus.Script.Utils.Scripts qualified as PV1
 
 -- | Hash a 'PV1.Validator' script.
 validatorHash :: PV1.Validator -> PV1.ValidatorHash
@@ -59,7 +59,7 @@ stakeValidatorHash =
   . PV1.getStakeValidator
 
 -- | Hash a 'Script'
-scriptHash :: Script -> PV1.ScriptHash
+scriptHash :: PV1.Script -> PV1.ScriptHash
 scriptHash =
     fromCardanoHash
     . Script.hashScript
@@ -76,13 +76,11 @@ fromCardanoHash =
 --
 -- For why we depend on `cardano-api`,
 -- see note [Hash computation of datums, redeemers and scripts]
-toCardanoApiScript :: Script -> Script.Script Script.PlutusScriptV1
+toCardanoApiScript :: PV1.Script -> Script.Script Script.PlutusScriptV1
 toCardanoApiScript =
     Script.PlutusScript Script.PlutusScriptV1
   . Script.PlutusScriptSerialised
-  . SBS.toShort
-  . BSL.toStrict
-  . serialise
+  . PV1.unScript
 
 {-# INLINABLE scriptCurrencySymbol #-}
 -- | The 'CurrencySymbol' of a 'MintingPolicy'.

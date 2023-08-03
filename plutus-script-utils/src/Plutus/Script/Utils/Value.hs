@@ -10,14 +10,14 @@ module Plutus.Script.Utils.Value
   , currencyMPSHash
   ) where
 
-import Plutus.Script.Utils.Scripts ()
 import Plutus.Script.Utils.Ada qualified as Ada
+import Plutus.Script.Utils.Scripts (MintingPolicyHash (MintingPolicyHash))
 import PlutusLedgerApi.V1.Value as Export (AssetClass (AssetClass, unAssetClass),
-                                         CurrencySymbol (CurrencySymbol, unCurrencySymbol),
-                                         TokenName (TokenName, unTokenName), Value (Value, getValue), adaSymbol,
-                                         adaToken, assetClass, assetClassValue, assetClassValueOf,
-                                         currencySymbol, flattenValue, geq, gt, isZero, leq, lt, scale,
-                                         singleton, split, symbols, toString, tokenName, unionWith, valueOf)
+                                           CurrencySymbol (CurrencySymbol, unCurrencySymbol),
+                                           TokenName (TokenName, unTokenName), Value (Value, getValue), adaSymbol,
+                                           adaToken, assetClass, assetClassValue, assetClassValueOf, currencySymbol,
+                                           flattenValue, geq, gt, isZero, leq, lt, scale, singleton, split, symbols,
+                                           toString, tokenName, unionWith, valueOf)
 import PlutusTx.AssocMap qualified as Map
 import PlutusTx.Prelude (Bool, Eq ((==)), Maybe (Just, Nothing), mempty, (-))
 
