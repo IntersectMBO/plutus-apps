@@ -113,10 +113,10 @@ let
   # local build inputs ( -> ./nix/pkgs/default.nix )
   localInputs = (with plutus-apps; [
     cabal-install
-    cardano-node.packages.${pkgs.system}.cardano-cli
-    cardano-node.packages.${pkgs.system}.cardano-node
-    cardano-wallet.packages.${pkgs.system}.cardano-wallet
-    cardano-repo-tool
+    # cardano-node.packages.${pkgs.system}.cardano-cli
+    # cardano-node.packages.${pkgs.system}.cardano-node
+    # cardano-wallet.packages.${pkgs.system}.cardano-wallet
+    # cardano-repo-tool
     docs.build-and-serve-docs
     fixPngOptimization
     fixCabalFmt

@@ -36,17 +36,11 @@ allow-newer:
   -- trustees can make a revision to these packages cabal file to solve the
   -- issue permanently.
   , ekg:aeson
-  , ekg-json:*
   , openapi3:aeson
   , servant:aeson
   , servant-client-core:aeson
   , servant-server:aeson
   , servant-foreign:lens
   , blockfrost-api:lens
-  , ghcide:*
 
 constraints:
-    ghc == 9.2.8
-  , ghcide == 1.10
-  , ghc-typelits-knownnat == 0.7.7
-  , ghc-typelits-natnormalise == 0.7.7
