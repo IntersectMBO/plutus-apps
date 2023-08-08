@@ -1,8 +1,7 @@
 Skeleton of a devcontainer for working on Plutus projects, based on https://github.com/hamishmack/docker-nixpkgs/blob/hkm/nix-devcontainer/images/devcontainer with some tweaks.
-The main derivation is in `default.nix` in the root, since it needs to add some extra things.
 
 Usage:
-1. `docker load < $(nix-build default.nix -A devcontainer)`
+1. `docker load < $(nix build .#devcontainer-docker-image)`
 2. Create `.devcontainer/devcontainer.json` in your project as below, the "image" property is most important
 3. Install the Remote Development extension pack in VSCode
 4. Open the folder "in the container"

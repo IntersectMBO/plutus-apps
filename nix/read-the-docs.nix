@@ -1,0 +1,3 @@
+{
+  siteFolder = "doc";
+}

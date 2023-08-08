@@ -1,11 +1,16 @@
-{ pkgs ? import <nixpkgs> { }
-, plutus-apps
-, dockerImage ? import ../plutus-devcontainer.nix { inherit pkgs plutus-apps; }
-}:
+{ pkgs, ... }:
+
+devcontainer-docker-image:
+
 let
+
+  dockerImage = devcontainer-docker-image;
+
   imageRef = dockerImage.imageName + ":" + dockerImage.imageTag;
+
   dockerHubRepoName = "inputoutput/plutus-starter-devcontainer";
 in
+
 pkgs.writeScript "docker-build-push-devcontainer" ''
   #!${pkgs.runtimeShell}
   set -euo pipefail
