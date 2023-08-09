@@ -13,6 +13,7 @@
   outputs = inputs: inputs.iogx.lib.mkFlake {
     inherit inputs;
     repoRoot = ./.;
+    debug = true;
   };
 
 
