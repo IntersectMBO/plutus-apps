@@ -1,7 +1,7 @@
 # This is a vscode devcontainer that can be used with the plutus-starter project (or probably the plutus project itself).
 { pkgs, ... }:
 
-project: 
+project:
 
 let
 
