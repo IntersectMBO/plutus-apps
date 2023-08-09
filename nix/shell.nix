@@ -1,22 +1,22 @@
 # This file is part of the IOGX template and is documented at the link below:
 # https://www.github.com/input-output-hk/iogx#34-nixshellnix
 
-{ inputs', pkgs, ... }:
+{ inputs', pkgs, project, ... }:
 
 let
 
-  cardano-cli = inputs'.self.cardano-node.legacyPackages.cardano-cli;
-  cardano-node = inputs'.self.cardano-node.legacyPackages.cardano-node;
-  cardano-wallet = inputs'.self.cardano-wallet.legacyPackages.cardano-wallet;
+  cardano-cli = project.hsPkgs.cardano-cli.components.exes.cardano-cli;
+  cardano-node = project.hsPkgs.cardano-node.components.exes.cardano-node;
+  cardano-wallet = project.hsPkgs.cardano-wallet.components.exes.cardano-wallet;
 
 in
 
 {
   name = "plutus-apps";
 
-  packages = [ 
-    cardano-cli 
-    cardano-node 
+  packages = [
+    cardano-cli
+    cardano-node
     cardano-wallet
 
     pkgs.sqlite-interactive
@@ -24,7 +24,6 @@ in
     pkgs.yq
     pkgs.jq
     pkgs.z3
-    pkgs.ghcid
     pkgs.gnused
     pkgs.awscli2
     pkgs.bzip2

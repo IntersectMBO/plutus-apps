@@ -1,7 +1,7 @@
 {
   shellcheck.enable = true;
-  stylish-haskell = true;
-  nixpkgs-fmt = true;
-  cabal-fmt = true;
-  png-optimization = true;
+  stylish-haskell.enable = true;
+  nixpkgs-fmt.enable = true;
+  cabal-fmt.enable = true;
+  png-optimization.enable = true;
 }

@@ -110,7 +110,7 @@ library
   if flag(defer-plugin-errors)
     ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
 
-test-suite plutus-ledger-test
+test-suite plutus-ledger-test2
   import:             lang
   type:               exitcode-stdio-1.0
   main-is:            Spec.hs

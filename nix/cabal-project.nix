@@ -2,7 +2,7 @@
 
 let
 
-  isDrawin = pkgs.stdenv.hostPlatform.isDarwin;
+  isDarwin = pkgs.stdenv.hostPlatform.isDarwin;
   isWindows = pkgs.stdenv.hostPlatform.isWindows;
   isCross = pkgs.stdenv.hostPlatform != pkgs.stdenv.buildPlatform;
 
@@ -87,8 +87,8 @@ let
     plutus-example.package.buildable = !isCross;
 
     # These need R
-    plutus-core.components.benchmarks.cost-model-test.buildable = l.mkForce !isCross;
-    plutus-core.components.benchmarks.update-cost-model.buildable = l.mkForce !isCross;
+    plutus-core.components.benchmarks.cost-model-test.buildable = l.mkForce (!isCross);
+    plutus-core.components.benchmarks.update-cost-model.buildable = l.mkForce (!isCross);
 
     # ---------- Darwin Packages ----------
 
@@ -114,8 +114,8 @@ let
     # Else, we'll get the error
     # `/nix/store/ls0ky8x6zi3fkxrv7n4vs4x9czcqh1pb-plutus-apps/marconi/test/configuration.yaml: openFile: does not exist (No such file or directory)`
     marconi-chain-index.preCheck = ''
-      export CARDANO_CLI=${inputs'.self.cardano-node.legacyPackages.cardano-cli}/bin/cardano-cli${pkgs.stdenv.hostPlatform.extensions.executable}
-      export CARDANO_NODE=${inputs'.self.cardano-node.legacyPackages.cardano-node}/bin/cardano-node${pkgs.stdenv.hostPlatform.extensions.executable}
+      export CARDANO_CLI=${config.hsPkgs.cardano-cli.components.exes.cardano-cli}/bin/cardano-cli${pkgs.stdenv.hostPlatform.extensions.executable}
+      export CARDANO_NODE=${config.hsPkgs.cardano-node.components.exes.cardano-node}/bin/cardano-node${pkgs.stdenv.hostPlatform.extensions.executable}
       export CARDANO_NODE_SRC=${../.}
     '';
 
@@ -182,5 +182,5 @@ let
 
 in
 
-{ inherit shellWithHoogle modules sha256map; }
+{ inherit modules sha256map cabalProjectLocal; }
 

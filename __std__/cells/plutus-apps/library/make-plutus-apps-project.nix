@@ -160,8 +160,8 @@ let
               export CREATE_SCRIPT_CONTEXT=${config.hsPkgs.plutus-example.components.exes.create-script-context}/bin/create-script-context${pkgs.stdenv.hostPlatform.extensions.executable}
               export CARDANO_NODE_SRC=${src}
             ";
-            plutus-example.components.tests.plutus-example-test.build-tools =
-              lib.mkForce (with pkgs.buildPackages; [ jq coreutils shellcheck lsof ]);
+            # plutus-example.components.tests.plutus-example-test.build-tools =
+            #   lib.mkForce (with pkgs.buildPackages; [ jq coreutils shellcheck lsof ]);
 
             # FIXME: Haddock mysteriously gives a spurious missing-home-modules warning
             plutus-tx-plugin.doHaddock = false;

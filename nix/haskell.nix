@@ -1,13 +1,13 @@
 { system, ... }:
 
 {
-  supportedCompilers = ["ghc8017"];
+  supportedCompilers = [ "ghc8107" ];
 
 
   enableCrossCompilation = true;
 
 
-  defaultChangelogPackages = [];
+  defaultChangelogPackages = [ ];
 
   # Because of lack of resources in our darwin CI cluster, the "combined-plutus-apps-haddock" job
   # often gets timed out, which of course makes the required darwin CI checks fail. In the end, we
@@ -16,10 +16,10 @@
 
 
   projectPackagesWithHaddock = [
-    "plutus-core" 
-    "plutus-tx" 
-    "plutus-tx-plugin" 
-    "plutus-ledger-api" 
+    "plutus-core"
+    "plutus-tx"
+    "plutus-tx-plugin"
+    "plutus-ledger-api"
     "quickcheck-contractmodel"
   ];
 
