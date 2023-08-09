@@ -32,9 +32,10 @@ let
     server.upload-dirs = ("/tmp")
   '';
 in
+
 # Needed variables:
-#  NOMAD_PORT_${port-name}
-#  NOMAD_IP_${port-name}
+  # NOMAD_PORT_${port-name}
+  # NOMAD_IP_${port-name}
 pkgs.writeShellScriptBin "entrypoint" ''
   exec -a lighttpd ${pkgs.lighttpd}/bin/lighttpd -f ${config} -D
 ''
