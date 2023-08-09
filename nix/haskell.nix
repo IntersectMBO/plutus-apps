@@ -15,7 +15,7 @@
   # Because of lack of resources in our darwin CI cluster, the "combined-plutus-apps-haddock" job
   # often gets timed out, which of course makes the required darwin CI checks fail. In the end, we
   # just remove it from the required darwin jobs, but still keep it in the linux jobs.
-  enableCombinedHaddock = true; # system == "x86_64-linux";
+  enableCombinedHaddock = system == "x86_64-linux";
 
 
   projectPackagesWithHaddock = [
