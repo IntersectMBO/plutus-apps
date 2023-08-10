@@ -1,5 +1,5 @@
 # This is a vscode devcontainer that can be used with the plutus-starter project (or probably the plutus project itself).
-{ pkgs, ... }:
+{ iogx, pkgs, ... }:
 
 project:
 
@@ -34,6 +34,8 @@ let
 
   nonRootUser = "plutus";
   nonRootUserId = "1000";
+
+  haskell-toolchain = iogx.modules.haskell.mkToolChainForGhc project.meta.haskellCompiler;
 
   # I think we should be able to use buildLayeredImage, but for some reason it
   # produces a nonfunctional image
@@ -82,8 +84,9 @@ let
 
       # Plutus Stuff
       project.pkg-set.config.ghc.package
-      project.hsPkgs.haskell-language-server.components.exes.haskell-language-server
-      project.hsPkgs.cabal-install.components.exes.cabal-install
+      haskell-toolchain.haskell-language-server
+      haskell-toolchain.haskell-language-server-wrapper
+      haskell-toolchain.cabal-install
     ];
 
     extraCommands = ''

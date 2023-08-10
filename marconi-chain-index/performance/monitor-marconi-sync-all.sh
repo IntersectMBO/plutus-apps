@@ -25,7 +25,7 @@ monitor_indexer () {
   $(cabal exec -- which marconi-chain-index) \
     -s "$HOME"/cardano-node/${NETWORK}/cardano-node.socket \
     --testnet-magic ${NETWORKID} \
-    ${indexers_cli} \
+    "${indexers_cli}" \
     -d ~/cardano-node/${NETWORK}/marconi-chain-index \
     --node-config-path "$HOME"/cardano-node/${NETWORK}/${NETWORK}-config.json >> marconi-chain-index-"${indexer}".log &
   pid=$!
