@@ -81,7 +81,7 @@ let
       pkgs.jq
 
       # Plutus Stuff
-      project.ghc
+      project.pkg-set.config.ghc.package
       project.hsPkgs.haskell-language-server.components.exes.haskell-language-server
       project.hsPkgs.cabal-install.components.exes.cabal-install
     ];
