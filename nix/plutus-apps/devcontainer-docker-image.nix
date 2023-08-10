@@ -89,7 +89,7 @@ let
       haskell-toolchain.cabal-install
     ];
 
-    diskSize = 2048;
+    diskSize = 4096;
 
     extraCommands = ''
       # for /usr/bin/env
