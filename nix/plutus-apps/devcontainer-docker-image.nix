@@ -35,7 +35,7 @@ let
   nonRootUser = "plutus";
   nonRootUserId = "1000";
 
-  haskell-toolchain = iogx.modules.haskell.mkToolChainForGhc project.meta.haskellCompiler;
+  haskell-toolchain = iogx.modules.haskell.mkToolchainForGhc project.meta.haskellCompiler;
 
   # I think we should be able to use buildLayeredImage, but for some reason it
   # produces a nonfunctional image
