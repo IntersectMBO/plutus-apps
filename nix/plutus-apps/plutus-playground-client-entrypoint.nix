@@ -2,7 +2,7 @@
 
 let
 
-  docs = inputs'.self.read-the-docs-site;
+  docs = inputs'.self.packages.read-the-docs-site;
 
   shiftedDocs = pkgs.linkFarm docs.name [{ name = "doc"; path = docs; }];
 

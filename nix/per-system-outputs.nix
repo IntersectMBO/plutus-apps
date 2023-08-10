@@ -6,7 +6,7 @@
 rec {
 
   packages.generated-puc-scripts-output =
-    nix.plutus-apps.generated-puc-scripts-outputs projects.default;
+    nix.plutus-apps.generated-puc-scripts-output projects.default;
 
 
   packages.plutus-playground-client-entrypoint =
