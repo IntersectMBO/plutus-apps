@@ -82,7 +82,6 @@ let
 
       # Plutus Stuff
       project.ghc
-      # project.hsPkgs.haskell-language-server-wrapper
       project.hsPkgs.haskell-language-server.components.exes.haskell-language-server
       project.hsPkgs.cabal-install.components.exes.cabal-install
     ];
