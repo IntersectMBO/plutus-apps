@@ -83,11 +83,13 @@ let
       pkgs.jq
 
       # Plutus Stuff
-      # project.pkg-set.config.ghc.package
+      project.pkg-set.config.ghc.package
       haskell-toolchain.haskell-language-server
       haskell-toolchain.haskell-language-server-wrapper
       haskell-toolchain.cabal-install
     ];
+
+    diskSize = 2048;
 
     extraCommands = ''
       # for /usr/bin/env
