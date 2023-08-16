@@ -75,7 +75,7 @@ customRedeemerToScriptData (AnyPV2CustomRedeemer cRedeem) =
 
 data ScriptContextError = NoScriptsInByronEra
                         | NoScriptsInEra
-                        | ReadTxBodyError (FileError TextEnvelopeError)
+                        | ReadTxBodyError (FileError TextEnvelopeCddlError)
                         | IntervalConvError Text
                         | AcquireFail AcquiringFailure
                         | NoTipLocalStateError
@@ -188,6 +188,9 @@ seqToList :: Seq.StrictSeq a -> [a]
 seqToList (x Seq.:<| rest) = x : seqToList rest
 seqToList Seq.Empty        = []
 
+newtype CddlTx = CddlTx { unCddlTx :: InAnyCardanoEra Tx }
+    deriving (Show, Eq)
+
 createAnyCustomRedeemerFromTxFp
   :: PlutusScriptVersion lang
   -> FilePath
@@ -196,12 +199,14 @@ createAnyCustomRedeemerFromTxFp
   -> ExceptT ScriptContextError IO AnyCustomRedeemer
 createAnyCustomRedeemerFromTxFp pScriptVer fp (AnyConsensusModeParams cModeParams) network = do
   -- TODO: Expose readFileTx from cardano-cli
-  InAnyCardanoEra cEra alonzoTx
+  CddlTx (InAnyCardanoEra cEra alonzoTx)
     <- firstExceptT ReadTxBodyError
          . newExceptT
-         $ readFileTextEnvelopeAnyOf
-             [ FromSomeType (AsTx AsAlonzoEra) (InAnyCardanoEra AlonzoEra)
-             , FromSomeType (AsTx AsBabbageEra) (InAnyCardanoEra BabbageEra)
+         $ readFileTextEnvelopeCddlAnyOf
+             [ FromCDDLTx "Witnessed Tx AlonzoEra" CddlTx
+             , FromCDDLTx "Unwitnessed Tx AlonzoEra" CddlTx
+             , FromCDDLTx "Witnessed Tx BabbageEra" CddlTx
+             , FromCDDLTx "Unwitnessed Tx BabbageEra" CddlTx
              ]
              fp
 
