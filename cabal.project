@@ -58,13 +58,21 @@ allow-newer:
   , persistent:aeson
   , servant-foreign:lens
   , blockfrost-api:lens
+  , plutus-core:dependent-sum-template
+  , docopt:template-haskell
+  , *:vector
   -- temporary
   , quickcheck-contractmodel:*
   , cardano-wallet:cardano-api
   , ouroboros-consensus-byron:*
 
+allow-older:
+  strict-containers:binary,containers
+
 constraints:
   dependent-sum-template >= 0.2
+  , docopt >= 0.7.0.7
+  , strict-containers ^>= 0.2
 
 -- The plugin will typically fail when producing Haddock documentation. However,
 -- in this instance you can simply tell it to defer any errors to runtime (which

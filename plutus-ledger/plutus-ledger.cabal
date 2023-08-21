@@ -118,12 +118,13 @@ library
     , cardano-binary
     , cardano-crypto
     , cardano-crypto-class
+    , cardano-ledger-allegra
     , cardano-ledger-alonzo
     , cardano-ledger-babbage
     , cardano-ledger-byron
     , cardano-ledger-core
+    , cardano-ledger-mary
     , cardano-ledger-shelley
-    , cardano-ledger-shelley-ma
     , cardano-slotting
     , data-default
     , iohk-monitoring
@@ -140,12 +141,13 @@ library
   -- defined there.
   build-depends:
     , aeson
-    , base                      >=4.9     && <5
+    , base                       >=4.9     && <5
     , base16-bytestring
     , bytestring
+    , cardano-strict-containers
     , cborg
     , containers
-    , cryptonite                >=0.25
+    , cryptonite                 >=0.25
     , flat
     , hashable
     , http-api-data
@@ -154,11 +156,10 @@ library
     , mtl
     , newtype-generics
     , prettyprinter
-    , quickcheck-contractmodel  >=0.1.4.0
+    , quickcheck-contractmodel   >=0.1.4.0
     , scientific
     , serialise
     , servant
-    , strict-containers
     , tagged
     , template-haskell
     , text

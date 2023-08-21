@@ -199,11 +199,12 @@ test-suite plutus-use-cases-test
   build-depends:
       cardano-api                  >=8.0
     , cardano-binary
+    , cardano-ledger-allegra
     , cardano-ledger-alonzo
     , cardano-ledger-babbage
     , cardano-ledger-core
+    , cardano-ledger-mary
     , cardano-ledger-shelley
-    , cardano-ledger-shelley-ma
     , cardano-slotting
     , ouroboros-consensus
     , ouroboros-consensus-cardano
@@ -220,8 +221,9 @@ test-suite plutus-use-cases-test
   ------------------------
   build-depends:
       aeson
-    , base               >=4.9     && <5
+    , base                       >=4.9     && <5
     , bytestring
+    , cardano-strict-containers
     , containers
     , data-default
     , foldl
@@ -233,10 +235,9 @@ test-suite plutus-use-cases-test
     , prettyprinter
     , QuickCheck
     , streaming
-    , strict-containers
     , tasty
     , tasty-golden
-    , tasty-hedgehog     >=0.2.0.0
+    , tasty-hedgehog             >=0.2.0.0
     , tasty-hunit
     , tasty-quickcheck
     , text

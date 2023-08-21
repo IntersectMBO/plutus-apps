@@ -49,12 +49,14 @@ library
   --------------------------
   build-depends:
     , cardano-api                   >=8.0
+    , cardano-ledger-allegra
     , cardano-ledger-alonzo
     , cardano-ledger-byron
     , cardano-ledger-core
+    , cardano-ledger-mary
     , cardano-ledger-shelley
-    , cardano-ledger-shelley-ma
     , cardano-slotting
+    , cardano-strict-containers
     , cryptonite
     , exceptions
     , io-classes
@@ -72,7 +74,6 @@ library
     , plutus-tx                     >=1.0.0
     , quickcheck-contractmodel      >=0.1.4.0
     , serialise
-    , strict-containers
     , text-class
     , typed-protocols
 

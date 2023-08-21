@@ -54,11 +54,12 @@ library
   build-depends:
     , cardano-api:{cardano-api, gen}  >=8.0
     , cardano-crypto
+    , cardano-ledger-allegra
     , cardano-ledger-alonzo
     , cardano-ledger-babbage
     , cardano-ledger-core
+    , cardano-ledger-mary
     , cardano-ledger-shelley
-    , cardano-ledger-shelley-ma
     , cardano-slotting
     , mtl
     , ouroboros-consensus
@@ -71,10 +72,11 @@ library
   -- Non-IOG dependencies
   ------------------------
   build-depends:
-    , aeson               >=2
+    , aeson                      >=2
     , array
-    , base                >=4.9     && <5
+    , base                       >=4.9     && <5
     , bytestring
+    , cardano-strict-containers
     , containers
     , data-default
     , either
@@ -82,11 +84,10 @@ library
     , hedgehog
     , lens
     , mtl
-    , prettyprinter       >=1.1.0.1
+    , prettyprinter              >=1.1.0.1
     , QuickCheck
     , quickcheck-dynamic
     , serialise
-    , strict-containers
     , text
     , time
 
