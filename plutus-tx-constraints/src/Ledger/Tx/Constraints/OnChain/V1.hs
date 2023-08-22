@@ -37,7 +37,7 @@ import Plutus.Script.Utils.V1.Contexts (ScriptContext (ScriptContext, scriptCont
 import Plutus.Script.Utils.V1.Contexts qualified as V
 import Plutus.Script.Utils.Value (leq)
 import Plutus.Script.Utils.Value qualified as Value
-import Plutus.V1.Ledger.Interval (contains)
+import PlutusLedgerApi.V1.Interval (contains)
 
 {-# INLINABLE checkScriptContext #-}
 -- | Does the 'ScriptContext' satisfy the constraints?

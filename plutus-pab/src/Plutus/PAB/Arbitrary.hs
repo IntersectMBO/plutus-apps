@@ -37,7 +37,7 @@ import Plutus.Script.Utils.Ada qualified as Plutus
 import Plutus.Script.Utils.V1.Address (mkValidatorAddress)
 import Plutus.Script.Utils.V1.Typed.Scripts (ConnectionError, WrongOutTypeError)
 import Plutus.Script.Utils.Value qualified as Plutus
-import Plutus.V1.Ledger.Api (Address (..), LedgerBytes, PubKeyHash, ValidatorHash (ValidatorHash))
+import PlutusLedgerApi.V1 (Address (..), LedgerBytes, PubKeyHash, ValidatorHash (ValidatorHash))
 import PlutusLedgerApi.V1.Bytes qualified as LedgerBytes
 import PlutusLedgerApi.V2 qualified as PV2
 import PlutusTx qualified

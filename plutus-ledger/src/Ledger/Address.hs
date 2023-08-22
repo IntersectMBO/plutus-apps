@@ -47,7 +47,7 @@ import Ledger.Orphans ()
 import Ledger.Scripts (Language (..), StakeValidatorHash (..), Validator, ValidatorHash (..), Versioned (..))
 import Plutus.Script.Utils.V1.Address qualified as PV1
 import Plutus.Script.Utils.V2.Address qualified as PV2
-import Plutus.V1.Ledger.Address as Export hiding (pubKeyHashAddress)
+import PlutusLedgerApi.V1.Address as Export hiding (pubKeyHashAddress)
 import PlutusLedgerApi.V1.Credential (Credential (PubKeyCredential, ScriptCredential), StakingCredential (StakingHash))
 import PlutusTx qualified
 import PlutusTx.Lift (makeLift)

@@ -22,7 +22,7 @@ import Data.Scientific (floatingOrInteger, scientific)
 import Data.Text qualified as Text
 import GHC.Generics (Generic)
 import Ledger.Crypto (PrivateKey (PrivateKey, getPrivateKey))
-import Plutus.V1.Ledger.Api (LedgerBytes, POSIXTime (POSIXTime), TxId (TxId), fromBytes)
+import PlutusLedgerApi.V1 (LedgerBytes, POSIXTime (POSIXTime), TxId (TxId), fromBytes)
 import PlutusLedgerApi.V1.Bytes (bytes)
 import PlutusLedgerApi.V1.Scripts (ScriptError)
 import Web.HttpApiData (FromHttpApiData (parseUrlPiece), ToHttpApiData (toUrlPiece))

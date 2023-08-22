@@ -50,7 +50,6 @@ import Plutus.Script.Utils.V1.Scripts qualified as Scripts
 import Plutus.Script.Utils.V1.Typed.Scripts.MonetaryPolicies qualified as MPS
 import PlutusCore.Default (DefaultUni)
 import PlutusLedgerApi.V1 qualified as PV1
-import PlutusLedgerApi.V1.Address qualified as PV1
 import PlutusTx (CompiledCode, Lift, liftCode, unsafeApplyCode)
 import Prettyprinter (Pretty (pretty), viaShow, (<+>))
 

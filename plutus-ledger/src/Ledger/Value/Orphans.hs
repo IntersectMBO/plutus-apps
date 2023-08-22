@@ -16,7 +16,7 @@ import Data.String (IsString (fromString))
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as E
 import GHC.Generics (Generic)
-import Plutus.V1.Ledger.Bytes qualified as Bytes
+import PlutusLedgerApi.V1.Bytes qualified as Bytes
 import PlutusLedgerApi.V1.Value
 import PlutusTx.AssocMap qualified as Map
 import PlutusTx.Prelude qualified as PlutusTx

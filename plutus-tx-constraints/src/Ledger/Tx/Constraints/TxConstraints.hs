@@ -39,11 +39,11 @@ import Ledger.Slot (Slot)
 import Ledger.Tx (DecoratedTxOut)
 import Plutus.Script.Utils.V1.Address qualified as PV1
 import Plutus.Script.Utils.V2.Address qualified as PV2
-import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential), Datum, DatumHash, MintingPolicyHash,
-       PlutusLedgerApi.V1      POSIXTime, POSIXTimeRange, Redeemer, StakingCredential, TxOutRef, Validator, ValidatorHash)
-import Plutus.V1.Ledger.Interval qualified as I
+import PlutusLedgerApi.V1 (Credential (PubKeyCredential, ScriptCredential), Datum, DatumHash, MintingPolicyHash,
+                           POSIXTime, POSIXTimeRange, Redeemer, StakingCredential, TxOutRef, Validator, ValidatorHash)
+import PlutusLedgerApi.V1.Interval qualified as I
 import PlutusLedgerApi.V1.Scripts (MintingPolicyHash (MintingPolicyHash), ScriptHash (ScriptHash),
-                                 ValidatorHash (ValidatorHash), unitRedeemer)
+                                   ValidatorHash (ValidatorHash), unitRedeemer)
 import PlutusLedgerApi.V1.Value (TokenName, Value, isZero)
 import PlutusLedgerApi.V1.Value qualified as Value
 

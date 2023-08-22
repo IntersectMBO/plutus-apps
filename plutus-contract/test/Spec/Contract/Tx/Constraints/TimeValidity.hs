@@ -28,8 +28,8 @@ import Plutus.Contract.Test (assertEvaluationError, assertFailedTransaction, ass
                              checkPredicateOptions, defaultCheckOptions, emulatorConfig, w1)
 import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Trace qualified as Trace
-import Plutus.V1.Ledger.Api (POSIXTime, TxInfo, Validator)
-import Plutus.V1.Ledger.Api qualified as P
+import PlutusLedgerApi.V1 (POSIXTime, TxInfo, Validator)
+import PlutusLedgerApi.V1 qualified as P
 import PlutusLedgerApi.V1.Interval (contains, from)
 import PlutusLedgerApi.V1.Interval qualified as I
 import PlutusLedgerApi.V1.Scripts (unitDatum, unitRedeemer)

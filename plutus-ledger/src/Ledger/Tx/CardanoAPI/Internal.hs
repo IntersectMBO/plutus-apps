@@ -133,7 +133,7 @@ import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Ada qualified as P
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
 import Plutus.Script.Utils.V2.Scripts qualified as PV2
-import Plutus.V1.Ledger.Api qualified as PV1
+import PlutusLedgerApi.V1 qualified as PV1
 import PlutusLedgerApi.V1.Credential qualified as Credential
 import PlutusLedgerApi.V1.Tx qualified as PV1
 import PlutusLedgerApi.V1.Value qualified as Value

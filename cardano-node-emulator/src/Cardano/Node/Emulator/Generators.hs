@@ -79,8 +79,8 @@ import Data.Maybe (fromMaybe, isNothing)
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.String (fromString)
-import GHC.Stack (HasCallStack)
 import Gen.Cardano.Api.Typed qualified as Gen
+import GHC.Stack (HasCallStack)
 import Hedgehog (Gen, MonadGen, MonadTest, Range)
 import Hedgehog qualified as H
 import Hedgehog.Gen qualified as Gen
@@ -96,7 +96,7 @@ import Ledger.Tx.CardanoAPI (ToCardanoError, fromCardanoPlutusScript)
 import Ledger.Tx.CardanoAPI qualified as C hiding (makeTransactionBody)
 import Ledger.Value.CardanoAPI qualified as Value
 import Numeric.Natural (Natural)
-import Plutus.V1.Ledger.Api qualified as V1
+import PlutusLedgerApi.V1 qualified as V1
 import PlutusLedgerApi.V1.Interval qualified as Interval
 import PlutusLedgerApi.V1.Scripts qualified as Script
 import PlutusTx (toData)

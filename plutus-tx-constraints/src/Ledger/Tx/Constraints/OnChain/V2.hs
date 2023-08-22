@@ -32,7 +32,7 @@ import Plutus.Script.Utils.V2.Contexts (ScriptContext (ScriptContext, scriptCont
                                         TxOut (TxOut, txOutAddress, txOutDatum), findOwnInput)
 import Plutus.Script.Utils.V2.Contexts qualified as PV2
 import Plutus.Script.Utils.Value qualified as Value
-import Plutus.V1.Ledger.Interval (contains)
+import PlutusLedgerApi.V1.Interval (contains)
 import PlutusLedgerApi.V1.Value (leq)
 import PlutusLedgerApi.V2.Tx (OutputDatum (NoOutputDatum, OutputDatum, OutputDatumHash))
 import PlutusTx (ToData (toBuiltinData))

@@ -25,7 +25,7 @@ import Ledger.Address.Orphans ()
 import Ledger.Builtins.Orphans ()
 import Ledger.Value.Orphans ()
 
-import Plutus.V1.Ledger.Api
+import PlutusLedgerApi.V1
 import PlutusLedgerApi.V1.Bytes qualified as Bytes
 import PlutusLedgerApi.V1.Tx
 

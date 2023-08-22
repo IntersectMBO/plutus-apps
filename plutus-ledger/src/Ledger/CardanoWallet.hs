@@ -55,7 +55,7 @@ import Ledger.Crypto (PubKey (..))
 import Ledger.Crypto qualified as Crypto
 import Ledger.Test (testnet)
 import Ledger.Tx.CardanoAPI.Internal qualified as Tx
-import Plutus.V1.Ledger.Api (Address (Address), Credential (PubKeyCredential), StakingCredential (StakingHash))
+import PlutusLedgerApi.V1 (Address (Address), Credential (PubKeyCredential), StakingCredential (StakingHash))
 import PlutusLedgerApi.V1.Bytes (LedgerBytes (getLedgerBytes))
 import Servant.API (FromHttpApiData, ToHttpApiData)
 

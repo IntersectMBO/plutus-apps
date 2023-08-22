@@ -24,9 +24,9 @@ import Ledger.Tx.CardanoAPI hiding (fromCardanoAddressInEra)
 import Ledger.Value.CardanoAPI qualified as Value
 import Money (Approximation (Round), DecimalConf (..), SomeDiscrete, UnitScale, defaultDecimalConf, discreteToDecimal,
               scale, someDiscreteAmount, someDiscreteCurrency)
-import Plutus.V1.Ledger.Address qualified as LA
 import PlutusLedgerApi.V1 (Credential (..), TxId (TxId), fromBuiltin, toBuiltin, unCurrencySymbol, unTokenName)
 import PlutusLedgerApi.V1 qualified (DatumHash, RedeemerHash)
+import PlutusLedgerApi.V1.Address qualified as LA
 import PlutusLedgerApi.V1.Interval (always, from, interval, to)
 import PlutusLedgerApi.V1.Scripts qualified as PS
 import PlutusLedgerApi.V1.Value (AssetClass, unAssetClass)

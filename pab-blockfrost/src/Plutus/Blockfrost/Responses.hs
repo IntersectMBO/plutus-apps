@@ -37,7 +37,7 @@ import Ledger.Tx (DatumFromQuery (DatumUnknown), DecoratedTxOut (..), Language (
                   TxOutRef (..), Versioned (Versioned), mkPubkeyDecoratedTxOut, mkScriptDecoratedTxOut)
 import Plutus.ChainIndex.Api (IsUtxoResponse (..), QueryResponse (..), TxosResponse (..), UtxosResponse (..))
 import Plutus.ChainIndex.Types (BlockId (..), BlockNumber (..), ChainIndexTx (..), ChainIndexTxOutputs (..), Tip (..))
-import Plutus.V1.Ledger.Api (PubKeyHash)
+import PlutusLedgerApi.V1 (PubKeyHash)
 import PlutusLedgerApi.V1.Credential (Credential (PubKeyCredential, ScriptCredential))
 import PlutusLedgerApi.V1.Scripts (Datum, MintingPolicy, StakeValidator, Validator (..), ValidatorHash (..))
 import PlutusLedgerApi.V1.Scripts qualified as Ledger (DatumHash, Script, ScriptHash (..))
