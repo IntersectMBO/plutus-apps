@@ -15,11 +15,11 @@ module Plutus.Script.Utils.V1.Typed.Scripts.MonetaryPolicies
     , forwardToValidator
     ) where
 
+import Plutus.Script.Utils.Scripts (MintingPolicy, ValidatorHash (ValidatorHash), mkMintingPolicyScript)
 import Plutus.Script.Utils.Typed (mkUntypedMintingPolicy)
-import PlutusLedgerApi.V1 (Address (Address, addressCredential), Credential (ScriptCredential), MintingPolicy,
-                             ValidatorHash, mkMintingPolicyScript)
+import PlutusLedgerApi.V1 (Address (Address, addressCredential), Credential (ScriptCredential), ScriptHash (ScriptHash))
 import PlutusLedgerApi.V1.Contexts (ScriptContext (ScriptContext, scriptContextPurpose, scriptContextTxInfo),
-                                  ScriptPurpose (Minting), TxInfo (TxInfo, txInfoInputs))
+                                    ScriptPurpose (Minting), TxInfo (TxInfo, txInfoInputs))
 import PlutusLedgerApi.V1.Contexts qualified as PV1
 import PlutusLedgerApi.V1.Tx (TxOut (TxOut, txOutAddress))
 import PlutusTx qualified
@@ -35,13 +35,13 @@ mkForwardingMintingPolicy vshsh =
      $ $$(PlutusTx.compile [|| \(hsh :: ValidatorHash) ->
          mkUntypedMintingPolicy (forwardToValidator hsh)
          ||])
-       `PlutusTx.applyCode` PlutusTx.liftCode vshsh
+       `PlutusTx.unsafeApplyCode` PlutusTx.liftCode vshsh
 
 {-# INLINABLE forwardToValidator #-}
 forwardToValidator :: ValidatorHash -> () -> PV1.ScriptContext -> Bool
-forwardToValidator h _ ScriptContext{scriptContextTxInfo=TxInfo{txInfoInputs}, scriptContextPurpose=Minting _} =
-    let checkHash TxOut{txOutAddress=Address{addressCredential=ScriptCredential vh}} = vh == h
-        checkHash _                                                                  = False
+forwardToValidator (ValidatorHash h) _ ScriptContext{scriptContextTxInfo=TxInfo{txInfoInputs}, scriptContextPurpose=Minting _} =
+    let checkHash TxOut{txOutAddress=Address{addressCredential=ScriptCredential (ScriptHash vh)}} = vh == h
+        checkHash _                                                                               = False
     in any (checkHash . PV1.txInInfoResolved) txInfoInputs
 forwardToValidator _ _ _ = False
 

@@ -1,9 +1,8 @@
-{-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DerivingVia     #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE NamedFieldPuns     #-}
-{-# LANGUAGE OverloadedStrings  #-}
-
+{-# LANGUAGE DeriveAnyClass    #-}
+{-# LANGUAGE DerivingVia       #-}
+{-# LANGUAGE NamedFieldPuns    #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell   #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 {-|
@@ -16,8 +15,14 @@ module Plutus.Script.Utils.Scripts
     , Versioned (..)
     , Script (..)
     , Validator (..)
+    , mkValidatorScript
+    , unValidatorScript
     , MintingPolicy (..)
+    , mkMintingPolicyScript
+    , unMintingPolicyScript
     , StakeValidator (..)
+    , mkStakeValidatorScript
+    , unStakeValidatorScript
       -- * Script hashing
     , ValidatorHash (..)
     , MintingPolicyHash (..)
@@ -36,22 +41,27 @@ module Plutus.Script.Utils.Scripts
     , datumHash
     , redeemerHash
     , dataHash
+      -- * Address utilities
+    , toScriptAddress
+    , fromCardanoHash
+    , mkValidatorCardanoAddress
     ) where
 
 import Cardano.Api qualified as C.Api
 import Cardano.Api.Shelley qualified as C.Api
 import Cardano.Ledger.Alonzo.Language (Language (PlutusV1, PlutusV2, PlutusV3))
-import Codec.Serialise (Serialise, serialise)
+import Codec.Serialise (Serialise)
 import Data.Aeson (FromJSON, ToJSON)
-import Data.ByteString.Lazy qualified as BSL
-import Data.ByteString.Short qualified as SBS
 import Data.String (IsString)
 import GHC.Generics (Generic)
+import PlutusLedgerApi.Common (serialiseCompiledCode)
 import PlutusLedgerApi.V1 qualified as PV1
 import PlutusLedgerApi.V1.Bytes (LedgerBytes (LedgerBytes))
+import PlutusTx (CompiledCode, makeLift)
+import PlutusTx.Builtins (BuiltinData)
 import PlutusTx.Builtins qualified as Builtins
 import Prettyprinter (Pretty (pretty))
-import Prettyprinter.Extras (PrettyShow(PrettyShow))
+import Prettyprinter.Extras (PrettyShow (PrettyShow))
 
 deriving instance Serialise Language
 
@@ -70,19 +80,20 @@ instance Pretty script => Pretty (Versioned script) where
 
 -- | Hash a 'Versioned' 'Script'
 scriptHash :: Versioned Script -> PV1.ScriptHash
-scriptHash (Versioned script lang) =
+scriptHash = fromCardanoHash . cardanoScriptHash
+
+-- | Transform a Cardano Script hash in a Plutus Script hash
+fromCardanoHash :: C.Api.ScriptHash -> PV1.ScriptHash
+fromCardanoHash =
     PV1.ScriptHash
     . Builtins.toBuiltin
     . C.Api.serialiseToRawBytes
-    . hashInner lang
-    . SBS.toShort
-    . BSL.toStrict
-    . serialise
-    $ script
-    where
-      hashInner PlutusV1 = C.Api.hashScript . C.Api.PlutusScript C.Api.PlutusScriptV1 . C.Api.PlutusScriptSerialised
-      hashInner PlutusV2 = C.Api.hashScript . C.Api.PlutusScript C.Api.PlutusScriptV2 . C.Api.PlutusScriptSerialised
-      hashInner PlutusV3 = C.Api.hashScript . C.Api.PlutusScript C.Api.PlutusScriptV3 . C.Api.PlutusScriptSerialised
+
+cardanoScriptHash :: Versioned Script -> C.Api.ScriptHash
+cardanoScriptHash (Versioned (Script script) lang) = case lang of
+  PlutusV1 -> C.Api.hashScript . C.Api.PlutusScript C.Api.PlutusScriptV1 $ C.Api.PlutusScriptSerialised script
+  PlutusV2 -> C.Api.hashScript . C.Api.PlutusScript C.Api.PlutusScriptV2 $ C.Api.PlutusScriptSerialised script
+  PlutusV3 -> C.Api.hashScript . C.Api.PlutusScript C.Api.PlutusScriptV3 $ C.Api.PlutusScriptSerialised script
 
 -- | Hash a 'Versioned' 'Validator' script.
 validatorHash :: Versioned Validator -> ValidatorHash
@@ -199,21 +210,54 @@ instance Show Script where
 
 -- | Script runtime representation of a @Digest SHA256@.
 newtype ValidatorHash =
-    ValidatorHash Builtins.BuiltinByteString
+    ValidatorHash { getValidatorHash :: Builtins.BuiltinByteString }
     deriving (IsString, Show, Pretty) via LedgerBytes
     deriving stock (Generic)
     deriving newtype (Eq, Ord)
 
 -- | Script runtime representation of a @Digest SHA256@.
 newtype MintingPolicyHash =
-    MintingPolicyHash Builtins.BuiltinByteString
+    MintingPolicyHash { getMintingPolicyHash :: Builtins.BuiltinByteString }
     deriving (IsString, Show, Pretty) via LedgerBytes
     deriving stock (Generic)
     deriving newtype (Eq, Ord)
 
 -- | Script runtime representation of a @Digest SHA256@.
 newtype StakeValidatorHash =
-    StakeValidatorHash Builtins.BuiltinByteString
+    StakeValidatorHash { getStakeValidatorHash :: Builtins.BuiltinByteString }
     deriving (IsString, Show, Pretty) via LedgerBytes
     deriving stock (Generic)
     deriving newtype (Eq, Ord)
+
+mkValidatorScript :: CompiledCode (BuiltinData -> BuiltinData -> BuiltinData -> ()) -> Validator
+mkValidatorScript = Validator . Script . serialiseCompiledCode
+
+unValidatorScript :: Validator -> Script
+unValidatorScript = getValidator
+
+mkMintingPolicyScript :: CompiledCode (BuiltinData -> BuiltinData -> ()) -> MintingPolicy
+mkMintingPolicyScript = MintingPolicy . Script . serialiseCompiledCode
+
+unMintingPolicyScript :: MintingPolicy -> Script
+unMintingPolicyScript = getMintingPolicy
+
+mkStakeValidatorScript :: CompiledCode (BuiltinData -> BuiltinData -> ()) -> StakeValidator
+mkStakeValidatorScript = StakeValidator . Script . serialiseCompiledCode
+
+unStakeValidatorScript :: StakeValidator -> Script
+unStakeValidatorScript = getStakeValidator
+
+
+toScriptAddress :: C.Api.NetworkId -> Versioned Script -> C.Api.AddressInEra C.Api.BabbageEra
+toScriptAddress networkId script = C.Api.makeShelleyAddressInEra
+  networkId
+  (C.Api.PaymentCredentialByScript (cardanoScriptHash script))
+  C.Api.NoStakeAddress
+
+mkValidatorCardanoAddress :: C.Api.NetworkId -> Versioned Validator -> C.Api.AddressInEra C.Api.BabbageEra
+mkValidatorCardanoAddress networkId = toScriptAddress networkId . fmap getValidator
+
+
+makeLift ''ValidatorHash
+makeLift ''MintingPolicyHash
+makeLift ''StakeValidatorHash

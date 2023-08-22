@@ -13,7 +13,6 @@ module Plutus.Script.Utils.V1.Generators
     ) where
 
 import Plutus.Script.Utils.Scripts qualified as Ledger
-import PlutusLedgerApi.V1.Scripts qualified as Ledger
 import PlutusLedgerApi.V1.Value (TokenName, Value)
 import PlutusLedgerApi.V1.Value qualified as Value
 import PlutusTx qualified

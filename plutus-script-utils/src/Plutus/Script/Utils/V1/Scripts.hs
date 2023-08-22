@@ -13,7 +13,7 @@ module Plutus.Script.Utils.V1.Scripts
     , PV1.MintingPolicyHash
     , PV1.StakeValidator
     , PV1.StakeValidatorHash
-    , fromCardanoHash
+    , PV1.fromCardanoHash
     , validatorHash
     , mintingPolicyHash
     , stakeValidatorHash
@@ -23,16 +23,10 @@ module Plutus.Script.Utils.V1.Scripts
     , toCardanoApiScript
     ) where
 
-import Cardano.Api qualified as C
 import Cardano.Api qualified as Script
 import Cardano.Api.Shelley qualified as Script
-import Codec.Serialise (serialise)
-import Data.ByteString.Lazy qualified as BSL
-import Data.ByteString.Short qualified as SBS
 import Plutus.Script.Utils.Scripts qualified as PV1
 import PlutusLedgerApi.V1 qualified as PV1
-import PlutusLedgerApi.V1.Scripts qualified as PV1
-import PlutusTx.Builtins qualified as Builtins
 
 -- | Hash a 'PV1.Validator' script.
 validatorHash :: PV1.Validator -> PV1.ValidatorHash
@@ -61,16 +55,9 @@ stakeValidatorHash =
 -- | Hash a 'Script'
 scriptHash :: PV1.Script -> PV1.ScriptHash
 scriptHash =
-    fromCardanoHash
+    PV1.fromCardanoHash
     . Script.hashScript
     . toCardanoApiScript
-
--- | Transform a Cardano Script hash in a Plutus Script hash
-fromCardanoHash :: C.ScriptHash -> PV1.ScriptHash
-fromCardanoHash =
-    PV1.ScriptHash
-    . Builtins.toBuiltin
-    . Script.serialiseToRawBytes
 
 -- | Convert a 'Script' to a 'cardano-api' script.
 --
