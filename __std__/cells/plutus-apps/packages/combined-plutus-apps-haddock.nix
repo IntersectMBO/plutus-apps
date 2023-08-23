@@ -11,7 +11,7 @@ let
   toHaddock =
     haskellLib.collectComponents' "library" (
       haskellLib.selectProjectPackages hspkgs // {
-        inherit (hspkgs) plutus-core plutus-tx plutus-tx-plugin plutus-ledger-api quickcheck-contractmodel;
+        inherit (hspkgs) plutus-core plutus-tx plutus-tx-plugin plutus-ledger-api; # quickcheck-contractmodel;
       }
     );
 
