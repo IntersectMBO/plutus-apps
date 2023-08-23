@@ -20,14 +20,10 @@ module Ledger.Tx.Internal
     ) where
 
 import Cardano.Api qualified as C
-import Cardano.Api.Shelley qualified as C hiding (toShelleyTxOut)
+import Cardano.Api.Shelley qualified as C
 import Cardano.Binary qualified as C
 import Cardano.Ledger.Alonzo.Genesis ()
 import Codec.Serialise (Serialise, decode, encode)
-
-import Cardano.Ledger.Core qualified as Ledger (TxOut)
-import Cardano.Ledger.Serialization qualified as Ledger (Sized, mkSized)
-import Ouroboros.Consensus.Shelley.Eras qualified as Ledger
 
 import Control.Lens qualified as L
 import Data.Aeson (FromJSON, ToJSON)
@@ -40,15 +36,14 @@ import Ledger.Address (CardanoAddress, cardanoPubKeyHash)
 import Ledger.Contexts.Orphans ()
 import Ledger.Crypto
 import Ledger.DCert.Orphans ()
-import Ledger.Tx.CardanoAPITemp qualified as C
 import Ledger.Tx.Orphans ()
 import Ledger.Tx.Orphans.V2 ()
 
 import Plutus.Script.Utils.Scripts
 import PlutusLedgerApi.V1 (Credential, DCert, dataToBuiltinData)
 import PlutusLedgerApi.V1.Scripts
-import PlutusLedgerApi.V1.Tx hiding (TxIn (..), TxInType (..), TxOut (..), inRef, inType, pubKeyTxIn, scriptTxIn)
-import PlutusTx (FromData (..))
+import PlutusLedgerApi.V1.Tx hiding (TxOut (..))
+import PlutusTx (FromData (..), fromData)
 import PlutusTx.Prelude qualified as PlutusTx
 import Prettyprinter (Pretty (..), viaShow)
 
@@ -98,7 +93,7 @@ newtype TxOut = TxOut {getTxOut :: C.TxOut C.CtxTx C.BabbageEra}
     deriving newtype (Pretty)
 
 instance C.ToCBOR TxOut where
-  toCBOR (TxOut txout) = C.toCBOR $ C.toShelleyTxOut C.ShelleyBasedEraBabbage txout
+  toCBOR = C.toCBOR . C.toShelleyTxOut C.ShelleyBasedEraBabbage . toCtxUTxOTxOut
 
 instance C.FromCBOR TxOut where
   fromCBOR = do
@@ -108,9 +103,6 @@ instance C.FromCBOR TxOut where
 instance Serialise TxOut where
   encode = C.toCBOR
   decode = C.fromCBOR
-
-toSizedTxOut :: TxOut -> Ledger.Sized (Ledger.TxOut Ledger.StandardBabbage)
-toSizedTxOut = Ledger.mkSized . C.toShelleyTxOut C.ShelleyBasedEraBabbage . getTxOut
 
 toCtxUTxOTxOut :: TxOut -> C.TxOut C.CtxUTxO C.BabbageEra
 toCtxUTxOTxOut = C.toCtxUTxOTxOut . getTxOut
@@ -128,9 +120,9 @@ txOutDatumHash (TxOut (C.TxOut _aie _tov tod _rs)) =
     C.TxOutDatumHash _era scriptDataHash ->
       Just $ DatumHash $ PlutusTx.toBuiltin (C.serialiseToRawBytes scriptDataHash)
     C.TxOutDatumInline _era scriptData ->
-      Just $ datumHash $ Datum $ dataToBuiltinData $ C.toPlutusData scriptData
+      Just $ datumHash $ Datum $ dataToBuiltinData $ C.toPlutusData $ C.getScriptData scriptData
     C.TxOutDatumInTx _era scriptData ->
-      Just $ datumHash $ Datum $ dataToBuiltinData $ C.toPlutusData scriptData
+      Just $ datumHash $ Datum $ dataToBuiltinData $ C.toPlutusData $ C.getScriptData scriptData
 
 txOutDatum :: forall d . FromData d => TxOut -> Maybe d
 txOutDatum (TxOut (C.TxOut _aie _tov tod _rs)) =
@@ -140,9 +132,9 @@ txOutDatum (TxOut (C.TxOut _aie _tov tod _rs)) =
     C.TxOutDatumHash _era _scriptDataHash ->
       Nothing
     C.TxOutDatumInline _era scriptData ->
-      fromBuiltinData @d  $ dataToBuiltinData $ C.toPlutusData scriptData
+      fromData @d $ C.toPlutusData $ C.getScriptData scriptData
     C.TxOutDatumInTx _era scriptData ->
-      fromBuiltinData @d  $ dataToBuiltinData $ C.toPlutusData scriptData
+      fromData @d $ C.toPlutusData $ C.getScriptData scriptData
 
 
 cardanoTxOutDatumHash :: C.TxOutDatum C.CtxUTxO C.BabbageEra -> Maybe (C.Hash C.ScriptData)
@@ -151,7 +143,7 @@ cardanoTxOutDatumHash = \case
     Nothing
   C.TxOutDatumHash _era scriptDataHash ->
     Just scriptDataHash
-  C.TxOutDatumInline _era scriptData -> Just $ C.hashScriptData scriptData
+  C.TxOutDatumInline _era scriptData -> Just $ C.hashScriptDataBytes scriptData
 
 
 txOutPubKey :: TxOut -> Maybe PubKeyHash

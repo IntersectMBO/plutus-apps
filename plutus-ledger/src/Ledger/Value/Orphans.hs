@@ -125,7 +125,7 @@ instance Serialise C.PolicyId where
   encode = encode . C.serialiseToRawBytes
   decode = do
     bs <- decode
-    maybe (fail "Can get back policy ID")
+    either (fail . show)
       pure
       $ C.deserialiseFromRawBytes C.AsPolicyId bs
 
@@ -133,6 +133,6 @@ instance Serialise C.AssetName where
   encode = encode . C.serialiseToRawBytes
   decode = do
     bs <- decode
-    maybe (fail "Can get back asset name")
+    either (fail . show)
       pure
       $ C.deserialiseFromRawBytes C.AsAssetName bs

@@ -18,15 +18,16 @@ module Ledger.Typed.Scripts
   ) where
 
 import Ledger.Typed.Scripts.Orphans as Export ()
+import Plutus.Script.Utils.Scripts (MintingPolicy, Validator)
 import Plutus.Script.Utils.Scripts qualified as Untyped
 import Plutus.Script.Utils.Typed as Export
 import Plutus.Script.Utils.V1.Typed.Scripts qualified as PV1
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as PV2
-import PlutusLedgerApi.V1 (MintingPolicy, Validator)
 
 mkForwardingMintingPolicy :: Versioned Validator -> Versioned MintingPolicy
 mkForwardingMintingPolicy vl@(Versioned _ PlutusV1) = Versioned (PV1.mkForwardingMintingPolicy (Untyped.validatorHash vl)) PlutusV1
 mkForwardingMintingPolicy vl@(Versioned _ PlutusV2) = Versioned (PV2.mkForwardingMintingPolicy (Untyped.validatorHash vl)) PlutusV2
+mkForwardingMintingPolicy (Versioned _ PlutusV3) = error "mkForwardingMintingPolicy: Plutus V3 not supported in Babbage era"
 
 -- | Make a 'TypedValidator' (with no type constraints) from an untyped 'Validator' script.
 unsafeMkTypedValidator :: Versioned Validator -> TypedValidator Any

@@ -41,7 +41,7 @@ import Cardano.Ledger.Alonzo.PlutusScriptApi (collectTwoPhaseScriptInputs, evalS
 import Cardano.Ledger.Alonzo.Rules.Utxos (UtxosPredicateFailure (CollectErrors))
 import Cardano.Ledger.Alonzo.Scripts (CostModels, Script, unCostModels)
 import Cardano.Ledger.Alonzo.Tools qualified as C.Ledger
-import Cardano.Ledger.Alonzo.Tx (IsValid (IsValid), ValidatedTx (ValidatedTx))
+import Cardano.Ledger.Alonzo.Tx (AlonzoTx (AlonzoTx), IsValid (IsValid))
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO, ScriptResult (Fails, Passes))
 import Cardano.Ledger.Alonzo.TxWitness qualified as Alonzo
 import Cardano.Ledger.Babbage.PParams (PParams' (_costmdls, _maxTxExUnits, _protocolVersion))
@@ -207,7 +207,7 @@ hasValidationErrors params slotNo utxoIndex tx'@(C.ShelleyTx _ tx) =
       vtx <- first (P.CardanoLedgerValidationError . Text.pack . show) (constructValidated (emulatorGlobals params) (utxoEnv params slotNo) (lsUTxOState (_memPoolState state)) tx)
       fmap OnChainTx <$> applyTx params state vtx
 
--- | Construct a 'ValidatedTx' from a 'Core.Tx' by setting the `IsValid`
+-- | Construct a 'AlonzoTx' from a 'Core.Tx' by setting the `IsValid`
 -- flag.
 --
 -- Note that this simply constructs the transaction; it does not validate
@@ -234,14 +234,14 @@ constructValidated ::
   UtxoEnv era ->
   UTxOState era ->
   Core.Tx era ->
-  m (ValidatedTx era)
+  m (AlonzoTx era)
 constructValidated globals (UtxoEnv _ pp _ _) st tx =
   case collectTwoPhaseScriptInputs ei sysS pp tx utxo of
     Left errs -> throwError [CollectErrors errs]
     Right sLst ->
       let scriptEvalResult = evalScripts @era (getField @"_protocolVersion" pp) tx sLst
           vTx =
-            ValidatedTx
+            AlonzoTx
               (getField @"body" tx)
               (getField @"wits" tx)
               (IsValid (lift scriptEvalResult))
@@ -257,7 +257,7 @@ constructValidated globals (UtxoEnv _ pp _ _) st tx =
 unsafeMakeValid :: CardanoTx -> OnChainTx
 unsafeMakeValid (CardanoEmulatorEraTx (C.Tx txBody _)) =
   let C.ShelleyTxBody _ txBody' _ _ _ _ = txBody
-      vtx :: Core.Tx EmulatorEra = ValidatedTx txBody' mempty (IsValid True) C.Ledger.SNothing
+      vtx :: Core.Tx EmulatorEra = AlonzoTx txBody' mempty (IsValid True) C.Ledger.SNothing
   in OnChainTx $ unsafeMakeValidated vtx
 
 validateCardanoTx

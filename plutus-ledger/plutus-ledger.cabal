@@ -100,9 +100,7 @@ library
   -- The rest of the plutus-ledger-api modules are reexported from within
   -- the Haskell modules and not in the current cabal file.
   -- For example: PlutusLedgerApi.V1.Address is reexported by Ledger.Address
-  other-modules:
-    Codec.CBOR.Extras
-    Ledger.Tx.CardanoAPITemp
+  other-modules:      Codec.CBOR.Extras
 
   --------------------
   -- Local components
@@ -113,24 +111,25 @@ library
   -- Other IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api        ^>=8.2
+    , cardano-api:{cardano-api, internal}  ^>=8.2
     , cardano-binary
+    , cardano-crypto
+    , cardano-crypto-class
+    , cardano-ledger-allegra
+    , cardano-ledger-alonzo
+    , cardano-ledger-babbage
+    , cardano-ledger-byron
+    , cardano-ledger-core
+    , cardano-ledger-mary
+    , cardano-ledger-shelley
     , cardano-slotting
     , data-default
     , iohk-monitoring
-    , plutus-core        >=1.0.0
-    , plutus-ledger-api  >=1.0.0
-    , plutus-tx          >=1.0.0
+    , plutus-core                          >=1.0.0
+    , plutus-ledger-api                    >=1.0.0
+    , plutus-tx                            >=1.0.0
 
-  -- , cardano-crypto
-  -- , cardano-crypto-class
-  -- , cardano-ledger-alonzo
-  -- , cardano-ledger-babbage
-  -- , cardano-ledger-byron
-  -- , cardano-ledger-core
-  -- , cardano-ledger-shelley
-  -- , cardano-ledger-shelley-ma
-  -- , ouroboros-consensus-shelley
+  -- , ouroboros-consensus-shelley >= 0.4.0.1
   ------------------------
   -- Non-IOG dependencies
   ------------------------

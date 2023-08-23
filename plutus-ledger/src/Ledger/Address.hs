@@ -44,9 +44,7 @@ import GHC.Generics (Generic)
 import Ledger.Address.Orphans as Export ()
 import Ledger.Crypto (PubKey (PubKey), PubKeyHash (PubKeyHash), pubKeyHash, toPublicKey)
 import Ledger.Orphans ()
-import Ledger.Scripts (Language (..), StakeValidatorHash (..), Validator, ValidatorHash (..), Versioned (..))
-import Plutus.Script.Utils.V1.Address qualified as PV1
-import Plutus.Script.Utils.V2.Address qualified as PV2
+import Ledger.Scripts (ScriptHash (..), StakeValidatorHash (..), ValidatorHash (..), mkValidatorCardanoAddress)
 import PlutusLedgerApi.V1.Address as Export hiding (pubKeyHashAddress)
 import PlutusLedgerApi.V1.Credential (Credential (PubKeyCredential, ScriptCredential), StakingCredential (StakingHash))
 import PlutusTx qualified
@@ -73,7 +71,7 @@ cardanoAddressCredential (C.AddressInEra _ (C.ShelleyAddress _ paymentCredential
           $ PlutusTx.toBuiltin
           $ C.serialiseToRawBytes paymentKeyHash
       C.PaymentCredentialByScript scriptHash ->
-          ScriptCredential $ scriptToValidatorHash scriptHash
+          ScriptCredential $ scriptToScriptHash scriptHash
 
 cardanoStakingCredential :: C.AddressInEra era -> Maybe StakingCredential
 cardanoStakingCredential (C.AddressInEra C.ByronAddressInAnyEra _) = Nothing
@@ -90,7 +88,7 @@ cardanoStakingCredential (C.AddressInEra _ (C.ShelleyAddress _ _ stakeAddressRef
       $ PubKeyHash
       $ PlutusTx.toBuiltin
       $ C.serialiseToRawBytes stakeKeyHash
-    fromCardanoStakeCredential (C.StakeCredentialByScript scriptHash) = ScriptCredential (scriptToValidatorHash scriptHash)
+    fromCardanoStakeCredential (C.StakeCredentialByScript scriptHash) = ScriptCredential (scriptToScriptHash scriptHash)
 
 cardanoPubKeyHash :: C.AddressInEra era -> Maybe PubKeyHash
 cardanoPubKeyHash addr = case cardanoAddressCredential addr of
@@ -103,8 +101,8 @@ toPlutusAddress address = Address (cardanoAddressCredential address) (cardanoSta
 toPlutusPubKeyHash :: C.Hash C.PaymentKey -> PubKeyHash
 toPlutusPubKeyHash paymentKeyHash = PubKeyHash $ PlutusTx.toBuiltin $ C.serialiseToRawBytes paymentKeyHash
 
-scriptToValidatorHash :: C.ScriptHash -> ValidatorHash
-scriptToValidatorHash = ValidatorHash . PlutusTx.toBuiltin . C.serialiseToRawBytes
+scriptToScriptHash :: C.ScriptHash -> ScriptHash
+scriptToScriptHash = ScriptHash . PlutusTx.toBuiltin . C.serialiseToRawBytes
 
 newtype PaymentPrivateKey = PaymentPrivateKey { unPaymentPrivateKey :: Crypto.XPrv }
 
@@ -171,7 +169,7 @@ pubKeyAddress (PaymentPubKey pk) = Address (PubKeyCredential (pubKeyHash pk))
 -- | The address that should be used by a transaction output locked by the given validator script
 -- (with its staking credentials).
 scriptValidatorHashAddress :: ValidatorHash -> Maybe StakingCredential -> Address
-scriptValidatorHashAddress vh = Address (ScriptCredential vh)
+scriptValidatorHashAddress (ValidatorHash vh) = Address (ScriptCredential (ScriptHash vh))
 
 {-# INLINABLE stakePubKeyHashCredential #-}
 -- | Construct a `StakingCredential` from a public key hash.
@@ -181,9 +179,4 @@ stakePubKeyHashCredential = StakingHash . PubKeyCredential . unStakePubKeyHash
 {-# INLINEABLE stakeValidatorHashCredential #-}
 -- | Construct a `StakingCredential` from a validator script hash.
 stakeValidatorHashCredential :: StakeValidatorHash -> StakingCredential
-stakeValidatorHashCredential (StakeValidatorHash h) = StakingHash . ScriptCredential . ValidatorHash $ h
-
--- | Cardano address of a versioned 'Validator' script.
-mkValidatorCardanoAddress :: C.NetworkId -> Versioned Validator -> C.AddressInEra C.BabbageEra
-mkValidatorCardanoAddress networkId (Versioned val PlutusV1) = PV1.mkValidatorCardanoAddress networkId val
-mkValidatorCardanoAddress networkId (Versioned val PlutusV2) = PV2.mkValidatorCardanoAddress networkId val
+stakeValidatorHashCredential (StakeValidatorHash h) = StakingHash . ScriptCredential . ScriptHash $ h

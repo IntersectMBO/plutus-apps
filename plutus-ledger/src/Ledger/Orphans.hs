@@ -29,7 +29,7 @@ import Web.HttpApiData (FromHttpApiData (parseUrlPiece), ToHttpApiData (toUrlPie
 
 -- TODO: remove this dependency here once the instance of Ord for AddressInEra
 -- can be obtained from upstream and removed from quickcheck-contractmodel.
-import Test.QuickCheck.ContractModel.Internal.Common ()
+-- import Test.QuickCheck.ContractModel.Internal.Common ()
 
 instance ToHttpApiData PrivateKey where
     toUrlPiece = toUrlPiece . getPrivateKey
@@ -55,7 +55,7 @@ instance Serialise (C.AddressInEra C.BabbageEra) where
   encode = encode . C.serialiseToRawBytes
   decode = do
     bs <- decode
-    maybe (fail "Can get back Address")
+    either (fail . show)
       pure
       $ C.deserialiseFromRawBytes (C.AsAddressInEra C.AsBabbageEra) bs
 

@@ -1,10 +1,11 @@
-{-# LANGUAGE DataKinds          #-}
-{-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE FlexibleContexts   #-}
-{-# LANGUAGE NamedFieldPuns     #-}
-{-# LANGUAGE OverloadedStrings  #-}
-{-# LANGUAGE TypeFamilies       #-}
+{-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE DeriveAnyClass    #-}
+{-# LANGUAGE DerivingVia       #-}
+{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE NamedFieldPuns    #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications  #-}
+{-# LANGUAGE TypeFamilies      #-}
 
 {- Cardano wallet implementation for the emulator.
 -}
@@ -39,6 +40,7 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Aeson.Extras (encodeByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as BSL
+import Data.Coerce (coerce)
 import Data.Either (fromRight)
 import Data.Hashable (Hashable (..))
 import Data.List (findIndex)
@@ -81,9 +83,14 @@ data MockWallet =
 
 -- | Wrapper for config files and APIs
 newtype WalletNumber = WalletNumber { getWallet :: Integer }
-    deriving (Show, Eq, Ord, Generic)
-    deriving newtype (ToHttpApiData, FromHttpApiData, Num, Enum, Real, Integral)
+    deriving stock (Show, Eq, Ord, Generic)
+    deriving newtype (ToHttpApiData, FromHttpApiData, Num, Enum, Real)
     deriving anyclass (FromJSON, ToJSON)
+
+-- Workaround for warning "Call of toInteger :: Integer -> Integer can probably be omitted" GHC issue #21679
+instance Integral WalletNumber where
+    quotRem = coerce @(Integer -> Integer -> (Integer, Integer)) @(WalletNumber -> WalletNumber -> (WalletNumber, WalletNumber)) quotRem
+    toInteger = coerce
 
 fromWalletNumber :: WalletNumber -> MockWallet
 fromWalletNumber (WalletNumber i) = (fromSeed' (BSL.toStrict $ serialise i)) { mwPrintAs = Just (show i) }

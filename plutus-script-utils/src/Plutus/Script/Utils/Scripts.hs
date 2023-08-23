@@ -4,6 +4,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE RankNTypes        #-}
 
 {-|
 This module contains functions related to versioning scripts and BuiltinData, or more specifially,
@@ -33,6 +34,7 @@ module Plutus.Script.Utils.Scripts
     , stakeValidatorHash
       -- * Script utilities
     , scriptCurrencySymbol
+    , withCardanoApiScript
       -- * Script data hashes
     , PV1.Datum
     , PV1.DatumHash
@@ -89,11 +91,14 @@ fromCardanoHash =
     . Builtins.toBuiltin
     . C.Api.serialiseToRawBytes
 
+withCardanoApiScript :: (forall lang. C.Api.Script lang -> r) -> Versioned Script -> r
+withCardanoApiScript f (Versioned (Script script) lang) = case lang of
+  PlutusV1 -> f . C.Api.PlutusScript C.Api.PlutusScriptV1 $ C.Api.PlutusScriptSerialised script
+  PlutusV2 -> f . C.Api.PlutusScript C.Api.PlutusScriptV2 $ C.Api.PlutusScriptSerialised script
+  PlutusV3 -> f . C.Api.PlutusScript C.Api.PlutusScriptV3 $ C.Api.PlutusScriptSerialised script
+
 cardanoScriptHash :: Versioned Script -> C.Api.ScriptHash
-cardanoScriptHash (Versioned (Script script) lang) = case lang of
-  PlutusV1 -> C.Api.hashScript . C.Api.PlutusScript C.Api.PlutusScriptV1 $ C.Api.PlutusScriptSerialised script
-  PlutusV2 -> C.Api.hashScript . C.Api.PlutusScript C.Api.PlutusScriptV2 $ C.Api.PlutusScriptSerialised script
-  PlutusV3 -> C.Api.hashScript . C.Api.PlutusScript C.Api.PlutusScriptV3 $ C.Api.PlutusScriptSerialised script
+cardanoScriptHash = withCardanoApiScript C.Api.hashScript
 
 -- | Hash a 'Versioned' 'Validator' script.
 validatorHash :: Versioned Validator -> ValidatorHash
@@ -254,6 +259,7 @@ toScriptAddress networkId script = C.Api.makeShelleyAddressInEra
   (C.Api.PaymentCredentialByScript (cardanoScriptHash script))
   C.Api.NoStakeAddress
 
+-- | Cardano address of a versioned 'Validator' script.
 mkValidatorCardanoAddress :: C.Api.NetworkId -> Versioned Validator -> C.Api.AddressInEra C.Api.BabbageEra
 mkValidatorCardanoAddress networkId = toScriptAddress networkId . fmap getValidator
 

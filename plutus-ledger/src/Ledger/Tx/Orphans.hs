@@ -76,7 +76,7 @@ instance Serialise C.TxId where
   encode = encode . C.serialiseToRawBytes
   decode = do
     bs <- decode
-    maybe (fail "Can get back Tx ID")
+    either (fail . show)
       pure
       $ C.deserialiseFromRawBytes C.AsTxId bs
 

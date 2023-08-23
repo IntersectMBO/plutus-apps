@@ -24,7 +24,6 @@ module Ledger.Slot(
 
 import Codec.Serialise.Class (Serialise)
 import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
-import Data.Hashable (Hashable)
 import GHC.Generics (Generic)
 import Prelude qualified as Haskell
 import Prettyprinter (Pretty (pretty), (<+>))
@@ -45,7 +44,7 @@ newtype Slot = Slot { getSlot :: Integer }
     deriving stock (Haskell.Eq, Haskell.Ord, Haskell.Show, Generic, Data)
     deriving anyclass (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
     deriving newtype (AdditiveSemigroup, AdditiveMonoid, AdditiveGroup, Eq, Ord, Enum, PlutusTx.ToData, PlutusTx.FromData, PlutusTx.UnsafeFromData)
-    deriving newtype (Haskell.Num, Haskell.Enum, Haskell.Real, Haskell.Integral, Serialise, Hashable)
+    deriving newtype (Haskell.Num, Haskell.Enum, Haskell.Real, Haskell.Integral, Serialise)
 
 makeLift ''Slot
 
@@ -70,22 +69,18 @@ width (Interval (LowerBound (Finite (Slot s1)) in1) (UpperBound (Finite (Slot s2
 width _ = Nothing
 
 
-deriving anyclass instance (Hashable a) => Hashable (Interval a)
 deriving anyclass instance (Serialise a) => Serialise (Interval a)
 deriving anyclass instance (ToJSON a) => ToJSON (Interval a)
 deriving anyclass instance (FromJSON a) => FromJSON (Interval a)
 
-deriving anyclass instance (Hashable a) => Hashable (LowerBound a)
 deriving anyclass instance (Serialise a) => Serialise (LowerBound a)
 deriving anyclass instance (ToJSON a) => ToJSON (LowerBound a)
 deriving anyclass instance (FromJSON a) => FromJSON (LowerBound a)
 
-deriving anyclass instance (Hashable a) => Hashable (UpperBound a)
 deriving anyclass instance (Serialise a) => Serialise (UpperBound a)
 deriving anyclass instance (ToJSON a) => ToJSON (UpperBound a)
 deriving anyclass instance (FromJSON a) => FromJSON (UpperBound a)
 
-deriving anyclass instance (Hashable a) => Hashable (Extended a)
 deriving anyclass instance (Serialise a) => Serialise (Extended a)
 deriving anyclass instance (ToJSON a) => ToJSON (Extended a)
 deriving anyclass instance (FromJSON a) => FromJSON (Extended a)

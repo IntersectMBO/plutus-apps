@@ -22,8 +22,8 @@ import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
 import Cardano.Binary qualified as CBOR
 import Cardano.Ledger.Alonzo.Scripts (ExUnits)
-import Cardano.Ledger.Alonzo.Tx (IsValid (IsValid), ValidatedTx (ValidatedTx))
-import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr)
+import Cardano.Ledger.Alonzo.Tx (AlonzoTx (AlonzoTx), IsValid (IsValid))
+import Cardano.Ledger.Alonzo.TxWits (RdmrPtr)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Core (Tx)
 import Cardano.Ledger.Crypto (StandardCrypto)
@@ -51,7 +51,7 @@ instance Serialise OnChainTx where
   decode = fail "Not allowed to use `decode` on `OnChainTx`" -- Unused
 
 eitherTx :: (CardanoTx -> r) -> (CardanoTx -> r) -> OnChainTx -> r
-eitherTx ifInvalid ifValid (extractTx . getOnChainTx -> tx@(ValidatedTx _ _ (IsValid isValid) _)) =
+eitherTx ifInvalid ifValid (extractTx . getOnChainTx -> tx@(AlonzoTx _ _ (IsValid isValid) _)) =
     let ctx = CardanoEmulatorEraTx (C.ShelleyTx C.ShelleyBasedEraBabbage tx)
     in if isValid then ifValid ctx else ifInvalid ctx
 
