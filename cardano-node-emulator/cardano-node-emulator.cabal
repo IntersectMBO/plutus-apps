@@ -45,8 +45,9 @@ library
   -- Local components
   --------------------
   build-depends:
-    , freer-extras   >=1.2.0
-    , plutus-ledger  >=1.2.0
+    , freer-extras         >=1.2.0
+    , plutus-ledger        >=1.2.0
+    , plutus-script-utils  >=1.2.0
 
   --------------------------
   -- Other IOG dependencies
@@ -55,17 +56,18 @@ library
     , cardano-api:{cardano-api, gen}  ^>=8.2
     , cardano-crypto
     , cardano-ledger-alonzo
+    , cardano-ledger-api
     , cardano-ledger-babbage
     , cardano-ledger-core
     , cardano-ledger-shelley
     , cardano-ledger-shelley-ma
     , cardano-slotting
-    , mtl
     , ouroboros-consensus
     , plutus-core                     >=1.0.0
     , plutus-ledger-api               >=1.0.0
     , plutus-tx                       >=1.0.0
-    , quickcheck-contractmodel        >=0.1.4.0
+
+  -- , quickcheck-contractmodel        >=0.1.4.0
 
   ------------------------
   -- Non-IOG dependencies
@@ -125,7 +127,7 @@ test-suite cardano-node-emulator-test
   ------------------------
   build-depends:
     , aeson
-    , base                      >=4.9 && <5
+    , base              >=4.9 && <5
     , bytestring
     , containers
     , data-default
@@ -133,11 +135,12 @@ test-suite cardano-node-emulator-test
     , lens
     , mtl
     , QuickCheck
-    , quickcheck-contractmodel
-    , quickcheck-dynamic
     , tasty
     , tasty-golden
     , tasty-hedgehog
     , tasty-hunit
     , tasty-quickcheck
     , text
+
+-- , quickcheck-contractmodel
+-- , quickcheck-dynamic

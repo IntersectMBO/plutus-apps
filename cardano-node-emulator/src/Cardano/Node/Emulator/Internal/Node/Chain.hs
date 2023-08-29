@@ -33,7 +33,7 @@ import GHC.Generics (Generic)
 import Ledger (Block, Blockchain, CardanoTx, OnChainTx, Slot (Slot), getCardanoTxId, getCardanoTxValidityRange,
                unOnChain)
 import Ledger.Index qualified as Index
-import Ledger.Interval qualified as Interval
+import PlutusLedgerApi.V1.Interval qualified as Interval
 import Prettyprinter (Pretty (pretty), vsep, (<+>))
 
 -- | Events produced by the blockchain emulator.

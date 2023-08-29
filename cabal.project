@@ -18,6 +18,8 @@ index-state:
 
 packages: plutus-ledger
           plutus-script-utils
+          cardano-node-emulator
+          freer-extras
 
 -- We never, ever, want this.
 write-ghc-environment-files: never
@@ -44,3 +46,4 @@ allow-newer:
   , blockfrost-api:lens
 
 constraints:
+  aeson ^>= 2.1
