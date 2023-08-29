@@ -32,7 +32,7 @@ import Database.Beam (Beamable, DatabaseEntity, FromBackendRow, HasQBuilder, Ide
                       SqlInsert, SqlSelect, SqlUpdate, TableEntity, asc_, filter_, insertValues, limit_, orderBy_,
                       runDelete, runInsert, runSelectReturningList, runSelectReturningOne, runUpdate, select, val_,
                       (>.))
-import Database.Beam.Backend.SQL (BeamSqlBackend, BeamSqlBackendSyntax, HasSqlValueSyntax,
+import Database.Beam.Backend.SQL (BeamSqlBackendSyntax, HasSqlValueSyntax,
                                   IsSql92ExpressionSyntax (Sql92ExpressionValueSyntax),
                                   IsSql92SelectSyntax (Sql92SelectSelectTableSyntax),
                                   IsSql92SelectTableSyntax (Sql92SelectTableExpressionSyntax),
@@ -180,8 +180,7 @@ combined ops
 
 handleBeam ::
   forall dbt (dbM :: Type -> Type) effs.
-  ( BeamSqlBackend dbt
-  , MonadBeam dbt dbM
+  ( MonadBeam dbt dbM
   , BeamHasInsertOnConflict dbt
   )
   =>(Trace IO BeamLog -> dbM ~> Eff effs)

@@ -29,6 +29,7 @@ import Data.Kind (Constraint)
 import Data.List (sort)
 import Data.Pool (Pool)
 import Data.Pool qualified as Pool
+import Data.Pool.Internal qualified as Pool
 import Data.Semigroup.Generic (GenericSemigroupMonoid (..))
 import Data.Set qualified as Set
 import Database.Beam (Beamable, Columnar, Database, DatabaseSettings, FromBackendRow, Generic, MonadIO (liftIO), Q,
@@ -46,6 +47,7 @@ import Database.Beam.Sqlite.Migrate qualified as Sqlite
 import Database.Beam.Sqlite.Syntax (SqliteValueSyntax)
 import Database.SQLite.Simple qualified as Sqlite
 
+import Data.Kind (Type)
 import Data.Maybe (listToMaybe)
 import Data.Set (Set)
 import Hedgehog (Property, PropertyT, assert, forAll, property, (===))
@@ -68,7 +70,7 @@ newtype Db f = Db
     } deriving (Generic)
       deriving anyclass (Database be)
 
-type AllTables (c :: * -> Constraint) f =
+type AllTables (c :: Type -> Constraint) f =
     ( c (f (TableEntity TestRowT))
     )
 deriving via (GenericSemigroupMonoid (Db f)) instance AllTables Semigroup f => Semigroup (Db f)
@@ -197,6 +199,7 @@ runBeamEffectInGenTestDb items effect runTest = do
     , Pool.freeResource = Sqlite.close
     , Pool.poolCacheTTL = 1_000_000
     , Pool.poolMaxResources = 1
+    , Pool.poolNumStripes = Nothing
     }
   result <- liftIO $ do
     Pool.withResource pool $ \conn -> Sqlite.runBeamSqlite conn $ do
