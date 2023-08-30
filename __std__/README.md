@@ -21,7 +21,7 @@ A description of the arguments follows:
 - `inputs.self`\
   This is a path pointing to the top-level of the repository.\
   It is the *only* way to reference source files inside the repository.\
-  Example: `{ src = inputs.self + /marconi-core; }`
+  Example: `{ src = inputs.self + /plutus-ledger; }`
 
 - `inputs.cells`\
   Provides access to all cells.\
@@ -75,11 +75,11 @@ While these blocks are not exposed directly to the flake (they are not "harveste
 `nix (develop|build|run) .#<system>.<cell>.<cell-block>.<valid.attr.path>`
 
 For example:
-`nix build .#x86_64-linux.plutus-apps.library.plutus-apps-project.hsPkgs.marconi-sidechain.components.exes.marconi-sidechain`
+`nix build .#x86_64-linux.plutus-apps.library.plutus-apps-project.hsPkgs.plutus-chain-index.components.exes.plutus-chain-index`
 
 ## Reference example
 
-As an example, consider the file `./__std__/cells/plutus-apps/packages/marconi-chain-index.nix`:
+As an example, consider the file `./__std__/cells/plutus-apps/packages/plutus-chain-index.nix`:
 
 - `./__std__/cells` is the `cellsFrom` value in `flake.nix`
 - `/plutus-apps` is the cell name
@@ -88,11 +88,11 @@ As an example, consider the file `./__std__/cells/plutus-apps/packages/marconi-c
 - `/packages` is the cell block name
 - `/packages/*` are accessible via `cell.packages.*` (while inside `cells/plutus-apps`)
 - `/packages/*` are accessible via `inputs.cells.plutus-apps.packages.*` (everywhere)
-- `/marconi-chain-index.nix` contains a *single derivation*
-- `marconi-chain-index` is the name of the flake fragment
-- A derivation named `marconi-chain-index` is accessible via `cell.packages.marconi-chain-index` (while inside `cells/plutus-apps`)
-- And also accessible via `inputs.cells.plutus-apps.packages.marconi-chain-index` (everywhere)
-- And also buildable via `nix build .#marconi-chain-index`
+- `/plutus-chain-index.nix` contains a *single derivation*
+- `plutus-chain-index` is the name of the flake fragment
+- A derivation named `plutus-chain-index` is accessible via `cell.packages.plutus-chain-index` (while inside `cells/plutus-apps`)
+- And also accessible via `inputs.cells.plutus-apps.packages.plutus-chain-index` (everywhere)
+- And also buildable via `nix build .#plutus-chain-index`
 
 As another example, consider the file `./__std__/cells/plutus-apps/library/default.nix`
 
