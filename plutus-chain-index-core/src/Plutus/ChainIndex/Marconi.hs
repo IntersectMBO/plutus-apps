@@ -31,7 +31,7 @@ import Data.Set qualified as Set
 import Ledger.Address (CardanoAddress)
 import Ledger.Tx (CardanoTx (CardanoTx))
 import Marconi.ChainIndex.Indexers.Utxo (StorableEvent (UtxoEvent), StorableQuery (UtxoByAddress), UtxoHandle,
-                                         getInputs, getUtxoResult, getUtxos, txId, txIx, urUtxo)
+                                         getInputs, getUtxoResult, getUtxosFromTxBody, txId, txIx, urUtxo)
 import Marconi.Core.Storable (HasPoint, QueryInterval (QEverything), Queryable, State, StorableMonad, StorablePoint,
                               StorableResult, insertMany, query)
 import Plutus.ChainIndex.Api (UtxosResponse (UtxosResponse))
@@ -139,8 +139,8 @@ getUtxoEvents
   -> C.ChainPoint
   -> StorableEvent UtxoHandle -- ^ UtxoEvents are stored in storage after conversion to UtxoRow
 getUtxoEvents txs cp =
-  let utxosFromCardanoTx (CardanoTx c _) = elems $ getUtxos Nothing c
-      inputsFromCardanoTx (CardanoTx c _) = getInputs c
+  let utxosFromCardanoTx (CardanoTx (C.Tx txBody _) _) = elems $ getUtxosFromTxBody Nothing txBody
+      inputsFromCardanoTx (CardanoTx (C.Tx txBody _) _) = getInputs txBody
       utxos = Set.fromList $ concatMap utxosFromCardanoTx txs
       ins = foldl' Set.union Set.empty $ inputsFromCardanoTx <$> txs
   in UtxoEvent utxos ins cp

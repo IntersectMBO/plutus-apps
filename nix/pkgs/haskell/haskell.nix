@@ -54,9 +54,6 @@ let
             # Things that need plutus-tx-plugin
             freer-extras.package.buildable = false;
             cardano-node-emulator.package.buildable = false;
-            cardano-streaming.package.buildable = false;
-            marconi-chain-index.package.buildable = false;
-            marconi-core.package.buildable = false;
             pab-blockfrost.package.buildable = false;
             plutus-benchmark.package.buildable = false;
             plutus-chain-index.package.buildable = false;
@@ -116,29 +113,6 @@ let
         })
         ({ pkgs, config, ... }: {
           packages = {
-            marconi-core.doHaddock = deferPluginErrors;
-            marconi-core.flags.defer-plugin-errors = deferPluginErrors;
-
-            marconi-chain-index.doHaddock = deferPluginErrors;
-            marconi-chain-index.flags.defer-plugin-errors = deferPluginErrors;
-
-            # The lines `export CARDANO_NODE=...` and `export CARDANO_CLI=...`
-            # is necessary to prevent the error
-            # `../dist-newstyle/cache/plan.json: openBinaryFile: does not exist (No such file or directory)`.
-            # See https://github.com/input-output-hk/cardano-node/issues/4194
-            #
-            # The line 'export CARDANO_NODE_SRC=...' is used to specify the
-            # root folder used to fetch the `configuration.yaml` file (in
-            # plutus-apps, it's currently in the
-            # `configuration/defaults/byron-mainnet` directory.
-            # Else, we'll get the error
-            # `/nix/store/ls0ky8x6zi3fkxrv7n4vs4x9czcqh1pb-plutus-apps/marconi/test/configuration.yaml: openFile: does not exist (No such file or directory)`
-            marconi-chain-index.preCheck = "
-              export CARDANO_CLI=${config.hsPkgs.cardano-cli.components.exes.cardano-cli}/bin/cardano-cli${pkgs.stdenv.hostPlatform.extensions.executable}
-              export CARDANO_NODE=${config.hsPkgs.cardano-node.components.exes.cardano-node}/bin/cardano-node${pkgs.stdenv.hostPlatform.extensions.executable}
-              export CARDANO_NODE_SRC=${src}
-            ";
-
             plutus-contract.doHaddock = deferPluginErrors;
             plutus-contract.flags.defer-plugin-errors = deferPluginErrors;
 
@@ -177,9 +151,6 @@ let
             cardano-wallet.doHaddock = false;
 
             # Werror everything. This is a pain, see https://github.com/input-output-hk/haskell.nix/issues/519
-            cardano-streaming.ghcOptions = [ "-Werror" ];
-            marconi-chain-index.ghcOptions = [ "-Werror" ];
-            marconi-core.ghcOptions = [ "-Werror" ];
             pab-blockfrost.ghcOptions = [ "-Werror" ];
             plutus-chain-index.ghcOptions = [ "-Werror" ];
             plutus-chain-index-core.ghcOptions = [ "-Werror" ];
