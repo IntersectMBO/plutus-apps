@@ -55,12 +55,13 @@ library
   build-depends:
     , cardano-api:{cardano-api, gen}  ^>=8.2
     , cardano-crypto
+    , cardano-ledger-allegra
     , cardano-ledger-alonzo
     , cardano-ledger-api
     , cardano-ledger-babbage
     , cardano-ledger-core
+    , cardano-ledger-mary
     , cardano-ledger-shelley
-    , cardano-ledger-shelley-ma
     , cardano-slotting
     , ouroboros-consensus
     , plutus-core                     >=1.0.0
@@ -87,6 +88,7 @@ library
     , mtl
     , prettyprinter              >=1.1.0.1
     , QuickCheck
+    , quickcheck-contractmodel
     , quickcheck-dynamic
     , serialise
     , text
@@ -127,7 +129,7 @@ test-suite cardano-node-emulator-test
   ------------------------
   build-depends:
     , aeson
-    , base              >=4.9 && <5
+    , base                      >=4.9 && <5
     , bytestring
     , containers
     , data-default
@@ -135,12 +137,11 @@ test-suite cardano-node-emulator-test
     , lens
     , mtl
     , QuickCheck
+    , quickcheck-contractmodel
+    , quickcheck-dynamic
     , tasty
     , tasty-golden
     , tasty-hedgehog
     , tasty-hunit
     , tasty-quickcheck
     , text
-
--- , quickcheck-contractmodel
--- , quickcheck-dynamic

@@ -5,6 +5,7 @@
 {-# LANGUAGE RecordWildCards    #-}
 {-# LANGUAGE TemplateHaskell    #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE TupleSections      #-}
 -- | The set of parameters, like protocol parameters and slot configuration.
 module Cardano.Node.Emulator.Internal.Node.Params (
   Params(..),
@@ -59,6 +60,7 @@ import GHC.Generics (Generic)
 import GHC.Natural (Natural)
 import Ledger.Test (testnet)
 import Ouroboros.Consensus.HardFork.History qualified as Ouroboros
+import Plutus.Script.Utils.Scripts (Language (PlutusV3))
 import PlutusCore.Evaluation.Machine.ExBudgetingDefaults (defaultCostModelParams)
 import PlutusLedgerApi.V1 (POSIXTime (POSIXTime))
 import Prettyprinter (Pretty (pretty), viaShow, vsep, (<+>))
@@ -173,7 +175,8 @@ instance Default C.ProtocolParameters where
     , protocolParamTreasuryCut = 1 % 5
     , protocolParamUTxOCostPerWord = Nothing -- Obsolete from babbage onwards
     , protocolParamCostModels =
-        let costModels = Map.fromList $ fromJust $ traverse (\l -> (,) l <$> (defaultCostModelParams >>= Alonzo.costModelFromMap l)) [minBound .. maxBound]
+        let costModel = fromJust $ defaultCostModelParams >>= Alonzo.costModelFromMap PlutusV3
+            costModels = Map.fromList $ map (, costModel) [minBound .. maxBound]
         in C.fromAlonzoCostModels $ Alonzo.CostModels costModels mempty mempty
     , protocolParamPrices = Just (C.ExecutionUnitPrices {priceExecutionSteps = 721 % 10000000, priceExecutionMemory = 577 % 10000})
     , protocolParamMaxTxExUnits = Just (C.ExecutionUnits {executionSteps = 10000000000, executionMemory = 14000000})
