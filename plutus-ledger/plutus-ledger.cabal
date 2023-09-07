@@ -114,7 +114,7 @@ library
   -- Other IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api                  >=8.0
+    , cardano-api             >=8.0
     , cardano-binary
     , cardano-crypto
     , cardano-crypto-class
@@ -128,10 +128,9 @@ library
     , cardano-slotting
     , data-default
     , iohk-monitoring
-    , ouroboros-consensus-shelley
-    , plutus-core                  >=1.0.0
-    , plutus-ledger-api            >=1.0.0
-    , plutus-tx                    >=1.0.0
+    , plutus-core             >=1.0.0
+    , plutus-ledger-api       >=1.0.0
+    , plutus-tx               >=1.0.0
 
   ------------------------
   -- Non-IOG dependencies

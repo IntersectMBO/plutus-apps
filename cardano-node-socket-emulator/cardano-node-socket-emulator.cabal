@@ -63,10 +63,8 @@ library
     , iohk-monitoring
     , memory
     , ouroboros-consensus
-    , ouroboros-consensus-byron
     , ouroboros-consensus-cardano
     , ouroboros-consensus-protocol
-    , ouroboros-consensus-shelley
     , ouroboros-network
     , ouroboros-network-framework
     , plutus-core                   >=1.0.0
