@@ -44,6 +44,9 @@ benchmarks: true
 -- 'tasty' output.
 test-show-details: direct
 
+package cardano-crypto-praos
+  flags: -external-libsodium-vrf
+
 allow-newer:
   -- cardano-ledger packages need aeson >2, the following packages have a
   -- too restictive upper bounds on aeson, so we relax them here. The hackage
