@@ -40,7 +40,7 @@ import Control.Monad.Except (MonadError (throwError))
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Kind (Type)
 import GHC.Generics (Generic)
-import Plutus.Script.Utils.Scripts (Datum, Language (PlutusV1), Versioned (Versioned))
+import Plutus.Script.Utils.Scripts (Datum, Language (PlutusV1), Versioned (Versioned), mkValidatorScript)
 import Plutus.Script.Utils.Typed (DatumType, RedeemerType,
                                   TypedValidator (TypedValidator, tvForwardingMPS, tvForwardingMPSHash, tvValidator, tvValidatorHash),
                                   UntypedValidator, ValidatorTypes, forwardingMintingPolicy,
@@ -48,10 +48,9 @@ import Plutus.Script.Utils.Typed (DatumType, RedeemerType,
                                   vValidatorScript, validatorAddress, validatorHash, validatorScript)
 import Plutus.Script.Utils.V1.Scripts qualified as Scripts
 import Plutus.Script.Utils.V1.Typed.Scripts.MonetaryPolicies qualified as MPS
-import Plutus.V1.Ledger.Address qualified as PV1
-import Plutus.V1.Ledger.Api qualified as PV1
 import PlutusCore.Default (DefaultUni)
-import PlutusTx (CompiledCode, Lift, applyCode, liftCode)
+import PlutusLedgerApi.V1 qualified as PV1
+import PlutusTx (CompiledCode, Lift, liftCode, unsafeApplyCode)
 import Prettyprinter (Pretty (pretty), viaShow, (<+>))
 
 -- | The type of validators for the given connection type.
@@ -72,7 +71,7 @@ mkTypedValidator vc wrapper =
     , tvForwardingMPSHash = Scripts.mintingPolicyHash mps
     }
   where
-    val = PV1.mkValidatorScript $ wrapper `applyCode` vc
+    val = mkValidatorScript $ wrapper `unsafeApplyCode` vc
     hsh = Scripts.validatorHash val
     mps = MPS.mkForwardingMintingPolicy hsh
 
@@ -88,7 +87,7 @@ mkTypedValidatorParam ::
   param ->
   TypedValidator a
 mkTypedValidatorParam vc wrapper param =
-  mkTypedValidator (vc `applyCode` liftCode param) wrapper
+  mkTypedValidator (vc `unsafeApplyCode` liftCode param) wrapper
 
 data WrongOutTypeError
   = ExpectedScriptGotPubkey

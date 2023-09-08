@@ -22,13 +22,12 @@ module Plutus.Script.Utils.V1.Typed.Scripts
 where
 
 import Control.Monad.Except (MonadError (throwError))
-import Plutus.Script.Utils.Scripts (datumHash)
+import Plutus.Script.Utils.Scripts (MintingPolicy, StakeValidator, Validator, datumHash)
 import Plutus.Script.Utils.V1.Typed.Scripts.MonetaryPolicies hiding (forwardToValidator)
 import Plutus.Script.Utils.V1.Typed.Scripts.StakeValidators hiding (forwardToValidator)
 import Plutus.Script.Utils.V1.Typed.Scripts.Validators
-import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential), Datum (Datum), FromData, MintingPolicy,
-                             StakeValidator, ToData (..), TxOut (TxOut, txOutAddress, txOutDatumHash, txOutValue),
-                             TxOutRef, Validator, Value, addressCredential)
+import PlutusLedgerApi.V1 (Credential (PubKeyCredential, ScriptCredential), Datum (Datum), FromData, ToData (..),
+                           TxOut (TxOut, txOutAddress, txOutDatumHash, txOutValue), TxOutRef, Value, addressCredential)
 
 {- Note [Scripts returning Bool]
 It used to be that the signal for validation failure was a script being `error`. This is nice for

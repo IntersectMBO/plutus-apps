@@ -20,15 +20,15 @@ module Plutus.Script.Utils.V2.Typed.Scripts
 where
 
 import Control.Monad.Except (MonadError (throwError))
-import Plutus.Script.Utils.Scripts (datumHash)
+import Plutus.Script.Utils.Scripts (MintingPolicy, StakeValidator, Validator, datumHash)
 import Plutus.Script.Utils.V1.Typed.Scripts.Validators (ConnectionError (..))
 import Plutus.Script.Utils.V1.Typed.Scripts.Validators qualified as V1
 import Plutus.Script.Utils.V2.Typed.Scripts.MonetaryPolicies hiding (forwardToValidator)
 import Plutus.Script.Utils.V2.Typed.Scripts.StakeValidators hiding (forwardToValidator)
 import Plutus.Script.Utils.V2.Typed.Scripts.Validators
-import Plutus.V2.Ledger.Api (Credential (PubKeyCredential, ScriptCredential), Datum, FromData, MintingPolicy,
-                             OutputDatum (OutputDatum, OutputDatumHash), StakeValidator, ToData (..),
-                             TxOut (txOutAddress, txOutDatum), TxOutRef, Validator, addressCredential)
+import PlutusLedgerApi.V2 (Credential (PubKeyCredential, ScriptCredential), Datum, FromData,
+                           OutputDatum (OutputDatum, OutputDatumHash), ToData (..), TxOut (txOutAddress, txOutDatum),
+                           TxOutRef, addressCredential)
 
 --
 -- | A 'TxOut' tagged by a phantom type: and the connection type of the output.

@@ -13,9 +13,9 @@ module Plutus.Script.Utils.V2.Contexts
     , valuePaidTo
     ) where
 
-import Plutus.V1.Ledger.Api (Address, Value)
-import Plutus.V2.Ledger.Api qualified as PV2
-import Plutus.V2.Ledger.Contexts as Contexts hiding (findTxInByTxOutRef, valuePaidTo)
+import PlutusLedgerApi.V1 (Address, Value)
+import PlutusLedgerApi.V2 qualified as PV2
+import PlutusLedgerApi.V2.Contexts as Contexts hiding (findTxInByTxOutRef, valuePaidTo)
 import PlutusTx.Prelude (Maybe (Just, Nothing), find, mapMaybe, mconcat, (==))
 
 {-# INLINABLE findTxInByTxOutRef #-}

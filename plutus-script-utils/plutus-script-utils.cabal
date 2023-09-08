@@ -79,12 +79,13 @@ library
     Plutus.Script.Utils.V2.Typed.Scripts.StakeValidators
     Plutus.Script.Utils.V2.Typed.Scripts.Validators
     Plutus.Script.Utils.Value
+    Prettyprinter.Extras
 
   --------------------------
   -- Other IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api            >=8.0
+    , cardano-api            ^>=8.2
     , cardano-ledger-alonzo
     , plutus-core            >=1.0.0
     , plutus-ledger-api      >=1.0.0

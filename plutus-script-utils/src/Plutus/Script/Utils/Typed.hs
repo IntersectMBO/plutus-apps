@@ -23,7 +23,7 @@ module Plutus.Script.Utils.Typed (
   , generalise
   ---
   , Any
-  , Language (PlutusV1, PlutusV2)
+  , Language (PlutusV1, PlutusV2, PlutusV3)
   , Versioned (Versioned, unversioned, version)
   , IsScriptContext(mkUntypedValidator, mkUntypedStakeValidator, mkUntypedMintingPolicy)
   , ScriptContextV1
@@ -31,17 +31,16 @@ module Plutus.Script.Utils.Typed (
 ) where
 
 import Cardano.Api qualified as C
-import Cardano.Ledger.Alonzo.Language (Language (PlutusV1, PlutusV2))
+import Cardano.Ledger.Alonzo.Language (Language (PlutusV1, PlutusV2, PlutusV3))
 import Data.Aeson (ToJSON)
 import Data.Kind (Type)
 import Data.Void (Void)
 import GHC.Generics (Generic)
-import Plutus.Script.Utils.Scripts (Versioned (Versioned, unversioned, version))
-import Plutus.Script.Utils.V1.Address qualified as PSU.PV1
-import Plutus.Script.Utils.V2.Address qualified as PSU.PV2
-import Plutus.V1.Ledger.Address qualified as PV1
-import Plutus.V1.Ledger.Api qualified as PV1
-import Plutus.V2.Ledger.Api qualified as PV2
+import Plutus.Script.Utils.Scripts (Versioned (Versioned, unversioned, version), mkValidatorCardanoAddress)
+import Plutus.Script.Utils.Scripts qualified as PV1
+import PlutusLedgerApi.V1 qualified as PV1
+import PlutusLedgerApi.V1.Address qualified as PV1
+import PlutusLedgerApi.V2 qualified as PV2
 import PlutusTx.Prelude (BuiltinData, BuiltinString, check, trace)
 
 type UntypedValidator = BuiltinData -> BuiltinData -> BuiltinData -> ()
@@ -90,15 +89,11 @@ validatorHash = tvValidatorHash
 
 -- | The address of the validator.
 validatorAddress :: TypedValidator a -> PV1.Address
-validatorAddress = PV1.scriptHashAddress . tvValidatorHash
+validatorAddress = PV1.scriptHashAddress . PV1.ScriptHash . PV1.getValidatorHash . tvValidatorHash
 
 -- | The address of the validator.
 validatorCardanoAddress :: C.NetworkId -> TypedValidator a -> C.AddressInEra C.BabbageEra
-validatorCardanoAddress networkId tv =
-  let validator = tvValidator tv
-  in case version validator of
-          PlutusV1 -> PSU.PV1.mkValidatorCardanoAddress networkId $ unversioned validator
-          PlutusV2 -> PSU.PV2.mkValidatorCardanoAddress networkId $ unversioned validator
+validatorCardanoAddress networkId = mkValidatorCardanoAddress networkId . tvValidator
 
 validatorCardanoAddressAny :: C.NetworkId -> TypedValidator a -> C.AddressAny
 validatorCardanoAddressAny nid tv =
@@ -153,7 +148,7 @@ class PV1.UnsafeFromData sc => IsScriptContext sc where
     --
     -- @
     --   import PlutusTx qualified
-    --   import Plutus.V2.Ledger.Scripts qualified as Plutus
+    --   import PlutusLedgerApi.V2.Scripts qualified as Plutus
     --   import Plutus.Script.Utils.V2.Scripts (mkUntypedValidator)
     --
     --   newtype MyCustomDatum = MyCustomDatum Integer
@@ -175,7 +170,7 @@ class PV1.UnsafeFromData sc => IsScriptContext sc where
     --
     -- @
     --   import PlutusTx qualified
-    --   import Plutus.V2.Ledger.Scripts qualified as Plutus
+    --   import PlutusLedgerApi.V2.Scripts qualified as Plutus
     --   import Plutus.Script.Utils.V2.Scripts (mkUntypedValidator)
     --
     --   newtype MyCustomDatum = MyCustomDatum Integer
@@ -217,7 +212,7 @@ class PV1.UnsafeFromData sc => IsScriptContext sc where
     --
     -- @
     --   import PlutusTx qualified
-    --   import Plutus.V1.Ledger.Scripts qualified as Plutus
+    --   import PlutusLedgerApi.V1.Scripts qualified as Plutus
     --   import Plutus.Script.Utils.V1.Scripts (mkUntypedStakeValidator)
     --
     --   newtype MyCustomRedeemer = MyCustomRedeemer Integer
@@ -255,7 +250,7 @@ class PV1.UnsafeFromData sc => IsScriptContext sc where
     --
     -- @
     --   import PlutusTx qualified
-    --   import Plutus.V1.Ledger.Scripts qualified as Plutus
+    --   import PlutusLedgerApi.V1.Scripts qualified as Plutus
     --   import Plutus.Script.Utils.V1.Scripts (mkUntypedMintingPolicy)
     --
     --   newtype MyCustomRedeemer = MyCustomRedeemer Integer

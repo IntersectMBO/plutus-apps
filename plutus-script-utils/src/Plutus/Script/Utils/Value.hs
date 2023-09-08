@@ -6,15 +6,18 @@ module Plutus.Script.Utils.Value
   , adaOnlyValue
   , isAdaOnlyValue
   , currencyValueOf
+  , mpsSymbol
+  , currencyMPSHash
   ) where
 
 import Plutus.Script.Utils.Ada qualified as Ada
-import Plutus.V1.Ledger.Value as Export (AssetClass (AssetClass, unAssetClass),
-                                         CurrencySymbol (CurrencySymbol, unCurrencySymbol),
-                                         TokenName (TokenName, unTokenName), Value (Value, getValue), adaSymbol,
-                                         adaToken, assetClass, assetClassValue, assetClassValueOf, currencyMPSHash,
-                                         currencySymbol, flattenValue, geq, gt, isZero, leq, lt, mpsSymbol, scale,
-                                         singleton, split, symbols, toString, tokenName, unionWith, valueOf)
+import Plutus.Script.Utils.Scripts (MintingPolicyHash (MintingPolicyHash))
+import PlutusLedgerApi.V1.Value as Export (AssetClass (AssetClass, unAssetClass),
+                                           CurrencySymbol (CurrencySymbol, unCurrencySymbol),
+                                           TokenName (TokenName, unTokenName), Value (Value, getValue), adaSymbol,
+                                           adaToken, assetClass, assetClassValue, assetClassValueOf, currencySymbol,
+                                           flattenValue, geq, gt, isZero, leq, lt, scale, singleton, split, symbols,
+                                           toString, tokenName, unionWith, valueOf)
 import PlutusTx.AssocMap qualified as Map
 import PlutusTx.Prelude (Bool, Eq ((==)), Maybe (Just, Nothing), mempty, (-))
 
@@ -40,3 +43,13 @@ currencyValueOf :: Value -> CurrencySymbol -> Value
 currencyValueOf (Value m) c = case Map.lookup c m of
     Nothing -> mempty
     Just t  -> Value (Map.singleton c t)
+
+{-# INLINABLE mpsSymbol #-}
+-- | The currency symbol of a monetay policy hash
+mpsSymbol :: MintingPolicyHash -> CurrencySymbol
+mpsSymbol (MintingPolicyHash h) = CurrencySymbol h
+
+{-# INLINABLE currencyMPSHash #-}
+-- | The minting policy hash of a currency symbol
+currencyMPSHash :: CurrencySymbol -> MintingPolicyHash
+currencyMPSHash (CurrencySymbol h) = MintingPolicyHash h
