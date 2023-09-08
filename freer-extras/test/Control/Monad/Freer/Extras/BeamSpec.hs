@@ -46,6 +46,7 @@ import Database.Beam.Sqlite.Migrate qualified as Sqlite
 import Database.Beam.Sqlite.Syntax (SqliteValueSyntax)
 import Database.SQLite.Simple qualified as Sqlite
 
+import Data.Kind (Type)
 import Data.Maybe (listToMaybe)
 import Data.Set (Set)
 import Hedgehog (Property, PropertyT, assert, forAll, property, (===))
@@ -68,7 +69,7 @@ newtype Db f = Db
     } deriving (Generic)
       deriving anyclass (Database be)
 
-type AllTables (c :: * -> Constraint) f =
+type AllTables (c :: Type -> Constraint) f =
     ( c (f (TableEntity TestRowT))
     )
 deriving via (GenericSemigroupMonoid (Db f)) instance AllTables Semigroup f => Semigroup (Db f)
