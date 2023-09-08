@@ -19,7 +19,7 @@ import Ledger.Address.Orphans ()
 import Ledger.Builtins.Orphans ()
 import Ledger.Value.Orphans ()
 
-import Plutus.V2.Ledger.Api
+import PlutusLedgerApi.V2
 
 deriving anyclass instance ToJSON OutputDatum
 deriving anyclass instance FromJSON OutputDatum

@@ -10,7 +10,7 @@ import Codec.Serialise (Serialise)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Hashable (Hashable)
 
-import Plutus.V1.Ledger.Credential
+import PlutusLedgerApi.V1.Credential
 
 deriving anyclass instance ToJSON Credential
 deriving anyclass instance FromJSON Credential

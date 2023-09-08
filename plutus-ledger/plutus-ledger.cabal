@@ -89,7 +89,6 @@ library
     Ledger.Typed.TypeUtils
     Ledger.Value.CardanoAPI
     Ledger.Value.Orphans
-    Prettyprinter.Extras
 
   reexported-modules:
     PlutusLedgerApi.V1.Bytes as Ledger.Bytes,
@@ -100,10 +99,8 @@ library
 
   -- The rest of the plutus-ledger-api modules are reexported from within
   -- the Haskell modules and not in the current cabal file.
-  -- For example: Plutus.V1.Ledger.Address is reexported by Ledger.Address
-  other-modules:
-    Codec.CBOR.Extras
-    Ledger.Tx.CardanoAPITemp
+  -- For example: PlutusLedgerApi.V1.Address is reexported by Ledger.Address
+  other-modules:      Codec.CBOR.Extras
 
   --------------------
   -- Local components
@@ -114,7 +111,7 @@ library
   -- Other IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api             >=8.0
+    , cardano-api:{cardano-api, internal}  ^>=8.2
     , cardano-binary
     , cardano-crypto
     , cardano-crypto-class
@@ -128,10 +125,11 @@ library
     , cardano-slotting
     , data-default
     , iohk-monitoring
-    , plutus-core             >=1.0.0
-    , plutus-ledger-api       >=1.0.0
-    , plutus-tx               >=1.0.0
+    , plutus-core                          >=1.0.0
+    , plutus-ledger-api                    >=1.0.0
+    , plutus-tx                            >=1.0.0
 
+  -- , ouroboros-consensus-shelley >= 0.4.0.1
   ------------------------
   -- Non-IOG dependencies
   ------------------------
@@ -140,7 +138,7 @@ library
   -- defined there.
   build-depends:
     , aeson
-    , base                       >=4.9     && <5
+    , base                       >=4.9  && <5
     , base16-bytestring
     , bytestring
     , cardano-strict-containers
@@ -155,7 +153,6 @@ library
     , mtl
     , newtype-generics
     , prettyprinter
-    , quickcheck-contractmodel   >=0.1.4.0
     , scientific
     , serialise
     , servant
@@ -166,6 +163,7 @@ library
     , transformers
     , vector
 
+  -- , quickcheck-contractmodel  >=0.1.4.0
   ghc-options:        -fprint-potential-instances
 
   if !(impl(ghcjs) || os(ghcjs))
@@ -194,11 +192,11 @@ test-suite plutus-ledger-test
   -- Other IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api:{cardano-api, gen}  >=8.0
-    , cardano-crypto-class            >=2.0.0
+    , cardano-api:{cardano-api, gen}  ^>=8.2
     , plutus-ledger-api               >=1.0.0
     , plutus-tx                       >=1.0.0
 
+  -- , cardano-crypto-class            >=2.0.0
   ------------------------
   -- Non-IOG dependencies
   ------------------------

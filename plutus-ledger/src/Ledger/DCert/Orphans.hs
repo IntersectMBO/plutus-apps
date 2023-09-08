@@ -10,7 +10,7 @@ import Data.Aeson (FromJSON, ToJSON)
 
 import Ledger.Credential.Orphans ()
 import Ledger.Crypto.Orphans ()
-import Plutus.V1.Ledger.DCert (DCert)
+import PlutusLedgerApi.V1.DCert (DCert)
 
 deriving anyclass instance ToJSON DCert
 deriving anyclass instance FromJSON DCert

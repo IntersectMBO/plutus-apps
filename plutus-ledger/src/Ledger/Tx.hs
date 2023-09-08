@@ -82,8 +82,8 @@ module Ledger.Tx
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C.Api
 import Cardano.Crypto.Wallet qualified as Crypto
-import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..))
-import Cardano.Ledger.Alonzo.TxWitness (txwitsVKey)
+import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
+import Cardano.Ledger.Alonzo.TxWits (txwitsVKey)
 import Codec.Serialise (Serialise)
 
 import Control.Lens (Getter, Lens', Traversal', lens, makeLenses, makePrisms, to, view, views, (^.), (^?))
@@ -102,18 +102,17 @@ import Ledger.Slot (SlotRange)
 import Ledger.Tx.CardanoAPI (CardanoTx (CardanoTx), ToCardanoError (..), pattern CardanoEmulatorEraTx)
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
 
-import Plutus.Script.Utils.Scripts (scriptHash)
-import Plutus.V1.Ledger.Api qualified as V1
-import Plutus.V2.Ledger.Api qualified as V2
-import Plutus.V2.Ledger.Tx qualified as V2.Tx hiding (TxId (..), TxIn (..), TxInType (..))
+import Plutus.Script.Utils.Scripts (Script, Validator, ValidatorHash (..), scriptHash)
+import PlutusLedgerApi.V1 qualified as V1
+import PlutusLedgerApi.V2 qualified as V2
+import PlutusLedgerApi.V2.Tx qualified as V2.Tx hiding (TxId (..))
 
 import Prettyprinter (Pretty (pretty), colon, hang, nest, viaShow, vsep, (<+>))
 -- for re-export
 import Ledger.Index.Internal (UtxoIndex)
 import Ledger.Tx.Internal as Export
-import Plutus.V1.Ledger.Tx as Export hiding (TxId (..), TxIn (..), TxInType (..), TxOut (..), inRef, inType, outAddress,
-                                      outValue, pubKeyTxIn, scriptTxIn, txOutDatum, txOutPubKey)
-import Plutus.V1.Ledger.Value (Value)
+import PlutusLedgerApi.V1.Tx as Export hiding (TxId (..), TxOut (..), outAddress, outValue, txOutDatum, txOutPubKey)
+import PlutusLedgerApi.V1.Value (Value)
 
 
 -- | A datum in a transaction output that comes from a chain index query.
@@ -142,11 +141,11 @@ data DecoratedTxOut =
       -- | Optional datum (inline datum or datum in transaction body) attached to the transaction output.
       _decoratedTxOutPubKeyDatum       :: Maybe (V2.DatumHash, DatumFromQuery),
       -- | Value of the transaction output.
-      _decoratedTxOutReferenceScript   :: Maybe (Versioned V1.Script)
+      _decoratedTxOutReferenceScript   :: Maybe (Versioned Script)
     }
   | ScriptDecoratedTxOut {
       -- | The hash of the script that protects the transaction address
-      _decoratedTxOutValidatorHash     :: V1.ValidatorHash,
+      _decoratedTxOutValidatorHash     :: ValidatorHash,
       -- | The staking credential of the transaction address, if any
       _decoratedTxOutStakingCredential :: Maybe V1.StakingCredential,
       -- | Value of the transaction output.
@@ -157,9 +156,9 @@ data DecoratedTxOut =
       _decoratedTxOutScriptDatum       :: (V2.DatumHash, DatumFromQuery),
       -- The reference script is, in genereal, unrelated to the validator
       -- script althought it could also be the same.
-      _decoratedTxOutReferenceScript   :: Maybe (Versioned V1.Script),
+      _decoratedTxOutReferenceScript   :: Maybe (Versioned Script),
       -- | Full version of the validator protecting the transaction output
-      _decoratedTxOutValidator         :: Maybe (Versioned V1.Validator)
+      _decoratedTxOutValidator         :: Maybe (Versioned Validator)
   }
   deriving (Show, Eq, Serialise, Generic, ToJSON, FromJSON)
 
@@ -168,16 +167,16 @@ makePrisms ''DecoratedTxOut
 
 
 mkDecoratedTxOut
-    :: CardanoAddress -> C.Value -> Maybe (V2.DatumHash, DatumFromQuery) -> Maybe (Versioned V1.Script)
+    :: CardanoAddress -> C.Value -> Maybe (V2.DatumHash, DatumFromQuery) -> Maybe (Versioned Script)
     -> Maybe DecoratedTxOut
 mkDecoratedTxOut a v md rs = let
   sc = cardanoStakingCredential a
   in case cardanoAddressCredential a of
-  (V2.PubKeyCredential c) -> Just (PublicKeyDecoratedTxOut c sc v md rs)
-  (V2.ScriptCredential c) -> (\dt -> ScriptDecoratedTxOut c sc v dt rs Nothing) <$> md
+  (V2.PubKeyCredential c)                 -> Just (PublicKeyDecoratedTxOut c sc v md rs)
+  (V2.ScriptCredential (V2.ScriptHash c)) -> (\dt -> ScriptDecoratedTxOut (ValidatorHash c) sc v dt rs Nothing) <$> md
 
 mkPubkeyDecoratedTxOut
-    :: CardanoAddress -> C.Value -> Maybe (V2.DatumHash, DatumFromQuery) -> Maybe (Versioned V1.Script)
+    :: CardanoAddress -> C.Value -> Maybe (V2.DatumHash, DatumFromQuery) -> Maybe (Versioned Script)
     -> Maybe DecoratedTxOut
 mkPubkeyDecoratedTxOut a v dat rs = let
   sc = cardanoStakingCredential a
@@ -189,20 +188,20 @@ mkScriptDecoratedTxOut
     :: CardanoAddress
     -> C.Value
     -> (V2.DatumHash, DatumFromQuery)
-    -> Maybe (Versioned V1.Script)
-    -> Maybe (Versioned V1.Validator)
+    -> Maybe (Versioned Script)
+    -> Maybe (Versioned Validator)
     -> Maybe DecoratedTxOut
 mkScriptDecoratedTxOut a v dat rs val = let
   sc = cardanoStakingCredential a
   in case cardanoAddressCredential a of
-  (V2.ScriptCredential c) -> pure $ ScriptDecoratedTxOut c sc v dat rs val
-  _                       -> Nothing
+  (V2.ScriptCredential (V2.ScriptHash c)) -> pure $ ScriptDecoratedTxOut (ValidatorHash c) sc v dat rs val
+  _                                       -> Nothing
 
 _decoratedTxOutAddress :: DecoratedTxOut -> Address
 _decoratedTxOutAddress PublicKeyDecoratedTxOut{_decoratedTxOutPubKeyHash, _decoratedTxOutStakingCredential} =
     V1.Address (V1.PubKeyCredential _decoratedTxOutPubKeyHash) _decoratedTxOutStakingCredential
 _decoratedTxOutAddress ScriptDecoratedTxOut{_decoratedTxOutValidatorHash, _decoratedTxOutStakingCredential} =
-    V1.Address (V1.ScriptCredential _decoratedTxOutValidatorHash) _decoratedTxOutStakingCredential
+    V1.Address (V1.ScriptCredential (V2.ScriptHash (getValidatorHash _decoratedTxOutValidatorHash))) _decoratedTxOutStakingCredential
 
 decoratedTxOutAddress :: Getter DecoratedTxOut Address
 decoratedTxOutAddress = to _decoratedTxOutAddress
@@ -223,9 +222,9 @@ toDecoratedTxOut (TxOut (C.TxOut addr' val dt rs)) =
     toDecoratedDatum (C.TxOutDatumHash _ h) =
       Just (V2.DatumHash $ V2.toBuiltin (C.serialiseToRawBytes h), DatumUnknown)
     toDecoratedDatum (C.TxOutDatumInTx _ d) =
-      Just (V2.DatumHash $ V2.toBuiltin (C.serialiseToRawBytes (C.hashScriptData d)), DatumInBody $ V2.Datum $ CardanoAPI.fromCardanoScriptData d)
+      Just (V2.DatumHash $ V2.toBuiltin (C.serialiseToRawBytes (C.hashScriptDataBytes d)), DatumInBody $ V2.Datum $ CardanoAPI.fromCardanoScriptData d)
     toDecoratedDatum (C.TxOutDatumInline _ d) =
-      Just (V2.DatumHash $ V2.toBuiltin (C.serialiseToRawBytes (C.hashScriptData d)), DatumInline $ V2.Datum $ CardanoAPI.fromCardanoScriptData d)
+      Just (V2.DatumHash $ V2.toBuiltin (C.serialiseToRawBytes (C.hashScriptDataBytes d)), DatumInline $ V2.Datum $ CardanoAPI.fromCardanoScriptData d)
 
 toTxOut :: C.NetworkId -> DecoratedTxOut -> Either ToCardanoError TxOut
 toTxOut networkId p =
@@ -293,7 +292,7 @@ instance Pretty CardanoTx where
         in nest 2 $ vsep ["Tx" <+> pretty (getCardanoTxId tx) <> colon, vsep lines']
 
 instance Pretty CardanoAPI.CardanoBuildTx where
-  pretty txBodyContent = case C.makeSignedTransaction [] <$> CardanoAPI.makeTransactionBody Nothing mempty txBodyContent of
+  pretty txBodyContent = case C.makeSignedTransaction [] <$> CardanoAPI.makeTransactionBody txBodyContent of
     Right tx -> pretty $ CardanoEmulatorEraTx tx
     _        -> viaShow txBodyContent
 
@@ -402,8 +401,8 @@ addCardanoTxSignature privKey = addSignatureCardano
         addSignatureCardano (CardanoEmulatorEraTx ctx)
             = CardanoEmulatorEraTx (addSignatureCardano' ctx)
 
-        addSignatureCardano' (C.Api.ShelleyTx shelleyBasedEra (ValidatedTx body wits isValid aux))
-            = C.Api.ShelleyTx shelleyBasedEra (ValidatedTx body wits' isValid aux)
+        addSignatureCardano' (C.Api.ShelleyTx shelleyBasedEra (AlonzoTx body wits isValid aux))
+            = C.Api.ShelleyTx shelleyBasedEra (AlonzoTx body wits' isValid aux)
           where
             wits' = wits <> mempty { txwitsVKey = newWits }
             newWits = case fromPaymentPrivateKey privKey body of

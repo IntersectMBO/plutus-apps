@@ -40,11 +40,9 @@ import Data.List (partition)
 import Data.Maybe (isJust)
 import Data.Monoid (All (All, getAll))
 import Data.Ratio (denominator, numerator)
-import Ledger.Scripts (Language (..), MintingPolicy (MintingPolicy), Versioned (..))
+import Ledger.Scripts (MintingPolicy (..), Versioned (..), withCardanoApiScript)
 import Ledger.Tx.CardanoAPI.Internal (adaToCardanoValue, fromCardanoAssetId, fromCardanoValue, toCardanoAssetId,
                                       toCardanoValue)
-import Plutus.Script.Utils.V1.Scripts qualified as PV1
-import Plutus.Script.Utils.V2.Scripts qualified as PV2
 import PlutusTx.Lattice (JoinSemiLattice (..))
 
 lovelaceToValue :: C.Lovelace -> C.Value
@@ -83,8 +81,7 @@ split :: C.Value -> (C.Value, C.Value)
 split = bimap (C.negateValue . C.valueFromList) C.valueFromList . partition ((< 0) . snd) . C.valueToList
 
 policyId :: Versioned MintingPolicy -> C.PolicyId
-policyId (Versioned (MintingPolicy mp) PlutusV1) = C.scriptPolicyId (PV1.toCardanoApiScript mp)
-policyId (Versioned (MintingPolicy mp) PlutusV2) = C.scriptPolicyId (PV2.toCardanoApiScript mp)
+policyId = withCardanoApiScript C.scriptPolicyId . fmap getMintingPolicy
 
 combine :: Monoid m => (C.AssetId -> C.Quantity -> C.Quantity -> m) -> C.Value -> C.Value -> m
 combine f v1 v2 = merge (C.valueToList v1) (C.valueToList v2)
