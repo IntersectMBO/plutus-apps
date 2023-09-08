@@ -68,7 +68,6 @@ allow-newer:
 
 allow-older:
   strict-containers:binary,containers
-  , marconi-chain-index:*
 
 constraints:
   dependent-sum-template >= 0.2
@@ -154,3 +153,12 @@ source-repository-package
     subdir:
       command-line
       core
+
+source-repository-package
+    type: git
+    location: https://github.com/input-output-hk/quickcheck-contractmodel
+    tag: 40f645223bc0ec69fa15c8d5c92eea6e76877199
+    --sha256: sha256-PrIFKBAXXX/fD3MGqqFCtArzD2xF1wJtCVB62LjZHHI=
+    subdir:
+      quickcheck-contractmodel
+      quickcheck-threatmodel
