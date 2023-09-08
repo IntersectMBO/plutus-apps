@@ -74,6 +74,8 @@ library
     Control.Concurrent.Availability
     Control.Concurrent.STM.Extras
     Control.Concurrent.STM.Extras.Stream
+    Marconi.Core.Index.VSplit
+    Marconi.Core.Index.VSqlite
     Plutus.PAB.App
     Plutus.PAB.Arbitrary
     Plutus.PAB.Core
@@ -122,7 +124,6 @@ library
     , cardano-node-emulator         >=1.2.0
     , cardano-node-socket-emulator  >=1.2.0
     , freer-extras                  >=1.2.0
-    , marconi-core                  >=1.2.0
     , pab-blockfrost                >=1.2.0
     , plutus-chain-index            >=1.2.0
     , plutus-chain-index-core       >=1.2.0

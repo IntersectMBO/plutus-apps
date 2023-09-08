@@ -39,8 +39,6 @@ import Plutus.ChainIndex.UtxoState qualified as UtxoState
 import Test.Tasty
 import Test.Tasty.Hedgehog (testPropertyNamed)
 
-import Plutus.ChainIndex.MarconiSpec qualified as Marconi
-
 main :: IO ()
 main = defaultMain tests
 
@@ -50,7 +48,6 @@ tests =
     [ testGroup "tx out balance" txOutBalanceTests
     , testGroup "utxo balance" utxoBalanceTests
     , testGroup "txidstate" txIdStateTests
-    , Marconi.tests
     , testPropertyNamed "lift tx output status to tx status" "txOutStatusTxStatusProp" txOutStatusTxStatusProp
     , testPropertyNamed "tx output status" "txOutStatusSpentUnspentProp" txOutStatusSpentUnspentProp
     , DiskStateSpec.tests
