@@ -79,8 +79,8 @@ import Data.Maybe (fromMaybe, isNothing)
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.String (fromString)
-import GHC.Stack (HasCallStack)
 import Gen.Cardano.Api.Typed qualified as Gen
+import GHC.Stack (HasCallStack)
 import Hedgehog (Gen, MonadGen, MonadTest, Range)
 import Hedgehog qualified as H
 import Hedgehog.Gen qualified as Gen

@@ -17,9 +17,9 @@ import Cardano.BM.Data.Severity (Severity (Notice))
 import Cardano.BM.Data.Tracer (HasPrivacyAnnotation, HasSeverityAnnotation)
 import Cardano.BM.Plugin (loadPlugin)
 import Cardano.BM.Tracing (HasSeverityAnnotation (getSeverityAnnotation), Severity (Debug, Info))
+import Cardano.ChainIndex.Types qualified as PAB.CI
 import Cardano.CLI (LogOutput (LogToFile, LogToStdStreams), Port, ekgEnabled, getEKGURL, getPrometheusURL,
                     withLoggingNamed)
-import Cardano.ChainIndex.Types qualified as PAB.CI
 import Cardano.Launcher.Node (nodeSocketFile)
 import Cardano.Mnemonic (SomeMnemonic (SomeMnemonic))
 import Cardano.Node.Emulator.Internal.Node (SlotConfig (SlotConfig))

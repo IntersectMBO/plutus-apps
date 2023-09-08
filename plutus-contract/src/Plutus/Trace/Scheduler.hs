@@ -58,11 +58,11 @@ import Control.Monad.Freer.Coroutine
 import Control.Monad.Freer.Extras.Log (LogMsg, logDebug)
 import Control.Monad.Freer.Reader
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Hashable (Hashable)
 import Data.HashMap.Strict (HashMap)
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet (HashSet)
 import Data.HashSet qualified as HashSet
-import Data.Hashable (Hashable)
 import Data.Map as Map
 import Data.Sequence (Seq (..))
 import Data.Sequence qualified as Seq

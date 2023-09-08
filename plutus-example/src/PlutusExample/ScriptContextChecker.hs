@@ -31,8 +31,8 @@ import GHC.Records (HasField (..))
 
 import Cardano.CLI.Shelley.Run.Query
 import Cardano.Ledger.Alonzo qualified as Alonzo
-import Cardano.Ledger.Alonzo.PParams qualified as Alonzo
 import Cardano.Ledger.Alonzo.PlutusScriptApi qualified as Alonzo
+import Cardano.Ledger.Alonzo.PParams qualified as Alonzo
 import Cardano.Ledger.Alonzo.Tx qualified as Alonzo
 import Cardano.Ledger.Alonzo.TxInfo qualified as Alonzo
 import Cardano.Ledger.Alonzo.TxWitness qualified as Alonzo
