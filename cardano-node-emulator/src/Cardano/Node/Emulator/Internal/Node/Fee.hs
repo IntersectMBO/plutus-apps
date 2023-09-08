@@ -19,10 +19,8 @@ module Cardano.Node.Emulator.Internal.Node.Fee(
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
 import Cardano.Api.Shelley qualified as C.Api
-import Cardano.Ledger.BaseTypes (Globals (systemStart))
-import Cardano.Ledger.Core qualified as C.Ledger (Tx)
-import Cardano.Ledger.Shelley.API qualified as C.Ledger hiding (Tx)
-import Cardano.Node.Emulator.Internal.Node.Params (EmulatorEra, PParams, Params (emulatorPParams), emulatorEraHistory,
+import Cardano.Ledger.BaseTypes (Globals (systemStart), epochInfo)
+import Cardano.Node.Emulator.Internal.Node.Params (EmulatorEra, Params (emulatorPParams), bundledProtocolParameters,
                                                    emulatorGlobals, pProtocolParams)
 import Cardano.Node.Emulator.Internal.Node.Validation (CardanoLedgerError, UTxO (UTxO), makeTransactionBody)
 import Control.Arrow ((&&&))
@@ -40,20 +38,19 @@ import Ledger.Index (UtxoIndex, ValidationError (MaxCollateralInputsExceeded, Tx
                      ValidationPhase (Phase1), adjustTxOut, minAdaTxOutEstimated)
 import Ledger.Tx (ToCardanoError (TxBodyError), TxOut)
 import Ledger.Tx qualified as Tx
-import Ledger.Tx.CardanoAPI (CardanoBuildTx (CardanoBuildTx), fromPlutusIndex, getCardanoBuildTx, toCardanoFee,
+import Ledger.Tx.CardanoAPI (CardanoBuildTx (CardanoBuildTx), getCardanoBuildTx, toCardanoFee,
                              toCardanoReturnCollateral, toCardanoTotalCollateral)
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
 import Ledger.Value.CardanoAPI (isZero, lovelaceToValue, split, valueGeq)
 
 estimateCardanoBuildTxFee
   :: Params
-  -> UTxO EmulatorEra
   -> CardanoBuildTx
   -> Either CardanoLedgerError C.Lovelace
-estimateCardanoBuildTxFee params utxo txBodyContent = do
+estimateCardanoBuildTxFee params txBodyContent = do
   let nkeys = C.Api.estimateTransactionKeyWitnessCount (getCardanoBuildTx txBodyContent)
-  txBody <- makeTransactionBody params utxo txBodyContent
-  pure $ evaluateTransactionFee (emulatorPParams params) txBody nkeys
+  txBody <- makeTransactionBody txBodyContent
+  pure $ evaluateTransactionFee (bundledProtocolParameters params) txBody nkeys
 
 -- | Creates a balanced transaction by calculating the execution units, the fees and the change,
 -- which is assigned to the given address. Only balances Ada.
@@ -65,7 +62,7 @@ makeAutoBalancedTransaction
   -> Either CardanoLedgerError (C.Api.Tx C.Api.BabbageEra)
 makeAutoBalancedTransaction params utxo (CardanoBuildTx txBodyContent) cChangeAddr = first Right $ do
   -- Compute the change.
-  C.Api.BalancedTxBody _ change _ <- first (TxBodyError . C.Api.displayError) $ balance []
+  C.Api.BalancedTxBody _ _ change _ <- first (TxBodyError . C.Api.displayError) $ balance []
   let
     -- Recompute execution units with full set of UTxOs, including change.
     trial = balance [change]
@@ -76,17 +73,18 @@ makeAutoBalancedTransaction params utxo (CardanoBuildTx txBodyContent) cChangeAd
           C.Api.TxOut addr (C.Api.TxOutValue vtype $ value <> lovelaceToValue delta) datum _referenceScript
         _ -> change
   -- Construct the body with correct execution units and fees.
-  C.Api.BalancedTxBody txBody _ _ <- first (TxBodyError . C.Api.displayError) $ balance [change']
+  C.Api.BalancedTxBody _ txBody _ _ <- first (TxBodyError . C.Api.displayError) $ balance [change']
   pure $ C.Api.makeSignedTransaction [] txBody
   where
-    eh = emulatorEraHistory params
-    ss = systemStart $ emulatorGlobals params
+    globals = emulatorGlobals params
+    ei = C.Api.LedgerEpochInfo $ epochInfo globals
+    ss = systemStart globals
     utxo' = fromLedgerUTxO utxo
     balance extraOuts = C.Api.makeTransactionBodyAutoBalance
-      C.Api.BabbageEraInCardanoMode
       ss
-      eh
+      ei
       (pProtocolParams params)
+      mempty
       mempty
       utxo'
       txBodyContent { C.Api.txOuts = C.Api.txOuts txBodyContent ++ extraOuts }
@@ -117,11 +115,10 @@ makeAutoBalancedTransactionWithUtxoProvider params txUtxo cChangeAddr utxoProvid
 
         calcFee n fee = do
 
-            (txBodyContent, extraUtxos) <- handleBalanceTx params txUtxo cChangeAddr utxoProvider errorReporter fee unbalancedBodyContent
+            (txBodyContent, _) <- handleBalanceTx params txUtxo cChangeAddr utxoProvider errorReporter fee unbalancedBodyContent
 
             newFee <- either errorReporter pure $ do
-                let cUtxo = fromPlutusIndex $ txUtxo <> extraUtxos
-                estimateCardanoBuildTxFee params cUtxo (CardanoBuildTx txBodyContent)
+                estimateCardanoBuildTxFee params (CardanoBuildTx txBodyContent)
 
             if newFee /= fee
                 then if n == (0 :: Int)
@@ -132,11 +129,10 @@ makeAutoBalancedTransactionWithUtxoProvider params txUtxo cChangeAddr utxoProvid
 
     theFee <- calcFee 5 initialFeeEstimate
 
-    (txBodyContent, extraUtxos) <- handleBalanceTx params txUtxo cChangeAddr utxoProvider errorReporter theFee unbalancedBodyContent
+    (txBodyContent, _) <- handleBalanceTx params txUtxo cChangeAddr utxoProvider errorReporter theFee unbalancedBodyContent
 
     either errorReporter pure $ do
-        let cUtxo = fromPlutusIndex $ txUtxo <> extraUtxos
-        C.makeSignedTransaction [] <$> makeTransactionBody params cUtxo (CardanoBuildTx txBodyContent)
+        C.makeSignedTransaction [] <$> makeTransactionBody (CardanoBuildTx txBodyContent)
 
 -- | Balance an unbalanced transaction by adding missing inputs and outputs
 handleBalanceTx
@@ -351,9 +347,5 @@ fromLedgerUTxO (UTxO utxo) =
   $ utxo
 
 -- Adapted from cardano-api Cardano.API.Fee to avoid PParams conversion
-evaluateTransactionFee :: PParams -> C.Api.TxBody C.Api.BabbageEra -> Word -> C.Api.Lovelace
-evaluateTransactionFee pparams txbody keywitcount = case C.Api.makeSignedTransaction [] txbody of
-      C.Api.ShelleyTx _  tx -> evalShelleyBasedEra tx
-  where
-    evalShelleyBasedEra :: C.Ledger.Tx (C.Api.ShelleyLedgerEra C.Api.BabbageEra) -> C.Api.Lovelace
-    evalShelleyBasedEra tx = C.Api.fromShelleyLovelace $ C.Ledger.evaluateTransactionFee pparams tx keywitcount
+evaluateTransactionFee :: C.BundledProtocolParameters C.Api.BabbageEra -> C.Api.TxBody C.Api.BabbageEra -> Word -> C.Api.Lovelace
+evaluateTransactionFee params txbody keywitcount = C.evaluateTransactionFee params txbody keywitcount 0

@@ -79,7 +79,6 @@ import Data.Maybe (fromMaybe, isNothing)
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.String (fromString)
-import Gen.Cardano.Api.Typed qualified as Gen
 import GHC.Stack (HasCallStack)
 import Hedgehog (Gen, MonadGen, MonadTest, Range)
 import Hedgehog qualified as H
@@ -91,15 +90,16 @@ import Ledger (CardanoTx (CardanoEmulatorEraTx), Interval, MintingPolicy (getMin
                ValidationErrorInPhase, ValidationPhase (Phase1, Phase2), ValidationResult (FailPhase1, FailPhase2),
                addCardanoTxSignature, createGenesisTransaction, minLovelaceTxOutEstimated, pubKeyAddress, txOutValue)
 import Ledger.CardanoWallet qualified as CW
+import Ledger.Scripts qualified as Script
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI (ToCardanoError, fromCardanoPlutusScript)
 import Ledger.Tx.CardanoAPI qualified as C hiding (makeTransactionBody)
 import Ledger.Value.CardanoAPI qualified as Value
 import Numeric.Natural (Natural)
-import Plutus.V1.Ledger.Api qualified as V1
-import Plutus.V1.Ledger.Interval qualified as Interval
-import Plutus.V1.Ledger.Scripts qualified as Script
+import PlutusLedgerApi.V1 qualified as V1
+import PlutusLedgerApi.V1.Interval qualified as Interval
 import PlutusTx (toData)
+import Test.Gen.Cardano.Api.Typed qualified as Gen
 
 -- | Attach signatures of all known private keys to a transaction.
 signAll :: CardanoTx -> CardanoTx
@@ -222,7 +222,7 @@ makeTx
     => C.TxBodyContent C.BuildTx C.BabbageEra
     -> m CardanoTx
 makeTx bodyContent = do
-    txBody <- either (fail . ("makeTx: Can't create TxBody: " <>) . show) pure $ C.makeTransactionBody bodyContent
+    txBody <- either (fail . ("makeTx: Can't create TxBody: " <>) . show) pure $ C.createAndValidateTransactionBody bodyContent
     pure $ signAll $ CardanoEmulatorEraTx $ C.Tx txBody []
 
 -- | Generate a valid transaction, using the unspent outputs provided.
@@ -278,7 +278,7 @@ genValidTransactionBodySpending' g ins totalVal = do
                                                   (C.AsPlutusScript C.AsPlutusScriptV2)
                                                   (getMintingPolicy alwaysSucceedPolicy))
                            <*> pure C.NoScriptDatumForMint
-                           <*> pure (C.fromPlutusData $ toData Script.unitRedeemer)
+                           <*> pure (C.unsafeHashableScriptData $ C.fromPlutusData $ toData Script.unitRedeemer)
                            <*> pure C.zeroExecutionUnits
     let txMintValue = C.TxMintValue C.MultiAssetInBabbageEra (fromMaybe mempty mintValue)
                           (C.BuildTxWith (Map.singleton alwaysSucceedPolicyId mintWitness))

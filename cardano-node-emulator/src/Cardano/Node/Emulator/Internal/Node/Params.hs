@@ -5,14 +5,16 @@
 {-# LANGUAGE RecordWildCards    #-}
 {-# LANGUAGE TemplateHaskell    #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE TupleSections      #-}
 -- | The set of parameters, like protocol parameters and slot configuration.
 module Cardano.Node.Emulator.Internal.Node.Params (
   Params(..),
   paramsWithProtocolsParameters,
   slotConfigL,
   emulatorPParamsL,
-  pParamsFromProtocolParams,
   pProtocolParams,
+  pParamsFromProtocolParams,
+  bundledProtocolParameters,
   protocolParamsL,
   networkIdL,
   increaseTransactionLimits,
@@ -30,10 +32,12 @@ module Cardano.Node.Emulator.Internal.Node.Params (
 
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
+import Cardano.Ledger.Alonzo.PParams qualified as C
+import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
 import Cardano.Ledger.Babbage (BabbageEra)
-import Cardano.Ledger.Babbage.PParams (retractPP)
 import Cardano.Ledger.Babbage.PParams qualified as C
 import Cardano.Ledger.BaseTypes (boundRational)
+import Cardano.Ledger.Core qualified as C
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Shelley.API (Coin (Coin), Globals, ShelleyGenesis, mkShelleyGlobals)
 import Cardano.Ledger.Shelley.API qualified as C.Ledger
@@ -47,17 +51,18 @@ import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), Value (Object), (.:), 
 import Data.Aeson qualified as JSON
 import Data.Aeson.Types (prependFailure, typeMismatch)
 import Data.Default (Default (def))
-import Data.Map (fromList)
-import Data.Maybe (fromMaybe)
+import Data.Map qualified as Map
+import Data.Maybe (fromJust, fromMaybe)
 import Data.Ratio ((%))
+import Data.SOP.Counting qualified as Ouroboros
 import Data.SOP.Strict (K (K), NP (Nil, (:*)))
 import GHC.Generics (Generic)
 import GHC.Natural (Natural)
 import Ledger.Test (testnet)
 import Ouroboros.Consensus.HardFork.History qualified as Ouroboros
-import Ouroboros.Consensus.Util.Counting qualified as Ouroboros
-import Plutus.V1.Ledger.Api (POSIXTime (POSIXTime))
-import PlutusCore (defaultCostModelParams)
+import Plutus.Script.Utils.Scripts (Language (PlutusV3))
+import PlutusCore.Evaluation.Machine.ExBudgetingDefaults (defaultCostModelParams)
+import PlutusLedgerApi.V1 (POSIXTime (POSIXTime))
 import Prettyprinter (Pretty (pretty), viaShow, vsep, (<+>))
 
 -- | The default era for the emulator
@@ -94,7 +99,13 @@ pProtocolParams :: Params -> C.ProtocolParameters
 pProtocolParams p = C.fromLedgerPParams C.ShelleyBasedEraBabbage $ emulatorPParams p
 
 pParamsFromProtocolParams :: C.ProtocolParameters -> PParams
-pParamsFromProtocolParams = C.toLedgerPParams C.ShelleyBasedEraBabbage
+pParamsFromProtocolParams = either (error . show) id . C.toLedgerPParams C.ShelleyBasedEraBabbage
+
+bundledProtocolParameters :: Params -> C.BundledProtocolParameters C.BabbageEra
+bundledProtocolParameters params = C.BundleAsShelleyBasedProtocolParameters
+  C.ShelleyBasedEraBabbage
+  (pProtocolParams params)
+  (emulatorPParams params)
 
 paramsWithProtocolsParameters :: SlotConfig -> C.ProtocolParameters -> C.NetworkId -> Params
 paramsWithProtocolsParameters sc p = Params sc (pParamsFromProtocolParams p)
@@ -114,7 +125,7 @@ instance ToJSON Params where
 instance FromJSON Params where
   parseJSON (Object v) = Params
     <$> (v .: "pSlotConfig" >>= parseJSON)
-    <*> (C.toLedgerPParams C.ShelleyBasedEraBabbage <$> (v .: "pProtocolParams" >>= parseJSON))
+    <*> (pParamsFromProtocolParams <$> (v .: "pProtocolParams" >>= parseJSON))
     <*> (v .: "pNetworkId" >>= parseJSON)
   parseJSON _ = fail "Can't parse a Param"
 
@@ -163,9 +174,10 @@ instance Default C.ProtocolParameters where
     , protocolParamMonetaryExpansion = 3 % 1000
     , protocolParamTreasuryCut = 1 % 5
     , protocolParamUTxOCostPerWord = Nothing -- Obsolete from babbage onwards
-    , protocolParamCostModels = fromList
-      [ (C.AnyPlutusScriptVersion C.PlutusScriptV1, C.CostModel $ fromMaybe (error "Ledger.Params: defaultCostModelParams is broken") defaultCostModelParams)
-      , (C.AnyPlutusScriptVersion C.PlutusScriptV2, C.CostModel $ fromMaybe (error "Ledger.Params: defaultCostModelParams is broken") defaultCostModelParams) ]
+    , protocolParamCostModels =
+        let costModel = fromJust $ defaultCostModelParams >>= Alonzo.costModelFromMap PlutusV3
+            costModels = Map.fromList $ map (, costModel) [minBound .. maxBound]
+        in C.fromAlonzoCostModels $ Alonzo.CostModels costModels mempty mempty
     , protocolParamPrices = Just (C.ExecutionUnitPrices {priceExecutionSteps = 721 % 10000000, priceExecutionMemory = 577 % 10000})
     , protocolParamMaxTxExUnits = Just (C.ExecutionUnits {executionSteps = 10000000000, executionMemory = 14000000})
     , protocolParamMaxBlockExUnits = Just (C.ExecutionUnits {executionSteps = 40000000000, executionMemory = 62000000})
@@ -192,14 +204,18 @@ emulatorGlobals :: Params -> Globals
 emulatorGlobals params = mkShelleyGlobals
   (genesisDefaultsFromParams params)
   (fixedEpochInfo emulatorEpochSize (slotLength params))
-  (fst $ C.protocolParamProtocolVersion $ pProtocolParams params)
+  (toEnum $ fromIntegral $ fst $ C.protocolParamProtocolVersion $ pProtocolParams params)
 
-genesisDefaultsFromParams :: Params -> ShelleyGenesis EmulatorEra
+genesisDefaultsFromParams :: Params -> ShelleyGenesis StandardCrypto
 genesisDefaultsFromParams params@Params { pSlotConfig, pNetworkId } = C.shelleyGenesisDefaults
   { C.sgSystemStart = posixTimeToUTCTime $ scSlotZeroTime pSlotConfig
   , C.sgNetworkMagic = case pNetworkId of C.Testnet (C.NetworkMagic nm) -> nm; _ -> 0
   , C.sgNetworkId = case pNetworkId of C.Testnet _ -> C.Ledger.Testnet; C.Mainnet -> C.Ledger.Mainnet
-  , C.sgProtocolParams = retractPP (Coin 0) d C.Ledger.NeutralNonce $ emulatorPParams params
+  , C.sgProtocolParams =  emulatorPParams params
+      & C.downgradePParams (C.DowngradeBabbagePParams d C.Ledger.NeutralNonce)
+      & C.downgradePParams (C.DowngradeAlonzoPParams (Coin 0))
+      & C.downgradePParams ()
+      & C.downgradePParams ()
   }
   where
     d = fromMaybe (error "3 % 5 should be valid UnitInterval") $ boundRational (3 % 5)
@@ -209,4 +225,4 @@ emulatorEraHistory :: Params -> C.EraHistory C.CardanoMode
 emulatorEraHistory params = C.EraHistory C.CardanoMode (Ouroboros.mkInterpreter $ Ouroboros.summaryWithExactly list)
   where
     one = Ouroboros.nonEmptyHead $ Ouroboros.getSummary $ Ouroboros.neverForksSummary emulatorEpochSize (slotLength params)
-    list = Ouroboros.Exactly $ K one :* K one :* K one :* K one :* K one :* K one :* Nil
+    list = Ouroboros.Exactly $ K one :* K one :* K one :* K one :* K one :* K one :* K one :* Nil
