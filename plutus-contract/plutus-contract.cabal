@@ -196,11 +196,6 @@ library
   if !((impl(ghcjs) || os(ghcjs)) || os(windows))
     exposed-modules:
       Plutus.Contract.Test
-      Plutus.Contract.Test.ContractModel
-      Plutus.Contract.Test.ContractModel.CrashTolerance
-      Plutus.Contract.Test.ContractModel.DoubleSatisfaction
-      Plutus.Contract.Test.ContractModel.Internal
-      Plutus.Contract.Test.ContractModel.Symbolics
       Plutus.Contract.Test.Coverage
       Plutus.Contract.Test.Coverage.Analysis
       Plutus.Contract.Test.Coverage.Analysis.Common
@@ -241,7 +236,6 @@ test-suite plutus-contract-test
     Spec.Contract
     Spec.Contract.TxConstraints
     Spec.Emulator
-    Spec.ErrorChecking
     Spec.Plutus.Contract.Oracle
     Spec.Plutus.Contract.Wallet
     Spec.Rows
