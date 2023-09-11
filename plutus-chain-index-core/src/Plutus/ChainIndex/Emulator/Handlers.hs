@@ -56,11 +56,10 @@ import Plutus.ChainIndex.Types (ChainIndexTx, ChainIndexTxOut (..), ChainSyncBlo
                                 fromReferenceScript)
 import Plutus.ChainIndex.UtxoState (InsertUtxoSuccess (..), RollbackResult (..), UtxoIndex, tip, utxoState)
 import Plutus.ChainIndex.UtxoState qualified as UtxoState
-import Plutus.Script.Utils.Scripts (datumHash)
-import PlutusLedgerApi.V1 (Credential (PubKeyCredential, ScriptCredential), Datum, DatumHash,
-                           MintingPolicy (MintingPolicy), MintingPolicyHash (MintingPolicyHash), Script,
-                           StakeValidator (StakeValidator), StakeValidatorHash (StakeValidatorHash), TxId,
-                           Validator (Validator), ValidatorHash (ValidatorHash))
+import Plutus.Script.Utils.Scripts (MintingPolicy (MintingPolicy), MintingPolicyHash (MintingPolicyHash), Script,
+                                    StakeValidator (StakeValidator), StakeValidatorHash (StakeValidatorHash),
+                                    Validator (Validator), ValidatorHash (ValidatorHash), datumHash)
+import PlutusLedgerApi.V1 (Credential (PubKeyCredential, ScriptCredential), Datum, DatumHash, TxId)
 import PlutusLedgerApi.V2 (OutputDatum (..))
 
 data ChainIndexEmulatorState =
@@ -146,7 +145,7 @@ makeChainIndexTxOut txout@(ChainIndexTxOut address value datum refScript) = do
   -- We need to handle them differently.
   case cardanoAddressCredential $ citoAddress txout of
     PubKeyCredential _ -> pure $ L.mkPubkeyDecoratedTxOut address value datumWithHash script
-    ScriptCredential (ValidatorHash h) -> do
+    ScriptCredential (ScriptHash h) -> do
       case datumWithHash of
         Just d -> do
           v <- getScriptFromHash (ScriptHash h)

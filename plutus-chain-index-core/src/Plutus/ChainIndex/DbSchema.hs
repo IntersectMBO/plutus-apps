@@ -29,7 +29,7 @@ import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as BSL
 import Data.Coerce (coerce)
 import Data.Either (fromRight)
-import Data.Kind (Constraint)
+import Data.Kind (Constraint, Type)
 import Data.Semigroup.Generic (GenericSemigroupMonoid (..))
 import Data.Word (Word64)
 import Database.Beam (Beamable, Columnar, Database, DatabaseSettings, FromBackendRow, Generic, Identity, Table (..),
@@ -37,14 +37,14 @@ import Database.Beam (Beamable, Columnar, Database, DatabaseSettings, FromBacken
 import Database.Beam.Migrate (CheckedDatabaseSettings, defaultMigratableDbSettings, renameCheckedEntity,
                               unCheckDatabase)
 import Database.Beam.Sqlite (Sqlite)
-import Ledger (BlockId (..), DecoratedTxOut (..), Slot, Versioned)
+import Ledger (BlockId (..), Credential, Datum, DatumHash (..), DecoratedTxOut (..), MintingPolicy,
+               MintingPolicyHash (..), Redeemer, RedeemerHash (..), Script, Slot, StakeValidator,
+               StakeValidatorHash (..), TxOutRef (..), Validator, ValidatorHash (..), Versioned)
 import Plutus.ChainIndex.Tx (ChainIndexTx)
 import Plutus.ChainIndex.Tx qualified as CI
 import Plutus.ChainIndex.Types (BlockNumber (..), Tip (..))
 
-import PlutusLedgerApi.V1 (Credential, Datum, DatumHash (..), MintingPolicy, MintingPolicyHash (..), Redeemer,
-                           RedeemerHash (..), Script, StakeValidator, StakeValidatorHash (..), TxId (..), TxOutRef (..),
-                           Validator, ValidatorHash (..))
+import PlutusLedgerApi.V1 (TxId (..))
 import PlutusLedgerApi.V1.Scripts (ScriptHash (..))
 import PlutusLedgerApi.V1.Value (AssetClass)
 import PlutusTx.Builtins qualified as PlutusTx
@@ -193,7 +193,7 @@ data Db f = Db
     , unmatchedInputRows :: f (TableEntity UnmatchedInputRowT)
     } deriving (Generic, Database be)
 
-type AllTables (c :: * -> Constraint) f =
+type AllTables (c :: Type -> Constraint) f =
     ( c (f (TableEntity DatumRowT))
     , c (f (TableEntity ScriptRowT))
     , c (f (TableEntity RedeemerRowT))

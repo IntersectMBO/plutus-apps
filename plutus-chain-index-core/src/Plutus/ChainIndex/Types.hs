@@ -91,16 +91,17 @@ import Data.Set qualified as Set
 import Data.Typeable (Proxy (Proxy), Typeable)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
-import Ledger (CardanoAddress, CardanoTx, Language, SlotRange, TxOutRef (..), Versioned, toPlutusAddress)
+import Ledger (CardanoAddress, CardanoTx, Language, Script, SlotRange, TxOutRef (..), Validator (Validator), Versioned,
+               toPlutusAddress)
 import Ledger.Blockchain (BlockId (..))
 import Ledger.Blockchain qualified as Ledger
 import Ledger.Slot (Slot (Slot))
 import Ledger.Tx.CardanoAPI (fromCardanoScriptInAnyLang)
 import PlutusCore.Data
-import PlutusLedgerApi.V1.Scripts (Datum (Datum), DatumHash (DatumHash), Script, ScriptHash (..))
+import PlutusLedgerApi.V1.Scripts (Datum (Datum), DatumHash (DatumHash), ScriptHash (..))
 import PlutusLedgerApi.V1.Tx (RedeemerPtr, Redeemers, ScriptTag, TxId (TxId))
 import PlutusLedgerApi.V2 (CurrencySymbol (CurrencySymbol), Extended, Interval (..), LowerBound, OutputDatum (..),
-                           Redeemer (Redeemer), TokenName (TokenName), UpperBound, Validator (Validator), Value (..))
+                           Redeemer (Redeemer), TokenName (TokenName), UpperBound, Value (..))
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins.Internal (BuiltinData (..))
 import PlutusTx.Lattice (MeetSemiLattice (..))
@@ -126,10 +127,10 @@ instance Serialise C.ScriptInAnyLang where
         let
             -- Since lang is a GADT we have to encode the script in all branches
             other = case lang of
-                C.SimpleScriptLanguage C.SimpleScriptV1 -> encodeWord 0 <> encode (C.serialiseToCBOR script)
-                C.SimpleScriptLanguage C.SimpleScriptV2 -> encodeWord 1 <> encode (C.serialiseToCBOR script)
-                C.PlutusScriptLanguage C.PlutusScriptV1 -> encodeWord 2 <> encode (C.serialiseToCBOR script)
-                C.PlutusScriptLanguage C.PlutusScriptV2 -> encodeWord 3 <> encode (C.serialiseToCBOR script)
+                C.SimpleScriptLanguage                  -> encodeWord 0 <> encode (C.serialiseToCBOR script)
+                C.PlutusScriptLanguage C.PlutusScriptV1 -> encodeWord 1 <> encode (C.serialiseToCBOR script)
+                C.PlutusScriptLanguage C.PlutusScriptV2 -> encodeWord 2 <> encode (C.serialiseToCBOR script)
+                C.PlutusScriptLanguage C.PlutusScriptV3 -> encodeWord 3 <> encode (C.serialiseToCBOR script)
         in encodeListLen 2 <> other
     decode = do
         len <- decodeListLen
@@ -137,17 +138,17 @@ instance Serialise C.ScriptInAnyLang where
         script <- decode
         case (len, langWord) of
             (2, 0) -> do
-                let decoded = either (error "Failed to deserialise AsSimpleScriptV1 from CBOR ") id (C.deserialiseFromCBOR (C.AsScript C.AsSimpleScriptV1) script)
-                pure $ C.ScriptInAnyLang (C.SimpleScriptLanguage C.SimpleScriptV1) decoded
+                let decoded = either (error "Failed to deserialise AsSimpleScriptV1 from CBOR ") id (C.deserialiseFromCBOR (C.AsScript C.AsSimpleScript) script)
+                pure $ C.ScriptInAnyLang C.SimpleScriptLanguage decoded
             (2, 1) -> do
-                let decoded = either (error "Failed to deserialise AsSimpleScriptV2 from CBOR ") id (C.deserialiseFromCBOR (C.AsScript C.AsSimpleScriptV2) script)
-                pure $ C.ScriptInAnyLang (C.SimpleScriptLanguage C.SimpleScriptV2) decoded
-            (2, 2) -> do
                 let decoded = either (error "Failed to deserialise AsPlutusScriptV1 from CBOR ") id (C.deserialiseFromCBOR (C.AsScript C.AsPlutusScriptV1) script)
                 pure $ C.ScriptInAnyLang (C.PlutusScriptLanguage C.PlutusScriptV1) decoded
-            (2, 3) -> do
+            (2, 2) -> do
                 let decoded = either (error "Failed to deserialise AsPlutusScriptV2 from CBOR ") id (C.deserialiseFromCBOR (C.AsScript C.AsPlutusScriptV2) script)
                 pure $ C.ScriptInAnyLang (C.PlutusScriptLanguage C.PlutusScriptV2) decoded
+            (2, 3) -> do
+                let decoded = either (error "Failed to deserialise AsPlutusScriptV3 from CBOR ") id (C.deserialiseFromCBOR (C.AsScript C.AsPlutusScriptV3) script)
+                pure $ C.ScriptInAnyLang (C.PlutusScriptLanguage C.PlutusScriptV3) decoded
             _ -> fail "Invalid ScriptInAnyLang encoding"
 
 instance OpenApi.ToSchema C.ScriptInAnyLang where
@@ -237,8 +238,6 @@ data ChainIndexTxOutputs =
   | ValidTx [ChainIndexTxOut]
   deriving (Show, Eq, Generic, ToJSON, FromJSON, Serialise, OpenApi.ToSchema)
 
-makePrisms ''ChainIndexTxOutputs
-
 chainIndexTxOutputs :: Traversal' ChainIndexTxOutputs ChainIndexTxOut
 chainIndexTxOutputs = traversal go
   where
@@ -299,7 +298,6 @@ data ChainIndexTx = ChainIndexTx {
     -- are in the emulator.
     } deriving (Show, Eq, Generic, ToJSON, FromJSON, Serialise, OpenApi.ToSchema)
 
-makeLenses ''ChainIndexTx
 
 instance Pretty ChainIndexTx where
     pretty ChainIndexTx{_citxTxId, _citxInputs, _citxOutputs = ValidTx outputs, _citxValidRange, _citxData, _citxRedeemers, _citxScripts} =
@@ -353,7 +351,6 @@ data Tip =
     deriving stock (Eq, Show, Generic)
     deriving anyclass (ToJSON, FromJSON, OpenApi.ToSchema)
 
-makePrisms ''Tip
 
 -- | When performing a rollback the chain sync protocol does not provide a block
 --   number where to resume from.
@@ -366,7 +363,6 @@ data Point =
     deriving stock (Eq, Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
 
-makePrisms ''Point
 
 instance Ord Point where
   PointAtGenesis <= _              = True
@@ -606,7 +602,6 @@ instance Monoid TxOutBalance where
     mappend = (<>)
     mempty = TxOutBalance mempty mempty
 
-makeLenses ''TxOutBalance
 
 -- | The effect of a transaction (or a number of them) on the utxo set.
 data TxUtxoBalance =
@@ -619,7 +614,6 @@ data TxUtxoBalance =
         deriving stock (Eq, Show, Generic)
         deriving anyclass (FromJSON, ToJSON, Serialise)
 
-makeLenses ''TxUtxoBalance
 
 instance Semigroup TxUtxoBalance where
     l <> r =
@@ -656,3 +650,10 @@ data ChainSyncBlock = Block
     , blockTxs :: [(ChainIndexTx, TxProcessOption)]
     }
     deriving (Show)
+
+makeLenses ''ChainIndexTx
+makePrisms ''ChainIndexTxOutputs
+makePrisms ''Tip
+makePrisms ''Point
+makeLenses ''TxOutBalance
+makeLenses ''TxUtxoBalance

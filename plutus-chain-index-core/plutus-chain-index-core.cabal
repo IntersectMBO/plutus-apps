@@ -81,9 +81,11 @@ library
   --------------------------
   build-depends:
     , cardano-api                  >=8.0
+    , cardano-crypto-class
     , iohk-monitoring
     , ouroboros-network
     , ouroboros-network-framework
+    , ouroboros-network-protocols
     , plutus-core                  >=1.0.0
     , plutus-ledger-api            >=1.0.0
     , plutus-tx                    >=1.0.0

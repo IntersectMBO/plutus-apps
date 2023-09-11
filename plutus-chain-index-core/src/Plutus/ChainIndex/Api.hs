@@ -35,10 +35,10 @@ import Ledger.Address (CardanoAddress)
 import Ledger.Tx (DatumFromQuery, DecoratedTxOut, TxOutRef, Versioned)
 import Plutus.ChainIndex.Tx (ChainIndexTx)
 import Plutus.ChainIndex.Types (Diagnostics, Tip)
-import PlutusLedgerApi.V1 (Datum, DatumHash, MintingPolicy (MintingPolicy), MintingPolicyHash (MintingPolicyHash),
-                           PubKeyHash, Redeemer, RedeemerHash (RedeemerHash), StakeValidator (StakeValidator),
-                           StakeValidatorHash (StakeValidatorHash), StakingCredential, TxId, Validator,
-                           ValidatorHash (ValidatorHash))
+import Plutus.Script.Utils.Scripts (MintingPolicy (MintingPolicy), MintingPolicyHash (MintingPolicyHash),
+                                    StakeValidator (StakeValidator), StakeValidatorHash (StakeValidatorHash), Validator,
+                                    ValidatorHash (ValidatorHash))
+import PlutusLedgerApi.V1 (Datum, DatumHash, PubKeyHash, Redeemer, RedeemerHash (RedeemerHash), StakingCredential, TxId)
 import PlutusLedgerApi.V1.Credential (Credential)
 import PlutusLedgerApi.V1.Value (AssetClass (AssetClass))
 import Servant qualified
