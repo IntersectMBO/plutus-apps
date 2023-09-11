@@ -43,12 +43,13 @@ library
     , cardano-node-emulator  >=1.2.0
     , freer-extras           >=1.2.0
     , plutus-ledger          >=1.2.0
+    , plutus-script-utils    >=1.2.0
 
   --------------------------
   -- Other IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api                   >=8.0
+    , cardano-api                    >=8.0
     , cardano-ledger-allegra
     , cardano-ledger-alonzo
     , cardano-ledger-byron
@@ -64,13 +65,16 @@ library
     , memory
     , ouroboros-consensus
     , ouroboros-consensus-cardano
+    , ouroboros-consensus-diffusion
     , ouroboros-consensus-protocol
     , ouroboros-network
+    , ouroboros-network-api
     , ouroboros-network-framework
-    , plutus-core                   >=1.0.0
-    , plutus-ledger-api             >=1.0.0
-    , plutus-tx                     >=1.0.0
-    , quickcheck-contractmodel      >=0.1.4.0
+    , ouroboros-network-protocols
+    , plutus-core                    >=1.0.0
+    , plutus-ledger-api              >=1.0.0
+    , plutus-tx                      >=1.0.0
+    , quickcheck-contractmodel       >=0.1.4.0
     , serialise
     , text-class
     , typed-protocols

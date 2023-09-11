@@ -1,16 +1,17 @@
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE DeriveAnyClass    #-}
-{-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE DerivingVia       #-}
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs             #-}
-{-# LANGUAGE LambdaCase        #-}
-{-# LANGUAGE NamedFieldPuns    #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE StrictData        #-}
-{-# LANGUAGE TemplateHaskell   #-}
-{-# LANGUAGE TypeApplications  #-}
+{-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE DeriveAnyClass     #-}
+{-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE DerivingVia        #-}
+{-# LANGUAGE FlexibleContexts   #-}
+{-# LANGUAGE FlexibleInstances  #-}
+{-# LANGUAGE GADTs              #-}
+{-# LANGUAGE LambdaCase         #-}
+{-# LANGUAGE NamedFieldPuns     #-}
+{-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE StrictData         #-}
+{-# LANGUAGE TemplateHaskell    #-}
+{-# LANGUAGE TypeApplications   #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -244,20 +245,20 @@ nodeToClientVersion = NodeToClientV_13
 -- argument to the client connection function in a future PR (the network magic
 -- number matches the one in the test net created by scripts)
 nodeToClientVersionData :: NodeToClientVersionData
-nodeToClientVersionData = NodeToClientVersionData { networkMagic = testNetworkMagic }
+nodeToClientVersionData = NodeToClientVersionData { networkMagic = testNetworkMagic, query = False }
 
 -- | A protocol client that will never leave the initial state.
 doNothingInitiatorProtocol
   :: MonadTimer m => RunMiniProtocol 'InitiatorMode BSL.ByteString m a Void
 doNothingInitiatorProtocol =
     InitiatorProtocolOnly $ MuxPeerRaw $
-    const $ forever $ threadDelay 1e6
+    const $ forever $ threadDelay 1_000_000
 
 doNothingResponderProtocol
   :: MonadTimer m => RunMiniProtocol 'ResponderMode BSL.ByteString m Void a
 doNothingResponderProtocol =
   ResponderProtocolOnly $ MuxPeerRaw $
-  const $ forever $ threadDelay 1e6
+  const $ forever $ threadDelay 1_000_000
 
 -- | Boilerplate codecs used for protocol serialisation.
 
@@ -277,6 +278,7 @@ codecConfig :: CodecConfig (CardanoBlock StandardCrypto)
 codecConfig =
   CardanoCodecConfig
     (Byron.ByronCodecConfig epochSlots)
+    Shelley.ShelleyCodecConfig
     Shelley.ShelleyCodecConfig
     Shelley.ShelleyCodecConfig
     Shelley.ShelleyCodecConfig
