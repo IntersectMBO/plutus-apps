@@ -70,7 +70,7 @@ The core `plutus-apps` packages are versioned as follows:
 ** The second-major-version component is used for releases which are major versions according to the PVP, but which are still compatible with the current "era".
 ** The minor-version and below are used as normal.
 * Packages which are used downstream should all have the same version.
-* Other packages which are not used downstream (e.g. `plutus-playground-server`, `plutus-playground-client`, `quickcheck-dynamic`, etc.) can remain unversioned.
+* Other packages which are not used downstream (e.g. `plutus-playground-server`, `plutus-playground-client`, etc.) can remain unversioned.
 
 In principle we could just have a single major version, but using two makes it easier to avoid mistakes and clearly expresses the state of the repository.
 

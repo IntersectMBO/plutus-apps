@@ -140,7 +140,6 @@ library
     , plutus-core            >=1.0.0
     , plutus-ledger-api      >=1.0.0
     , plutus-tx              >=1.0.0
-    , quickcheck-dynamic
     , cardano-binary
 
   if !(impl(ghcjs) || os(ghcjs))

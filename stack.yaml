@@ -15,7 +15,6 @@ packages:
 - plutus-pab
 - plutus-playground-server
 - plutus-use-cases
-- quickcheck-dynamic
 - web-ghc
 
 extra-deps:

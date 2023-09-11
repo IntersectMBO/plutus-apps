@@ -15,7 +15,6 @@ repository cardano-haskell-packages
 index-state: 2022-12-22T00:00:00Z
 
 packages: cardano-streaming
-          doc
           freer-extras
           marconi
           marconi-mamba
@@ -24,16 +23,13 @@ packages: cardano-streaming
           plutus-chain-index
           plutus-chain-index-core
           plutus-contract
-          plutus-contract-certification
           plutus-example
           plutus-ledger
           plutus-ledger-constraints
           plutus-pab
-          plutus-pab-executables
           plutus-playground-server
           plutus-script-utils
           plutus-tx-constraints
-          plutus-use-cases
           rewindable-index
           web-ghc
 
@@ -156,13 +152,6 @@ source-repository-package
   location: https://github.com/input-output-hk/servant-purescript
   tag: 44e7cacf109f84984cd99cd3faf185d161826963
 
-
--- Direct dependency.
-source-repository-package
-    type: git
-    location: https://github.com/input-output-hk/quickcheck-dynamic
-    tag: c272906361471d684440f76c297e29ab760f6a1e
-
 -- Should follow cardano-wallet.
 source-repository-package
     type: git
@@ -170,7 +159,6 @@ source-repository-package
     tag: b7273a5d3c21f1a003595ebf1e1f79c28cd72513
     subdir: command-line
             core
-
 
 -- Should follow cardano-wallet.
 source-repository-package
