@@ -138,8 +138,8 @@ import Plutus.Contract.Types (Contract (..), IsContract (..), ResumableResult, s
 import Plutus.Trace.Emulator (EmulatorConfig (..), EmulatorTrace, params, runEmulatorStream)
 import Plutus.Trace.Emulator.Types (ContractConstraints, ContractInstanceLog, ContractInstanceState (..),
                                     ContractInstanceTag, UserThreadMsg)
-import Plutus.V1.Ledger.Scripts qualified as PV1
-import Plutus.V1.Ledger.Value qualified as Plutus
+import PlutusLedgerApi.V1.Scripts qualified as PV1
+import PlutusLedgerApi.V1.Value qualified as Plutus
 import PlutusTx (CompiledCode, FromData (..), getPir)
 import PlutusTx.Coverage
 import Streaming qualified as S

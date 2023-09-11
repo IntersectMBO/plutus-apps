@@ -42,8 +42,8 @@ import Ledger qualified as P
 import Ledger.Tx (CardanoTx, TxOutRef)
 import Ledger.Tx.CardanoAPI (fromPlutusIndex)
 import Ledger.Tx.Constraints (UnbalancedTx (UnbalancedCardanoTx))
-import Plutus.V1.Ledger.Api qualified as Plutus
-import Plutus.V1.Ledger.Scripts (MintingPolicyHash)
+import PlutusLedgerApi.V1 qualified as Plutus
+import PlutusLedgerApi.V1.Scripts (MintingPolicyHash)
 import PlutusTx qualified
 import Wallet.API qualified as WAPI
 import Wallet.Effects (WalletEffect, balanceTx, yieldUnbalancedTx)

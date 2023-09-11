@@ -44,7 +44,7 @@ import Plutus.Script.Utils.Ada (Ada (Lovelace))
 import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Value (CurrencySymbol (CurrencySymbol), TokenName (TokenName), Value)
 import Plutus.Script.Utils.Value qualified as Value
-import Plutus.V2.Ledger.Api (TxId)
+import PlutusLedgerApi.V2 (TxId)
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Prelude qualified as PlutusTx

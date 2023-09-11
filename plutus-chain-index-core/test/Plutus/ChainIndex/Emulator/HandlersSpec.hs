@@ -28,7 +28,7 @@ import Plutus.ChainIndex.ChainIndexError (ChainIndexError)
 import Plutus.ChainIndex.Effects (ChainIndexControlEffect, ChainIndexQueryEffect, getTip)
 import Plutus.ChainIndex.Emulator.Handlers (ChainIndexEmulatorState, handleControl, handleQuery)
 import Plutus.ChainIndex.Tx (ChainIndexTxOut (citoValue), txOuts)
-import Plutus.V1.Ledger.Value (AssetClass (AssetClass))
+import PlutusLedgerApi.V1.Value (AssetClass (AssetClass))
 
 import Hedgehog (Property, assert, forAll, property, (===))
 import Ledger.Tx.CardanoAPI (fromCardanoAssetId)

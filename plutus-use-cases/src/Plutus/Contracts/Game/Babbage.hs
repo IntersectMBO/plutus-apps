@@ -64,8 +64,8 @@ import Plutus.Script.Utils.Typed (ScriptContextV2, validatorHash)
 import Plutus.Script.Utils.V2.Address (mkValidatorCardanoAddress)
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
 import Plutus.Script.Utils.Value (Value)
-import Plutus.V2.Ledger.Api (Address, Datum (Datum), Validator)
-import Plutus.V2.Ledger.Contexts qualified as V2
+import PlutusLedgerApi.V2 (Address, Datum (Datum), Validator)
+import PlutusLedgerApi.V2.Contexts qualified as V2
 import PlutusTx qualified
 import PlutusTx.Code (getCovIdx)
 import PlutusTx.Coverage (CoverageIndex)

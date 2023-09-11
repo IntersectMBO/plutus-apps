@@ -30,22 +30,22 @@ import Prettyprinter (Pretty (pretty, prettyList), defaultLayoutOptions, hang, l
 
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
-import PlutusTx.Prelude (Bool (False, True), Eq, Foldable (foldMap), Functor (fmap), Integer, JoinSemiLattice ((\/)),
-                         Maybe (Just, Nothing), Monoid (mempty), Semigroup ((<>)), any, concat, foldl, map, mapMaybe,
-                         not, null, ($), (.), (==), (>>=), (||))
+import PlutusTx.Prelude (Bool (False, True), Eq, Functor (fmap), Integer, JoinSemiLattice ((\/)), Maybe (Just, Nothing),
+                         Monoid (mempty), Semigroup ((<>)), any, concat, foldMap, foldl, map, mapMaybe, not, null, ($),
+                         (.), (==), (>>=), (||))
 
 import Ledger.Address (Address (Address), PaymentPubKeyHash (PaymentPubKeyHash))
+import Ledger.Scripts (MintingPolicyHash (MintingPolicyHash), ScriptHash (ScriptHash), Validator,
+                       ValidatorHash (ValidatorHash), unitRedeemer)
 import Ledger.Slot (Slot)
 import Ledger.Tx (DecoratedTxOut)
 import Plutus.Script.Utils.V1.Address qualified as PV1
 import Plutus.Script.Utils.V2.Address qualified as PV2
-import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential), Datum, DatumHash, MintingPolicyHash,
-                             POSIXTime, POSIXTimeRange, Redeemer, StakingCredential, TxOutRef, Validator, ValidatorHash)
-import Plutus.V1.Ledger.Interval qualified as I
-import Plutus.V1.Ledger.Scripts (MintingPolicyHash (MintingPolicyHash), ScriptHash (ScriptHash),
-                                 ValidatorHash (ValidatorHash), unitRedeemer)
-import Plutus.V1.Ledger.Value (TokenName, Value, isZero)
-import Plutus.V1.Ledger.Value qualified as Value
+import Plutus.Script.Utils.Value qualified as Value
+import PlutusLedgerApi.V1 (Credential (PubKeyCredential, ScriptCredential), Datum, DatumHash, POSIXTime, POSIXTimeRange,
+                           Redeemer, StakingCredential, TxOutRef)
+import PlutusLedgerApi.V1.Interval qualified as I
+import PlutusLedgerApi.V1.Value (TokenName, Value, isZero)
 
 import Control.Lens (At (at), (^.))
 import Data.Function (const, flip)

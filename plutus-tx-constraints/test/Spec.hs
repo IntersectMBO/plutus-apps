@@ -23,7 +23,6 @@ import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import Ledger qualified hiding (TxId (..))
 import Ledger.Address (StakePubKeyHash (StakePubKeyHash), stakePubKeyHashCredential, stakeValidatorHashCredential)
-import Ledger.Credential (StakingCredential)
 import Ledger.Scripts (WitCtx (WitCtxStake), examplePlutusScriptAlwaysSucceedsHash)
 import Ledger.Slot qualified as Slot
 import Ledger.Test (asRedeemer)
@@ -37,7 +36,8 @@ import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.V1.Generators qualified as Gen
 import Plutus.Script.Utils.Value (Value)
 import Plutus.Script.Utils.Value qualified as Value
-import Plutus.V1.Ledger.Api qualified as Ledger
+import PlutusLedgerApi.V1 qualified as Ledger
+import PlutusLedgerApi.V1.Credential (StakingCredential)
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AMap
 import Spec.Balancing qualified as Balancing

@@ -45,7 +45,7 @@ import Plutus.Trace.Emulator.Types (ContractInstanceLog (_cilMessage),
                                     ContractInstanceMsg (ContractLog, CurrentRequests, HandledRequest, ReceiveEndpointCall, Started, StoppedNoError),
                                     ContractInstanceState (ContractInstanceState, instContractState),
                                     UserThreadMsg (UserLog))
-import Plutus.V1.Ledger.Api (Validator)
+import PlutusLedgerApi.V1 (Validator)
 import PlutusTx qualified
 import Prelude hiding (not)
 import Wallet.Emulator qualified as EM

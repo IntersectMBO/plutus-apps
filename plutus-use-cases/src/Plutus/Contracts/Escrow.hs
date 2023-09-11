@@ -59,7 +59,6 @@ import PlutusTx.Prelude hiding (Applicative (..), Semigroup (..), check, foldMap
 import Cardano.Node.Emulator.Internal.Node (pNetworkId)
 import Ledger (POSIXTime, PaymentPubKeyHash (unPaymentPubKeyHash), TxId, getCardanoTxId)
 import Ledger qualified
-import Ledger.Interval (after, before)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.Constraints (TxConstraints)
 import Ledger.Tx.Constraints qualified as Constraints
@@ -71,9 +70,10 @@ import Plutus.Script.Utils.Scripts (datumHash)
 import Plutus.Script.Utils.V2.Contexts (ScriptContext (..), TxInfo (..), scriptOutputsAt, txInfoValidRange, txSignedBy)
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
 import Plutus.Script.Utils.Value (Value, geq, lt)
-import Plutus.V2.Ledger.Api (Datum (Datum), DatumHash, ValidatorHash)
-import Plutus.V2.Ledger.Contexts (valuePaidTo)
-import Plutus.V2.Ledger.Tx (OutputDatum (OutputDatumHash))
+import PlutusLedgerApi.V1.Interval (after, before)
+import PlutusLedgerApi.V2 (Datum (Datum), DatumHash, ValidatorHash)
+import PlutusLedgerApi.V2.Contexts (valuePaidTo)
+import PlutusLedgerApi.V2.Tx (OutputDatum (OutputDatumHash))
 
 import Prelude (Semigroup (..), foldMap)
 import Prelude qualified as Haskell

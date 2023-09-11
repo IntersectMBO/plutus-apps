@@ -41,8 +41,8 @@ import Plutus.ChainIndex.Api (API, IsUtxoResponse, QueryAtAddressRequest (QueryA
 import Plutus.ChainIndex.Effects (ChainIndexQueryEffect (..))
 import Plutus.ChainIndex.Tx (ChainIndexTx)
 import Plutus.ChainIndex.Types (Tip)
-import Plutus.V1.Ledger.Api (Datum, DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, RedeemerHash, StakeValidator,
-                             StakeValidatorHash, TxId, Validator, ValidatorHash)
+import PlutusLedgerApi.V1 (Datum, DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, RedeemerHash, StakeValidator,
+                           StakeValidatorHash, TxId, Validator, ValidatorHash)
 import Servant (NoContent, (:<|>) (..))
 import Servant.Client (ClientEnv, ClientError (..), ClientM, client, runClientM)
 import Servant.Client.Core.Response (ResponseF (..))

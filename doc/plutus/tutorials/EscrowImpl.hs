@@ -56,7 +56,6 @@ import GHC.Generics (Generic)
 import Ledger (POSIXTime, PaymentPubKeyHash (unPaymentPubKeyHash), ScriptContext (ScriptContext, scriptContextTxInfo),
                TxId, getCardanoTxId, interval, scriptOutputsAt, txSignedBy, valuePaidTo)
 import Ledger qualified
-import Ledger.Interval (after, before, from)
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.Constraints (TxConstraints)
 import Ledger.Tx.Constraints qualified as Constraints
@@ -66,8 +65,9 @@ import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Script.Utils.Scripts qualified as Scripts
 import Plutus.Script.Utils.V1.Scripts qualified as Scripts
 import Plutus.Script.Utils.Value (Value, geq, lt)
-import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash, ValidatorHash)
-import Plutus.V1.Ledger.Contexts (ScriptContext (ScriptContext, scriptContextTxInfo), TxInfo (txInfoValidRange))
+import PlutusLedgerApi.V1 (Datum (Datum), DatumHash, ValidatorHash)
+import PlutusLedgerApi.V1.Contexts (ScriptContext (ScriptContext, scriptContextTxInfo), TxInfo (txInfoValidRange))
+import PlutusLedgerApi.V1.Interval (after, before, from)
 
 import Cardano.Node.Emulator.Internal.Node.Params qualified as Params
 import Plutus.Contract (AsContractError (_ContractError), Contract, ContractError, Endpoint, HasEndpoint, Promise,

@@ -78,7 +78,7 @@ import Plutus.Contract.Test hiding (not)
 import Plutus.Trace.Effects.EmulatorControl (EmulatorControl, discardWallets)
 import Plutus.Trace.Emulator as Trace (BaseEmulatorEffects, EmulatorEffects, EmulatorTrace, activateContract,
                                        freezeContractInstance, waitNSlots)
-import Plutus.V1.Ledger.Crypto
+import PlutusLedgerApi.V1.Crypto
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Coverage hiding (_coverageIndex)
 import PlutusTx.ErrorCodes

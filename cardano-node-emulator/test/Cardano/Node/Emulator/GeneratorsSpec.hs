@@ -19,9 +19,9 @@ import Hedgehog.Range qualified as Range
 import Ledger (DiffMilliSeconds (DiffMilliSeconds), Interval (Interval), LowerBound (LowerBound), Slot (Slot),
                UpperBound (UpperBound), fromMilliSeconds, interval)
 import Ledger qualified
-import Ledger.Bytes qualified as Bytes
-import Ledger.Interval qualified as Interval
 import Ledger.Value.CardanoAPI qualified as C
+import PlutusLedgerApi.V1.Bytes qualified as Bytes
+import PlutusLedgerApi.V1.Interval qualified as Interval
 import PlutusLedgerApi.V1.Value qualified as Value
 import PlutusTx.Prelude qualified as PlutusTx
 import Test.Tasty (TestTree, testGroup)

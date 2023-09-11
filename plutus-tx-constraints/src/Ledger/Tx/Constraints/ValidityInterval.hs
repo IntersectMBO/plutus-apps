@@ -20,8 +20,8 @@ module Ledger.Tx.Constraints.ValidityInterval
 
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
-import Plutus.V1.Ledger.Interval (Extended (Finite, NegInf, PosInf), Interval (Interval), LowerBound (LowerBound),
-                                  UpperBound (UpperBound))
+import PlutusLedgerApi.V1.Interval (Extended (Finite, NegInf, PosInf), Interval (Interval), LowerBound (LowerBound),
+                                    UpperBound (UpperBound))
 import PlutusTx.Prelude (Bool (False, True), Enum (succ), Functor (fmap), Maybe (Just, Nothing))
 import Prelude qualified as Haskell
 

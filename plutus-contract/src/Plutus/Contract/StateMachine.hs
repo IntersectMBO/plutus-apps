@@ -88,7 +88,7 @@ import Plutus.Script.Utils.V2.Scripts (scriptCurrencySymbol)
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as Typed
 import Plutus.Script.Utils.Value (Value)
 import Plutus.Script.Utils.Value qualified as Value
-import Plutus.V2.Ledger.Tx qualified as V2
+import PlutusLedgerApi.V2.Tx qualified as V2
 import PlutusTx qualified
 import PlutusTx.Monoid (inv)
 

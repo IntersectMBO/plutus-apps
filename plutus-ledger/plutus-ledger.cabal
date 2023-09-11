@@ -50,9 +50,9 @@ flag defer-plugin-errors
   manual:      True
 
 library
-  import:             lang
-  hs-source-dirs:     src
-  default-language:   Haskell2010
+  import:           lang
+  hs-source-dirs:   src
+  default-language: Haskell2010
   exposed-modules:
     Data.Aeson.Extras
     Data.Time.Units.Extra
@@ -90,22 +90,15 @@ library
     Ledger.Value.CardanoAPI
     Ledger.Value.Orphans
 
-  reexported-modules:
-    PlutusLedgerApi.V1.Bytes as Ledger.Bytes,
-    PlutusLedgerApi.V1.Credential as Ledger.Credential,
-    PlutusLedgerApi.V1.DCert as Ledger.DCert,
-    PlutusLedgerApi.V1.Interval as Ledger.Interval,
-    PlutusLedgerApi.V1.Time as Ledger.Time,
-
   -- The rest of the plutus-ledger-api modules are reexported from within
   -- the Haskell modules and not in the current cabal file.
   -- For example: PlutusLedgerApi.V1.Address is reexported by Ledger.Address
-  other-modules:      Codec.CBOR.Extras
+  other-modules:    Codec.CBOR.Extras
 
   --------------------
   -- Local components
   --------------------
-  build-depends:      plutus-script-utils >=1.2.0
+  build-depends:    plutus-script-utils >=1.2.0
 
   --------------------------
   -- Other IOG dependencies
@@ -164,7 +157,7 @@ library
     , vector
 
   -- , quickcheck-contractmodel  >=0.1.4.0
-  ghc-options:        -fprint-potential-instances
+  ghc-options:      -fprint-potential-instances
 
   if !(impl(ghcjs) || os(ghcjs))
     build-depends: plutus-tx-plugin >=1.0.0

@@ -21,7 +21,6 @@ import PlutusTx.Prelude (Bool (False, True), Eq ((==)), Functor (fmap), Maybe (J
 
 import Ledger qualified
 import Ledger.Address (PaymentPubKeyHash (unPaymentPubKeyHash))
-import Ledger.Credential (Credential (ScriptCredential))
 import Ledger.Tx.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConstraint, icRedeemer, icReferenceTxOutRef, icTxOutRef),
                                             ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocReferenceScriptHash, ocValue),
                                             TxConstraint (MustBeSignedBy, MustIncludeDatumInTx, MustIncludeDatumInTxWithHash, MustMintValue, MustPayToAddress, MustProduceAtLeast, MustReferenceOutput, MustSatisfyAnyOf, MustSpendAtLeast, MustSpendPubKeyOutput, MustSpendScriptOutput, MustUseOutputAsCollateral, MustValidateInTimeRange),
@@ -37,7 +36,8 @@ import Plutus.Script.Utils.V1.Contexts (ScriptContext (ScriptContext, scriptCont
 import Plutus.Script.Utils.V1.Contexts qualified as V
 import Plutus.Script.Utils.Value (leq)
 import Plutus.Script.Utils.Value qualified as Value
-import Plutus.V1.Ledger.Interval (contains)
+import PlutusLedgerApi.V1.Credential (Credential (ScriptCredential))
+import PlutusLedgerApi.V1.Interval (contains)
 
 {-# INLINABLE checkScriptContext #-}
 -- | Does the 'ScriptContext' satisfy the constraints?

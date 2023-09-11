@@ -22,12 +22,12 @@ import Test.Tasty.HUnit qualified as HUnit
 import Cardano.Node.Emulator.Internal.Node.TimeSlot qualified as TimeSlot
 import Ledger qualified
 import Ledger.Address (PaymentPrivateKey, PaymentPubKey)
-import Ledger.Time (POSIXTime)
 import Ledger.Value.CardanoAPI qualified as Value
 import Plutus.Contract.Oracle (Observation (..), SignedMessage)
 import Plutus.Contract.Oracle qualified as Oracle
 import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Value (Value, scale)
+import PlutusLedgerApi.V1.Time (POSIXTime)
 
 import Ledger.CardanoWallet qualified as CW
 import Plutus.Contract.Test

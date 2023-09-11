@@ -56,7 +56,6 @@ import Ledger.Address (CardanoAddress, PaymentPrivateKey (..), PaymentPubKey, Pa
                        cardanoAddressCredential)
 import Ledger.CardanoWallet (MockWallet, WalletNumber)
 import Ledger.CardanoWallet qualified as CW
-import Ledger.Credential (Credential (PubKeyCredential, ScriptCredential))
 import Ledger.Tx qualified as Tx
 import Ledger.Tx.CardanoAPI (fromCardanoValue, getRequiredSigners)
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
@@ -66,7 +65,8 @@ import Plutus.ChainIndex qualified as ChainIndex
 import Plutus.ChainIndex.Api (collectQueryResponse)
 import Plutus.ChainIndex.Emulator (ChainIndexEmulatorState, ChainIndexQueryEffect)
 import Plutus.Contract.Checkpoint (CheckpointLogMsg)
-import Plutus.V1.Ledger.Api (ValidatorHash, Value)
+import PlutusLedgerApi.V1 (ValidatorHash, Value)
+import PlutusLedgerApi.V1.Credential (Credential (PubKeyCredential, ScriptCredential))
 import Prettyprinter (Pretty (pretty))
 import Servant.API (FromHttpApiData (parseUrlPiece), ToHttpApiData (toUrlPiece))
 import Wallet.Effects (NodeClientEffect,

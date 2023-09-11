@@ -10,7 +10,7 @@ import Data.List.NonEmpty (NonEmpty)
 import Ledger (CardanoAddress, PaymentPubKeyHash)
 import Ledger.Tx (CardanoTx)
 import Ledger.Tx.Constraints.OffChain (UnbalancedTx)
-import Plutus.V1.Ledger.Api (Value)
+import PlutusLedgerApi.V1 (Value)
 import Servant.API (Capture, Get, JSON, NoContent, Post, QueryParam, ReqBody, (:<|>), (:>))
 import Wallet.Emulator.Error (WalletAPIError)
 

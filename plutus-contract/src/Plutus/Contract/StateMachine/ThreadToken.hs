@@ -27,7 +27,7 @@ import Plutus.Contract.StateMachine.MintingPolarity (MintingPolarity (..))
 import Plutus.Script.Utils.Typed (ScriptContextV2, mkUntypedMintingPolicy)
 import Plutus.Script.Utils.Value (CurrencySymbol, TokenName (..), Value (..))
 import Plutus.Script.Utils.Value qualified as Value
-import Plutus.V2.Ledger.Contexts qualified as V2
+import PlutusLedgerApi.V2.Contexts qualified as V2
 import PlutusTx qualified
 import Prelude qualified as Haskell
 

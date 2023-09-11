@@ -23,7 +23,7 @@ import Plutus.Contract as Contract
 import Plutus.Contracts.Currency ()
 import Plutus.Contracts.Uniswap.Pool
 import Plutus.Contracts.Uniswap.Types
-import Plutus.V2.Ledger.Api (Redeemer (Redeemer))
+import PlutusLedgerApi.V2 (Redeemer (Redeemer))
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (Semigroup (..), dropWhile, flip, unless)
 import Prelude as Haskell (Semigroup (..), Show, show)

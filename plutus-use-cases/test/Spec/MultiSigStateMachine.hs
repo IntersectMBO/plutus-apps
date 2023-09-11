@@ -15,9 +15,9 @@ import Data.Foldable (traverse_)
 
 import Cardano.Node.Emulator.Internal.Node.TimeSlot qualified as TimeSlot
 import Ledger qualified
-import Ledger.Time (POSIXTime)
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Script.Utils.Ada qualified as Ada
+import PlutusLedgerApi.V1.Time (POSIXTime)
 import Wallet.Emulator qualified as EM
 
 import Plutus.Contract.Test

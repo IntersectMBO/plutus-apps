@@ -34,7 +34,7 @@ import Control.Monad (void)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Semigroup (Last (..))
 import GHC.Generics (Generic)
-import Plutus.V2.Ledger.Contexts qualified as V2
+import PlutusLedgerApi.V2.Contexts qualified as V2
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Prelude hiding (Monoid (..), Semigroup (..))
@@ -49,7 +49,7 @@ import Plutus.Contract.Request (getUnspentOutput)
 import Plutus.Script.Utils.V2.Scripts qualified as V2
 import Plutus.Script.Utils.Value (CurrencySymbol, TokenName, Value)
 import Plutus.Script.Utils.Value qualified as Value
-import Plutus.V2.Ledger.Api qualified as V2
+import PlutusLedgerApi.V2 qualified as V2
 
 import Prelude (Semigroup (..))
 import Prelude qualified as Haskell

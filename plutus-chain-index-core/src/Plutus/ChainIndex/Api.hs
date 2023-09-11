@@ -32,15 +32,15 @@ import Data.OpenApi qualified as OpenApi
 import Data.Proxy (Proxy (..))
 import GHC.Generics (Generic)
 import Ledger.Address (CardanoAddress)
-import Ledger.Credential (Credential)
 import Ledger.Tx (DatumFromQuery, DecoratedTxOut, TxOutRef, Versioned)
 import Plutus.ChainIndex.Tx (ChainIndexTx)
 import Plutus.ChainIndex.Types (Diagnostics, Tip)
-import Plutus.V1.Ledger.Api (Datum, DatumHash, MintingPolicy (MintingPolicy), MintingPolicyHash (MintingPolicyHash),
-                             PubKeyHash, Redeemer, RedeemerHash (RedeemerHash), StakeValidator (StakeValidator),
-                             StakeValidatorHash (StakeValidatorHash), StakingCredential, TxId, Validator,
-                             ValidatorHash (ValidatorHash))
-import Plutus.V1.Ledger.Value (AssetClass (AssetClass))
+import PlutusLedgerApi.V1 (Datum, DatumHash, MintingPolicy (MintingPolicy), MintingPolicyHash (MintingPolicyHash),
+                           PubKeyHash, Redeemer, RedeemerHash (RedeemerHash), StakeValidator (StakeValidator),
+                           StakeValidatorHash (StakeValidatorHash), StakingCredential, TxId, Validator,
+                           ValidatorHash (ValidatorHash))
+import PlutusLedgerApi.V1.Credential (Credential)
+import PlutusLedgerApi.V1.Value (AssetClass (AssetClass))
 import Servant qualified
 import Servant.API (Description, Get, JSON, NoContent, Post, Put, ReqBody, (:<|>), (:>))
 import Servant.OpenApi (toOpenApi)

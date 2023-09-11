@@ -24,10 +24,10 @@ import Plutus.Contracts.Uniswap.Pool (calculateAdditionalLiquidity, calculateIni
                                       checkSwap, lpTicker)
 import Plutus.Contracts.Uniswap.Types
 import Plutus.Script.Utils.Value (AssetClass (..), symbols)
-import Plutus.V2.Ledger.Api (Datum (Datum), DatumHash, OutputDatum (..), ScriptContext (..), TokenName,
-                             TxInInfo (txInInfoResolved), TxInfo (txInfoInputs, txInfoMint),
-                             TxOut (txOutDatum, txOutValue), Value)
-import Plutus.V2.Ledger.Contexts qualified as V2
+import PlutusLedgerApi.V2 (Datum (Datum), DatumHash, OutputDatum (..), ScriptContext (..), TokenName,
+                           TxInInfo (txInInfoResolved), TxInfo (txInfoInputs, txInfoMint),
+                           TxOut (txOutDatum, txOutValue), Value)
+import PlutusLedgerApi.V2.Contexts qualified as V2
 import PlutusTx qualified
 import PlutusTx.Prelude
 

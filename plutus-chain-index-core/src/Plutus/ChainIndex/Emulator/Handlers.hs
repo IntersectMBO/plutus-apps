@@ -57,11 +57,11 @@ import Plutus.ChainIndex.Types (ChainIndexTx, ChainIndexTxOut (..), ChainSyncBlo
 import Plutus.ChainIndex.UtxoState (InsertUtxoSuccess (..), RollbackResult (..), UtxoIndex, tip, utxoState)
 import Plutus.ChainIndex.UtxoState qualified as UtxoState
 import Plutus.Script.Utils.Scripts (datumHash)
-import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential), Datum, DatumHash,
-                             MintingPolicy (MintingPolicy), MintingPolicyHash (MintingPolicyHash), Script,
-                             StakeValidator (StakeValidator), StakeValidatorHash (StakeValidatorHash), TxId,
-                             Validator (Validator), ValidatorHash (ValidatorHash))
-import Plutus.V2.Ledger.Api (OutputDatum (..))
+import PlutusLedgerApi.V1 (Credential (PubKeyCredential, ScriptCredential), Datum, DatumHash,
+                           MintingPolicy (MintingPolicy), MintingPolicyHash (MintingPolicyHash), Script,
+                           StakeValidator (StakeValidator), StakeValidatorHash (StakeValidatorHash), TxId,
+                           Validator (Validator), ValidatorHash (ValidatorHash))
+import PlutusLedgerApi.V2 (OutputDatum (..))
 
 data ChainIndexEmulatorState =
     ChainIndexEmulatorState

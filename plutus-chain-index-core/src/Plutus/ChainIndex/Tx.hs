@@ -49,7 +49,7 @@ import Ledger.Scripts (Redeemer, RedeemerHash)
 import Plutus.ChainIndex.Types
 import Plutus.Contract.CardanoAPI (fromCardanoTx)
 import Plutus.Script.Utils.Scripts (redeemerHash)
-import Plutus.V2.Ledger.Api (Address (..), OutputDatum (..), Value (..))
+import PlutusLedgerApi.V2 (Address (..), OutputDatum (..), Value (..))
 
 -- | Get tx outputs from tx.
 txOuts :: ChainIndexTx -> [ChainIndexTxOut]

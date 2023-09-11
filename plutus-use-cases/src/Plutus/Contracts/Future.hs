@@ -64,7 +64,7 @@ import Plutus.Contract.Util (loopM)
 import Plutus.Script.Utils.V2.Address (mkValidatorAddress)
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
 import Plutus.Script.Utils.Value as Value
-import Plutus.V2.Ledger.Api (Datum (Datum), Validator, ValidatorHash)
+import PlutusLedgerApi.V2 (Datum (Datum), Validator, ValidatorHash)
 
 import Plutus.Contract.StateMachine (AsSMContractError, State (..), StateMachine (..), Void)
 import Plutus.Contract.StateMachine qualified as SM
