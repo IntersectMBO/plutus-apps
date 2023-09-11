@@ -16,7 +16,6 @@ import Control.Monad.State (evalStateT)
 import Data.Default (def)
 import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Void (Void)
-import Gen.Cardano.Api.Typed (genTxId)
 import Hedgehog (Property, annotateShow, forAll, property, (===))
 import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
@@ -41,6 +40,7 @@ import PlutusLedgerApi.V1.Credential (StakingCredential)
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AMap
 import Spec.Balancing qualified as Balancing
+import Test.Gen.Cardano.Api.Typed (genTxId)
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.Hedgehog (testPropertyNamed)
 

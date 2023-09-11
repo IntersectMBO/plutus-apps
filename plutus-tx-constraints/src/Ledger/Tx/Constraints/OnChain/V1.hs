@@ -133,11 +133,11 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
 {-# INLINABLE checkTxConstraintFun #-}
 checkTxConstraintFun :: ScriptContext -> TxConstraintFun -> Bool
 checkTxConstraintFun ScriptContext{scriptContextTxInfo} = \case
-    MustSpendScriptOutputWithMatchingDatumAndValue vh datumPred valuePred _ ->
+    MustSpendScriptOutputWithMatchingDatumAndValue (Ledger.ValidatorHash vh) datumPred valuePred _ ->
         let findDatum mdh = do
                 dh <- mdh
                 V.findDatum dh scriptContextTxInfo
-            isMatch (TxOut (Ledger.Address (ScriptCredential vh') _) val (findDatum -> Just d)) =
+            isMatch (TxOut (Ledger.Address (ScriptCredential (Ledger.ScriptHash vh')) _) val (findDatum -> Just d)) =
                 vh == vh' && valuePred val && datumPred d
             isMatch _ = False
         in

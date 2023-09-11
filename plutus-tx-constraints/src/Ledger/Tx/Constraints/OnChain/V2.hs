@@ -138,11 +138,11 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
 {-# INLINABLE checkTxConstraintFun #-}
 checkTxConstraintFun :: ScriptContext -> TxConstraintFun -> Bool
 checkTxConstraintFun ScriptContext{scriptContextTxInfo} = \case
-    MustSpendScriptOutputWithMatchingDatumAndValue vh datumPred valuePred rdmr ->
+    MustSpendScriptOutputWithMatchingDatumAndValue (Ledger.ValidatorHash vh) datumPred valuePred rdmr ->
         let findDatum NoOutputDatum        = Nothing
             findDatum (OutputDatumHash dh) = PV2.findDatum dh scriptContextTxInfo
             findDatum (OutputDatum d)      = PV2.findDatumHash d scriptContextTxInfo >> Just d
-            txOutIsMatch (TxOut (Ledger.Address (ScriptCredential vh') _) val (findDatum -> Just d) _refScript) =
+            txOutIsMatch (TxOut (Ledger.Address (ScriptCredential (Ledger.ScriptHash vh')) _) val (findDatum -> Just d) _refScript) =
                 vh == vh' && valuePred val && datumPred d
             txOutIsMatch _ = False
             rdmrIsMatch txOutRef = Just rdmr == AMap.lookup (Spending txOutRef) (txInfoRedeemers scriptContextTxInfo)

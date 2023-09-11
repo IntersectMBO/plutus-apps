@@ -25,6 +25,7 @@ module Plutus.Script.Utils.Scripts
     , mkStakeValidatorScript
     , unStakeValidatorScript
       -- * Script hashing
+    , PV1.ScriptHash (..)
     , ValidatorHash (..)
     , MintingPolicyHash (..)
     , StakeValidatorHash (..)

@@ -310,7 +310,6 @@ instance Monoid (TxConstraints i o) where
     mempty = TxConstraints mempty mempty mempty mempty
 
 instance Haskell.Monoid (TxConstraints i o) where
-    mappend = (<>)
     mempty  = mempty
 
 deriving anyclass instance (ToJSON i, ToJSON o) => ToJSON (TxConstraints i o)
@@ -640,22 +639,22 @@ mustPayToOtherScript = mustPayToOtherScriptWithDatumHash
 -- | @mustPayToOtherScriptWithDatumHash vh d v@ is the same as
 -- 'mustPayToOtherScriptAddressWithDatumHash', but without the staking key hash.
 mustPayToOtherScriptWithDatumHash :: forall i o. ValidatorHash -> Datum -> Value -> TxConstraints i o
-mustPayToOtherScriptWithDatumHash vh dv vl =
-    singleton (MustPayToAddress (Address (ScriptCredential vh) Nothing) (Just (TxOutDatumHash dv)) Nothing vl)
+mustPayToOtherScriptWithDatumHash (ValidatorHash vh) dv vl =
+    singleton (MustPayToAddress (Address (ScriptCredential (ScriptHash vh)) Nothing) (Just (TxOutDatumHash dv)) Nothing vl)
 
 {-# INLINABLE mustPayToOtherScriptWithDatumInTx #-}
 -- | @mustPayToOtherScriptWithDatumInTx vh d v@ is the same as
 -- 'mustPayToOtherScriptAddressWithDatumHash', but without the staking key hash.
 mustPayToOtherScriptWithDatumInTx :: forall i o. ValidatorHash -> Datum -> Value -> TxConstraints i o
-mustPayToOtherScriptWithDatumInTx vh dv vl =
-    singleton (MustPayToAddress (Address (ScriptCredential vh) Nothing) (Just (TxOutDatumInTx dv)) Nothing vl)
+mustPayToOtherScriptWithDatumInTx (ValidatorHash vh) dv vl =
+    singleton (MustPayToAddress (Address (ScriptCredential (ScriptHash vh)) Nothing) (Just (TxOutDatumInTx dv)) Nothing vl)
 
 {-# INLINABLE mustPayToOtherScriptWithInlineDatum #-}
 -- | @mustPayToOtherScriptWithInlineDatum vh d v@ is the same as
 -- 'mustPayToOtherScriptAddressWithDatumHash', but with an inline datum and without the staking key hash.
 mustPayToOtherScriptWithInlineDatum :: forall i o. ValidatorHash -> Datum -> Value -> TxConstraints i o
-mustPayToOtherScriptWithInlineDatum vh dv vl =
-    singleton (MustPayToAddress (Address (ScriptCredential vh) Nothing) (Just (TxOutDatumInline dv)) Nothing vl)
+mustPayToOtherScriptWithInlineDatum (ValidatorHash vh) dv vl =
+    singleton (MustPayToAddress (Address (ScriptCredential (ScriptHash vh)) Nothing) (Just (TxOutDatumInline dv)) Nothing vl)
 
 {-# DEPRECATED mustPayToOtherScriptAddress "Use mustPayToOtherScriptAddressWithDatumHash instead" #-}
 mustPayToOtherScriptAddress :: forall i o. ValidatorHash -> StakingCredential -> Datum -> Value -> TxConstraints i o
@@ -676,8 +675,8 @@ mustPayToOtherScriptAddress = mustPayToOtherScriptAddressWithDatumHash
 -- The output can contain more, or different tokens, but the requested value @v@ must
 -- be present.
 mustPayToOtherScriptAddressWithDatumHash :: forall i o. ValidatorHash -> StakingCredential -> Datum -> Value -> TxConstraints i o
-mustPayToOtherScriptAddressWithDatumHash vh sc dv vl =
-    singleton (MustPayToAddress (Address (ScriptCredential vh) (Just sc)) (Just (TxOutDatumHash dv)) Nothing vl)
+mustPayToOtherScriptAddressWithDatumHash (ValidatorHash vh) sc dv vl =
+    singleton (MustPayToAddress (Address (ScriptCredential (ScriptHash vh)) (Just sc)) (Just (TxOutDatumHash dv)) Nothing vl)
 
 {-# INLINABLE mustPayToOtherScriptAddressWithDatumInTx #-}
 -- | @mustPayToOtherScriptAddressWithDatumInTx vh svh d v@ locks the value @v@ with the given script
@@ -699,8 +698,8 @@ mustPayToOtherScriptAddressWithDatumInTx
     -> Datum
     -> Value
     -> TxConstraints i o
-mustPayToOtherScriptAddressWithDatumInTx vh sc dv vl =
-    singleton (MustPayToAddress (Address (ScriptCredential vh) (Just sc)) (Just (TxOutDatumInTx dv)) Nothing vl)
+mustPayToOtherScriptAddressWithDatumInTx (ValidatorHash vh) sc dv vl =
+    singleton (MustPayToAddress (Address (ScriptCredential (ScriptHash vh)) (Just sc)) (Just (TxOutDatumInTx dv)) Nothing vl)
 
 {-# INLINABLE mustPayToOtherScriptAddressWithInlineDatum #-}
 -- | @mustPayToOtherScriptAddressInlineDatum vh d v@ is the same as
@@ -711,8 +710,8 @@ mustPayToOtherScriptAddressWithInlineDatum
     -> Datum
     -> Value
     -> TxConstraints i o
-mustPayToOtherScriptAddressWithInlineDatum vh sc dv vl =
-    singleton (MustPayToAddress (Address (ScriptCredential vh) (Just sc)) (Just (TxOutDatumInline dv)) Nothing vl)
+mustPayToOtherScriptAddressWithInlineDatum (ValidatorHash vh) sc dv vl =
+    singleton (MustPayToAddress (Address (ScriptCredential (ScriptHash vh)) (Just sc)) (Just (TxOutDatumInline dv)) Nothing vl)
 
 {-# INLINABLE mustPayToAddress #-}
 -- | @mustPayToAddress addr v@ locks the value @v@ at the given address @addr@.

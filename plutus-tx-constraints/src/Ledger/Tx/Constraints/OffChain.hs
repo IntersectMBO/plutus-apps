@@ -124,13 +124,13 @@ import Ledger.Tx.Constraints.TxConstraints
 import Ledger.Tx.Constraints.ValidityInterval (toPlutusInterval)
 import Ledger.Typed.Scripts (Any, ConnectionError (UnknownRef), TypedValidator (tvValidator, tvValidatorHash),
                              ValidatorTypes (DatumType, RedeemerType), validatorAddress)
-import Plutus.Script.Utils.Scripts (datumHash, scriptHash)
+import Plutus.Script.Utils.Scripts (MintingPolicy (MintingPolicy, getMintingPolicy),
+                                    MintingPolicyHash (MintingPolicyHash), Script, ScriptHash (ScriptHash),
+                                    Validator (Validator), ValidatorHash (ValidatorHash), datumHash, scriptHash)
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as Typed
 import Plutus.Script.Utils.Value qualified as Value
-import PlutusLedgerApi.V1 (Datum (Datum), DatumHash, StakingCredential, Validator, Value, getMintingPolicy)
+import PlutusLedgerApi.V1 (Datum (Datum), DatumHash, StakingCredential, Value)
 import PlutusLedgerApi.V1.Interval ()
-import PlutusLedgerApi.V1.Scripts (MintingPolicy (MintingPolicy), MintingPolicyHash (MintingPolicyHash), Script,
-                                   ScriptHash (ScriptHash), Validator (Validator), ValidatorHash (ValidatorHash))
 import PlutusTx (FromData, ToData (toBuiltinData))
 import PlutusTx.Lattice (BoundedMeetSemiLattice (top), JoinSemiLattice ((\/)), MeetSemiLattice ((/\)))
 import PlutusTx.Numeric qualified as N
