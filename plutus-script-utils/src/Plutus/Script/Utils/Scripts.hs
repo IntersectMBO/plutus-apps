@@ -61,6 +61,7 @@ import PlutusLedgerApi.Common (serialiseCompiledCode)
 import PlutusLedgerApi.V1 qualified as PV1
 import PlutusLedgerApi.V1.Bytes (LedgerBytes (LedgerBytes))
 import PlutusTx (CompiledCode, makeLift)
+import PlutusTx qualified
 import PlutusTx.Builtins (BuiltinData)
 import PlutusTx.Builtins qualified as Builtins
 import Prettyprinter (Pretty (pretty))
@@ -219,21 +220,21 @@ newtype ValidatorHash =
     ValidatorHash { getValidatorHash :: Builtins.BuiltinByteString }
     deriving (IsString, Show, Pretty) via LedgerBytes
     deriving stock (Generic)
-    deriving newtype (Eq, Ord)
+    deriving newtype (Eq, Ord, PlutusTx.ToData, PlutusTx.FromData, PlutusTx.UnsafeFromData)
 
 -- | Script runtime representation of a @Digest SHA256@.
 newtype MintingPolicyHash =
     MintingPolicyHash { getMintingPolicyHash :: Builtins.BuiltinByteString }
     deriving (IsString, Show, Pretty) via LedgerBytes
     deriving stock (Generic)
-    deriving newtype (Eq, Ord)
+    deriving newtype (Eq, Ord, PlutusTx.ToData, PlutusTx.FromData, PlutusTx.UnsafeFromData)
 
 -- | Script runtime representation of a @Digest SHA256@.
 newtype StakeValidatorHash =
     StakeValidatorHash { getStakeValidatorHash :: Builtins.BuiltinByteString }
     deriving (IsString, Show, Pretty) via LedgerBytes
     deriving stock (Generic)
-    deriving newtype (Eq, Ord)
+    deriving newtype (Eq, Ord, PlutusTx.ToData, PlutusTx.FromData, PlutusTx.UnsafeFromData)
 
 mkValidatorScript :: CompiledCode (BuiltinData -> BuiltinData -> BuiltinData -> ()) -> Validator
 mkValidatorScript = Validator . Script . serialiseCompiledCode

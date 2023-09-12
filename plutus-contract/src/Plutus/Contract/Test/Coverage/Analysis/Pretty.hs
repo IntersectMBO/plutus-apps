@@ -70,9 +70,9 @@ pParen :: Bool -> Doc -> Doc
 pParen False = id
 pParen True  = parens
 
-type PrettyTm tyname name uni fun = (Eq tyname, Pretty tyname
+type PrettyTm tyname name uni = (Eq tyname, Pretty tyname
                                     , Pretty name, Pretty (SomeTypeIn uni)
-                                    , Pretty (Some (ValueOf uni)), Pretty fun)
+                                    , Pretty (Some (ValueOf uni)))
 type PrettyTy tyname uni = (Eq tyname, Pretty tyname, Pretty (SomeTypeIn uni))
 
 instance Pretty Text.Text where
@@ -81,8 +81,8 @@ instance Pretty Text.Text where
 instance Pretty (PlutusTx.CompiledCode a) where
   pretty = maybe "Nothing" pretty . PlutusTx.getPir
 
-instance PrettyTm tyname name uni fun => Pretty (Program tyname name uni fun ann) where
-  prettyPrec p (Program _ t) = prettyPrec p t
+instance (PrettyTm tyname name uni, Pretty fun) => Pretty (Program tyname name uni fun ann) where
+  prettyPrec p (Program _ _ t) = prettyPrec p t
 
 instance Pretty (SomeTypeIn DefaultUni) where
   pretty = text . show . Pp.pretty
@@ -156,12 +156,13 @@ instance PrettyTy tyname uni => Pretty (Type tyname uni ann) where
         (hd, args) = viewApp a []
         viewApp (TyApp _ a b) args = viewApp a (b : args)
         viewApp a args             = (a, args)
+    TySOP _ tss -> sep $ punctuate " |" $ map (sep . punctuate " *" . map pretty) tss
 
 -- data Binding tyname name uni fun a = TermBind a Strictness (VarDecl tyname name uni fun a) (Term tyname name uni fun a)
 --                            | TypeBind a (TyVarDecl tyname a) (Type tyname uni a)
 --                            | DatatypeBind a (Datatype tyname name uni fun a)
 
-instance PrettyTm tyname name uni fun => Pretty (Binding tyname name uni fun ann) where
+instance (PrettyTm tyname name uni, Pretty fun) => Pretty (Binding tyname name uni fun ann) where
   pretty bind = case bind of
     TermBind _ s vdec t -> (pretty vdec <+> eq) <?> pretty t
       where
@@ -178,15 +179,15 @@ instance PrettyTy tyname uni => Pretty (TyDecl tyname uni ann) where
 instance Pretty tyname => Pretty (TyVarDecl tyname ann) where
   prettyPrec p (TyVarDecl _ x k) = pParen (p > 0) $ ppTyBind (x, k)
 
-instance (PrettyTy tyname uni, Pretty name) => Pretty (VarDecl tyname name uni fun ann) where
+instance (PrettyTy tyname uni, Pretty name) => Pretty (VarDecl tyname name uni ann) where
   prettyPrec p (VarDecl _ x a) = pParen (p > 0) $ pretty x <+> ":" <+> pretty a
 
-instance PrettyTm tyname name uni fun => Pretty (Datatype tyname name uni fun ann) where
+instance PrettyTm tyname name uni => Pretty (Datatype tyname name uni ann) where
   pretty (Datatype _ tydec pars name cs) =
     vcat [ "data" <+> pretty tydec <+> fsep (map pretty pars) <+> "/" <+> pretty name <+> "where"
          , nest 2 $ vcat $ map pretty cs ]
 
-instance PrettyTm tyname name uni fun => Pretty (Term tyname name uni fun ann) where
+instance (PrettyTm tyname name uni, Pretty fun) => Pretty (Term tyname name uni fun ann) where
   prettyPrec p t = case t of
     Let _ rec binds body -> pParen (p > 0) $ sep [kw <+> vcat (map pretty $ toList binds), "in" <+> pretty body]
       where
@@ -205,6 +206,8 @@ instance PrettyTm tyname name uni fun => Pretty (Term tyname name uni fun ann) w
     TyInst{}             -> ppApp p t
     Constant _ c         -> pretty c
     Builtin _ b          -> pretty b
+    Constr _ b _ ts      -> ppApp' p "Constr" $ Left b : map Right ts
+    Case _ b t ts        -> ppApp' p "Case" $ Left b : Right t : map Right ts
     Error _ ty           -> pParen (p > 0) $ "error" <+> ":" <+> pretty ty
     IWrap _ a b t        -> ppApp' p "Wrap" [Left a, Left b, Right t]
     Unwrap _ t           -> ppApp' p "unwrap" [Right t]
@@ -229,10 +232,10 @@ instance Pretty DDat where
 instance Pretty DCon where
   pretty (DCon ds) = pretty ds
 
-ppApp :: PrettyTm tyname name uni fun => Int -> Term tyname name uni fun ann -> Doc
+ppApp :: (PrettyTm tyname name uni, Pretty fun) => Int -> Term tyname name uni fun ann -> Doc
 ppApp p t = uncurry (ppApp' p . prettyPrec 10) (viewApp t)
 
-ppApp' :: PrettyTm tyname name uni fun => Int -> Doc -> [Either (Type tyname uni ann) (Term tyname name uni fun ann)] -> Doc
+ppApp' :: (PrettyTm tyname name uni, Pretty fun) => Int -> Doc -> [Either (Type tyname uni ann) (Term tyname name uni fun ann)] -> Doc
 ppApp' p hd args = pParen (p > 10) $ hd <?> fsep (map ppArg args)
   where
     ppArg (Left a)  = "@" <> prettyPrec 11 a

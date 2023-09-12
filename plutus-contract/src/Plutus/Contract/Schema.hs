@@ -32,6 +32,7 @@ import Prettyprinter
 
 import Data.Row.Extras
 
+import Data.Kind (Type)
 import GHC.TypeLits
 
 {- Note [Contract Schema]
@@ -93,7 +94,7 @@ instance (Forall (Output s) Pretty) => Pretty (Handlers s) where
     hang 1 (braces $ vsep [lbl <> colon, vl])
 
 initialise ::
-  forall (s :: Row *) l a.
+  forall (s :: Row Type) l a.
   ( KnownSymbol l
   , AllUniqueLabels (Output s)
   , HasType l a (Output s)
@@ -105,10 +106,10 @@ initialise a =
 
 --  | Given a schema 's', 'Input s' is the 'Row' type of the inputs that
 --    contracts with this schema accept. See [Contract Schema]
-type family Input (r :: Row *) where
+type family Input (r :: Row Type) where
   Input ('R r) = 'R (InputR r)
 
-type family InputR (r :: [LT *]) where
+type family InputR (r :: [LT Type]) where
   InputR '[] = '[]
   InputR (l ':-> (t1, _) ': r) =
     l ':-> t1 ': InputR r
@@ -118,10 +119,10 @@ type family InputR (r :: [LT *]) where
 
 --  | Given a schema 's', 'Output s' is the 'Row' type of the outputs that
 --    contracts with this schema produce. See [Contract Schema]
-type family Output (r :: Row *) where
+type family Output (r :: Row Type) where
   Output ('R r) = 'R (OutputR r)
 
-type family OutputR (r :: [LT *]) where
+type family OutputR (r :: [LT Type]) where
   OutputR '[] = '[]
   OutputR (l ':-> (_, t2) ': r) =
     l ':-> t2 ': OutputR r

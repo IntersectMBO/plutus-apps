@@ -67,7 +67,7 @@ checkPolicy (TxOutRef refHash refIdx) (vHash, mintingPolarity) ctx@V2.ScriptCont
 curPolicy :: TxOutRef -> MintingPolicy
 curPolicy outRef = mkMintingPolicyScript $
     $$(PlutusTx.compile [|| \r -> mkUntypedMintingPolicy @ScriptContextV2 (checkPolicy r) ||])
-        `PlutusTx.applyCode`
+        `PlutusTx.unsafeApplyCode`
             PlutusTx.liftCode outRef
 
 {-# INLINABLE threadTokenValue #-}

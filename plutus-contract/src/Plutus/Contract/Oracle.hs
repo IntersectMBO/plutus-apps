@@ -101,6 +101,9 @@ data Observation a = Observation
     -- ^ The time at which the value was observed
     } deriving (Generic, Haskell.Show, Haskell.Eq)
 
+makeLift ''Observation
+makeIsDataIndexed ''Observation [('Observation,0)]
+
 instance Eq a => Eq (Observation a) where
     l == r =
         obsValue l == obsValue r
@@ -258,5 +261,3 @@ signObservation' time vl = signMessage' Observation{obsValue=vl, obsTime=time}
 makeLift ''SignedMessage
 makeIsDataIndexed ''SignedMessage [('SignedMessage,0)]
 
-makeLift ''Observation
-makeIsDataIndexed ''Observation [('Observation,0)]
