@@ -602,7 +602,7 @@ processConstraintFun = \case
         case opts of
             [] -> throwError $ NoMatchingOutputFound vh
             [(ref, Just (validator, datum, value))] -> do
-                mkWitness <- throwLeft ToCardanoError $ C.toCardanoTxInScriptWitnessHeader (getValidator <$> validator)
+                let mkWitness = C.toCardanoTxInScriptWitnessHeader (getValidator <$> validator)
                 txIn <- throwLeft ToCardanoError $ C.toCardanoTxIn ref
                 let witness
                         = C.ScriptWitness C.ScriptWitnessForSpending $
@@ -701,7 +701,7 @@ processConstraint = \case
             mscriptTXO <- resolveScriptTxOutValidator txout
             case mscriptTXO of
                 Just validator ->
-                    throwLeft ToCardanoError $ C.toCardanoTxInScriptWitnessHeader (getValidator <$> validator)
+                    pure $ C.toCardanoTxInScriptWitnessHeader (getValidator <$> validator)
                 _ -> throwError (TxOutRefWrongType txo)
         mscriptTXO <- resolveScriptTxOutDatumAndValue txout
         case mscriptTXO of
@@ -874,7 +874,7 @@ lookupScriptAsReferenceScript
     -> ReaderT (ScriptLookups a) (StateT ConstraintProcessingState (Except MkTxError)) (C.ReferenceScript C.BabbageEra)
 lookupScriptAsReferenceScript msh = do
     mscript <- traverse lookupScript msh
-    throwToCardanoError $ C.toCardanoReferenceScript mscript
+    pure $ C.toCardanoReferenceScript mscript
 
 resolveScriptTxOut
     :: ( MonadReader (ScriptLookups a) m

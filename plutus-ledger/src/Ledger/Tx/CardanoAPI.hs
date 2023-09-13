@@ -61,25 +61,12 @@ toCardanoScriptWitness :: PV1.ToData a =>
   -> a
   -> Either (P.Versioned PV1.Script) (P.Versioned PV1.TxOutRef)
   -> Either ToCardanoError (C.ScriptWitness witctx C.BabbageEra)
-toCardanoScriptWitness datum redeemer scriptOrRef = (case lang of
-    P.PlutusV1 ->
-      C.PlutusScriptWitness C.PlutusScriptV1InBabbage C.PlutusScriptV1
-          <$> (case scriptOrRef of
-            Left (P.Versioned script _) -> fmap C.PScript (toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV1) script)
-            Right (P.Versioned ref _) -> flip C.PReferenceScript Nothing <$> toCardanoTxIn ref
-          )
-    P.PlutusV2 ->
-      C.PlutusScriptWitness C.PlutusScriptV2InBabbage C.PlutusScriptV2
-          <$> (case scriptOrRef of
-            Left (P.Versioned script _) -> fmap C.PScript (toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV2) script)
-            Right (P.Versioned ref _) -> flip C.PReferenceScript Nothing <$> toCardanoTxIn ref
-          )
-    P.PlutusV3 -> error "toCardanoScriptWitness: Plutus V3 not supported in Babbage era"
+toCardanoScriptWitness datum redeemer scriptOrRef = (case scriptOrRef of
+    Left script -> pure $ toCardanoTxInScriptWitnessHeader script
+    Right ref   -> toCardanoTxInReferenceWitnessHeader ref
   ) <*> pure datum
     <*> pure (C.unsafeHashableScriptData $ C.fromPlutusData $ PV1.toData redeemer)
     <*> pure zeroExecutionUnits
-  where
-    lang = either P.version P.version scriptOrRef
 
 fromCardanoTxInsCollateral :: C.TxInsCollateral era -> [C.TxIn]
 fromCardanoTxInsCollateral C.TxInsCollateralNone       = []
@@ -88,9 +75,9 @@ fromCardanoTxInsCollateral (C.TxInsCollateral _ txIns) = txIns
 toCardanoDatumWitness :: Maybe PV1.Datum -> C.ScriptDatum C.WitCtxTxIn
 toCardanoDatumWitness = maybe C.InlineScriptDatum (C.ScriptDatumForTxIn . toCardanoScriptData . PV1.getDatum)
 
-type WitnessHeader = C.ScriptDatum C.WitCtxTxIn -> C.ScriptRedeemer -> C.ExecutionUnits -> C.ScriptWitness C.WitCtxTxIn C.BabbageEra
+type WitnessHeader witctx = C.ScriptDatum witctx -> C.ScriptRedeemer -> C.ExecutionUnits -> C.ScriptWitness witctx C.BabbageEra
 
-toCardanoTxInReferenceWitnessHeader :: P.Versioned PV1.TxOutRef -> Either ToCardanoError WitnessHeader
+toCardanoTxInReferenceWitnessHeader :: P.Versioned PV1.TxOutRef -> Either ToCardanoError (WitnessHeader witctx)
 toCardanoTxInReferenceWitnessHeader (P.Versioned ref lang) = do
     txIn <- toCardanoTxIn ref
     pure $ case lang of
@@ -102,16 +89,12 @@ toCardanoTxInReferenceWitnessHeader (P.Versioned ref lang) = do
                 C.PReferenceScript txIn Nothing
         P.PlutusV3 -> error "toCardanoTxInReferenceWitnessHeader: Plutus V3 not supported in Babbage era"
 
-toCardanoTxInScriptWitnessHeader :: P.Versioned PV1.Script -> Either ToCardanoError WitnessHeader
-toCardanoTxInScriptWitnessHeader (P.Versioned script lang) =
-    case lang of
-        P.PlutusV1 ->
-            C.PlutusScriptWitness C.PlutusScriptV1InBabbage C.PlutusScriptV1 . C.PScript <$>
-                toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV1) script
-        P.PlutusV2 ->
-            C.PlutusScriptWitness C.PlutusScriptV2InBabbage C.PlutusScriptV2 . C.PScript <$>
-                toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV2) script
-        P.PlutusV3 -> error "toCardanoTxInScriptWitnessHeader: Plutus V3 not supported in Babbage era"
+toCardanoTxInScriptWitnessHeader :: P.Versioned PV1.Script -> WitnessHeader witctx
+toCardanoTxInScriptWitnessHeader script =
+    case toCardanoScriptInEra script of
+        C.ScriptInEra _ (C.SimpleScript _) -> error "toCardanoTxInScriptWitnessHeader: impossible simple script"
+        C.ScriptInEra era (C.PlutusScript v s) ->
+            C.PlutusScriptWitness era v (C.PScript s)
 
 fromCardanoTotalCollateral :: C.TxTotalCollateral C.BabbageEra -> Maybe C.Lovelace
 fromCardanoTotalCollateral C.TxTotalCollateralNone    = Nothing

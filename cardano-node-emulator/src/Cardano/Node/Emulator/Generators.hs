@@ -84,15 +84,15 @@ import Hedgehog (Gen, MonadGen, MonadTest, Range)
 import Hedgehog qualified as H
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-import Ledger (CardanoTx (CardanoEmulatorEraTx), Interval, MintingPolicy (getMintingPolicy),
-               POSIXTime (POSIXTime, getPOSIXTime), POSIXTimeRange, Passphrase (Passphrase),
-               PaymentPrivateKey (unPaymentPrivateKey), PaymentPubKey, Slot (Slot), SlotRange, TxOut,
-               ValidationErrorInPhase, ValidationPhase (Phase1, Phase2), ValidationResult (FailPhase1, FailPhase2),
-               addCardanoTxSignature, createGenesisTransaction, minLovelaceTxOutEstimated, pubKeyAddress, txOutValue)
+import Ledger (CardanoTx (CardanoEmulatorEraTx), Interval, POSIXTime (POSIXTime, getPOSIXTime), POSIXTimeRange,
+               Passphrase (Passphrase), PaymentPrivateKey (unPaymentPrivateKey), PaymentPubKey, Slot (Slot), SlotRange,
+               TxOut, ValidationErrorInPhase, ValidationPhase (Phase1, Phase2),
+               ValidationResult (FailPhase1, FailPhase2), addCardanoTxSignature, createGenesisTransaction,
+               minLovelaceTxOutEstimated, pubKeyAddress, txOutValue)
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Scripts qualified as Script
 import Ledger.Tx qualified as Tx
-import Ledger.Tx.CardanoAPI (ToCardanoError, fromCardanoPlutusScript)
+import Ledger.Tx.CardanoAPI (ToCardanoError)
 import Ledger.Tx.CardanoAPI qualified as C hiding (makeTransactionBody)
 import Ledger.Value.CardanoAPI qualified as Value
 import Numeric.Natural (Natural)
@@ -273,13 +273,11 @@ genValidTransactionBodySpending' g ins totalVal = do
     let txOutputs = either (fail . ("Cannot create outputs: " <>) . show) id
                     $ traverse (\(v, ppk) -> pubKeyTxOut v ppk Nothing)
                     $ zip outVals pubKeys
-    mintWitness <- failOnCardanoError $ C.PlutusScriptWitness C.PlutusScriptV2InBabbage C.PlutusScriptV2
-                           <$> (C.PScript <$> C.toCardanoPlutusScript
-                                                  (C.AsPlutusScript C.AsPlutusScriptV2)
-                                                  (getMintingPolicy alwaysSucceedPolicy))
-                           <*> pure C.NoScriptDatumForMint
-                           <*> pure (C.unsafeHashableScriptData $ C.fromPlutusData $ toData Script.unitRedeemer)
-                           <*> pure C.zeroExecutionUnits
+    let mintWitness = C.PlutusScriptWitness C.PlutusScriptV1InBabbage C.PlutusScriptV1
+                           (C.PScript $ C.examplePlutusScriptAlwaysSucceeds C.WitCtxMint)
+                           C.NoScriptDatumForMint
+                           (C.unsafeHashableScriptData $ C.fromPlutusData $ toData Script.unitRedeemer)
+                           C.zeroExecutionUnits
     let txMintValue = C.TxMintValue C.MultiAssetInBabbageEra (fromMaybe mempty mintValue)
                           (C.BuildTxWith (Map.singleton alwaysSucceedPolicyId mintWitness))
         txIns = map (, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending) ins
@@ -436,7 +434,7 @@ genPassphrase =
   Passphrase <$> Gen.utf8 (Range.singleton 16) Gen.unicode
 
 alwaysSucceedPolicy :: Script.MintingPolicy
-alwaysSucceedPolicy = Script.MintingPolicy (fromCardanoPlutusScript $ C.examplePlutusScriptAlwaysSucceeds C.WitCtxMint)
+alwaysSucceedPolicy = Script.MintingPolicy (C.fromCardanoPlutusScript $ C.examplePlutusScriptAlwaysSucceeds C.WitCtxMint)
 
 alwaysSucceedPolicyId :: C.PolicyId
 alwaysSucceedPolicyId = C.scriptPolicyId (C.PlutusScript C.PlutusScriptV1 $ C.examplePlutusScriptAlwaysSucceeds C.WitCtxMint)

@@ -143,7 +143,7 @@ mkGuessTx
     -> GuessArgs
     -> (C.CardanoBuildTx, UtxoIndex)
 mkGuessTx utxos GuessArgs { guessArgsGameParam, guessArgsSecret } =
-    let witnessHeader = either (error . show) id $ C.toCardanoTxInScriptWitnessHeader (getValidator <$> mkGameValidator guessArgsGameParam)
+    let witnessHeader = C.toCardanoTxInScriptWitnessHeader (getValidator <$> mkGameValidator guessArgsGameParam)
         redeemer = C.unsafeHashableScriptData $ C.fromPlutusData $ PlutusTx.toData $ clearString guessArgsSecret
         witness = C.BuildTxWith $ C.ScriptWitness C.ScriptWitnessForSpending $
             witnessHeader C.InlineScriptDatum redeemer C.zeroExecutionUnits

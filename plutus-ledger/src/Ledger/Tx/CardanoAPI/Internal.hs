@@ -80,7 +80,6 @@ module Ledger.Tx.CardanoAPI.Internal(
   , toCardanoScriptDataHash
   , toCardanoScriptHash
   , toCardanoStakeKeyHash
-  , toCardanoPlutusScript
   , toCardanoScriptInAnyLang
   , toCardanoReferenceScript
   , toCardanoTxId
@@ -114,7 +113,6 @@ import Data.Aeson.Types (Parser, parseFail, prependFailure, typeMismatch)
 import Data.Bifunctor (first)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
-import Data.ByteString.Lazy qualified as BSL
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (mapMaybe)
@@ -963,22 +961,13 @@ fromCardanoScriptInEra (C.ScriptInEra C.PlutusScriptV3InConway (C.PlutusScript C
     Just (P.Versioned (fromCardanoPlutusScript script) P.PlutusV3)
 fromCardanoScriptInEra (C.ScriptInEra _ C.SimpleScript{}) = Nothing
 
-toCardanoScriptInEra :: P.Versioned P.Script -> Either ToCardanoError (C.ScriptInEra C.BabbageEra)
-toCardanoScriptInEra (P.Versioned script P.PlutusV1) = C.ScriptInEra C.PlutusScriptV1InBabbage . C.PlutusScript C.PlutusScriptV1 <$> toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV1) script
-toCardanoScriptInEra (P.Versioned script P.PlutusV2) = C.ScriptInEra C.PlutusScriptV2InBabbage . C.PlutusScript C.PlutusScriptV2 <$> toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV2) script
+toCardanoScriptInEra :: P.Versioned P.Script -> C.ScriptInEra C.BabbageEra
+toCardanoScriptInEra (P.Versioned (P.Script s) P.PlutusV1) = C.ScriptInEra C.PlutusScriptV1InBabbage . C.PlutusScript C.PlutusScriptV1 $ C.PlutusScriptSerialised s
+toCardanoScriptInEra (P.Versioned (P.Script s) P.PlutusV2) = C.ScriptInEra C.PlutusScriptV2InBabbage . C.PlutusScript C.PlutusScriptV2 $ C.PlutusScriptSerialised s
 toCardanoScriptInEra (P.Versioned _ P.PlutusV3) = error "toCardanoScriptInEra: Plutus V3 not supported in Babbage era"
 
-fromCardanoPlutusScript :: C.HasTypeProxy lang => C.PlutusScript lang -> P.Script
-fromCardanoPlutusScript = Codec.deserialise . BSL.fromStrict . C.serialiseToRawBytes
-
-toCardanoPlutusScript
-    :: C.SerialiseAsRawBytes plutusScript
-    => C.AsType plutusScript
-    -> P.Script
-    -> Either ToCardanoError plutusScript
-toCardanoPlutusScript asPlutusScriptType =
-    tag "toCardanoPlutusScript"
-    . deserialiseFromRawBytes asPlutusScriptType . BSL.toStrict . Codec.serialise
+fromCardanoPlutusScript :: C.PlutusScript lang -> P.Script
+fromCardanoPlutusScript (C.PlutusScriptSerialised s) = P.Script s
 
 fromCardanoScriptInAnyLang :: C.ScriptInAnyLang -> Maybe (P.Versioned P.Script)
 fromCardanoScriptInAnyLang (C.ScriptInAnyLang _sl (C.SimpleScript _)) = Nothing
@@ -987,24 +976,24 @@ fromCardanoScriptInAnyLang (C.ScriptInAnyLang _sl (C.PlutusScript psv ps)) = Jus
      C.PlutusScriptV2 -> P.Versioned (fromCardanoPlutusScript ps) P.PlutusV2
      C.PlutusScriptV3 -> P.Versioned (fromCardanoPlutusScript ps) P.PlutusV3
 
-toCardanoScriptInAnyLang :: P.Versioned P.Script -> Either ToCardanoError C.ScriptInAnyLang
-toCardanoScriptInAnyLang (P.Versioned script P.PlutusV1) =
+toCardanoScriptInAnyLang :: P.Versioned P.Script -> C.ScriptInAnyLang
+toCardanoScriptInAnyLang (P.Versioned (P.Script s) P.PlutusV1) =
   C.ScriptInAnyLang (C.PlutusScriptLanguage C.PlutusScriptV1) . C.PlutusScript C.PlutusScriptV1
-    <$> toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV1) script
-toCardanoScriptInAnyLang (P.Versioned script P.PlutusV2) =
+    $ C.PlutusScriptSerialised s
+toCardanoScriptInAnyLang (P.Versioned (P.Script s) P.PlutusV2) =
   C.ScriptInAnyLang (C.PlutusScriptLanguage C.PlutusScriptV2) . C.PlutusScript C.PlutusScriptV2
-    <$> toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV2) script
-toCardanoScriptInAnyLang (P.Versioned script P.PlutusV3) =
+    $ C.PlutusScriptSerialised s
+toCardanoScriptInAnyLang (P.Versioned (P.Script s) P.PlutusV3) =
   C.ScriptInAnyLang (C.PlutusScriptLanguage C.PlutusScriptV3) . C.PlutusScript C.PlutusScriptV3
-    <$> toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV3) script
+    $ C.PlutusScriptSerialised s
 
 fromCardanoReferenceScript :: C.ReferenceScript C.BabbageEra -> Maybe (P.Versioned P.Script)
 fromCardanoReferenceScript C.ReferenceScriptNone        = Nothing
 fromCardanoReferenceScript (C.ReferenceScript _ script) = fromCardanoScriptInAnyLang script
 
-toCardanoReferenceScript :: Maybe (P.Versioned P.Script) -> Either ToCardanoError (C.ReferenceScript C.BabbageEra)
-toCardanoReferenceScript (Just script) = C.ReferenceScript C.ReferenceTxInsScriptsInlineDatumsInBabbageEra <$> toCardanoScriptInAnyLang script
-toCardanoReferenceScript Nothing = pure C.ReferenceScriptNone
+toCardanoReferenceScript :: Maybe (P.Versioned P.Script) -> C.ReferenceScript C.BabbageEra
+toCardanoReferenceScript (Just script) = C.ReferenceScript C.ReferenceTxInsScriptsInlineDatumsInBabbageEra $ toCardanoScriptInAnyLang script
+toCardanoReferenceScript Nothing = C.ReferenceScriptNone
 
 deserialiseFromRawBytes :: C.SerialiseAsRawBytes t => C.AsType t -> ByteString -> Either ToCardanoError t
 deserialiseFromRawBytes asType = either (const (Left DeserialisationError)) Right . C.deserialiseFromRawBytes asType

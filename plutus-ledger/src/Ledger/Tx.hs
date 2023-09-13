@@ -232,7 +232,7 @@ toTxOut networkId p =
     <$> CardanoAPI.toCardanoAddressInEra networkId (p ^. decoratedTxOutAddress)
     <*> pure (CardanoAPI.toCardanoTxOutValue (p ^. decoratedTxOutValue))
     <*> (toTxOutDatum $ p ^? decoratedTxOutDatum)
-    <*> CardanoAPI.toCardanoReferenceScript (p ^. decoratedTxOutReferenceScript))
+    <*> pure (CardanoAPI.toCardanoReferenceScript (p ^. decoratedTxOutReferenceScript)))
 
 toTxOutDatum :: Maybe (V2.DatumHash, DatumFromQuery) -> Either ToCardanoError (C.TxOutDatum C.CtxTx C.BabbageEra)
 toTxOutDatum = CardanoAPI.toCardanoTxOutDatum . toPlutusOutputDatum
