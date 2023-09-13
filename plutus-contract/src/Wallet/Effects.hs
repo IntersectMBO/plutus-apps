@@ -31,7 +31,7 @@ import Control.Monad.Freer.TH (makeEffect)
 import Data.List.NonEmpty (NonEmpty)
 import Ledger (CardanoAddress, CardanoTx, Slot)
 import Ledger.Tx.Constraints.OffChain (UnbalancedTx)
-import Plutus.V1.Ledger.Value (Value)
+import PlutusLedgerApi.V1.Value (Value)
 import Wallet.Error (WalletAPIError)
 
 {-# DEPRECATED TotalFunds "We won't use the wallet for querying blockchain information. See https://plutus-apps.readthedocs.io/en/latest/adr/0005-pab-indexing-solution-integration.html" #-}

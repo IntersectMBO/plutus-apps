@@ -55,7 +55,6 @@ library
     Plutus.ChainIndex.Emulator.Handlers
     Plutus.ChainIndex.Emulator.Server
     Plutus.ChainIndex.Handlers
-    Plutus.ChainIndex.Marconi
     Plutus.ChainIndex.Server
     Plutus.ChainIndex.Tx
     Plutus.ChainIndex.TxIdState
@@ -74,8 +73,6 @@ library
     , cardano-node-emulator         >=1.2.0
     , cardano-node-socket-emulator  >=1.2.0
     , freer-extras                  >=1.2.0
-    , marconi-chain-index           >=1.2.0
-    , marconi-core                  >=1.2.0
     , plutus-ledger                 >=1.2.0
     , plutus-script-utils           >=1.2.0
 
@@ -83,10 +80,12 @@ library
   -- Other IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api                  >=1.35
+    , cardano-api                  >=8.0
+    , cardano-crypto-class
     , iohk-monitoring
     , ouroboros-network
     , ouroboros-network-framework
+    , ouroboros-network-protocols
     , plutus-core                  >=1.0.0
     , plutus-ledger-api            >=1.0.0
     , plutus-tx                    >=1.0.0
@@ -142,26 +141,23 @@ test-suite plutus-chain-index-test
     Plutus.ChainIndex.Emulator.DiskStateSpec
     Plutus.ChainIndex.Emulator.HandlersSpec
     Plutus.ChainIndex.HandlersSpec
-    Plutus.ChainIndex.MarconiSpec
     Util
 
   --------------------
   -- Local components
   --------------------
   build-depends:
-    , cardano-node-emulator                                                    >=1.2.0
-    , freer-extras                                                             >=1.2.0
-    , marconi-chain-index:{marconi-chain-index, marconi-chain-index-test-lib}  >=1.2.0
-    , marconi-core                                                             >=1.2.0
-    , plutus-chain-index-core                                                  >=1.2.0
-    , plutus-ledger                                                            >=1.2.0
-    , plutus-script-utils                                                      >=1.2.0
+    , cardano-node-emulator    >=1.2.0
+    , freer-extras             >=1.2.0
+    , plutus-chain-index-core  >=1.2.0
+    , plutus-ledger            >=1.2.0
+    , plutus-script-utils      >=1.2.0
 
   --------------------------
   -- Other IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api:{cardano-api, gen}  >=1.35
+    , cardano-api:{cardano-api, gen}  >=8.0
     , plutus-ledger-api               >=1.0.0
     , plutus-tx                       >=1.0.0
 

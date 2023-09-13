@@ -68,9 +68,9 @@ import Ledger.Tx.Constraints (TxConstraints)
 import Ledger.Tx.Constraints qualified as Constraints
 import Ledger.Tx.Constraints.OnChain.V2 qualified as Constraints
 import Plutus.Script.Utils.Scripts qualified as Scripts
-import Plutus.V1.Ledger.Bytes (LedgerBytes (LedgerBytes))
-import Plutus.V1.Ledger.Time (POSIXTime)
-import Plutus.V2.Ledger.Contexts (ScriptContext)
+import PlutusLedgerApi.V1.Bytes (LedgerBytes (LedgerBytes))
+import PlutusLedgerApi.V1.Time (POSIXTime)
+import PlutusLedgerApi.V2.Contexts (ScriptContext)
 
 import Prelude qualified as Haskell
 
@@ -100,6 +100,9 @@ data Observation a = Observation
     , obsTime  :: POSIXTime
     -- ^ The time at which the value was observed
     } deriving (Generic, Haskell.Show, Haskell.Eq)
+
+makeLift ''Observation
+makeIsDataIndexed ''Observation [('Observation,0)]
 
 instance Eq a => Eq (Observation a) where
     l == r =
@@ -258,5 +261,3 @@ signObservation' time vl = signMessage' Observation{obsValue=vl, obsTime=time}
 makeLift ''SignedMessage
 makeIsDataIndexed ''SignedMessage [('SignedMessage,0)]
 
-makeLift ''Observation
-makeIsDataIndexed ''Observation [('Observation,0)]

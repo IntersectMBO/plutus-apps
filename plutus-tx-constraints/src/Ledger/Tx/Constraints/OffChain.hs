@@ -114,7 +114,6 @@ import Ledger (Datum, Language (PlutusV1, PlutusV2), MintingPolicy, MintingPolic
                Redeemer (Redeemer), UtxoIndex, Versioned, adjustTxOut, decoratedTxOutReferenceScript)
 import Ledger.Address (PaymentPubKey (PaymentPubKey), PaymentPubKeyHash (PaymentPubKeyHash))
 import Ledger.Crypto (pubKeyHash)
-import Ledger.Interval ()
 import Ledger.Orphans ()
 import Ledger.Scripts (ScriptHash, getRedeemer, getValidator)
 import Ledger.Tx (DecoratedTxOut, TxOut, TxOutRef)
@@ -125,12 +124,13 @@ import Ledger.Tx.Constraints.TxConstraints
 import Ledger.Tx.Constraints.ValidityInterval (toPlutusInterval)
 import Ledger.Typed.Scripts (Any, ConnectionError (UnknownRef), TypedValidator (tvValidator, tvValidatorHash),
                              ValidatorTypes (DatumType, RedeemerType), validatorAddress)
-import Plutus.Script.Utils.Scripts (datumHash, scriptHash)
+import Plutus.Script.Utils.Scripts (MintingPolicy (MintingPolicy, getMintingPolicy),
+                                    MintingPolicyHash (MintingPolicyHash), Script, ScriptHash (ScriptHash),
+                                    Validator (Validator), ValidatorHash (ValidatorHash), datumHash, scriptHash)
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as Typed
 import Plutus.Script.Utils.Value qualified as Value
-import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash, StakingCredential, Validator, Value, getMintingPolicy)
-import Plutus.V1.Ledger.Scripts (MintingPolicy (MintingPolicy), MintingPolicyHash (MintingPolicyHash), Script,
-                                 ScriptHash (ScriptHash), Validator (Validator), ValidatorHash (ValidatorHash))
+import PlutusLedgerApi.V1 (Datum (Datum), DatumHash, StakingCredential, Value)
+import PlutusLedgerApi.V1.Interval ()
 import PlutusTx (FromData, ToData (toBuiltinData))
 import PlutusTx.Lattice (BoundedMeetSemiLattice (top), JoinSemiLattice ((\/)), MeetSemiLattice ((/\)))
 import PlutusTx.Numeric qualified as N
@@ -365,7 +365,7 @@ actual values we encounter on either side of the transaction. Then we
 compute the missing value on both sides, and add an input with the
 join of the positive parts [1] of the missing values.
 
-[1] See 'Plutus.V1.Ledger.Value.split'
+[1] See 'PlutusLedgerApi.V1.Value.split'
 
 -}
 
@@ -602,7 +602,7 @@ processConstraintFun = \case
         case opts of
             [] -> throwError $ NoMatchingOutputFound vh
             [(ref, Just (validator, datum, value))] -> do
-                mkWitness <- throwLeft ToCardanoError $ C.toCardanoTxInScriptWitnessHeader (getValidator <$> validator)
+                let mkWitness = C.toCardanoTxInScriptWitnessHeader (getValidator <$> validator)
                 txIn <- throwLeft ToCardanoError $ C.toCardanoTxIn ref
                 let witness
                         = C.ScriptWitness C.ScriptWitnessForSpending $
@@ -701,7 +701,7 @@ processConstraint = \case
             mscriptTXO <- resolveScriptTxOutValidator txout
             case mscriptTXO of
                 Just validator ->
-                    throwLeft ToCardanoError $ C.toCardanoTxInScriptWitnessHeader (getValidator <$> validator)
+                    pure $ C.toCardanoTxInScriptWitnessHeader (getValidator <$> validator)
                 _ -> throwError (TxOutRefWrongType txo)
         mscriptTXO <- resolveScriptTxOutDatumAndValue txout
         case mscriptTXO of
@@ -874,7 +874,7 @@ lookupScriptAsReferenceScript
     -> ReaderT (ScriptLookups a) (StateT ConstraintProcessingState (Except MkTxError)) (C.ReferenceScript C.BabbageEra)
 lookupScriptAsReferenceScript msh = do
     mscript <- traverse lookupScript msh
-    throwToCardanoError $ C.toCardanoReferenceScript mscript
+    pure $ C.toCardanoReferenceScript mscript
 
 resolveScriptTxOut
     :: ( MonadReader (ScriptLookups a) m

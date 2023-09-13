@@ -48,7 +48,7 @@ import Plutus.Script.Utils.V1.Generators (alwaysSucceedPolicyVersioned, someToke
 import Plutus.Script.Utils.V1.Scripts qualified as PSU.V1
 import Plutus.Script.Utils.V2.Scripts qualified as PSU.V2
 import Plutus.Trace.Emulator qualified as Trace (EmulatorTrace, activateContractWallet, params, waitNSlots)
-import Plutus.V1.Ledger.Value
+import PlutusLedgerApi.V1.Value
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
 

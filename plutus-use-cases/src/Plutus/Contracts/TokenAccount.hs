@@ -61,8 +61,8 @@ import Plutus.Script.Utils.V2.Address (mkValidatorCardanoAddress)
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
 import Plutus.Script.Utils.Value (AssetClass, TokenName, Value)
 import Plutus.Script.Utils.Value qualified as Value
-import Plutus.V2.Ledger.Api qualified as V2
-import Plutus.V2.Ledger.Contexts qualified as V2
+import PlutusLedgerApi.V2 qualified as V2
+import PlutusLedgerApi.V2.Contexts qualified as V2
 
 import Prettyprinter.Extras (PrettyShow (PrettyShow))
 

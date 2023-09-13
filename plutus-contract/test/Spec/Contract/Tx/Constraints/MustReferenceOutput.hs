@@ -44,7 +44,7 @@ import Plutus.Script.Utils.Typed (Any)
 import Plutus.Script.Utils.V2.Address qualified as PSU.V2
 import Plutus.Script.Utils.V2.Scripts qualified as PSU.V2
 import Plutus.Trace qualified as Trace
-import Plutus.V2.Ledger.Api qualified as PV2
+import PlutusLedgerApi.V2 qualified as PV2
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
 import Spec.Contract.Error (cardanoLedgerErrorContaining)

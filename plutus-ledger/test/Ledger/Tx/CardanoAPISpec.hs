@@ -9,8 +9,6 @@ import Cardano.Api (AsType (AsPaymentKey, AsStakeKey), Key (verificationKeyHash)
                     StakeAddressReference (NoStakeAddress, StakeAddressByValue), StakeCredential, makeShelleyAddress,
                     shelleyAddressInEra)
 import Cardano.Api.Shelley (StakeCredential (StakeCredentialByKey))
-import Gen.Cardano.Api.Typed (genAssetName, genTxId, genValueDefault)
-import Gen.Cardano.Api.Typed qualified as Gen
 import Hedgehog (Gen, Property, forAll, property, tripping, (===))
 import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
@@ -20,6 +18,8 @@ import Ledger.Tx.CardanoAPI (fromCardanoAssetName, fromCardanoTxId, fromCardanoV
                              toCardanoAssetName, toCardanoTxId, toCardanoValue)
 import Ledger.Value.CardanoAPI (combine, valueFromList, valueGeq)
 import PlutusTx.Lattice ((\/))
+import Test.Gen.Cardano.Api.Typed (genAssetName, genTxId, genValueDefault)
+import Test.Gen.Cardano.Api.Typed qualified as Gen
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testPropertyNamed)
 

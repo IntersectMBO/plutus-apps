@@ -35,7 +35,7 @@ import Plutus.Contract.Test (assertContractError, assertEvaluationError, assertV
 import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Typed qualified as Typed
 import Plutus.Trace qualified as Trace
-import Plutus.V1.Ledger.Api (Datum (Datum), ScriptContext, TxOutRef (TxOutRef), Validator, ValidatorHash)
+import PlutusLedgerApi.V1 (Datum (Datum), ScriptContext, TxOutRef (TxOutRef), Validator, ValidatorHash)
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
 import Wallet.Emulator.Wallet as Wallet (WalletState, chainIndexEmulatorState, ownAddress, signPrivateKeys,

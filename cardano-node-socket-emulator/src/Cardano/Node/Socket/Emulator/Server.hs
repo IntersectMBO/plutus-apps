@@ -48,8 +48,8 @@ import Ouroboros.Network.Block (Point (..), pointSlot)
 import Ouroboros.Network.Block qualified as O
 import Ouroboros.Network.IOManager
 import Ouroboros.Network.Mux
-import Ouroboros.Network.NodeToClient (NodeToClientProtocols (..), nodeToClientCodecCBORTerm,
-                                       nodeToClientHandshakeCodec, nullErrorPolicies, versionedNodeToClientProtocols)
+import Ouroboros.Network.NodeToClient (NodeToClientProtocols (..), nodeToClientCodecCBORTerm, nullErrorPolicies,
+                                       versionedNodeToClientProtocols)
 import Ouroboros.Network.Point qualified as OP (Block (..))
 import Ouroboros.Network.Protocol.Handshake.Codec
 import Ouroboros.Network.Protocol.Handshake.Version
@@ -428,6 +428,8 @@ protocolLoop socketPath internalState = liftIO $ withIOManager $ \iocp -> do
     _ <- async $ cleanNetworkMutableState networkState
     withServerNode
       (localSnocket iocp)
+      makeLocalBearer
+      (\_ _ -> pure ())
       nullNetworkServerTracers
       networkState
       (AcceptedConnectionsLimit maxBound maxBound 0)
@@ -435,7 +437,7 @@ protocolLoop socketPath internalState = liftIO $ withIOManager $ \iocp -> do
       nodeToClientHandshakeCodec
       noTimeLimitsHandshake
       (cborTermVersionDataCodec nodeToClientCodecCBORTerm)
-      acceptableVersion
+      (HandshakeCallbacks acceptableVersion queryVersion)
       (SomeResponderApplication <$>
         versionedNodeToClientProtocols
           nodeToClientVersion

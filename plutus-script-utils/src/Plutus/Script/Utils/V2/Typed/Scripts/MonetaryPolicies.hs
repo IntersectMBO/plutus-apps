@@ -15,13 +15,13 @@ module Plutus.Script.Utils.V2.Typed.Scripts.MonetaryPolicies
     , forwardToValidator
     ) where
 
+import Plutus.Script.Utils.Scripts (MintingPolicy, ValidatorHash (ValidatorHash), mkMintingPolicyScript)
 import Plutus.Script.Utils.Typed (mkUntypedMintingPolicy)
-import Plutus.V2.Ledger.Api (Address (Address, addressCredential), Credential (ScriptCredential), MintingPolicy,
-                             ValidatorHash, mkMintingPolicyScript)
-import Plutus.V2.Ledger.Contexts (ScriptContext (ScriptContext, scriptContextPurpose, scriptContextTxInfo),
-                                  ScriptPurpose (Minting), TxInfo (TxInfo, txInfoInputs))
-import Plutus.V2.Ledger.Contexts qualified as PV2
-import Plutus.V2.Ledger.Tx (TxOut (TxOut, txOutAddress))
+import PlutusLedgerApi.V2 (Address (Address, addressCredential), Credential (ScriptCredential), ScriptHash (ScriptHash))
+import PlutusLedgerApi.V2.Contexts (ScriptContext (ScriptContext, scriptContextPurpose, scriptContextTxInfo),
+                                    ScriptPurpose (Minting), TxInfo (TxInfo, txInfoInputs))
+import PlutusLedgerApi.V2.Contexts qualified as PV2
+import PlutusLedgerApi.V2.Tx (TxOut (TxOut, txOutAddress))
 import PlutusTx qualified
 import PlutusTx.Prelude (Bool (False), any, ($), (.), (==))
 
@@ -35,13 +35,13 @@ mkForwardingMintingPolicy vshsh =
      $ $$(PlutusTx.compile [|| \(hsh :: ValidatorHash) ->
          mkUntypedMintingPolicy (forwardToValidator hsh)
          ||])
-       `PlutusTx.applyCode` PlutusTx.liftCode vshsh
+       `PlutusTx.unsafeApplyCode` PlutusTx.liftCode vshsh
 
 {-# INLINABLE forwardToValidator #-}
 forwardToValidator :: ValidatorHash -> () -> PV2.ScriptContext -> Bool
-forwardToValidator h _ ScriptContext{scriptContextTxInfo=TxInfo{txInfoInputs}, scriptContextPurpose=Minting _} =
-    let checkHash TxOut{txOutAddress=Address{addressCredential=ScriptCredential vh}} = vh == h
-        checkHash _                                                                  = False
+forwardToValidator (ValidatorHash h) _ ScriptContext{scriptContextTxInfo=TxInfo{txInfoInputs}, scriptContextPurpose=Minting _} =
+    let checkHash TxOut{txOutAddress=Address{addressCredential=ScriptCredential (ScriptHash vh)}} = vh == h
+        checkHash _                                                                               = False
     in any (checkHash . PV2.txInInfoResolved) txInfoInputs
 forwardToValidator _ _ _ = False
 

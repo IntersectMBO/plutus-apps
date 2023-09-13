@@ -31,7 +31,6 @@ import Cardano.Api.Shelley (toPlutusData)
 import Cardano.Node.Emulator.Internal.Node.Params qualified as Params
 import Cardano.Node.Emulator.Internal.Node.TimeSlot qualified as TimeSlot
 import Ledger (Slot (..), minAdaTxOutEstimated)
-import Ledger.Time (POSIXTime)
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value.CardanoAPI qualified as Value
 import Plutus.Contract hiding (currentSlot)
@@ -39,6 +38,7 @@ import Plutus.Contract.Test
 import Plutus.Contract.Test.ContractModel
 import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Value
+import PlutusLedgerApi.V1.Time (POSIXTime)
 
 import Plutus.Contracts.Escrow hiding (Action (..))
 import Plutus.Contracts.Escrow qualified as Impl

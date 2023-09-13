@@ -116,6 +116,7 @@ data DTyp = DTVar NamedTyDeBruijn [DTyp]
           | DTForall { dtName :: NamedTyDeBruijn, dtKind :: Kin, dtBody :: DTyp }
           | DTWk { dtWk :: Weakening , dtBody :: DTyp }
           | DTyBuiltin Kin -- we don't care which
+          | DTSOP [[DTyp]]
   deriving (Show, Eq, Generic)
 
 data DArg = TyArg DTyp | DArg Dom

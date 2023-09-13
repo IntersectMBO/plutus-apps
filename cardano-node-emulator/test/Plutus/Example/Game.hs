@@ -28,14 +28,14 @@ import Control.Monad (void)
 import Data.ByteString.Char8 qualified as C
 import Data.Map qualified as Map
 import GHC.Generics (Generic)
-import Ledger (CardanoAddress, POSIXTime, PaymentPrivateKey, UtxoIndex, getValidator)
+import Ledger (CardanoAddress, POSIXTime, PaymentPrivateKey, UtxoIndex, Validator, getValidator)
 import Ledger.Address (mkValidatorCardanoAddress)
 import Ledger.Tx.CardanoAPI qualified as C
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Script.Utils.Typed (ScriptContextV2, Versioned)
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
-import Plutus.V2.Ledger.Api (Address, Validator)
-import Plutus.V2.Ledger.Contexts qualified as V2
+import PlutusLedgerApi.V2 (Address)
+import PlutusLedgerApi.V2.Contexts qualified as V2
 import PlutusTx (FromData, ToData)
 import PlutusTx qualified
 import PlutusTx.Prelude ()
@@ -126,7 +126,7 @@ data GuessArgs =
 mkLockTx :: LockArgs -> (C.CardanoBuildTx, UtxoIndex)
 mkLockTx LockArgs { lockArgsGameParam, lockArgsSecret, lockArgsValue } =
     let gameAddr = mkGameAddress lockArgsGameParam
-        datum = C.fromPlutusData $ PlutusTx.toData $ hashString lockArgsSecret
+        datum = C.unsafeHashableScriptData $ C.fromPlutusData $ PlutusTx.toData $ hashString lockArgsSecret
         txOut = C.TxOut
             gameAddr
             (C.toCardanoTxOutValue lockArgsValue)
@@ -143,8 +143,8 @@ mkGuessTx
     -> GuessArgs
     -> (C.CardanoBuildTx, UtxoIndex)
 mkGuessTx utxos GuessArgs { guessArgsGameParam, guessArgsSecret } =
-    let witnessHeader = either (error . show) id $ C.toCardanoTxInScriptWitnessHeader (getValidator <$> mkGameValidator guessArgsGameParam)
-        redeemer = C.fromPlutusData $ PlutusTx.toData $ clearString guessArgsSecret
+    let witnessHeader = C.toCardanoTxInScriptWitnessHeader (getValidator <$> mkGameValidator guessArgsGameParam)
+        redeemer = C.unsafeHashableScriptData $ C.fromPlutusData $ PlutusTx.toData $ clearString guessArgsSecret
         witness = C.BuildTxWith $ C.ScriptWitness C.ScriptWitnessForSpending $
             witnessHeader C.InlineScriptDatum redeemer C.zeroExecutionUnits
         txIns = (, witness) <$> Map.keys (C.unUTxO utxos)

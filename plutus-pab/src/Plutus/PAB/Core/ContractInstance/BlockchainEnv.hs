@@ -56,7 +56,7 @@ import Plutus.PAB.Types (Config (Config, dbConfig), DbConfig (..),
                          WebserverConfig (WebserverConfig, enableMarconi), developmentOptions, nodeServerConfig,
                          pabWebserverConfig)
 import Plutus.Trace.Emulator.ContractInstance (IndexedBlock (..), indexBlock)
-import Plutus.V1.Ledger.Api (TxId)
+import PlutusLedgerApi.V1 (TxId)
 import System.Random
 
 -- | Connect to the node and write node updates to the blockchain

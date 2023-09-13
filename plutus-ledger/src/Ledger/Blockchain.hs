@@ -32,7 +32,7 @@ import Cardano.Api qualified as C
 import Ledger.Index.Internal (OnChainTx (..), eitherTx, unOnChain)
 import Ledger.Tx (TxOut, getCardanoTxCollateralInputs, getCardanoTxInputs, getCardanoTxProducedOutputs,
                   getCardanoTxProducedReturnCollateral)
-import Plutus.V1.Ledger.Scripts
+import PlutusLedgerApi.V1.Scripts
 
 -- | Block identifier (usually a hash)
 newtype BlockId = BlockId { getBlockId :: BS.ByteString }

@@ -29,8 +29,8 @@ import Plutus.Contract.Test (assertContractError, assertEvaluationError, assertV
                              changeInitialWalletValue, checkPredicateOptions, defaultCheckOptions, mockWalletAddress,
                              w1, w6, (.&&.))
 import Plutus.Trace qualified as Trace
-import Plutus.V1.Ledger.Api (Datum (Datum), ScriptContext)
-import Plutus.V1.Ledger.Value qualified as Plutus
+import PlutusLedgerApi.V1 (Datum (Datum), ScriptContext)
+import PlutusLedgerApi.V1.Value qualified as Plutus
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
 import Prelude hiding (not)

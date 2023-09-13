@@ -14,7 +14,7 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Text (Text, pack)
 import GHC.Generics (Generic)
 
-import Cardano.Api (BlockInMode (..), CardanoMode, ChainPoint (..), ChainTip (..), ConsensusModeParams (..),
+import Cardano.Api (BlockInMode (..), CardanoMode, ChainPoint (..), ChainTip (..), ConsensusModeParams (..), File (..),
                     LocalChainSyncClient (..), LocalNodeClientProtocols (..), LocalNodeClientProtocolsInMode,
                     LocalNodeConnectInfo (..), NetworkId, connectToLocalNode)
 import Cardano.BM.Data.Trace (Trace)
@@ -104,7 +104,7 @@ runChainSync socketPath trace slotConfig networkId resumePoints onChainSyncEvent
       localNodeConnectInfo = LocalNodeConnectInfo {
         localConsensusModeParams = CardanoModeParams epochSlots,
         localNodeNetworkId = networkId,
-        localNodeSocketPath = socketPath }
+        localNodeSocketPath = File socketPath }
       localNodeClientProtocols :: LocalNodeClientProtocolsInMode CardanoMode
       localNodeClientProtocols = LocalNodeClientProtocols {
         localChainSyncClient =

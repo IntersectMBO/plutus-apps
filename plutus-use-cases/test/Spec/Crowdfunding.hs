@@ -39,7 +39,6 @@ import Test.Tasty.QuickCheck hiding ((.&&.))
 import Cardano.Node.Emulator.Internal.Node.TimeSlot qualified as TimeSlot
 import Ledger qualified
 import Ledger.Slot (Slot (..))
-import Ledger.Time (POSIXTime)
 import Ledger.Value.CardanoAPI qualified as Value
 import Plutus.Contract hiding (currentSlot, runError)
 import Plutus.Contract.Test
@@ -49,6 +48,7 @@ import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Value (Value)
 import Plutus.Trace.Emulator (ContractHandle (..), EmulatorTrace)
 import Plutus.Trace.Emulator qualified as Trace
+import PlutusLedgerApi.V1.Time (POSIXTime)
 import PlutusTx qualified
 import Streaming.Prelude qualified as S
 import Wallet.Emulator.Folds qualified as Folds

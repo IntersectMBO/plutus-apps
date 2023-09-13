@@ -34,7 +34,6 @@ import Control.Monad (forever, void)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 import Ledger (Address, POSIXTime, PaymentPubKeyHash)
-import Ledger.Interval qualified as Interval
 import Ledger.Tx.Constraints (TxConstraints)
 import Ledger.Tx.Constraints qualified as Constraints
 import Ledger.Tx.Constraints.ValidityInterval qualified as ValidityInterval
@@ -44,6 +43,7 @@ import Plutus.Script.Utils.V2.Contexts qualified as V2
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as V2
 import Plutus.Script.Utils.Value (Value)
 import Plutus.Script.Utils.Value qualified as Value
+import PlutusLedgerApi.V1.Interval qualified as Interval
 
 import Plutus.Contract
 import Plutus.Contract.StateMachine (AsSMContractError, State (..), StateMachine (..), Void)

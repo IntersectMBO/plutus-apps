@@ -29,6 +29,7 @@
 
 module Plutus.Contract.Test.Coverage.Analysis.Interpreter (allNonFailLocations) where
 import Control.Arrow hiding ((<+>))
+import Data.Default (def)
 import Data.Foldable
 import Data.List hiding (insert)
 import Data.Set (Set)
@@ -297,6 +298,7 @@ pushWeakenTy (DTWk w a) = case a of
   DTLam x k t    -> DTLam x k (wkT (shiftWeakening w) t)
   DTForall x k t -> DTForall x k (wkT (shiftWeakening w) t)
   DTyBuiltin k   -> DTyBuiltin k
+  DTSOP tss      -> DTSOP (map pushWeakenTy <$> tss)
   DTWk _ _       -> error "pushWeakenTy: DTWk"
 pushWeakenTy a = a
 
@@ -307,6 +309,7 @@ normTy a = case pushWeakenTy a of
   DTLam x k t    -> DTLam x k (normTy t)
   DTForall x k t -> DTForall x k (normTy t)
   DTyBuiltin k   -> DTyBuiltin k
+  DTSOP tss      -> DTSOP (map normTy <$> tss)
   DTWk{}         -> error "normTy: DTWk"
 
 tyCheck :: TyCtx -> DTyp -> Dom -> Bool
@@ -394,8 +397,6 @@ domApp ctx d arg = addLocations (topLevelLocations arg) $ case d of
     | otherwise -> errorDoc $ "domApp - type error - DTop:"
                                 <?> vcat ["d =" <+> pretty d
                                          ,"arg =" <+> pretty arg]
-
-  DError -> DError
 
   DSusp locs d -> addLocations (locs <> allLocations ctx arg) d
 
@@ -539,6 +540,7 @@ tyInst i a b = case pushWeakenTy a of
   DTLam x k t    -> DTLam x k (tyInst (i+1) t b)
   DTForall x k t -> DTForall x k (tyInst (i+1) t b)
   DTyBuiltin k   -> DTyBuiltin k
+  DTSOP tss      -> DTSOP (map (tyInst i a) <$> tss)
   DTWk _ _       -> error "tyInst: DTWk"
 
 domTyInst :: HasCallStack
@@ -631,6 +633,7 @@ interpTy ctx substT ty args = case ty of
       arg : args -> interpTy ctx (substT :> arg) b args
   TyApp _ a b   -> interpTy ctx substT a (interpTy ctx substT b [] : args)
   TyIFix _ _ _  -> error "interpTy: TyIFix"
+  TySOP _ tss -> DTSOP $ map (map (\ty -> interpTy ctx substT ty args)) tss
 
 -- interpDat :: {_ctx : TyCtx} (ctx : TyCtx)
 --           -> Subst _ctx (DTyp ctx)
@@ -839,7 +842,7 @@ interp ctx substD substT trm args =
                   | otherwise   -> error "interp: Constant"
 
                 Builtin _ b -> (Nil, domApps ctx (dTop (interpTy ctx substT
-                                                                 (toDeBruijn_Typ [] $ typeOfBuiltinFunction b) [])
+                                                                 (toDeBruijn_Typ [] $ typeOfBuiltinFunction def b) [])
                                                        aggro mempty) args)
 
                 IWrap{} -> error "interp: IWrap"

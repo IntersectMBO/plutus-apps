@@ -61,10 +61,10 @@ import Plutus.Script.Utils.V1.Typed.Scripts as PSU.V1
 import Plutus.Script.Utils.V2.Address qualified as PSU.V2
 import Plutus.Script.Utils.V2.Scripts qualified as PSU.V2
 import Plutus.Trace qualified as Trace
-import Plutus.V1.Ledger.Api qualified as PV1
-import Plutus.V1.Ledger.Scripts (ScriptError, unitRedeemer)
-import Plutus.V1.Ledger.Value qualified as V
-import Plutus.V2.Ledger.Api qualified as PV2
+import PlutusLedgerApi.V1 qualified as PV1
+import PlutusLedgerApi.V1.Scripts (ScriptError, unitRedeemer)
+import PlutusLedgerApi.V1.Value qualified as V
+import PlutusLedgerApi.V2 qualified as PV2
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as P
 import Wallet.Emulator.Wallet (mockWalletAddress)

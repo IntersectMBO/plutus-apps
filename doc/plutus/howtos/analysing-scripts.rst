@@ -58,7 +58,7 @@ results in the following output:
     Writing script: ./tmp/auction_2-5.flat (Size: 9.1kB, Cost: ExCPU 1126876612, ExMemory 3408894)
 
 .. note::
-    The program writes out fully applied validators by default. Fully applied validators are larger than unapplied validators because they contain not just the validator code itself but also all arguments, including the :hsobj:`Plutus.V1.Ledger.Contexts.ScriptContext`. The script context can be quite large as it is a representation of the entire transaction body.
+    The program writes out fully applied validators by default. Fully applied validators are larger than unapplied validators because they contain not just the validator code itself but also all arguments, including the :hsobj:`PlutusLedgerApi.V1.Contexts.ScriptContext`. The script context can be quite large as it is a representation of the entire transaction body.
 
 Running the program in the unapplied validator mode gives us a more realistic picture:
 
@@ -84,7 +84,7 @@ Partial transactions
 ~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: shell
-    
+
     cabal run plutus-use-cases-scripts -- ./tmp transactions -p ./plutus-use-cases/scripts/protocol-parameters.json
 
 results in

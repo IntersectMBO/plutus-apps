@@ -19,7 +19,6 @@ import Cardano.Node.Emulator.Internal.Node.TimeSlot qualified as TimeSlot
 import Ledger.Address (PaymentPrivateKey (unPaymentPrivateKey), PaymentPubKey (PaymentPubKey))
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Crypto (toPublicKey)
-import Ledger.Time (POSIXTime)
 import Plutus.Contract.Oracle (Observation, SignedMessage, signObservation')
 import Plutus.Contract.Test
 import Plutus.Contracts.Stablecoin (BC (..), ConversionRate, Input (..), RC (..), SC (..), SCAction (..),
@@ -29,6 +28,7 @@ import Plutus.Script.Utils.Ada (adaSymbol, adaToken)
 import Plutus.Script.Utils.Value qualified as Value
 import Plutus.Trace.Emulator (ContractHandle, EmulatorTrace)
 import Plutus.Trace.Emulator qualified as Trace
+import PlutusLedgerApi.V1.Time (POSIXTime)
 import PlutusTx.Numeric (negate, one, zero)
 import PlutusTx.Ratio qualified as R
 

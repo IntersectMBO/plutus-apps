@@ -5,28 +5,27 @@
 module Main(main) where
 
 import Cardano.Api qualified as C
-import Cardano.Crypto.Hash qualified as Crypto
 import Data.Aeson qualified as JSON
 import Data.Aeson.Extras qualified as JSON
-import Data.Aeson.Internal qualified as Aeson
+import Data.Aeson.Types qualified as Aeson
 import Data.ByteString.Lazy qualified as BSL
 import Data.List (sort)
-import Gen.Cardano.Api.Typed qualified as Gen
 import Hedgehog (Property, forAll, fromGenT, property)
 import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import Ledger (Slot (Slot))
-import Ledger.Interval qualified as Interval
 import Ledger.Tx.CardanoAPI (CardanoBuildTx (CardanoBuildTx), CardanoTx (CardanoTx))
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
 import Ledger.Tx.CardanoAPISpec qualified
 import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.Value qualified as Value hiding (scale)
+import PlutusLedgerApi.V1.Interval qualified as Interval
+import Test.Gen.Cardano.Api.Typed qualified as Gen
 import Test.Tasty (TestTree, defaultMain, testGroup)
+import Test.Tasty.Hedgehog (testPropertyNamed)
 import Test.Tasty.HUnit (testCase)
 import Test.Tasty.HUnit qualified as HUnit
-import Test.Tasty.Hedgehog (testPropertyNamed)
 
 main :: IO ()
 main = defaultMain tests
@@ -119,16 +118,10 @@ byteStringJson jsonString value =
 -- | Check that Ord instances of cardano-api's 'TxIn' and plutus-ledger-api's 'TxIn' match.
 txInOrdInstanceEquivalenceTest :: Property
 txInOrdInstanceEquivalenceTest = property $ do
-    txIns <- sort <$> forAll (Gen.list (Range.singleton 10) genTxIn)
+    txIns <- sort <$> forAll (Gen.list (Range.singleton 10) Gen.genTxIn)
     let toPlutus = map CardanoAPI.fromCardanoTxIn
     let plutusTxIns = sort $ toPlutus txIns
     Hedgehog.assert $ toPlutus txIns == plutusTxIns
-
-genTxIn :: Hedgehog.MonadGen m => m C.TxIn
-genTxIn = do
-    txId <- (\t -> C.TxId $ Crypto.castHash $ Crypto.hashWith (const t) ()) <$> Gen.utf8 (Range.singleton 5) Gen.unicode
-    txIx <- C.TxIx <$> Gen.integral (Range.linear 0 maxBound)
-    return $ C.TxIn txId txIx
 
 genCardanoBuildTx :: Hedgehog.Gen CardanoBuildTx
 genCardanoBuildTx = do

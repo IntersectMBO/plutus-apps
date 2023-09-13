@@ -51,7 +51,7 @@ import Prelude hiding (lookup)
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C.Api
 import Cardano.Ledger.Babbage qualified as Babbage
-import Cardano.Ledger.Babbage.PParams qualified as Babbage
+import Cardano.Ledger.Core (PParams, getMinCoinTxOut)
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Shelley.API qualified as C.Ledger
 import Control.Lens (alaf, (&), (.~), (<&>))
@@ -72,7 +72,7 @@ import Ledger.Tx.Internal qualified as Tx
 import Ledger.Value.CardanoAPI (Value, lovelaceToValue)
 import Plutus.Script.Utils.Ada (Ada)
 import Plutus.Script.Utils.Ada qualified as Ada
-import Plutus.V1.Ledger.Api qualified as PV1
+import PlutusLedgerApi.V1 qualified as PV1
 import PlutusTx.Lattice ((\/))
 
 -- | Create an index of all UTxOs on the chain.
@@ -114,7 +114,7 @@ getCollateral idx tx = case getCardanoTxTotalCollateral tx of
 
 -- | Adjust a single transaction output so it contains at least the minimum amount of Ada
 -- and return the adjustment (if any) and the updated TxOut.
-adjustTxOut :: Babbage.PParams (Babbage.BabbageEra StandardCrypto) -> TxOut -> ([C.Lovelace], Tx.TxOut)
+adjustTxOut :: PParams (Babbage.BabbageEra StandardCrypto) -> TxOut -> ([C.Lovelace], Tx.TxOut)
 adjustTxOut params txOut = do
     -- Increasing the ada amount can also increase the size in bytes, so start with a rough estimated amount of ada
     let withMinAdaValue = toCardanoTxOutValue $ txOutValue txOut \/ lovelaceToValue (minAdaTxOut params txOut)
@@ -129,11 +129,11 @@ adjustTxOut params txOut = do
 
 -- | Exact computation of the mimimum Ada required for a given TxOut.
 -- TODO: Should be moved to cardano-api-extended once created
-minAdaTxOut :: Babbage.PParams (Babbage.BabbageEra StandardCrypto) -> TxOut -> C.Lovelace
+minAdaTxOut :: PParams (Babbage.BabbageEra StandardCrypto) -> TxOut -> C.Lovelace
 minAdaTxOut params txOut = let
   toLovelace = C.Lovelace . C.Ledger.unCoin
   initialValue = txOutValue txOut
-  firstEstimate = toLovelace . C.Ledger.evaluateMinLovelaceOutput params $ fromPlutusTxOut txOut
+  firstEstimate = toLovelace . getMinCoinTxOut params $ fromPlutusTxOut txOut
   in -- if the estimate is above the initialValue, we run minAdaAgain, just to be sure that the
      -- new amount didn't change the TxOut size and requires more ada.
      if firstEstimate > C.selectLovelace initialValue
@@ -197,5 +197,5 @@ createGenesisTransaction vals =
            , C.txOuts = Map.toList vals <&> \(changeAddr, v) ->
                 C.TxOut changeAddr (toCardanoTxOutValue v) C.TxOutDatumNone C.Api.ReferenceScriptNone
            }
-        txBody = either (error . ("createGenesisTransaction: Can't create TxBody: " <>) . show) id $ C.makeTransactionBody txBodyContent
+        txBody = either (error . ("createGenesisTransaction: Can't create TxBody: " <>) . show) id $ C.createAndValidateTransactionBody txBodyContent
     in CardanoEmulatorEraTx $ C.Tx txBody []

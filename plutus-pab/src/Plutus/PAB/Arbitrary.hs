@@ -24,7 +24,6 @@ import Ledger (TxOut (TxOut))
 import Ledger qualified
 import Ledger.Address (PaymentPubKey, PaymentPubKeyHash, StakePubKey, StakePubKeyHash)
 import Ledger.Crypto (PubKey, Signature)
-import Ledger.Interval (Extended, Interval, LowerBound, UpperBound)
 import Ledger.Scripts (Language (..), Versioned (..))
 import Ledger.Slot (Slot)
 import Ledger.Tx (Certificate, RedeemerPtr, ScriptTag, TxOutRef, Withdrawal)
@@ -37,9 +36,10 @@ import Plutus.Script.Utils.Ada qualified as Plutus
 import Plutus.Script.Utils.V1.Address (mkValidatorAddress)
 import Plutus.Script.Utils.V1.Typed.Scripts (ConnectionError, WrongOutTypeError)
 import Plutus.Script.Utils.Value qualified as Plutus
-import Plutus.V1.Ledger.Api (Address (..), LedgerBytes, PubKeyHash, ValidatorHash (ValidatorHash))
-import Plutus.V1.Ledger.Bytes qualified as LedgerBytes
-import Plutus.V2.Ledger.Api qualified as PV2
+import PlutusLedgerApi.V1 (Address (..), LedgerBytes, PubKeyHash, ValidatorHash (ValidatorHash))
+import PlutusLedgerApi.V1.Bytes qualified as LedgerBytes
+import PlutusLedgerApi.V1.Interval (Extended, Interval, LowerBound, UpperBound)
+import PlutusLedgerApi.V2 qualified as PV2
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Prelude qualified as PlutusTx

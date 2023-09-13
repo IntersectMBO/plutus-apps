@@ -37,11 +37,11 @@ import Ledger.Tx (DatumFromQuery (DatumUnknown), DecoratedTxOut (..), Language (
                   TxOutRef (..), Versioned (Versioned), mkPubkeyDecoratedTxOut, mkScriptDecoratedTxOut)
 import Plutus.ChainIndex.Api (IsUtxoResponse (..), QueryResponse (..), TxosResponse (..), UtxosResponse (..))
 import Plutus.ChainIndex.Types (BlockId (..), BlockNumber (..), ChainIndexTx (..), ChainIndexTxOutputs (..), Tip (..))
-import Plutus.V1.Ledger.Api (PubKeyHash)
-import Plutus.V1.Ledger.Credential (Credential (PubKeyCredential, ScriptCredential))
-import Plutus.V1.Ledger.Scripts (Datum, MintingPolicy, StakeValidator, Validator (..), ValidatorHash (..))
-import Plutus.V1.Ledger.Scripts qualified as Ledger (DatumHash, Script, ScriptHash (..))
-import Plutus.V1.Ledger.Tx qualified
+import PlutusLedgerApi.V1 (PubKeyHash)
+import PlutusLedgerApi.V1.Credential (Credential (PubKeyCredential, ScriptCredential))
+import PlutusLedgerApi.V1.Scripts (Datum, MintingPolicy, StakeValidator, Validator (..), ValidatorHash (..))
+import PlutusLedgerApi.V1.Scripts qualified as Ledger (DatumHash, Script, ScriptHash (..))
+import PlutusLedgerApi.V1.Tx qualified
 
 import PlutusTx qualified
 
@@ -50,7 +50,7 @@ import Control.Monad ((<=<))
 import Plutus.Blockfrost.Types
 import Plutus.Blockfrost.Utils
 import Plutus.ChainIndex.Types qualified as CI
-import Plutus.V2.Ledger.Api qualified as PV2
+import PlutusLedgerApi.V2 qualified as PV2
 
 
 class FromJSON a => PlutusValidator a where
@@ -257,7 +257,7 @@ processGetTxFromTxId (Just TxResponse{..}) = do
         datElems <- sequence newElems
         return $ fromList $ zip newKeys datElems
 
-    getAllRedeemersMap :: Map Integer (ValidationPurpose, ScriptDatum) -> IO Plutus.V1.Ledger.Tx.Redeemers
+    getAllRedeemersMap :: Map Integer (ValidationPurpose, ScriptDatum) -> IO PlutusLedgerApi.V1.Tx.Redeemers
     getAllRedeemersMap datumMap = do
         let indexs = keys datumMap
             st     = map (toPlutusScriptTag . fst) (elems datumMap)

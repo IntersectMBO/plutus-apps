@@ -15,7 +15,7 @@ import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
 import Data.Map (Map)
 import GHC.Generics
 import Ledger (CardanoTx, PaymentPubKeyHash (PaymentPubKeyHash), TxOut, cardanoAddressCredential, txOutAddress)
-import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential), ValidatorHash, Value)
+import PlutusLedgerApi.V1 (Credential (PubKeyCredential, ScriptCredential), ValidatorHash, Value)
 
 data SequenceId =
     SequenceId

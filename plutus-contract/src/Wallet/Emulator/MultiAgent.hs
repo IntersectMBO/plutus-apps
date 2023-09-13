@@ -45,7 +45,7 @@ import Ledger.Index qualified as Index
 import Ledger.Scripts (MintingPolicy (getMintingPolicy))
 import Ledger.Slot (Slot)
 import Ledger.Tx.CardanoAPI (ToCardanoError, pattern CardanoEmulatorEraTx)
-import Ledger.Tx.CardanoAPI.Internal qualified as C (toCardanoPlutusScript, toCardanoValidityRange, zeroExecutionUnits)
+import Ledger.Tx.CardanoAPI.Internal qualified as C (toCardanoValidityRange, zeroExecutionUnits)
 import Ledger.Tx.CardanoAPI.Internal qualified as CardanoAPI (toCardanoAddressInEra, toCardanoTxOutValue)
 import Ledger.Tx.Internal (TxOut (TxOut), emptyTxBodyContent, txOutValue)
 import Ledger.Tx.Internal qualified as Tx (TxOut (getTxOut))
@@ -57,7 +57,7 @@ import Plutus.ChainIndex.Effects qualified as ChainIndex (ChainIndexControlEffec
 import Plutus.ChainIndex.Emulator.Handlers qualified as ChainIndex (handleControl, handleQuery)
 import Plutus.Trace.Emulator.Types (ContractInstanceLog, EmulatedWalletEffects, EmulatedWalletEffects', UserThreadMsg)
 import Plutus.Trace.Scheduler qualified as Scheduler
-import Plutus.V1.Ledger.Scripts qualified as Script
+import PlutusLedgerApi.V1.Scripts qualified as Script
 import PlutusTx (toData)
 import Prettyprinter (Pretty (pretty), colon, (<+>))
 import Wallet.API qualified as WAPI
@@ -290,14 +290,11 @@ emulatorStateInitialDist params mp = do
     minAdaEmptyTxOut <- mMinAdaTxOut
     outs <- traverse (mkOutputs minAdaEmptyTxOut) (Map.toList mp)
     validityRange <- C.toCardanoValidityRange WAPI.defaultSlotRange
-    mintWitness <- either (error . show) pure $ C.PlutusScriptWitness C.PlutusScriptV2InBabbage C.PlutusScriptV2
-                           <$> (C.PScript <$> C.toCardanoPlutusScript
-                                                  (C.AsPlutusScript C.AsPlutusScriptV2)
-                                                  (getMintingPolicy alwaysSucceedPolicy))
-                           <*> pure C.NoScriptDatumForMint
-                           <*> pure (C.fromPlutusData $ toData Script.unitRedeemer)
-                           <*> pure C.zeroExecutionUnits
-    let
+    let mintWitness = C.PlutusScriptWitness C.PlutusScriptV2InBabbage C.PlutusScriptV2
+            (C.examplePlutusScriptAlwaysSucceeds C.WitCtxMint)
+            C.NoScriptDatumForMint
+            (C.fromPlutusData $ toData Script.unitRedeemer)
+            C.zeroExecutionUnits
         txBodyContent = emptyTxBodyContent
            { C.txIns = [ (Index.genesisTxIn, C.BuildTxWith (C.KeyWitness C.KeyWitnessForSpending)) ]
            , C.txInsCollateral = C.TxInsCollateral C.CollateralInBabbageEra [Index.genesisTxIn]

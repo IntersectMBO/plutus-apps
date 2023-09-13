@@ -13,7 +13,7 @@ import Plutus.ChainIndex.ChainIndexError (ChainIndexError)
 import Plutus.ChainIndex.Tx (ChainIndexTxOut)
 import Plutus.ChainIndex.Types (Tip (..))
 import Plutus.Contract.CardanoAPI (FromCardanoError (..))
-import Plutus.V1.Ledger.Api (TxId)
+import PlutusLedgerApi.V1 (TxId)
 import Prettyprinter (Pretty (..), colon, viaShow, (<+>))
 
 data ChainIndexLog =

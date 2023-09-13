@@ -32,6 +32,7 @@ import PlutusIR
 import PlutusTx.Code
 import PlutusTx.Code qualified as PlutusTx
 
+import Data.Functor (void)
 import Plutus.Contract.Test.Coverage.Analysis.Common
 
 -- *** Conversion to DeBruijn
@@ -103,6 +104,10 @@ toDeBruijn_Trm tyCtx trmCtx trm = case trm of
 
   Builtin _ b  -> Builtin () b
 
+  Constr a t c ts -> Constr a (toDeBruijn_Typ tyCtx t) c (map (toDeBruijn_Trm tyCtx trmCtx) ts)
+
+  Case a t t' ts -> Case a (toDeBruijn_Typ tyCtx t) (toDeBruijn_Trm tyCtx trmCtx t') (map (toDeBruijn_Trm tyCtx trmCtx) ts)
+
   IWrap{}      -> error "toDeBruijn_Trm: IWrap"
   Unwrap{}     -> error "toDeBruijn_Trm: Unwrap"
 
@@ -114,6 +119,7 @@ toDeBruijn_Typ tyCtx a = case a of
   TyForall _ x k a -> TyForall () (mkDeBruijn x 0) k (toDeBruijn_Typ (extendDBCtx tyCtx x) a)
   TyLam _ x k a    -> TyLam () (mkDeBruijn x 0) k (toDeBruijn_Typ (extendDBCtx tyCtx x) a)
   TyApp _ a b      -> TyApp () (toDeBruijn_Typ tyCtx a) (toDeBruijn_Typ tyCtx b)
+  TySOP a tss      -> TySOP a (map (map (toDeBruijn_Typ tyCtx)) tss)
   TyIFix _ _ _     -> error "normalizeType: TyIFix"
 
 bindCtx_Dat :: HasCallStack => (DBCtx TyName, DBCtx Name) -> Dat' -> (DBCtx TyName, DBCtx Name)
@@ -142,4 +148,4 @@ toDeBruijn_Bind r tyCtx _ (DatatypeBind _ dat) =
   DatatypeBind () (toDeBruijn_Dat r tyCtx dat)
 
 getTrm :: HasCallStack => CompiledCode a -> Trm
-getTrm cc = let Program _ t = fromJust $ PlutusTx.getPir cc in toDeBruijn_Trm [] [] t
+getTrm cc = let Program _ _ t = fromJust $ PlutusTx.getPir cc in toDeBruijn_Trm [] [] (void t)

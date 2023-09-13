@@ -29,7 +29,7 @@ import Plutus.Script.Utils.Ada qualified as Ada
 import Plutus.Script.Utils.V1.Scripts (validatorHash)
 import Plutus.Script.Utils.V1.Typed.Scripts.Validators hiding (validatorHash)
 import Plutus.Trace.Emulator as Trace
-import Plutus.V1.Ledger.Api (Datum (Datum), ScriptContext)
+import PlutusLedgerApi.V1 (Datum (Datum), ScriptContext)
 import PlutusTx qualified
 import PlutusTx.IsData.Class
 import PlutusTx.Prelude hiding ((<$))

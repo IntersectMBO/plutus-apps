@@ -37,10 +37,10 @@ import Plutus.Contract.StateMachine (InvalidTransition, SMContractError, StateMa
 import Plutus.Contract.StateMachine qualified as SM
 import Plutus.Contracts.Prism.Credential (Credential)
 import Plutus.Contracts.Prism.Credential qualified as Credential
-import Plutus.Contracts.Prism.STO (STOData (..))
-import Plutus.Contracts.Prism.STO qualified as STO
 import Plutus.Contracts.Prism.StateMachine (IDAction (PresentCredential), IDState, UserCredential (..))
 import Plutus.Contracts.Prism.StateMachine qualified as StateMachine
+import Plutus.Contracts.Prism.STO (STOData (..))
+import Plutus.Contracts.Prism.STO qualified as STO
 import Plutus.Contracts.TokenAccount (TokenAccountError)
 import Plutus.Contracts.TokenAccount qualified as TokenAccount
 import Plutus.Script.Utils.Ada qualified as Ada

@@ -9,7 +9,8 @@ import Ledger.Builtins.Orphans ()
 
 import Codec.CBOR.Extras (SerialiseViaFlat (..))
 import Data.Aeson.Extras qualified as JSON
-import Plutus.V1.Ledger.Scripts
+import Plutus.Script.Utils.Scripts
+import PlutusLedgerApi.V1.Scripts
 
 import Data.Aeson (FromJSON (parseJSON), FromJSONKey, ToJSON (toJSON), ToJSONKey)
 import Data.Aeson qualified as JSON
@@ -91,8 +92,6 @@ deriving anyclass instance FromJSON Validator
 
 deriving anyclass instance ToJSON Redeemer
 deriving anyclass instance FromJSON Redeemer
-deriving anyclass instance Serialise Redeemer
 
 deriving anyclass instance ToJSON Datum
 deriving anyclass instance FromJSON Datum
-deriving anyclass instance Serialise Datum

@@ -10,7 +10,7 @@ import Cardano.Node.Emulator.Generators qualified as Gen
 import Cardano.Node.Emulator.Internal.Node.TimeSlot (SlotConfig (scSlotLength))
 import Cardano.Node.Emulator.Internal.Node.TimeSlot qualified as TimeSlot
 import Data.Aeson qualified as JSON
-import Data.Aeson.Internal qualified as Aeson
+import Data.Aeson.Types qualified as Aeson
 import Data.String (fromString)
 import Hedgehog (Gen, Property, forAll, property)
 import Hedgehog qualified
@@ -19,10 +19,10 @@ import Hedgehog.Range qualified as Range
 import Ledger (DiffMilliSeconds (DiffMilliSeconds), Interval (Interval), LowerBound (LowerBound), Slot (Slot),
                UpperBound (UpperBound), fromMilliSeconds, interval)
 import Ledger qualified
-import Ledger.Bytes qualified as Bytes
-import Ledger.Interval qualified as Interval
 import Ledger.Value.CardanoAPI qualified as C
-import Plutus.V1.Ledger.Value qualified as Value
+import PlutusLedgerApi.V1.Bytes qualified as Bytes
+import PlutusLedgerApi.V1.Interval qualified as Interval
+import PlutusLedgerApi.V1.Value qualified as Value
 import PlutusTx.Prelude qualified as PlutusTx
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testPropertyNamed)
@@ -93,8 +93,9 @@ ledgerBytesShowFromHexProp :: Property
 ledgerBytesShowFromHexProp = property $ do
     bts <- forAll $ Bytes.LedgerBytes . PlutusTx.toBuiltin <$> Gen.genSizedByteString 32
     let result = Bytes.fromHex $ fromString $ show bts
-
-    Hedgehog.assert $ result == Right bts
+    case result of
+        Left _    -> Hedgehog.failure
+        Right res -> Hedgehog.assert $ res == bts
 
 ledgerBytesToJSONProp :: Property
 ledgerBytesToJSONProp = property $ do

@@ -369,7 +369,7 @@ executable tx-inject
   --------------------------
   -- Other IOG dependencies
   --------------------------
-  build-depends:    cardano-api >=1.35
+  build-depends:    cardano-api >=8.0
 
   ------------------------
   -- Non-IOG dependencies
@@ -410,7 +410,7 @@ executable sync-client
   -- Other IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api       >=1.35
+    , cardano-api       >=8.0
     , cardano-slotting
 
   ------------------------
@@ -449,9 +449,8 @@ executable pab-cli
   -- Other IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api                  >=1.35
+    , cardano-api             >=8.0
     , cardano-ledger-shelley
-    , ouroboros-consensus-shelley
 
   ------------------------
   -- Non-IOG dependencies

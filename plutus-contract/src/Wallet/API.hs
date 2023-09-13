@@ -77,7 +77,7 @@ import Ledger (Address, CardanoTx, Interval (Interval, ivFrom, ivTo), PaymentPub
 import Ledger.Tx.Constraints qualified as Constraints
 import Ledger.Tx.Constraints.OffChain (adjustUnbalancedTx)
 import Ledger.Tx.Constraints.ValidityInterval qualified as Interval
-import Plutus.V1.Ledger.Value (Value)
+import PlutusLedgerApi.V1.Value (Value)
 import Wallet.Effects (NodeClientEffect, WalletEffect, balanceTx, getClientParams, getClientSlot, ownAddresses,
                        publishTx, submitTxn, walletAddSignature, yieldUnbalancedTx)
 import Wallet.Emulator.LogMessages (RequestHandlerLogMsg (AdjustingUnbalancedTx))

@@ -31,7 +31,7 @@ import Cardano.Node.Emulator.API (EmulatorLogs, EmulatorM, EmulatorMsg (ChainEve
                                   emptyEmulatorStateWithInitialDist, esChainState, getParams)
 import Cardano.Node.Emulator.Generators (knownAddresses)
 import Cardano.Node.Emulator.Internal.Node qualified as E
-import Cardano.Node.Emulator.Internal.Node.Params (pNetworkId, pProtocolParams)
+import Cardano.Node.Emulator.Internal.Node.Params (pNetworkId)
 import Control.Lens (use, view, (^.))
 import Control.Monad.Except (runExceptT)
 import Control.Monad.RWS.Strict (evalRWS)
@@ -135,7 +135,7 @@ propRunActionsWithOptions initialDist params predicate actions =
     monadic runFinalPredicate monadicPredicate
     where
         finalState = stateAfter actions
-        ps = pProtocolParams params
+        ps = E.bundledProtocolParameters params
 
         monadicPredicate :: PropertyM (RunMonad EmulatorM) Property
         monadicPredicate = do

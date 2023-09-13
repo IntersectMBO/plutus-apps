@@ -50,9 +50,9 @@ flag defer-plugin-errors
   manual:      True
 
 library
-  import:             lang
-  hs-source-dirs:     src
-  default-language:   Haskell2010
+  import:           lang
+  hs-source-dirs:   src
+  default-language: Haskell2010
   exposed-modules:
     Data.Aeson.Extras
     Data.Time.Units.Extra
@@ -89,49 +89,40 @@ library
     Ledger.Typed.TypeUtils
     Ledger.Value.CardanoAPI
     Ledger.Value.Orphans
-    Prettyprinter.Extras
-
-  reexported-modules:
-    Plutus.V1.Ledger.Bytes as Ledger.Bytes,
-    Plutus.V1.Ledger.Credential as Ledger.Credential,
-    Plutus.V1.Ledger.DCert as Ledger.DCert,
-    Plutus.V1.Ledger.Interval as Ledger.Interval,
-    Plutus.V1.Ledger.Time as Ledger.Time,
 
   -- The rest of the plutus-ledger-api modules are reexported from within
   -- the Haskell modules and not in the current cabal file.
-  -- For example: Plutus.V1.Ledger.Address is reexported by Ledger.Address
-  other-modules:
-    Codec.CBOR.Extras
-    Ledger.Tx.CardanoAPITemp
+  -- For example: PlutusLedgerApi.V1.Address is reexported by Ledger.Address
+  other-modules:    Codec.CBOR.Extras
 
   --------------------
   -- Local components
   --------------------
-  build-depends:      plutus-script-utils >=1.2.0
+  build-depends:    plutus-script-utils >=1.2.0
 
   --------------------------
   -- Other IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api                  >=1.35
+    , cardano-api:{cardano-api, internal}  ^>=8.2
     , cardano-binary
     , cardano-crypto
     , cardano-crypto-class
+    , cardano-ledger-allegra
     , cardano-ledger-alonzo
     , cardano-ledger-babbage
     , cardano-ledger-byron
     , cardano-ledger-core
+    , cardano-ledger-mary
     , cardano-ledger-shelley
-    , cardano-ledger-shelley-ma
     , cardano-slotting
     , data-default
     , iohk-monitoring
-    , ouroboros-consensus-shelley
-    , plutus-core                  >=1.0.0
-    , plutus-ledger-api            >=1.0.0
-    , plutus-tx                    >=1.0.0
+    , plutus-core                          >=1.0.0
+    , plutus-ledger-api                    >=1.0.0
+    , plutus-tx                            >=1.0.0
 
+  -- , ouroboros-consensus-shelley >= 0.4.0.1
   ------------------------
   -- Non-IOG dependencies
   ------------------------
@@ -140,12 +131,13 @@ library
   -- defined there.
   build-depends:
     , aeson
-    , base                      >=4.9     && <5
+    , base                       >=4.9  && <5
     , base16-bytestring
     , bytestring
+    , cardano-strict-containers
     , cborg
     , containers
-    , cryptonite                >=0.25
+    , cryptonite                 >=0.25
     , flat
     , hashable
     , http-api-data
@@ -154,11 +146,9 @@ library
     , mtl
     , newtype-generics
     , prettyprinter
-    , quickcheck-contractmodel  >=0.1.4.0
     , scientific
     , serialise
     , servant
-    , strict-containers
     , tagged
     , template-haskell
     , text
@@ -166,7 +156,8 @@ library
     , transformers
     , vector
 
-  ghc-options:        -fprint-potential-instances
+  -- , quickcheck-contractmodel  >=0.1.4.0
+  ghc-options:      -fprint-potential-instances
 
   if !(impl(ghcjs) || os(ghcjs))
     build-depends: plutus-tx-plugin >=1.0.0
@@ -194,11 +185,11 @@ test-suite plutus-ledger-test
   -- Other IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api:{cardano-api, gen}  >=1.35
-    , cardano-crypto-class            >=2.0.0
+    , cardano-api:{cardano-api, gen}  ^>=8.2
     , plutus-ledger-api               >=1.0.0
     , plutus-tx                       >=1.0.0
 
+  -- , cardano-crypto-class            >=2.0.0
   ------------------------
   -- Non-IOG dependencies
   ------------------------

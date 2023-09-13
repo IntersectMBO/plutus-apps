@@ -1,13 +1,9 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE GADTs              #-}
-{-# LANGUAGE LambdaCase         #-}
-{-# LANGUAGE NamedFieldPuns     #-}
 {-# LANGUAGE OverloadedLists    #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE RankNTypes         #-}
-{-# LANGUAGE RecordWildCards    #-}
-{-# LANGUAGE TupleSections      #-}
 
 {-|
 
@@ -38,9 +34,9 @@ module Ledger.Tx.CardanoAPI(
 
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
-import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..))
+import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
 import Cardano.Ledger.Babbage qualified as Babbage
-import Cardano.Ledger.Babbage.TxBody (TxBody (TxBody, reqSignerHashes))
+import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (BabbageTxBody, btbReqSignerHashes))
 import Cardano.Ledger.BaseTypes (mkTxIxPartial)
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Shelley.API qualified as C.Ledger
@@ -49,7 +45,8 @@ import Ledger.Index.Internal qualified as P
 import Ledger.Scripts qualified as P
 import Ledger.Tx.CardanoAPI.Internal
 import Ledger.Tx.Internal qualified as P
-import Plutus.V1.Ledger.Api qualified as PV1
+import Plutus.Script.Utils.Scripts qualified as PV1
+import PlutusLedgerApi.V1 qualified as PV1
 
 
 toCardanoMintWitness :: PV1.Redeemer -> Maybe (P.Versioned PV1.TxOutRef) -> Maybe (P.Versioned PV1.MintingPolicy) -> Either ToCardanoError (C.ScriptWitness C.WitCtxMint C.BabbageEra)
@@ -64,24 +61,12 @@ toCardanoScriptWitness :: PV1.ToData a =>
   -> a
   -> Either (P.Versioned PV1.Script) (P.Versioned PV1.TxOutRef)
   -> Either ToCardanoError (C.ScriptWitness witctx C.BabbageEra)
-toCardanoScriptWitness datum redeemer scriptOrRef = (case lang of
-    P.PlutusV1 ->
-      C.PlutusScriptWitness C.PlutusScriptV1InBabbage C.PlutusScriptV1
-          <$> (case scriptOrRef of
-            Left (P.Versioned script _) -> fmap C.PScript (toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV1) script)
-            Right (P.Versioned ref _) -> flip C.PReferenceScript Nothing <$> toCardanoTxIn ref
-          )
-    P.PlutusV2 ->
-      C.PlutusScriptWitness C.PlutusScriptV2InBabbage C.PlutusScriptV2
-          <$> (case scriptOrRef of
-            Left (P.Versioned script _) -> fmap C.PScript (toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV2) script)
-            Right (P.Versioned ref _) -> flip C.PReferenceScript Nothing <$> toCardanoTxIn ref
-          )
+toCardanoScriptWitness datum redeemer scriptOrRef = (case scriptOrRef of
+    Left script -> pure $ toCardanoTxInScriptWitnessHeader script
+    Right ref   -> toCardanoTxInReferenceWitnessHeader ref
   ) <*> pure datum
-    <*> pure (C.fromPlutusData $ PV1.toData redeemer)
+    <*> pure (C.unsafeHashableScriptData $ C.fromPlutusData $ PV1.toData redeemer)
     <*> pure zeroExecutionUnits
-  where
-    lang = either P.version P.version scriptOrRef
 
 fromCardanoTxInsCollateral :: C.TxInsCollateral era -> [C.TxIn]
 fromCardanoTxInsCollateral C.TxInsCollateralNone       = []
@@ -90,9 +75,9 @@ fromCardanoTxInsCollateral (C.TxInsCollateral _ txIns) = txIns
 toCardanoDatumWitness :: Maybe PV1.Datum -> C.ScriptDatum C.WitCtxTxIn
 toCardanoDatumWitness = maybe C.InlineScriptDatum (C.ScriptDatumForTxIn . toCardanoScriptData . PV1.getDatum)
 
-type WitnessHeader = C.ScriptDatum C.WitCtxTxIn -> C.ScriptRedeemer -> C.ExecutionUnits -> C.ScriptWitness C.WitCtxTxIn C.BabbageEra
+type WitnessHeader witctx = C.ScriptDatum witctx -> C.ScriptRedeemer -> C.ExecutionUnits -> C.ScriptWitness witctx C.BabbageEra
 
-toCardanoTxInReferenceWitnessHeader :: P.Versioned PV1.TxOutRef -> Either ToCardanoError WitnessHeader
+toCardanoTxInReferenceWitnessHeader :: P.Versioned PV1.TxOutRef -> Either ToCardanoError (WitnessHeader witctx)
 toCardanoTxInReferenceWitnessHeader (P.Versioned ref lang) = do
     txIn <- toCardanoTxIn ref
     pure $ case lang of
@@ -102,16 +87,14 @@ toCardanoTxInReferenceWitnessHeader (P.Versioned ref lang) = do
         P.PlutusV2 ->
             C.PlutusScriptWitness C.PlutusScriptV2InBabbage C.PlutusScriptV2 $
                 C.PReferenceScript txIn Nothing
+        P.PlutusV3 -> error "toCardanoTxInReferenceWitnessHeader: Plutus V3 not supported in Babbage era"
 
-toCardanoTxInScriptWitnessHeader :: P.Versioned PV1.Script -> Either ToCardanoError WitnessHeader
-toCardanoTxInScriptWitnessHeader (P.Versioned script lang) =
-    case lang of
-        P.PlutusV1 ->
-            C.PlutusScriptWitness C.PlutusScriptV1InBabbage C.PlutusScriptV1 . C.PScript <$>
-                toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV1) script
-        P.PlutusV2 ->
-            C.PlutusScriptWitness C.PlutusScriptV2InBabbage C.PlutusScriptV2 . C.PScript <$>
-                toCardanoPlutusScript (C.AsPlutusScript C.AsPlutusScriptV2) script
+toCardanoTxInScriptWitnessHeader :: P.Versioned PV1.Script -> WitnessHeader witctx
+toCardanoTxInScriptWitnessHeader script =
+    case toCardanoScriptInEra script of
+        C.ScriptInEra _ (C.SimpleScript _) -> error "toCardanoTxInScriptWitnessHeader: impossible simple script"
+        C.ScriptInEra era (C.PlutusScript v s) ->
+            C.PlutusScriptWitness era v (C.PScript s)
 
 fromCardanoTotalCollateral :: C.TxTotalCollateral C.BabbageEra -> Maybe C.Lovelace
 fromCardanoTotalCollateral C.TxTotalCollateralNone    = Nothing
@@ -136,7 +119,7 @@ toCardanoReturnCollateral returnCollateral =
     Nothing -> C.TxReturnCollateralNone
 
 getRequiredSigners :: C.Tx C.BabbageEra -> [P.PaymentPubKeyHash]
-getRequiredSigners (C.ShelleyTx _ (ValidatedTx TxBody { reqSignerHashes = rsq } _ _ _)) =
+getRequiredSigners (C.ShelleyTx _ (AlonzoTx BabbageTxBody { btbReqSignerHashes = rsq } _ _ _)) =
   foldMap (pure . P.PaymentPubKeyHash . P.toPlutusPubKeyHash . C.PaymentKeyHash . C.Ledger.coerceKeyRole) rsq
 
 fromPlutusIndex :: P.UtxoIndex -> C.Ledger.UTxO (Babbage.BabbageEra StandardCrypto)
@@ -148,5 +131,5 @@ fromPlutusTxOutRef (P.TxOutRef txId i) = C.Ledger.TxIn <$> fromPlutusTxId txId <
 fromPlutusTxId :: PV1.TxId -> Either ToCardanoError (C.Ledger.TxId StandardCrypto)
 fromPlutusTxId = fmap C.toShelleyTxId . toCardanoTxId
 
-fromPlutusTxOut :: P.TxOut -> Babbage.TxOut (Babbage.BabbageEra StandardCrypto)
+fromPlutusTxOut :: P.TxOut -> Babbage.BabbageTxOut (Babbage.BabbageEra StandardCrypto)
 fromPlutusTxOut = C.toShelleyTxOut C.ShelleyBasedEraBabbage . P.toCtxUTxOTxOut

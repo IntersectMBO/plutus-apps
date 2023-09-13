@@ -74,6 +74,8 @@ library
     Control.Concurrent.Availability
     Control.Concurrent.STM.Extras
     Control.Concurrent.STM.Extras.Stream
+    Marconi.Core.Index.VSplit
+    Marconi.Core.Index.VSqlite
     Plutus.PAB.App
     Plutus.PAB.Arbitrary
     Plutus.PAB.Core
@@ -122,7 +124,6 @@ library
     , cardano-node-emulator         >=1.2.0
     , cardano-node-socket-emulator  >=1.2.0
     , freer-extras                  >=1.2.0
-    , marconi-core                  >=1.2.0
     , pab-blockfrost                >=1.2.0
     , plutus-chain-index            >=1.2.0
     , plutus-chain-index-core       >=1.2.0
@@ -136,31 +137,31 @@ library
   --------------------------
   build-depends:
     , cardano-addresses
-    , cardano-api                      >=1.35
+    , cardano-api                  >=8.0
     , cardano-crypto
     , cardano-crypto-class
     , cardano-ledger-alonzo
     , cardano-ledger-core
     , cardano-slotting
     , cardano-wallet
-    , cardano-wallet-cli
-    , cardano-wallet-core
-    , cardano-wallet-core-integration
     , cardano-wallet-launcher
     , iohk-monitoring
     , lobemo-backend-ekg
     , ouroboros-network
     , ouroboros-network-framework
-    , plutus-ledger-api                >=1.0.0
-    , plutus-tx                        >=1.0.0
-    , plutus-tx-plugin                 >=1.0.0
+    , plutus-ledger-api            >=1.0.0
+    , plutus-tx                    >=1.0.0
+    , plutus-tx-plugin             >=1.0.0
     , Win32-network
 
+  -- , cardano-wallet-cli
+  -- , cardano-wallet-core
+  -- , cardano-wallet-core-integration
   ------------------------
   -- Non-IOG dependencies
   ------------------------
   build-depends:
-    , aeson                      <2.0.3.0
+    , aeson
     , aeson-pretty
     , async
     , base                       >=4.7     && <5
@@ -247,7 +248,7 @@ test-suite plutus-pab-test-light
   -- Other IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api:{cardano-api, gen}  >=1.35
+    , cardano-api:{cardano-api, gen}  >=8.0
     , plutus-ledger-api               >=1.0.0
     , plutus-tx                       >=1.0.0
 

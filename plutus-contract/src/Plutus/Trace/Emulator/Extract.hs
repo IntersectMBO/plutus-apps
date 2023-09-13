@@ -29,7 +29,7 @@ import Ledger.Tx.Constraints.OffChain (UnbalancedTx (..))
 import Plutus.Contract.Request (MkTxLog)
 import Plutus.Trace.Emulator (EmulatorConfig (_params), EmulatorTrace)
 import Plutus.Trace.Emulator qualified as Trace
-import Plutus.V1.Ledger.Api (ExBudget (..))
+import PlutusLedgerApi.V1 (ExBudget (..))
 import Prettyprinter (Pretty (..))
 import Streaming.Prelude qualified as S
 import System.Directory (createDirectoryIfMissing)

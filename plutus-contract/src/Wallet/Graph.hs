@@ -27,10 +27,10 @@ import GHC.Generics (Generic)
 import Cardano.Api qualified as C
 import Ledger.Address
 import Ledger.Blockchain
-import Ledger.Credential (Credential (..))
 import Ledger.Crypto
 import Ledger.Index qualified as Index
 import Ledger.Tx
+import PlutusLedgerApi.V1.Credential (Credential (..))
 
 -- | The owner of an unspent transaction output.
 data UtxOwner
