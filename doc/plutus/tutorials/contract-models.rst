@@ -325,7 +325,9 @@ Running tests and debugging the model
 
 We are finally ready to run some tests! We do still need to define a
 *property* that we can call QuickCheck with, but the :hsobj:`Plutus.Contract.Test.ContractModel.Interface.ContractModel`
-framework provides a standard one that we can just reuse. So we define
+framework provides a standard one that we can just reuse. To run the
+test successfully, we must increase the budget of the emulator, so
+we define
 
 .. literalinclude:: Escrow.hs
    :start-after: START prop_Escrow
