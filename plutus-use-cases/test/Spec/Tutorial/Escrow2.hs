@@ -138,8 +138,9 @@ testContract params = selectList [ void $ payEp params
 
 
 prop_Escrow :: Actions EscrowModel -> Property
-prop_Escrow = propRunActions_
-
+prop_Escrow = propRunActionsWithOptions options defaultCoverageOptions (\ _ -> pure True)
+  where
+    options = defaultCheckOptionsContractModel & increaseTransactionLimits
 
 escrowParams :: [(Wallet, Integer)] -> EscrowParams d
 escrowParams tgts =
