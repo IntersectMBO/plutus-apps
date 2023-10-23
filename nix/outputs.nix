@@ -1,6 +1,6 @@
 { repoRoot, inputs, pkgs, lib, system }:
 let
-  project = repoRoot.nix.cabal-project;
+  project = repoRoot.nix.project;
 in
 [
   (
