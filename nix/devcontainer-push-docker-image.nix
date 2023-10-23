@@ -1,8 +1,7 @@
-{ inputs, cell }:
-let
-  inherit (cell.library) pkgs;
+{ repoRoot, inputs, pkgs, lib, system }:
 
-  dockerImage = cell.devcontainer.devcontainer-docker-image;
+let
+  dockerImage = repoRoot.nix.devcontainer-docker-image;
 
   imageRef = dockerImage.imageName + ":" + dockerImage.imageTag;
 
