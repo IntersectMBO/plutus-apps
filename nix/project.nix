@@ -30,6 +30,7 @@ let
         "https://github.com/input-output-hk/cardano-addresses"."b7273a5d3c21f1a003595ebf1e1f79c28cd72513" = "129r5kyiw10n2021bkdvnr270aiiwyq58h472d151ph0r7wpslgp";
         "https://github.com/input-output-hk/cardano-ledger"."da3e9ae10cf9ef0b805a046c84745f06643583c2" = "sha256-3VUZKkLu1R43GUk9IwgsGQ55O0rnu8NrCkFX9gqA4ck=";
         "https://github.com/input-output-hk/cardano-wallet"."18a931648550246695c790578d4a55ee2f10463e" = "0i40hp1mdbljjcj4pn3n6zahblkb2jmpm8l4wnb36bya1pzf66fx";
+        "https://github.com/input-output-hk/marconi"."7285a3bc1ae53bf672c7cc2359210c6c29fbce44" = "sha256-Z1ex1CqsIDzhzE8tbHtFvK+V+W3Fn1me2tHL/D+HhUE=";
       };
 
       shell.withHoogle = false;
@@ -111,29 +112,6 @@ let
           plutus-pab-executables.components.tests.plutus-pab-test-full-long-running.buildable = lib.mkForce (!isDarwin);
 
           # ---------- Common Packages ----------
-
-          # marconi-core.doHaddock = meta.enableHaddock;
-          # marconi-core.flags.defer-plugin-errors = meta.enableHaddock;
-
-          # marconi-chain-index.doHaddock = meta.enableHaddock;
-          # marconi-chain-index.flags.defer-plugin-errors = meta.enableHaddock;
-
-          # The lines `export CARDANO_NODE=...` and `export CARDANO_CLI=...`
-          # is necessary to prevent the error
-          # `../dist-newstyle/cache/plan.json: openBinaryFile: does not exist (No such file or directory)`.
-          # See https://github.com/input-output-hk/cardano-node/issues/4194.
-          #
-          # The line 'export CARDANO_NODE_SRC=...' is used to specify the
-          # root folder used to fetch the `configuration.yaml` file (in
-          # plutus-apps, it's currently in the
-          # `configuration/defaults/byron-mainnet` directory.
-          # Else, we'll get the error
-          # `/nix/store/ls0ky8x6zi3fkxrv7n4vs4x9czcqh1pb-plutus-apps/marconi/test/configuration.yaml: openFile: does not exist (No such file or directory)`
-          marconi-chain-index.preCheck = ''
-            export CARDANO_CLI=${config.hsPkgs.cardano-cli.components.exes.cardano-cli}/bin/cardano-cli${pkgs.stdenv.hostPlatform.extensions.executable}
-            export CARDANO_NODE=${config.hsPkgs.cardano-node.components.exes.cardano-node}/bin/cardano-node${pkgs.stdenv.hostPlatform.extensions.executable}
-            export CARDANO_NODE_SRC=${../.}
-          '';
 
           # plutus-contract.doHaddock = meta.enableHaddock;
           # plutus-contract.flags.defer-plugin-errors = meta.enableHaddock;
@@ -229,4 +207,3 @@ let
 in
 
 project
-
