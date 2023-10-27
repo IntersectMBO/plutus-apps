@@ -1,7 +1,7 @@
 { repoRoot, inputs, pkgs, lib, system }:
 
 let
-  docs = inputs.self.cabalProject.read-the-docs-site;
+  docs = inputs.self.packages.read-the-docs-site;
 
   shiftedDocs = pkgs.linkFarm docs.name [{ name = "doc"; path = docs; }];
 

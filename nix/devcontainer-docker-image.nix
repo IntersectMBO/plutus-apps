@@ -10,7 +10,7 @@ let
   # The result of this derivation is a file that can be sourced to set the variables we need.
   horrible-env-vars-hack = pkgs.runCommand "exfiltrate-env-vars"
     {
-      inherit (project.cabalProject.devShell) buildInputs nativeBuildInputs propagatedBuildInputs;
+      inherit (project.devShell) buildInputs nativeBuildInputs propagatedBuildInputs;
     }
     ''
       set | grep -v -E '^BASHOPTS=|^BASH_VERSINFO=|^EUID=|^PPID=|^SHELLOPTS=|^UID=|^HOME=|^TEMP=|^TMP=|^TEMPDIR=|^TMPDIR=|^NIX_ENFORCE_PURITY=' >> $out
