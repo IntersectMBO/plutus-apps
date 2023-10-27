@@ -2,7 +2,6 @@ Sphinx==3.1.1
 sphinx-intl==2.0.1
 transifex-client==0.14.4
 testresources==2.0.1
--e git+https://github.com/input-output-hk/sphinx_rtd_theme.git#egg=sphinx_rtd_theme
 recommonmark==0.6
 ## The following requirements were added by pip freeze:
 alabaster==0.7.12
