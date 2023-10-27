@@ -126,7 +126,7 @@ let
           # plutus-ledger.flags.defer-plugin-errors = meta.enableHaddock;
 
           # plutus-script-utils.doHaddock = meta.enableHaddock;
-          # plutus-script-utils.flags.defer-plugin-errors = meta.enableHaddock;
+          plutus-script-utils.flags.defer-plugin-errors = true;
 
           # plutus-example.doHaddock = meta.enableHaddock;
           # plutus-example.flags.defer-plugin-errors = meta.enableHaddock;
