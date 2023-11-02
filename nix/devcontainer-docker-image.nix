@@ -41,6 +41,8 @@ let
     name = "plutus-devcontainer";
     tag = "latest";
 
+    diskSize = 4096;
+
     contents = [
       nsswitch-conf
 
