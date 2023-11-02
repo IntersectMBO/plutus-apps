@@ -10,6 +10,7 @@ chardet==3.0.4
 click==7.1.2
 sphinxcontrib-domaintools>=0.3
 sphinxemoji==0.1.6
+sphinx-rtd-theme==1.0.0
 sphinx_markdown_tables==0.0.15
 sphinxcontrib-plantuml==0.20.1
 sphinxcontrib-bibtex==2.2.0
