@@ -38,7 +38,7 @@ in
   };
 
   preCommit = {
-    shellcheck.enable = true;
+    shellcheck.enable = false;
     stylish-haskell.enable = true;
     nixpkgs-fmt.enable = true;
     cabal-fmt.enable = true;

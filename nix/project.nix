@@ -113,22 +113,11 @@ let
 
           # ---------- Common Packages ----------
 
-          # plutus-contract.doHaddock = meta.enableHaddock;
           plutus-contract.flags.defer-plugin-errors = true;
-
-          # plutus-contract-modelib.doHaddock = meta.enableHaddock;
           plutus-contract-modelib.flags.defer-plugin-errors = true;
-
-          # plutus-use-cases.doHaddock = meta.enableHaddock;
           plutus-use-cases.flags.defer-plugin-errors = true;
-
-          # plutus-ledger.doHaddock = meta.enableHaddock;
           plutus-ledger.flags.defer-plugin-errors = true;
-
-          # plutus-script-utils.doHaddock = meta.enableHaddock;
           plutus-script-utils.flags.defer-plugin-errors = true;
-
-          # plutus-example.doHaddock = meta.enableHaddock;
           plutus-example.flags.defer-plugin-errors = true;
 
           plutus-example.preCheck = "
