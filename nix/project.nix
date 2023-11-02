@@ -129,7 +129,7 @@ let
           plutus-script-utils.flags.defer-plugin-errors = true;
 
           # plutus-example.doHaddock = meta.enableHaddock;
-          # plutus-example.flags.defer-plugin-errors = meta.enableHaddock;
+          plutus-example.flags.defer-plugin-errors = meta.enableHaddock;
 
           plutus-example.preCheck = "
             export CARDANO_CLI=${config.hsPkgs.cardano-cli.components.exes.cardano-cli}/bin/cardano-cli${pkgs.stdenv.hostPlatform.extensions.executable}
