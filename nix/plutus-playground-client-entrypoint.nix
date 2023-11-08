@@ -1,9 +1,7 @@
-{ inputs, cell }:
+{ repoRoot, inputs, pkgs, lib, system }:
 
 let
-  inherit (cell.library) pkgs;
-
-  docs = cell.packages.read-the-docs-site;
+  docs = inputs.self.packages.read-the-docs-site;
 
   shiftedDocs = pkgs.linkFarm docs.name [{ name = "doc"; path = docs; }];
 
@@ -32,10 +30,14 @@ let
     deflate.mimetypes = ("text/plain", "text/html", "text/css")
     server.upload-dirs = ("/tmp")
   '';
+
+  # Needed variables:
+  #   NOMAD_PORT_${port-name}
+  #   NOMAD_IP_${port-name}
+  entrypoint = pkgs.writeShellScriptBin "entrypoint" ''
+    exec -a lighttpd ${pkgs.lighttpd}/bin/lighttpd -f ${config} -D
+  '';
+
 in
-# Needed variables:
-  #  NOMAD_PORT_${port-name}
-  #  NOMAD_IP_${port-name}
-pkgs.writeShellScriptBin "entrypoint" ''
-  exec -a lighttpd ${pkgs.lighttpd}/bin/lighttpd -f ${config} -D
-''
+
+entrypoint

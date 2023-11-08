@@ -1,9 +1,8 @@
 # This is a vscode devcontainer that can be used with the plutus-starter project (or probably the plutus project itself).
-{ inputs, cell }:
-let
-  inherit (cell.library) pkgs;
+{ repoRoot, inputs, pkgs, lib, system }:
 
-  plutus-apps-shell = cell.library.plutus-apps-project.shellFor { withHoogle = false; };
+let
+  project = repoRoot.nix.project;
 
   # This is an evil hack to allow us to have a docker container with a "similar" environment to
   # our haskell.nix shell without having it actually run nix develop. In particular, we need some
@@ -11,7 +10,7 @@ let
   # The result of this derivation is a file that can be sourced to set the variables we need.
   horrible-env-vars-hack = pkgs.runCommand "exfiltrate-env-vars"
     {
-      inherit (plutus-apps-shell) buildInputs nativeBuildInputs propagatedBuildInputs;
+      inherit (project.devShell) buildInputs nativeBuildInputs propagatedBuildInputs;
     }
     ''
       set | grep -v -E '^BASHOPTS=|^BASH_VERSINFO=|^EUID=|^PPID=|^SHELLOPTS=|^UID=|^HOME=|^TEMP=|^TMP=|^TEMPDIR=|^TMPDIR=|^NIX_ENFORCE_PURITY=' >> $out
@@ -41,6 +40,8 @@ let
 
     name = "plutus-devcontainer";
     tag = "latest";
+
+    diskSize = 4096;
 
     contents = [
       nsswitch-conf
@@ -81,9 +82,10 @@ let
       pkgs.jq
 
       # Plutus Stuff
-      plutus-apps-shell.ghc
-      cell.packages.haskell-language-server-wrapper
-      cell.packages.cabal-install
+      project.cabalProject.pkg-set.config.ghc.package
+      project.devShell.tools.haskell-language-server
+      project.devShell.tools.haskell-language-server-wrapper
+      project.devShell.tools.cabal-install
     ];
 
     extraCommands = ''
