@@ -30,6 +30,7 @@ in
     pkgs.cacert
     pkgs.dateutils
     pkgs.act
+    pkgs.hub
   ];
 
   env = {
