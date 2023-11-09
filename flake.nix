@@ -3,7 +3,7 @@
 
   inputs = {
     iogx = {
-      url = "github:input-output-hk/iogx?ref=profiled-addition";
+      url = "github:input-output-hk/iogx";
       inputs.hackage.follows = "hackage";
       inputs.CHaP.follows = "CHaP";
       inputs.haskell-nix.follows = "haskell-nix";
