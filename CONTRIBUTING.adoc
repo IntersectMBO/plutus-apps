@@ -14,87 +14,19 @@ If you _really_ cannot use Nix and still want to contribute to Plutus then xref:
 
 === Installing and setting up Nix
 
-This project uses Flakes, so you must have Nix version `>= 2.4` installed.
+For instructions on how to install and configure nix (including how to enable access to our binary caches), refer to link:https://github.com/input-output-hk/iogx/blob/main/doc/nix-setup-guide.md[this document]. 
 
-Either upgrade or install https://nixos.org/nix/[Nix] following the instructions on https://nixos.org/nix/[its website].
+If you already have nix installed and configured, you may enter the development shell by running `nix develop`.
 
-On Linux this command should suffice: `sh <(curl -L https://nixos.org/nix/install) --daemon`
+=== Note on pre-commit hooks
 
-=== How to get a shell environment with tools
-
-To enter the development shell run the following command in the root directory:
-
-`nix develop`
-
-If you receive this message:
-
-`error: experimental Nix feature 'nix-command' is disabled; use '--extra-experimental-features nix-command' to override`
-
-Then try this:
-
-`nix develop --extra-experimental-features 'nix-command flakes'`
-
-You may now choose to edit your `/etc/nix/nix.conf` (global) or `~/.config/nix/nix.conf` (you must be a https://nixos.org/nix/manual/#ssec-multi-user[trusted user] to do this) by appending the following line:
-
-`extra-experimental-features = nix-command flakes`
-
-If you do so you will be able to enter the development shell by running `nix develop`.
-
-If you are a VSCode user, you may want to start your development session by running:
-
-`nix develop --command code`
-
-If this is your first time running `nix develop`, you may be asked the following:
+If you are committing code outside `nix develop`, you will get this error:
 ```
-do you want to allow configuration setting 'allow-import-from-derivation' to be set to 'true' (y/N)? y
-do you want to permanently mark this value as trusted (y/N)? y
+pre-commit not found. Did you forget to activate your virtualenv?
 ```
-Please type `y` to this and all subsequent prompts to make life easy for yourself.
+In that case, you may either pass the flag `--no-verify` to `git commit`, or `pip install pre-commit`.
 
-IMPORTANT: *It is particularly important to accept the `extra-substituters` and `extra-trusted-public-keys` settings, which will grant access to our Nix binary cache.*
-
-At this point and if this is your first time running `nix develop` then Nix will download, build and install a copious amout of dependencies.
-
-It is not uncommon for this process to take a couple of hours and to write tens of GBs to the `/nix/store`.
-
-*Rest assured that this only happens the very first time you run `nix develop`.*
-
-However you should pay attention to the output of `nix develop`: if you notice that you are _building_ GHC, it is likely that your
-caches have not been configured correctly.
-
-Accepting the configuration settings as outlined above should be sufficient to avoid this, however if your caches are still broken, you may try to append the following lines to `/etc/nix/nix.conf` and/or `~/.config/nix/nix.conf`:
-
-----
-substituters = https://cache.zw3rk.com https://cache.iog.io https://cache.nixos.org/
-trusted-public-keys = loony-tools:pr9m4BkM/5/eSTZlkQyRt57Jz7OMBxNSUiMC4FkcNfk= hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
-extra-experimental-features = nix-command flakes
-----
-
-On NixOS, set the following NixOS options:
-----
-nix = {
-  binaryCaches          = [ "https://cache.zw3rk.com" "https://cache.iog.io" ];
-  binaryCachePublicKeys = [ "loony-tools:pr9m4BkM/5/eSTZlkQyRt57Jz7OMBxNSUiMC4FkcNfk=" "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=" ];
-};
-----
-
-You will need to restart the nix-daemon on non-NixOS for the changes to take effect, or just restart your machine.
-
-IMPORTANT: If you are on NixOS or otherwise using a multi-user Nix install, you **must** be a trusted user to set substituters. If you are not a trusted user, enabling the options prompted by the flake will have no effect (non-trusted users are disallowed from doing this).
-
-On non-NixOS systems, add the following to the system-wide configuration (`/etc/nix/nix.conf`):
-
-```
-trusted-users = <username> root
-```
-
-You can also use a group name by prefixing it with `@`, e.g. to add all members of the `wheel` group:
-
-```
-trusted-users = @wheel root
-```
-
-On NixOS, add the user/group name to the list under [`nix.settings.trusted-users`](https://search.nixos.org/options?show=nix.settings.trusted-users).
+The `pre-commit` checks will be run by CI anyway, so any formatting errors will be caught when submitting your PR.
 
 === What to do once inside the `nix develop` shell
 
@@ -126,9 +58,9 @@ We don't have a `hie.yaml`, the implicit cradle support in HLS seems to work fin
 
 Haskell components are provisioned by Nix via link:https://github.com/input-output-hk/haskell.nix[Haskell.nix]
 
-In general you can run `nix build .#SYSTEM.plutus.library.plutus-project.hsPkgs.PACKAGE.components.COMPONENT`
+In general you can run `nix build .#cabalProject.SYSTEM.hsPkgs.PACKAGE.components.COMPONENT`
 
-For example `nix build .#x86_64-linux.plutus.library.plutus-project.hsPkgs.plutus-core.components.library`
+For example `nix build .#cabalProject.x86_64-linux.hsPkgs.plutus-core.components.library`
 
 For full documentation about the Nix code see the link:nix/README.md[Nix README].
 
@@ -185,7 +117,7 @@ Note that `cabal` itself keeps track of what index states it knows about, so whe
 The Nix code which builds our packages also cares about the index state.
 This is represented by some pinned inputs in our flake (see xref:update-nix-pins[here] for more details)
 You can update these by running:
-- `nix flake lock --update-input hackage-nix` for Hackage
+- `nix flake lock --update-input hackage` for Hackage
 - `nix flake lock --update-input CHaP` for CHaP
 
 ==== Use of `source-repository-package`s
@@ -196,7 +128,7 @@ In particular, we should not release our packages while we depend on a `source-r
 
 If we are stuck in a situation where we need a long-running fork of a package, we should release it to CHaP instead (see the https://github.com/input-output-hk/cardano-haskell-packages[CHaP README] for more).
 
-If you do add a `source-repository-package`, you need to update the `sha256` mapping in `nix/cells/plutus/library/make-plutus-project.nix`.
+If you do add a `source-repository-package`, you need to update the `sha256` mapping in `nix/project.nix`.
 For the moment you have to do this by hand, using the following command to get the sha: `nix-prefetch-git --quiet <repo-url> <rev> | jq .sha256`, or by just getting it wrong and trying to build it, in which case Nix will give you the right value.
 
 [[update-nix-pins]]
@@ -215,7 +147,7 @@ Do *not* use `nix flake update`, as that will update all the inputs, which we ty
 
 TODO: Currently not available, coming soon
 
-If you launch `nix develop .#profiled-plutus-apps` you will get a shell where all the dependencies have been built with profiling.
+If you launch `nix develop .#profiled` you will get a shell where all the dependencies have been built with profiling.
 
 [WARNING]
 ====
@@ -662,15 +594,11 @@ It's useful to take a look if you're changing any of the documentation.
 Enter the development shell using `nix develop`.
 If you get a segfault, run `GC_DONT_GC=1 nix develop` instead.
 
-Then you can run `serve-docs` to host a local instance at http://0.0.0.0:8002. This will also build and serve Haddock documentation at http://0.0.0.0:8002/haddock. Alternatively, you can access the hosted version of the Haddock documentation at https://input-output-hk.github.io/plutus-apps/main.
+Then you can run `serve-rtd-site` to host a local instance at http://0.0.0.0:8002. This will also build and serve Haddock documentation at http://0.0.0.0:8002/haddock. Alternatively, you can access the hosted version of the Haddock documentation at https://input-output-hk.github.io/plutus-apps/main.
 
 ==== Github Actions
 
 These perform some of the same checks as Hydra, but Github Actions is often more available, so they return faster and act as a "smoke check".
-
-==== Buildkite
-
-Buildkite currently only performs the continuous deployment steps.
 
 == Project roles and responsibilities
 
@@ -686,6 +614,6 @@ Buildkite currently only performs the continuous deployment steps.
     - @ak3n
 - The maintainer of the documentation is @joseph-fajen.
 - If you have a technical dispute that you need help resolving, you can ask @koslambrou.
-- For problems with the developer environment setup, builds, or CI, you can ask @zeme-iohk, @Pacman99, or @koslambrou.
+- For problems with the developer environment setup, builds, or CI, you can ask @zeme-wana, @Pacman99, or @koslambrou.
 - For any QA related issues, you can mainly query @james-iohk, or any of the other regular contributors.
 - The releasing of the software is handled by @ak3n, but if you have a specific problem you may also ask @koslambrou.
