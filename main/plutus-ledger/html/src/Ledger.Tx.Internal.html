@@ -1,0 +1,1049 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass           #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric            #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DerivingVia              #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE DisambiguateRecordFields #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts         #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances        #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE GADTs                    #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase               #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns           #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE OverloadedLists          #-}</span><span>
+</span><span id="line-11"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings        #-}</span><span>
+</span><span id="line-12"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications         #-}</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Ledger.Tx.Internal</span><span>
+</span><span id="line-15"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Ledger.Tx.Internal.html"><span class="hs-identifier">Ledger.Tx.Internal</span></a></span><span>
+</span><span id="line-16"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Language</span></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier">TxOut</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">TxOutRef</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Versioned</span></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.Api</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">C</span></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.Api.Shelley</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">C</span></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">toShelleyTxOut</span></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.Binary</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">C</span></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.Ledger.Alonzo.Genesis</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Codec.Serialise</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Serialise</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">decode</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">encode</span></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.Ledger.Core</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><a href="Ledger.html"><span class="hs-identifier">Ledger</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">TxOut</span></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.Ledger.Serialization</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><a href="Ledger.html"><span class="hs-identifier">Ledger</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Sized</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">mkSized</span></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Ouroboros.Consensus.Shelley.Eras</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><a href="Ledger.html"><span class="hs-identifier">Ledger</span></a></span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Lens</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">FromJSON</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ToJSON</span></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Default</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">def</span></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Map</span></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Ledger.Address.html"><span class="hs-identifier">Ledger.Address</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Address.html#CardanoAddress"><span class="hs-identifier">CardanoAddress</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Address.html#cardanoPubKeyHash"><span class="hs-identifier">cardanoPubKeyHash</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Ledger.Contexts.Orphans.html"><span class="hs-identifier">Ledger.Contexts.Orphans</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Ledger.Crypto.html"><span class="hs-identifier">Ledger.Crypto</span></a></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Ledger.DCert.Orphans.html"><span class="hs-identifier">Ledger.DCert.Orphans</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Ledger.Tx.CardanoAPITemp.html"><span class="hs-identifier">Ledger.Tx.CardanoAPITemp</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">C</span></span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Ledger.Tx.Orphans.html"><span class="hs-identifier">Ledger.Tx.Orphans</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Ledger.Tx.Orphans.V2.html"><span class="hs-identifier">Ledger.Tx.Orphans.V2</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.Script.Utils.Scripts</span></span><span>
+</span><span id="line-48"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.V1.Ledger.Api</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Credential</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">DCert</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">dataToBuiltinData</span></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.V1.Ledger.Scripts</span></span><span>
+</span><span id="line-50"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.V1.Ledger.Tx</span></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">TxIn</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">TxInType</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">TxOut</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">inRef</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">inType</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">pubKeyTxIn</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">scriptTxIn</span></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">PlutusTx</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">FromData</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">PlutusTx.Prelude</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">PlutusTx</span></span><span>
+</span><span id="line-53"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Prettyprinter</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Pretty</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">viaShow</span></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span id="local-6989586621679742350"><span id="local-6989586621679742351"><span class="annot"><a href="Ledger.Tx.Internal.html#cardanoTxOutValue"><span class="hs-identifier hs-type">cardanoTxOutValue</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.TxOut</span></span><span> </span><span class="annot"><a href="#local-6989586621679742351"><span class="hs-identifier hs-type">ctx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679742350"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.Value</span></span></span></span><span>
+</span><span id="line-56"></span><span id="cardanoTxOutValue"><span class="annot"><span class="annottext">cardanoTxOutValue :: TxOut ctx era -&gt; Value
+</span><a href="Ledger.Tx.Internal.html#cardanoTxOutValue"><span class="hs-identifier hs-var hs-var">cardanoTxOutValue</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">C.TxOut</span></span><span> </span><span id="local-6989586621679742145"><span class="annot"><span class="annottext">AddressInEra era
+</span><a href="#local-6989586621679742145"><span class="hs-identifier hs-var">_aie</span></a></span></span><span> </span><span id="local-6989586621679742144"><span class="annot"><span class="annottext">TxOutValue era
+</span><a href="#local-6989586621679742144"><span class="hs-identifier hs-var">tov</span></a></span></span><span> </span><span id="local-6989586621679742143"><span class="annot"><span class="annottext">TxOutDatum ctx era
+</span><a href="#local-6989586621679742143"><span class="hs-identifier hs-var">_tod</span></a></span></span><span> </span><span id="local-6989586621679742142"><span class="annot"><span class="annottext">ReferenceScript era
+</span><a href="#local-6989586621679742142"><span class="hs-identifier hs-var">_rs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-57"></span><span>  </span><span class="annot"><span class="annottext">TxOutValue era -&gt; Value
+forall era. TxOutValue era -&gt; Value
+</span><span class="hs-identifier hs-var">C.txOutValueToValue</span></span><span> </span><span class="annot"><span class="annottext">TxOutValue era
+</span><a href="#local-6989586621679742144"><span class="hs-identifier hs-var">tov</span></a></span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span class="annot"><a href="Ledger.Tx.Internal.html#txOutValue"><span class="hs-identifier hs-type">txOutValue</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.Value</span></span><span>
+</span><span id="line-60"></span><span id="txOutValue"><span class="annot"><span class="annottext">txOutValue :: TxOut -&gt; Value
+</span><a href="Ledger.Tx.Internal.html#txOutValue"><span class="hs-identifier hs-var hs-var">txOutValue</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxOut CtxTx BabbageEra -&gt; Value
+forall ctx era. TxOut ctx era -&gt; Value
+</span><a href="Ledger.Tx.Internal.html#cardanoTxOutValue"><span class="hs-identifier hs-var">cardanoTxOutValue</span></a></span><span> </span><span class="annot"><span class="annottext">(TxOut CtxTx BabbageEra -&gt; Value)
+-&gt; (TxOut -&gt; TxOut CtxTx BabbageEra) -&gt; TxOut -&gt; Value
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">TxOut -&gt; TxOut CtxTx BabbageEra
+</span><a href="Ledger.Tx.Internal.html#getTxOut"><span class="hs-identifier hs-var hs-var">getTxOut</span></a></span><span>
+</span><span id="line-61"></span><span>
+</span><span id="line-62"></span><span class="annot"><a href="Ledger.Tx.Internal.html#outValue"><span class="hs-identifier hs-type">outValue</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">L.Lens</span></span><span> </span><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.Value</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">C.TxOutValue</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.BabbageEra</span></span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span id="outValue"><span class="annot"><span class="annottext">outValue :: (Value -&gt; f (TxOutValue BabbageEra)) -&gt; TxOut -&gt; f TxOut
+</span><a href="Ledger.Tx.Internal.html#outValue"><span class="hs-identifier hs-var hs-var">outValue</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(TxOut -&gt; Value)
+-&gt; (TxOut -&gt; TxOutValue BabbageEra -&gt; TxOut)
+-&gt; Lens TxOut TxOut Value (TxOutValue BabbageEra)
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><span class="hs-identifier hs-var">L.lens</span></span><span>
+</span><span id="line-64"></span><span>  </span><span class="annot"><span class="annottext">TxOut -&gt; Value
+</span><a href="Ledger.Tx.Internal.html#txOutValue"><span class="hs-identifier hs-var">txOutValue</span></a></span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">C.TxOut</span></span><span> </span><span id="local-6989586621679742134"><span class="annot"><span class="annottext">AddressInEra BabbageEra
+</span><a href="#local-6989586621679742134"><span class="hs-identifier hs-var">aie</span></a></span></span><span> </span><span class="annot"><span class="annottext">TxOutValue BabbageEra
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679742133"><span class="annot"><span class="annottext">TxOutDatum CtxTx BabbageEra
+</span><a href="#local-6989586621679742133"><span class="hs-identifier hs-var">tod</span></a></span></span><span> </span><span id="local-6989586621679742132"><span class="annot"><span class="annottext">ReferenceScript BabbageEra
+</span><a href="#local-6989586621679742132"><span class="hs-identifier hs-var">rs</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span id="local-6989586621679742131"><span class="annot"><span class="annottext">TxOutValue BabbageEra
+</span><a href="#local-6989586621679742131"><span class="hs-identifier hs-var">tov</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TxOut CtxTx BabbageEra -&gt; TxOut
+</span><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-var">TxOut</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AddressInEra BabbageEra
+-&gt; TxOutValue BabbageEra
+-&gt; TxOutDatum CtxTx BabbageEra
+-&gt; ReferenceScript BabbageEra
+-&gt; TxOut CtxTx BabbageEra
+forall ctx era.
+AddressInEra era
+-&gt; TxOutValue era
+-&gt; TxOutDatum ctx era
+-&gt; ReferenceScript era
+-&gt; TxOut ctx era
+</span><span class="hs-identifier hs-var">C.TxOut</span></span><span> </span><span class="annot"><span class="annottext">AddressInEra BabbageEra
+</span><a href="#local-6989586621679742134"><span class="hs-identifier hs-var">aie</span></a></span><span> </span><span class="annot"><span class="annottext">TxOutValue BabbageEra
+</span><a href="#local-6989586621679742131"><span class="hs-identifier hs-var">tov</span></a></span><span> </span><span class="annot"><span class="annottext">TxOutDatum CtxTx BabbageEra
+</span><a href="#local-6989586621679742133"><span class="hs-identifier hs-var">tod</span></a></span><span> </span><span class="annot"><span class="annottext">ReferenceScript BabbageEra
+</span><a href="#local-6989586621679742132"><span class="hs-identifier hs-var">rs</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span class="annot"><a href="Ledger.Tx.Internal.html#outValue%27"><span class="hs-identifier hs-type">outValue'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">L.Lens'</span></span><span> </span><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">C.TxOutValue</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.BabbageEra</span></span><span class="hs-special">)</span><span>
+</span><span id="line-68"></span><span id="outValue%27"><span class="annot"><span class="annottext">outValue' :: (TxOutValue BabbageEra -&gt; f (TxOutValue BabbageEra))
+-&gt; TxOut -&gt; f TxOut
+</span><a href="Ledger.Tx.Internal.html#outValue%27"><span class="hs-identifier hs-var hs-var">outValue'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(TxOut -&gt; TxOutValue BabbageEra)
+-&gt; (TxOut -&gt; TxOutValue BabbageEra -&gt; TxOut)
+-&gt; Lens TxOut TxOut (TxOutValue BabbageEra) (TxOutValue BabbageEra)
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><span class="hs-identifier hs-var">L.lens</span></span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">C.TxOut</span></span><span> </span><span id="local-6989586621679742128"><span class="annot"><span class="annottext">AddressInEra BabbageEra
+</span><a href="#local-6989586621679742128"><span class="hs-identifier hs-var">_aie</span></a></span></span><span> </span><span id="local-6989586621679742127"><span class="annot"><span class="annottext">TxOutValue BabbageEra
+</span><a href="#local-6989586621679742127"><span class="hs-identifier hs-var">tov</span></a></span></span><span> </span><span id="local-6989586621679742126"><span class="annot"><span class="annottext">TxOutDatum CtxTx BabbageEra
+</span><a href="#local-6989586621679742126"><span class="hs-identifier hs-var">_tod</span></a></span></span><span> </span><span id="local-6989586621679742125"><span class="annot"><span class="annottext">ReferenceScript BabbageEra
+</span><a href="#local-6989586621679742125"><span class="hs-identifier hs-var">_rs</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TxOutValue BabbageEra
+</span><a href="#local-6989586621679742127"><span class="hs-identifier hs-var">tov</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span>  </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">C.TxOut</span></span><span> </span><span id="local-6989586621679742124"><span class="annot"><span class="annottext">AddressInEra BabbageEra
+</span><a href="#local-6989586621679742124"><span class="hs-identifier hs-var">aie</span></a></span></span><span> </span><span class="annot"><span class="annottext">TxOutValue BabbageEra
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679742123"><span class="annot"><span class="annottext">TxOutDatum CtxTx BabbageEra
+</span><a href="#local-6989586621679742123"><span class="hs-identifier hs-var">tod</span></a></span></span><span> </span><span id="local-6989586621679742122"><span class="annot"><span class="annottext">ReferenceScript BabbageEra
+</span><a href="#local-6989586621679742122"><span class="hs-identifier hs-var">rs</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span id="local-6989586621679742121"><span class="annot"><span class="annottext">TxOutValue BabbageEra
+</span><a href="#local-6989586621679742121"><span class="hs-identifier hs-var">tov</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TxOut CtxTx BabbageEra -&gt; TxOut
+</span><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-var">TxOut</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AddressInEra BabbageEra
+-&gt; TxOutValue BabbageEra
+-&gt; TxOutDatum CtxTx BabbageEra
+-&gt; ReferenceScript BabbageEra
+-&gt; TxOut CtxTx BabbageEra
+forall ctx era.
+AddressInEra era
+-&gt; TxOutValue era
+-&gt; TxOutDatum ctx era
+-&gt; ReferenceScript era
+-&gt; TxOut ctx era
+</span><span class="hs-identifier hs-var">C.TxOut</span></span><span> </span><span class="annot"><span class="annottext">AddressInEra BabbageEra
+</span><a href="#local-6989586621679742124"><span class="hs-identifier hs-var">aie</span></a></span><span> </span><span class="annot"><span class="annottext">TxOutValue BabbageEra
+</span><a href="#local-6989586621679742121"><span class="hs-identifier hs-var">tov</span></a></span><span> </span><span class="annot"><span class="annottext">TxOutDatum CtxTx BabbageEra
+</span><a href="#local-6989586621679742123"><span class="hs-identifier hs-var">tod</span></a></span><span> </span><span class="annot"><span class="annottext">ReferenceScript BabbageEra
+</span><a href="#local-6989586621679742122"><span class="hs-identifier hs-var">rs</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="hs-comment">-- | Stake withdrawal, if applicable the script should be included in txScripts.</span><span>
+</span><span id="line-74"></span><span id="local-6989586621679742119"><span id="local-6989586621679742120"></span></span><span class="hs-keyword">data</span><span> </span><span id="Withdrawal"><span class="annot"><a href="Ledger.Tx.Internal.html#Withdrawal"><span class="hs-identifier hs-var">Withdrawal</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Withdrawal"><span class="annot"><a href="Ledger.Tx.Internal.html#Withdrawal"><span class="hs-identifier hs-var">Withdrawal</span></a></span></span><span>
+</span><span id="line-75"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="withdrawalCredential"><span class="annot"><span class="annottext">Withdrawal -&gt; Credential
+</span><a href="Ledger.Tx.Internal.html#withdrawalCredential"><span class="hs-identifier hs-var hs-var">withdrawalCredential</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Credential</span></span><span>      </span><span class="hs-comment">-- ^ staking credential</span><span>
+</span><span id="line-76"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="withdrawalAmount"><span class="annot"><span class="annottext">Withdrawal -&gt; Integer
+</span><a href="Ledger.Tx.Internal.html#withdrawalAmount"><span class="hs-identifier hs-var hs-var">withdrawalAmount</span></a></span></span><span>     </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/integer-gmp-1.0.3.0/src"><span class="hs-identifier hs-type">Integer</span></a></span><span>         </span><span class="hs-comment">-- ^ amount of withdrawal in Lovelace, must withdraw all eligible amount</span><span>
+</span><span id="line-77"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="withdrawalRedeemer"><span class="annot"><span class="annottext">Withdrawal -&gt; Maybe Redeemer
+</span><a href="Ledger.Tx.Internal.html#withdrawalRedeemer"><span class="hs-identifier hs-var hs-var">withdrawalRedeemer</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Redeemer</span></span><span>  </span><span class="hs-comment">-- ^ redeemer for script credential</span><span>
+</span><span id="line-78"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-79"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679742109"><span id="local-6989586621679742111"><span id="local-6989586621679742113"><span class="annot"><span class="annottext">Int -&gt; Withdrawal -&gt; ShowS
+[Withdrawal] -&gt; ShowS
+Withdrawal -&gt; String
+(Int -&gt; Withdrawal -&gt; ShowS)
+-&gt; (Withdrawal -&gt; String)
+-&gt; ([Withdrawal] -&gt; ShowS)
+-&gt; Show Withdrawal
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [Withdrawal] -&gt; ShowS
+$cshowList :: [Withdrawal] -&gt; ShowS
+show :: Withdrawal -&gt; String
+$cshow :: Withdrawal -&gt; String
+showsPrec :: Int -&gt; Withdrawal -&gt; ShowS
+$cshowsPrec :: Int -&gt; Withdrawal -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679742104"><span id="local-6989586621679742106"><span class="annot"><span class="annottext">Withdrawal -&gt; Withdrawal -&gt; Bool
+(Withdrawal -&gt; Withdrawal -&gt; Bool)
+-&gt; (Withdrawal -&gt; Withdrawal -&gt; Bool) -&gt; Eq Withdrawal
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: Withdrawal -&gt; Withdrawal -&gt; Bool
+$c/= :: Withdrawal -&gt; Withdrawal -&gt; Bool
+== :: Withdrawal -&gt; Withdrawal -&gt; Bool
+$c== :: Withdrawal -&gt; Withdrawal -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. Withdrawal -&gt; Rep Withdrawal x)
+-&gt; (forall x. Rep Withdrawal x -&gt; Withdrawal) -&gt; Generic Withdrawal
+forall x. Rep Withdrawal x -&gt; Withdrawal
+forall x. Withdrawal -&gt; Rep Withdrawal x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep Withdrawal x -&gt; Withdrawal
+$cfrom :: forall x. Withdrawal -&gt; Rep Withdrawal x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679742092"><span id="local-6989586621679742094"><span id="local-6989586621679742096"><span id="local-6989586621679742098"><span class="annot"><span class="annottext">[Withdrawal] -&gt; Encoding
+[Withdrawal] -&gt; Value
+Withdrawal -&gt; Encoding
+Withdrawal -&gt; Value
+(Withdrawal -&gt; Value)
+-&gt; (Withdrawal -&gt; Encoding)
+-&gt; ([Withdrawal] -&gt; Value)
+-&gt; ([Withdrawal] -&gt; Encoding)
+-&gt; ToJSON Withdrawal
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; ToJSON a
+toEncodingList :: [Withdrawal] -&gt; Encoding
+$ctoEncodingList :: [Withdrawal] -&gt; Encoding
+toJSONList :: [Withdrawal] -&gt; Value
+$ctoJSONList :: [Withdrawal] -&gt; Value
+toEncoding :: Withdrawal -&gt; Encoding
+$ctoEncoding :: Withdrawal -&gt; Encoding
+toJSON :: Withdrawal -&gt; Value
+$ctoJSON :: Withdrawal -&gt; Value
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679742087"><span id="local-6989586621679742089"><span class="annot"><span class="annottext">Value -&gt; Parser [Withdrawal]
+Value -&gt; Parser Withdrawal
+(Value -&gt; Parser Withdrawal)
+-&gt; (Value -&gt; Parser [Withdrawal]) -&gt; FromJSON Withdrawal
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+parseJSONList :: Value -&gt; Parser [Withdrawal]
+$cparseJSONList :: Value -&gt; Parser [Withdrawal]
+parseJSON :: Value -&gt; Parser Withdrawal
+$cparseJSON :: Value -&gt; Parser Withdrawal
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679742078"><span id="local-6989586621679742080"><span id="local-6989586621679742082"><span id="local-6989586621679742084"><span class="annot"><span class="annottext">[Withdrawal] -&gt; Encoding
+Withdrawal -&gt; Encoding
+(Withdrawal -&gt; Encoding)
+-&gt; (forall s. Decoder s Withdrawal)
+-&gt; ([Withdrawal] -&gt; Encoding)
+-&gt; (forall s. Decoder s [Withdrawal])
+-&gt; Serialise Withdrawal
+forall s. Decoder s [Withdrawal]
+forall s. Decoder s Withdrawal
+forall a.
+(a -&gt; Encoding)
+-&gt; (forall s. Decoder s a)
+-&gt; ([a] -&gt; Encoding)
+-&gt; (forall s. Decoder s [a])
+-&gt; Serialise a
+decodeList :: Decoder s [Withdrawal]
+$cdecodeList :: forall s. Decoder s [Withdrawal]
+encodeList :: [Withdrawal] -&gt; Encoding
+$cencodeList :: [Withdrawal] -&gt; Encoding
+decode :: Decoder s Withdrawal
+$cdecode :: forall s. Decoder s Withdrawal
+encode :: Withdrawal -&gt; Encoding
+$cencode :: Withdrawal -&gt; Encoding
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Serialise</span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-81"></span><span>
+</span><span id="line-82"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679742074"><span class="annot"><span class="hs-identifier hs-type">Pretty</span></span><span> </span><span class="annot"><a href="Ledger.Tx.Internal.html#Withdrawal"><span class="hs-identifier hs-type">Withdrawal</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-83"></span><span>    </span><span id="local-6989586621679742072"><span class="annot"><span class="annottext">pretty :: Withdrawal -&gt; Doc ann
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">pretty</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Withdrawal -&gt; Doc ann
+forall a ann. Show a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">viaShow</span></span><span>
+</span><span id="line-84"></span><span>
+</span><span id="line-85"></span><span id="local-6989586621679742069"><span id="local-6989586621679742070"></span></span><span class="hs-keyword">data</span><span> </span><span id="Certificate"><span class="annot"><a href="Ledger.Tx.Internal.html#Certificate"><span class="hs-identifier hs-var">Certificate</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Certificate"><span class="annot"><a href="Ledger.Tx.Internal.html#Certificate"><span class="hs-identifier hs-var">Certificate</span></a></span></span><span>
+</span><span id="line-86"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="certificateDcert"><span class="annot"><span class="annottext">Certificate -&gt; DCert
+</span><a href="Ledger.Tx.Internal.html#certificateDcert"><span class="hs-identifier hs-var hs-var">certificateDcert</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">DCert</span></span><span>
+</span><span id="line-87"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="certificateRedeemer"><span class="annot"><span class="annottext">Certificate -&gt; Maybe Redeemer
+</span><a href="Ledger.Tx.Internal.html#certificateRedeemer"><span class="hs-identifier hs-var hs-var">certificateRedeemer</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Redeemer</span></span><span>           </span><span class="hs-comment">-- ^ redeemer for script credential</span><span>
+</span><span id="line-88"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-89"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679742060"><span id="local-6989586621679742062"><span id="local-6989586621679742064"><span class="annot"><span class="annottext">Int -&gt; Certificate -&gt; ShowS
+[Certificate] -&gt; ShowS
+Certificate -&gt; String
+(Int -&gt; Certificate -&gt; ShowS)
+-&gt; (Certificate -&gt; String)
+-&gt; ([Certificate] -&gt; ShowS)
+-&gt; Show Certificate
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [Certificate] -&gt; ShowS
+$cshowList :: [Certificate] -&gt; ShowS
+show :: Certificate -&gt; String
+$cshow :: Certificate -&gt; String
+showsPrec :: Int -&gt; Certificate -&gt; ShowS
+$cshowsPrec :: Int -&gt; Certificate -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679742056"><span id="local-6989586621679742058"><span class="annot"><span class="annottext">Certificate -&gt; Certificate -&gt; Bool
+(Certificate -&gt; Certificate -&gt; Bool)
+-&gt; (Certificate -&gt; Certificate -&gt; Bool) -&gt; Eq Certificate
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: Certificate -&gt; Certificate -&gt; Bool
+$c/= :: Certificate -&gt; Certificate -&gt; Bool
+== :: Certificate -&gt; Certificate -&gt; Bool
+$c== :: Certificate -&gt; Certificate -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. Certificate -&gt; Rep Certificate x)
+-&gt; (forall x. Rep Certificate x -&gt; Certificate)
+-&gt; Generic Certificate
+forall x. Rep Certificate x -&gt; Certificate
+forall x. Certificate -&gt; Rep Certificate x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep Certificate x -&gt; Certificate
+$cfrom :: forall x. Certificate -&gt; Rep Certificate x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-90"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679742046"><span id="local-6989586621679742048"><span id="local-6989586621679742050"><span id="local-6989586621679742052"><span class="annot"><span class="annottext">[Certificate] -&gt; Encoding
+[Certificate] -&gt; Value
+Certificate -&gt; Encoding
+Certificate -&gt; Value
+(Certificate -&gt; Value)
+-&gt; (Certificate -&gt; Encoding)
+-&gt; ([Certificate] -&gt; Value)
+-&gt; ([Certificate] -&gt; Encoding)
+-&gt; ToJSON Certificate
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; ToJSON a
+toEncodingList :: [Certificate] -&gt; Encoding
+$ctoEncodingList :: [Certificate] -&gt; Encoding
+toJSONList :: [Certificate] -&gt; Value
+$ctoJSONList :: [Certificate] -&gt; Value
+toEncoding :: Certificate -&gt; Encoding
+$ctoEncoding :: Certificate -&gt; Encoding
+toJSON :: Certificate -&gt; Value
+$ctoJSON :: Certificate -&gt; Value
+</span><a href="#local-6989586621679742046"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679742042"><span id="local-6989586621679742044"><span class="annot"><span class="annottext">Value -&gt; Parser [Certificate]
+Value -&gt; Parser Certificate
+(Value -&gt; Parser Certificate)
+-&gt; (Value -&gt; Parser [Certificate]) -&gt; FromJSON Certificate
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+parseJSONList :: Value -&gt; Parser [Certificate]
+$cparseJSONList :: Value -&gt; Parser [Certificate]
+parseJSON :: Value -&gt; Parser Certificate
+$cparseJSON :: Value -&gt; Parser Certificate
+</span><a href="#local-6989586621679742042"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679742034"><span id="local-6989586621679742036"><span id="local-6989586621679742038"><span id="local-6989586621679742040"><span class="annot"><span class="annottext">[Certificate] -&gt; Encoding
+Certificate -&gt; Encoding
+(Certificate -&gt; Encoding)
+-&gt; (forall s. Decoder s Certificate)
+-&gt; ([Certificate] -&gt; Encoding)
+-&gt; (forall s. Decoder s [Certificate])
+-&gt; Serialise Certificate
+forall s. Decoder s [Certificate]
+forall s. Decoder s Certificate
+forall a.
+(a -&gt; Encoding)
+-&gt; (forall s. Decoder s a)
+-&gt; ([a] -&gt; Encoding)
+-&gt; (forall s. Decoder s [a])
+-&gt; Serialise a
+decodeList :: Decoder s [Certificate]
+$cdecodeList :: forall s. Decoder s [Certificate]
+encodeList :: [Certificate] -&gt; Encoding
+$cencodeList :: [Certificate] -&gt; Encoding
+decode :: Decoder s Certificate
+$cdecode :: forall s. Decoder s Certificate
+encode :: Certificate -&gt; Encoding
+$cencode :: Certificate -&gt; Encoding
+</span><a href="#local-6989586621679742034"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Serialise</span></a></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-91"></span><span>
+</span><span id="line-92"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679742031"><span class="annot"><span class="hs-identifier hs-type">Pretty</span></span><span> </span><span class="annot"><a href="Ledger.Tx.Internal.html#Certificate"><span class="hs-identifier hs-type">Certificate</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-93"></span><span>    </span><span id="local-6989586621679742030"><span class="annot"><span class="annottext">pretty :: Certificate -&gt; Doc ann
+</span><a href="#local-6989586621679742030"><span class="hs-identifier hs-var hs-var hs-var hs-var">pretty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Certificate -&gt; Doc ann
+forall a ann. Show a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">viaShow</span></span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span id="local-6989586621679742028"><span id="local-6989586621679742029"></span></span><span class="hs-keyword">newtype</span><span> </span><span id="TxOut"><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-var">TxOut</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="TxOut"><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-var">TxOut</span></a></span></span><span> </span><span class="hs-special">{</span><span id="getTxOut"><span class="annot"><span class="annottext">TxOut -&gt; TxOut CtxTx BabbageEra
+</span><a href="Ledger.Tx.Internal.html#getTxOut"><span class="hs-identifier hs-var hs-var">getTxOut</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.TxOut</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.CtxTx</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.BabbageEra</span></span><span class="hs-special">}</span><span>
+</span><span id="line-96"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679742022"><span id="local-6989586621679742024"><span id="local-6989586621679742026"><span class="annot"><span class="annottext">Int -&gt; TxOut -&gt; ShowS
+[TxOut] -&gt; ShowS
+TxOut -&gt; String
+(Int -&gt; TxOut -&gt; ShowS)
+-&gt; (TxOut -&gt; String) -&gt; ([TxOut] -&gt; ShowS) -&gt; Show TxOut
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [TxOut] -&gt; ShowS
+$cshowList :: [TxOut] -&gt; ShowS
+show :: TxOut -&gt; String
+$cshow :: TxOut -&gt; String
+showsPrec :: Int -&gt; TxOut -&gt; ShowS
+$cshowsPrec :: Int -&gt; TxOut -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679742018"><span id="local-6989586621679742020"><span class="annot"><span class="annottext">TxOut -&gt; TxOut -&gt; Bool
+(TxOut -&gt; TxOut -&gt; Bool) -&gt; (TxOut -&gt; TxOut -&gt; Bool) -&gt; Eq TxOut
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: TxOut -&gt; TxOut -&gt; Bool
+$c/= :: TxOut -&gt; TxOut -&gt; Bool
+== :: TxOut -&gt; TxOut -&gt; Bool
+$c== :: TxOut -&gt; TxOut -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. TxOut -&gt; Rep TxOut x)
+-&gt; (forall x. Rep TxOut x -&gt; TxOut) -&gt; Generic TxOut
+forall x. Rep TxOut x -&gt; TxOut
+forall x. TxOut -&gt; Rep TxOut x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep TxOut x -&gt; TxOut
+$cfrom :: forall x. TxOut -&gt; Rep TxOut x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-97"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679742008"><span id="local-6989586621679742010"><span id="local-6989586621679742012"><span id="local-6989586621679742014"><span class="annot"><span class="annottext">[TxOut] -&gt; Encoding
+[TxOut] -&gt; Value
+TxOut -&gt; Encoding
+TxOut -&gt; Value
+(TxOut -&gt; Value)
+-&gt; (TxOut -&gt; Encoding)
+-&gt; ([TxOut] -&gt; Value)
+-&gt; ([TxOut] -&gt; Encoding)
+-&gt; ToJSON TxOut
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; ToJSON a
+toEncodingList :: [TxOut] -&gt; Encoding
+$ctoEncodingList :: [TxOut] -&gt; Encoding
+toJSONList :: [TxOut] -&gt; Value
+$ctoJSONList :: [TxOut] -&gt; Value
+toEncoding :: TxOut -&gt; Encoding
+$ctoEncoding :: TxOut -&gt; Encoding
+toJSON :: TxOut -&gt; Value
+$ctoJSON :: TxOut -&gt; Value
+</span><a href="#local-6989586621679742008"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679742004"><span id="local-6989586621679742006"><span class="annot"><span class="annottext">Value -&gt; Parser [TxOut]
+Value -&gt; Parser TxOut
+(Value -&gt; Parser TxOut)
+-&gt; (Value -&gt; Parser [TxOut]) -&gt; FromJSON TxOut
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+parseJSONList :: Value -&gt; Parser [TxOut]
+$cparseJSONList :: Value -&gt; Parser [TxOut]
+parseJSON :: Value -&gt; Parser TxOut
+$cparseJSON :: Value -&gt; Parser TxOut
+</span><a href="#local-6989586621679742004"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-98"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679742000"><span id="local-6989586621679742002"><span class="annot"><span class="annottext">[TxOut] -&gt; Doc ann
+TxOut -&gt; Doc ann
+(forall ann. TxOut -&gt; Doc ann)
+-&gt; (forall ann. [TxOut] -&gt; Doc ann) -&gt; Pretty TxOut
+forall ann. [TxOut] -&gt; Doc ann
+forall ann. TxOut -&gt; Doc ann
+forall a.
+(forall ann. a -&gt; Doc ann)
+-&gt; (forall ann. [a] -&gt; Doc ann) -&gt; Pretty a
+prettyList :: [TxOut] -&gt; Doc ann
+$cprettyList :: forall ann. [TxOut] -&gt; Doc ann
+pretty :: TxOut -&gt; Doc ann
+$cpretty :: forall ann. TxOut -&gt; Doc ann
+</span><a href="#local-6989586621679742000"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Pretty</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-99"></span><span>
+</span><span id="line-100"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679741994"><span id="local-6989586621679741996"><span class="annot"><span class="hs-identifier hs-type">C.ToCBOR</span></span><span> </span><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-101"></span><span>  </span><span id="local-6989586621679741992"><span class="annot"><span class="annottext">toCBOR :: TxOut -&gt; Encoding
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">toCBOR</span></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span id="local-6989586621679741990"><span class="annot"><span class="annottext">TxOut CtxTx BabbageEra
+</span><a href="#local-6989586621679741990"><span class="hs-identifier hs-var">txout</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxOut (BabbageEra StandardCrypto) -&gt; Encoding
+forall a. ToCBOR a =&gt; a -&gt; Encoding
+</span><span class="hs-identifier hs-var">C.toCBOR</span></span><span> </span><span class="annot"><span class="annottext">(TxOut (BabbageEra StandardCrypto) -&gt; Encoding)
+-&gt; TxOut (BabbageEra StandardCrypto) -&gt; Encoding
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra BabbageEra
+-&gt; TxOut CtxTx BabbageEra -&gt; TxOut (BabbageEra StandardCrypto)
+forall era ledgerera.
+(ShelleyLedgerEra era ~ ledgerera, IsShelleyBasedEra era) =&gt;
+ShelleyBasedEra era -&gt; TxOut CtxTx era -&gt; TxOut ledgerera
+</span><a href="Ledger.Tx.CardanoAPITemp.html#toShelleyTxOut"><span class="hs-identifier hs-var">C.toShelleyTxOut</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra BabbageEra
+</span><span class="hs-identifier hs-var">C.ShelleyBasedEraBabbage</span></span><span> </span><span class="annot"><span class="annottext">TxOut CtxTx BabbageEra
+</span><a href="#local-6989586621679741990"><span class="hs-identifier hs-var">txout</span></a></span><span>
+</span><span id="line-102"></span><span>
+</span><span id="line-103"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679741984"><span class="annot"><span class="hs-identifier hs-type">C.FromCBOR</span></span><span> </span><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-104"></span><span>  </span><span id="local-6989586621679741982"><span class="annot"><span class="annottext">fromCBOR :: Decoder s TxOut
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">fromCBOR</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-105"></span><span>    </span><span id="local-6989586621679741980"><span class="annot"><span class="annottext">TxOut (BabbageEra StandardCrypto)
+</span><a href="#local-6989586621679741980"><span class="hs-identifier hs-var">txout</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Decoder s (TxOut (BabbageEra StandardCrypto))
+forall a s. FromCBOR a =&gt; Decoder s a
+</span><span class="hs-identifier hs-var">C.fromCBOR</span></span><span>
+</span><span id="line-106"></span><span>    </span><span class="annot"><span class="annottext">TxOut -&gt; Decoder s TxOut
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(TxOut -&gt; Decoder s TxOut) -&gt; TxOut -&gt; Decoder s TxOut
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TxOut CtxTx BabbageEra -&gt; TxOut
+</span><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-var">TxOut</span></a></span><span> </span><span class="annot"><span class="annottext">(TxOut CtxTx BabbageEra -&gt; TxOut)
+-&gt; TxOut CtxTx BabbageEra -&gt; TxOut
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra BabbageEra
+-&gt; TxOut (BabbageEra StandardCrypto) -&gt; TxOut CtxTx BabbageEra
+forall era ledgerera ctx.
+(ShelleyLedgerEra era ~ ledgerera) =&gt;
+ShelleyBasedEra era -&gt; TxOut ledgerera -&gt; TxOut ctx era
+</span><span class="hs-identifier hs-var">C.fromShelleyTxOut</span></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra BabbageEra
+</span><span class="hs-identifier hs-var">C.ShelleyBasedEraBabbage</span></span><span> </span><span class="annot"><span class="annottext">TxOut (BabbageEra StandardCrypto)
+TxOut (BabbageEra StandardCrypto)
+</span><a href="#local-6989586621679741980"><span class="hs-identifier hs-var">txout</span></a></span><span>
+</span><span id="line-107"></span><span>
+</span><span id="line-108"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679741973"><span id="local-6989586621679741975"><span class="annot"><span class="hs-identifier hs-type">Serialise</span></span><span> </span><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-109"></span><span>  </span><span id="local-6989586621679741972"><span class="annot"><span class="annottext">encode :: TxOut -&gt; Encoding
+</span><a href="#local-6989586621679741972"><span class="hs-identifier hs-var hs-var hs-var hs-var">encode</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxOut -&gt; Encoding
+forall a. ToCBOR a =&gt; a -&gt; Encoding
+</span><span class="hs-identifier hs-var">C.toCBOR</span></span><span>
+</span><span id="line-110"></span><span>  </span><span id="local-6989586621679741971"><span class="annot"><span class="annottext">decode :: Decoder s TxOut
+</span><a href="#local-6989586621679741971"><span class="hs-identifier hs-var hs-var hs-var hs-var">decode</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Decoder s TxOut
+forall a s. FromCBOR a =&gt; Decoder s a
+</span><span class="hs-identifier hs-var">C.fromCBOR</span></span><span>
+</span><span id="line-111"></span><span>
+</span><span id="line-112"></span><span class="annot"><a href="Ledger.Tx.Internal.html#toSizedTxOut"><span class="hs-identifier hs-type">toSizedTxOut</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ledger.Sized</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Ledger.TxOut</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ledger.StandardBabbage</span></span><span class="hs-special">)</span><span>
+</span><span id="line-113"></span><span id="toSizedTxOut"><span class="annot"><span class="annottext">toSizedTxOut :: TxOut -&gt; Sized (TxOut (BabbageEra StandardCrypto))
+</span><a href="Ledger.Tx.Internal.html#toSizedTxOut"><span class="hs-identifier hs-var hs-var">toSizedTxOut</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxOut (BabbageEra StandardCrypto)
+-&gt; Sized (TxOut (BabbageEra StandardCrypto))
+forall a. ToCBOR a =&gt; a -&gt; Sized a
+</span><span class="hs-identifier hs-var">Ledger.mkSized</span></span><span> </span><span class="annot"><span class="annottext">(TxOut (BabbageEra StandardCrypto)
+ -&gt; Sized (TxOut (BabbageEra StandardCrypto)))
+-&gt; (TxOut -&gt; TxOut (BabbageEra StandardCrypto))
+-&gt; TxOut
+-&gt; Sized (TxOut (BabbageEra StandardCrypto))
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra BabbageEra
+-&gt; TxOut CtxTx BabbageEra -&gt; TxOut (BabbageEra StandardCrypto)
+forall era ledgerera.
+(ShelleyLedgerEra era ~ ledgerera, IsShelleyBasedEra era) =&gt;
+ShelleyBasedEra era -&gt; TxOut CtxTx era -&gt; TxOut ledgerera
+</span><a href="Ledger.Tx.CardanoAPITemp.html#toShelleyTxOut"><span class="hs-identifier hs-var">C.toShelleyTxOut</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra BabbageEra
+</span><span class="hs-identifier hs-var">C.ShelleyBasedEraBabbage</span></span><span> </span><span class="annot"><span class="annottext">(TxOut CtxTx BabbageEra -&gt; TxOut (BabbageEra StandardCrypto))
+-&gt; (TxOut -&gt; TxOut CtxTx BabbageEra)
+-&gt; TxOut
+-&gt; TxOut (BabbageEra StandardCrypto)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">TxOut -&gt; TxOut CtxTx BabbageEra
+</span><a href="Ledger.Tx.Internal.html#getTxOut"><span class="hs-identifier hs-var hs-var">getTxOut</span></a></span><span>
+</span><span id="line-114"></span><span>
+</span><span id="line-115"></span><span class="annot"><a href="Ledger.Tx.Internal.html#toCtxUTxOTxOut"><span class="hs-identifier hs-type">toCtxUTxOTxOut</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.TxOut</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.CtxUTxO</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.BabbageEra</span></span><span>
+</span><span id="line-116"></span><span id="toCtxUTxOTxOut"><span class="annot"><span class="annottext">toCtxUTxOTxOut :: TxOut -&gt; TxOut CtxUTxO BabbageEra
+</span><a href="Ledger.Tx.Internal.html#toCtxUTxOTxOut"><span class="hs-identifier hs-var hs-var">toCtxUTxOTxOut</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxOut CtxTx BabbageEra -&gt; TxOut CtxUTxO BabbageEra
+forall era. TxOut CtxTx era -&gt; TxOut CtxUTxO era
+</span><span class="hs-identifier hs-var">C.toCtxUTxOTxOut</span></span><span> </span><span class="annot"><span class="annottext">(TxOut CtxTx BabbageEra -&gt; TxOut CtxUTxO BabbageEra)
+-&gt; (TxOut -&gt; TxOut CtxTx BabbageEra)
+-&gt; TxOut
+-&gt; TxOut CtxUTxO BabbageEra
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">TxOut -&gt; TxOut CtxTx BabbageEra
+</span><a href="Ledger.Tx.Internal.html#getTxOut"><span class="hs-identifier hs-var hs-var">getTxOut</span></a></span><span>
+</span><span id="line-117"></span><span>
+</span><span id="line-118"></span><span>
+</span><span id="line-119"></span><span class="hs-keyword">type</span><span> </span><span id="ScriptsMap"><span class="annot"><a href="Ledger.Tx.Internal.html#ScriptsMap"><span class="hs-identifier hs-var">ScriptsMap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ScriptHash</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Versioned</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Script</span></span><span class="hs-special">)</span><span>
+</span><span id="line-120"></span><span class="hs-keyword">type</span><span> </span><span id="MintingWitnessesMap"><span class="annot"><a href="Ledger.Tx.Internal.html#MintingWitnessesMap"><span class="hs-identifier hs-var">MintingWitnessesMap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">MintingPolicyHash</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Redeemer</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Versioned</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">TxOutRef</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-121"></span><span>
+</span><span id="line-122"></span><span class="hs-comment">-- | Get a hash from the stored TxOutDatum (either directly or by hashing the inlined datum)</span><span>
+</span><span id="line-123"></span><span class="annot"><a href="Ledger.Tx.Internal.html#txOutDatumHash"><span class="hs-identifier hs-type">txOutDatumHash</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">DatumHash</span></span><span>
+</span><span id="line-124"></span><span id="txOutDatumHash"><span class="annot"><span class="annottext">txOutDatumHash :: TxOut -&gt; Maybe DatumHash
+</span><a href="Ledger.Tx.Internal.html#txOutDatumHash"><span class="hs-identifier hs-var hs-var">txOutDatumHash</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">C.TxOut</span></span><span> </span><span id="local-6989586621679741964"><span class="annot"><span class="annottext">AddressInEra BabbageEra
+</span><a href="#local-6989586621679741964"><span class="hs-identifier hs-var">_aie</span></a></span></span><span> </span><span id="local-6989586621679741963"><span class="annot"><span class="annottext">TxOutValue BabbageEra
+</span><a href="#local-6989586621679741963"><span class="hs-identifier hs-var">_tov</span></a></span></span><span> </span><span id="local-6989586621679741962"><span class="annot"><span class="annottext">TxOutDatum CtxTx BabbageEra
+</span><a href="#local-6989586621679741962"><span class="hs-identifier hs-var">tod</span></a></span></span><span> </span><span id="local-6989586621679741961"><span class="annot"><span class="annottext">ReferenceScript BabbageEra
+</span><a href="#local-6989586621679741961"><span class="hs-identifier hs-var">_rs</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-125"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">TxOutDatum CtxTx BabbageEra
+</span><a href="#local-6989586621679741962"><span class="hs-identifier hs-var">tod</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-126"></span><span>    </span><span class="annot"><span class="annottext">TxOutDatum CtxTx BabbageEra
+</span><span class="hs-identifier hs-var">C.TxOutDatumNone</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-127"></span><span>      </span><span class="annot"><span class="annottext">Maybe DatumHash
+forall a. Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-128"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">C.TxOutDatumHash</span></span><span> </span><span id="local-6989586621679741958"><span class="annot"><span class="annottext">ScriptDataSupportedInEra BabbageEra
+</span><a href="#local-6989586621679741958"><span class="hs-identifier hs-var">_era</span></a></span></span><span> </span><span id="local-6989586621679741957"><span class="annot"><span class="annottext">Hash ScriptData
+</span><a href="#local-6989586621679741957"><span class="hs-identifier hs-var">scriptDataHash</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-129"></span><span>      </span><span class="annot"><span class="annottext">DatumHash -&gt; Maybe DatumHash
+forall a. a -&gt; Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(DatumHash -&gt; Maybe DatumHash) -&gt; DatumHash -&gt; Maybe DatumHash
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">BuiltinByteString -&gt; DatumHash
+</span><span class="hs-identifier hs-var">DatumHash</span></span><span> </span><span class="annot"><span class="annottext">(BuiltinByteString -&gt; DatumHash) -&gt; BuiltinByteString -&gt; DatumHash
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; BuiltinByteString
+forall a arep. ToBuiltin a arep =&gt; a -&gt; arep
+</span><span class="hs-identifier hs-var">PlutusTx.toBuiltin</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Hash ScriptData -&gt; ByteString
+forall a. SerialiseAsRawBytes a =&gt; a -&gt; ByteString
+</span><span class="hs-identifier hs-var">C.serialiseToRawBytes</span></span><span> </span><span class="annot"><span class="annottext">Hash ScriptData
+</span><a href="#local-6989586621679741957"><span class="hs-identifier hs-var">scriptDataHash</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-130"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">C.TxOutDatumInline</span></span><span> </span><span id="local-6989586621679741952"><span class="annot"><span class="annottext">ReferenceTxInsScriptsInlineDatumsSupportedInEra BabbageEra
+</span><a href="#local-6989586621679741952"><span class="hs-identifier hs-var">_era</span></a></span></span><span> </span><span id="local-6989586621679741951"><span class="annot"><span class="annottext">ScriptData
+</span><a href="#local-6989586621679741951"><span class="hs-identifier hs-var">scriptData</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-131"></span><span>      </span><span class="annot"><span class="annottext">DatumHash -&gt; Maybe DatumHash
+forall a. a -&gt; Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(DatumHash -&gt; Maybe DatumHash) -&gt; DatumHash -&gt; Maybe DatumHash
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Datum -&gt; DatumHash
+</span><span class="hs-identifier hs-var">datumHash</span></span><span> </span><span class="annot"><span class="annottext">(Datum -&gt; DatumHash) -&gt; Datum -&gt; DatumHash
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">BuiltinData -&gt; Datum
+</span><span class="hs-identifier hs-var">Datum</span></span><span> </span><span class="annot"><span class="annottext">(BuiltinData -&gt; Datum) -&gt; BuiltinData -&gt; Datum
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Data -&gt; BuiltinData
+</span><span class="hs-identifier hs-var">dataToBuiltinData</span></span><span> </span><span class="annot"><span class="annottext">(Data -&gt; BuiltinData) -&gt; Data -&gt; BuiltinData
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptData -&gt; Data
+</span><span class="hs-identifier hs-var">C.toPlutusData</span></span><span> </span><span class="annot"><span class="annottext">ScriptData
+</span><a href="#local-6989586621679741951"><span class="hs-identifier hs-var">scriptData</span></a></span><span>
+</span><span id="line-132"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">C.TxOutDatumInTx</span></span><span> </span><span id="local-6989586621679741946"><span class="annot"><span class="annottext">ScriptDataSupportedInEra BabbageEra
+</span><a href="#local-6989586621679741946"><span class="hs-identifier hs-var">_era</span></a></span></span><span> </span><span id="local-6989586621679741945"><span class="annot"><span class="annottext">ScriptData
+</span><a href="#local-6989586621679741945"><span class="hs-identifier hs-var">scriptData</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-133"></span><span>      </span><span class="annot"><span class="annottext">DatumHash -&gt; Maybe DatumHash
+forall a. a -&gt; Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(DatumHash -&gt; Maybe DatumHash) -&gt; DatumHash -&gt; Maybe DatumHash
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Datum -&gt; DatumHash
+</span><span class="hs-identifier hs-var">datumHash</span></span><span> </span><span class="annot"><span class="annottext">(Datum -&gt; DatumHash) -&gt; Datum -&gt; DatumHash
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">BuiltinData -&gt; Datum
+</span><span class="hs-identifier hs-var">Datum</span></span><span> </span><span class="annot"><span class="annottext">(BuiltinData -&gt; Datum) -&gt; BuiltinData -&gt; Datum
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Data -&gt; BuiltinData
+</span><span class="hs-identifier hs-var">dataToBuiltinData</span></span><span> </span><span class="annot"><span class="annottext">(Data -&gt; BuiltinData) -&gt; Data -&gt; BuiltinData
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptData -&gt; Data
+</span><span class="hs-identifier hs-var">C.toPlutusData</span></span><span> </span><span class="annot"><span class="annottext">ScriptData
+</span><a href="#local-6989586621679741945"><span class="hs-identifier hs-var">scriptData</span></a></span><span>
+</span><span id="line-134"></span><span>
+</span><span id="line-135"></span><span class="annot"><a href="Ledger.Tx.Internal.html#txOutDatum"><span class="hs-identifier hs-type">txOutDatum</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679741943"><span class="annot"><a href="#local-6989586621679741943"><span class="hs-identifier hs-type">d</span></a></span></span><span> </span><span class="hs-operator">.</span><span> </span><span class="annot"><span class="hs-identifier hs-type">FromData</span></span><span> </span><span class="annot"><a href="#local-6989586621679741943"><span class="hs-identifier hs-type">d</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679741943"><span class="hs-identifier hs-type">d</span></a></span><span>
+</span><span id="line-136"></span><span id="txOutDatum"><span class="annot"><span class="annottext">txOutDatum :: TxOut -&gt; Maybe d
+</span><a href="Ledger.Tx.Internal.html#txOutDatum"><span class="hs-identifier hs-var hs-var">txOutDatum</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">C.TxOut</span></span><span> </span><span id="local-6989586621679741942"><span class="annot"><span class="annottext">AddressInEra BabbageEra
+</span><a href="#local-6989586621679741942"><span class="hs-identifier hs-var">_aie</span></a></span></span><span> </span><span id="local-6989586621679741941"><span class="annot"><span class="annottext">TxOutValue BabbageEra
+</span><a href="#local-6989586621679741941"><span class="hs-identifier hs-var">_tov</span></a></span></span><span> </span><span id="local-6989586621679741940"><span class="annot"><span class="annottext">TxOutDatum CtxTx BabbageEra
+</span><a href="#local-6989586621679741940"><span class="hs-identifier hs-var">tod</span></a></span></span><span> </span><span id="local-6989586621679741939"><span class="annot"><span class="annottext">ReferenceScript BabbageEra
+</span><a href="#local-6989586621679741939"><span class="hs-identifier hs-var">_rs</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-137"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">TxOutDatum CtxTx BabbageEra
+</span><a href="#local-6989586621679741940"><span class="hs-identifier hs-var">tod</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-138"></span><span>    </span><span class="annot"><span class="annottext">TxOutDatum CtxTx BabbageEra
+</span><span class="hs-identifier hs-var">C.TxOutDatumNone</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-139"></span><span>      </span><span class="annot"><span class="annottext">Maybe d
+forall a. Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-140"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">C.TxOutDatumHash</span></span><span> </span><span id="local-6989586621679741938"><span class="annot"><span class="annottext">ScriptDataSupportedInEra BabbageEra
+</span><a href="#local-6989586621679741938"><span class="hs-identifier hs-var">_era</span></a></span></span><span> </span><span id="local-6989586621679741937"><span class="annot"><span class="annottext">Hash ScriptData
+</span><a href="#local-6989586621679741937"><span class="hs-identifier hs-var">_scriptDataHash</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-141"></span><span>      </span><span class="annot"><span class="annottext">Maybe d
+forall a. Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-142"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">C.TxOutDatumInline</span></span><span> </span><span id="local-6989586621679741936"><span class="annot"><span class="annottext">ReferenceTxInsScriptsInlineDatumsSupportedInEra BabbageEra
+</span><a href="#local-6989586621679741936"><span class="hs-identifier hs-var">_era</span></a></span></span><span> </span><span id="local-6989586621679741935"><span class="annot"><span class="annottext">ScriptData
+</span><a href="#local-6989586621679741935"><span class="hs-identifier hs-var">scriptData</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-143"></span><span>      </span><span class="annot"><span class="annottext">FromData d =&gt; BuiltinData -&gt; Maybe d
+forall a. FromData a =&gt; BuiltinData -&gt; Maybe a
+</span><span class="hs-identifier hs-var">fromBuiltinData</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679741943"><span class="hs-identifier hs-type">d</span></a></span><span>  </span><span class="annot"><span class="annottext">(BuiltinData -&gt; Maybe d) -&gt; BuiltinData -&gt; Maybe d
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Data -&gt; BuiltinData
+</span><span class="hs-identifier hs-var">dataToBuiltinData</span></span><span> </span><span class="annot"><span class="annottext">(Data -&gt; BuiltinData) -&gt; Data -&gt; BuiltinData
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptData -&gt; Data
+</span><span class="hs-identifier hs-var">C.toPlutusData</span></span><span> </span><span class="annot"><span class="annottext">ScriptData
+</span><a href="#local-6989586621679741935"><span class="hs-identifier hs-var">scriptData</span></a></span><span>
+</span><span id="line-144"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">C.TxOutDatumInTx</span></span><span> </span><span id="local-6989586621679741933"><span class="annot"><span class="annottext">ScriptDataSupportedInEra BabbageEra
+</span><a href="#local-6989586621679741933"><span class="hs-identifier hs-var">_era</span></a></span></span><span> </span><span id="local-6989586621679741932"><span class="annot"><span class="annottext">ScriptData
+</span><a href="#local-6989586621679741932"><span class="hs-identifier hs-var">scriptData</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-145"></span><span>      </span><span class="annot"><span class="annottext">FromData d =&gt; BuiltinData -&gt; Maybe d
+forall a. FromData a =&gt; BuiltinData -&gt; Maybe a
+</span><span class="hs-identifier hs-var">fromBuiltinData</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679741943"><span class="hs-identifier hs-type">d</span></a></span><span>  </span><span class="annot"><span class="annottext">(BuiltinData -&gt; Maybe d) -&gt; BuiltinData -&gt; Maybe d
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Data -&gt; BuiltinData
+</span><span class="hs-identifier hs-var">dataToBuiltinData</span></span><span> </span><span class="annot"><span class="annottext">(Data -&gt; BuiltinData) -&gt; Data -&gt; BuiltinData
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptData -&gt; Data
+</span><span class="hs-identifier hs-var">C.toPlutusData</span></span><span> </span><span class="annot"><span class="annottext">ScriptData
+</span><a href="#local-6989586621679741932"><span class="hs-identifier hs-var">scriptData</span></a></span><span>
+</span><span id="line-146"></span><span>
+</span><span id="line-147"></span><span>
+</span><span id="line-148"></span><span class="annot"><a href="Ledger.Tx.Internal.html#cardanoTxOutDatumHash"><span class="hs-identifier hs-type">cardanoTxOutDatumHash</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.TxOutDatum</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.CtxUTxO</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.BabbageEra</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">C.Hash</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.ScriptData</span></span><span class="hs-special">)</span><span>
+</span><span id="line-149"></span><span id="cardanoTxOutDatumHash"><span class="annot"><span class="annottext">cardanoTxOutDatumHash :: TxOutDatum CtxUTxO BabbageEra -&gt; Maybe (Hash ScriptData)
+</span><a href="Ledger.Tx.Internal.html#cardanoTxOutDatumHash"><span class="hs-identifier hs-var hs-var">cardanoTxOutDatumHash</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-150"></span><span>  </span><span class="annot"><span class="annottext">TxOutDatum CtxUTxO BabbageEra
+</span><span class="hs-identifier hs-var">C.TxOutDatumNone</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-151"></span><span>    </span><span class="annot"><span class="annottext">Maybe (Hash ScriptData)
+forall a. Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-152"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">C.TxOutDatumHash</span></span><span> </span><span id="local-6989586621679741930"><span class="annot"><span class="annottext">ScriptDataSupportedInEra BabbageEra
+</span><a href="#local-6989586621679741930"><span class="hs-identifier hs-var">_era</span></a></span></span><span> </span><span id="local-6989586621679741929"><span class="annot"><span class="annottext">Hash ScriptData
+</span><a href="#local-6989586621679741929"><span class="hs-identifier hs-var">scriptDataHash</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-153"></span><span>    </span><span class="annot"><span class="annottext">Hash ScriptData -&gt; Maybe (Hash ScriptData)
+forall a. a -&gt; Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">Hash ScriptData
+</span><a href="#local-6989586621679741929"><span class="hs-identifier hs-var">scriptDataHash</span></a></span><span>
+</span><span id="line-154"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">C.TxOutDatumInline</span></span><span> </span><span id="local-6989586621679741928"><span class="annot"><span class="annottext">ReferenceTxInsScriptsInlineDatumsSupportedInEra BabbageEra
+</span><a href="#local-6989586621679741928"><span class="hs-identifier hs-var">_era</span></a></span></span><span> </span><span id="local-6989586621679741927"><span class="annot"><span class="annottext">ScriptData
+</span><a href="#local-6989586621679741927"><span class="hs-identifier hs-var">scriptData</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Hash ScriptData -&gt; Maybe (Hash ScriptData)
+forall a. a -&gt; Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(Hash ScriptData -&gt; Maybe (Hash ScriptData))
+-&gt; Hash ScriptData -&gt; Maybe (Hash ScriptData)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptData -&gt; Hash ScriptData
+</span><span class="hs-identifier hs-var">C.hashScriptData</span></span><span> </span><span class="annot"><span class="annottext">ScriptData
+</span><a href="#local-6989586621679741927"><span class="hs-identifier hs-var">scriptData</span></a></span><span>
+</span><span id="line-155"></span><span>
+</span><span id="line-156"></span><span>
+</span><span id="line-157"></span><span class="annot"><a href="Ledger.Tx.Internal.html#txOutPubKey"><span class="hs-identifier hs-type">txOutPubKey</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">PubKeyHash</span></span><span>
+</span><span id="line-158"></span><span id="txOutPubKey"><span class="annot"><span class="annottext">txOutPubKey :: TxOut -&gt; Maybe PubKeyHash
+</span><a href="Ledger.Tx.Internal.html#txOutPubKey"><span class="hs-identifier hs-var hs-var">txOutPubKey</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">C.TxOut</span></span><span> </span><span id="local-6989586621679741924"><span class="annot"><span class="annottext">AddressInEra BabbageEra
+</span><a href="#local-6989586621679741924"><span class="hs-identifier hs-var">aie</span></a></span></span><span> </span><span class="annot"><span class="annottext">TxOutValue BabbageEra
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">TxOutDatum CtxTx BabbageEra
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">ReferenceScript BabbageEra
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AddressInEra BabbageEra -&gt; Maybe PubKeyHash
+forall era. AddressInEra era -&gt; Maybe PubKeyHash
+</span><a href="Ledger.Address.html#cardanoPubKeyHash"><span class="hs-identifier hs-var">cardanoPubKeyHash</span></a></span><span> </span><span class="annot"><span class="annottext">AddressInEra BabbageEra
+</span><a href="#local-6989586621679741924"><span class="hs-identifier hs-var">aie</span></a></span><span>
+</span><span id="line-159"></span><span>
+</span><span id="line-160"></span><span class="annot"><a href="Ledger.Tx.Internal.html#txOutAddress"><span class="hs-identifier hs-type">txOutAddress</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Ledger.Address.html#CardanoAddress"><span class="hs-identifier hs-type">CardanoAddress</span></a></span><span>
+</span><span id="line-161"></span><span id="txOutAddress"><span class="annot"><span class="annottext">txOutAddress :: TxOut -&gt; AddressInEra BabbageEra
+</span><a href="Ledger.Tx.Internal.html#txOutAddress"><span class="hs-identifier hs-var hs-var">txOutAddress</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">C.TxOut</span></span><span> </span><span id="local-6989586621679741922"><span class="annot"><span class="annottext">AddressInEra BabbageEra
+</span><a href="#local-6989586621679741922"><span class="hs-identifier hs-var">aie</span></a></span></span><span> </span><span id="local-6989586621679741921"><span class="annot"><span class="annottext">TxOutValue BabbageEra
+</span><a href="#local-6989586621679741921"><span class="hs-identifier hs-var">_tov</span></a></span></span><span> </span><span id="local-6989586621679741920"><span class="annot"><span class="annottext">TxOutDatum CtxTx BabbageEra
+</span><a href="#local-6989586621679741920"><span class="hs-identifier hs-var">_tod</span></a></span></span><span> </span><span id="local-6989586621679741919"><span class="annot"><span class="annottext">ReferenceScript BabbageEra
+</span><a href="#local-6989586621679741919"><span class="hs-identifier hs-var">_rs</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AddressInEra BabbageEra
+</span><a href="#local-6989586621679741922"><span class="hs-identifier hs-var">aie</span></a></span><span>
+</span><span id="line-162"></span><span>
+</span><span id="line-163"></span><span class="annot"><a href="Ledger.Tx.Internal.html#outAddress"><span class="hs-identifier hs-type">outAddress</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">L.Lens'</span></span><span> </span><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">C.AddressInEra</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.BabbageEra</span></span><span class="hs-special">)</span><span>
+</span><span id="line-164"></span><span id="outAddress"><span class="annot"><span class="annottext">outAddress :: (AddressInEra BabbageEra -&gt; f (AddressInEra BabbageEra))
+-&gt; TxOut -&gt; f TxOut
+</span><a href="Ledger.Tx.Internal.html#outAddress"><span class="hs-identifier hs-var hs-var">outAddress</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(TxOut -&gt; AddressInEra BabbageEra)
+-&gt; (TxOut -&gt; AddressInEra BabbageEra -&gt; TxOut)
+-&gt; Lens
+     TxOut TxOut (AddressInEra BabbageEra) (AddressInEra BabbageEra)
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><span class="hs-identifier hs-var">L.lens</span></span><span>
+</span><span id="line-165"></span><span>  </span><span class="annot"><span class="annottext">TxOut -&gt; AddressInEra BabbageEra
+</span><a href="Ledger.Tx.Internal.html#txOutAddress"><span class="hs-identifier hs-var">txOutAddress</span></a></span><span>
+</span><span id="line-166"></span><span>  </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">C.TxOut</span></span><span> </span><span class="annot"><span class="annottext">AddressInEra BabbageEra
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679741917"><span class="annot"><span class="annottext">TxOutValue BabbageEra
+</span><a href="#local-6989586621679741917"><span class="hs-identifier hs-var">tov</span></a></span></span><span> </span><span id="local-6989586621679741916"><span class="annot"><span class="annottext">TxOutDatum CtxTx BabbageEra
+</span><a href="#local-6989586621679741916"><span class="hs-identifier hs-var">tod</span></a></span></span><span> </span><span id="local-6989586621679741915"><span class="annot"><span class="annottext">ReferenceScript BabbageEra
+</span><a href="#local-6989586621679741915"><span class="hs-identifier hs-var">rs</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span id="local-6989586621679741914"><span class="annot"><span class="annottext">AddressInEra BabbageEra
+</span><a href="#local-6989586621679741914"><span class="hs-identifier hs-var">aie</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TxOut CtxTx BabbageEra -&gt; TxOut
+</span><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-var">TxOut</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AddressInEra BabbageEra
+-&gt; TxOutValue BabbageEra
+-&gt; TxOutDatum CtxTx BabbageEra
+-&gt; ReferenceScript BabbageEra
+-&gt; TxOut CtxTx BabbageEra
+forall ctx era.
+AddressInEra era
+-&gt; TxOutValue era
+-&gt; TxOutDatum ctx era
+-&gt; ReferenceScript era
+-&gt; TxOut ctx era
+</span><span class="hs-identifier hs-var">C.TxOut</span></span><span> </span><span class="annot"><span class="annottext">AddressInEra BabbageEra
+</span><a href="#local-6989586621679741914"><span class="hs-identifier hs-var">aie</span></a></span><span> </span><span class="annot"><span class="annottext">TxOutValue BabbageEra
+</span><a href="#local-6989586621679741917"><span class="hs-identifier hs-var">tov</span></a></span><span> </span><span class="annot"><span class="annottext">TxOutDatum CtxTx BabbageEra
+</span><a href="#local-6989586621679741916"><span class="hs-identifier hs-var">tod</span></a></span><span> </span><span class="annot"><span class="annottext">ReferenceScript BabbageEra
+</span><a href="#local-6989586621679741915"><span class="hs-identifier hs-var">rs</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-167"></span><span>
+</span><span id="line-168"></span><span class="annot"><a href="Ledger.Tx.Internal.html#outDatumHash"><span class="hs-identifier hs-type">outDatumHash</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">L.Lens</span></span><span> </span><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">DatumHash</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">C.TxOutDatum</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.CtxTx</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.BabbageEra</span></span><span class="hs-special">)</span><span>
+</span><span id="line-169"></span><span id="outDatumHash"><span class="annot"><span class="annottext">outDatumHash :: (Maybe DatumHash -&gt; f (TxOutDatum CtxTx BabbageEra))
+-&gt; TxOut -&gt; f TxOut
+</span><a href="Ledger.Tx.Internal.html#outDatumHash"><span class="hs-identifier hs-var hs-var">outDatumHash</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(TxOut -&gt; Maybe DatumHash)
+-&gt; (TxOut -&gt; TxOutDatum CtxTx BabbageEra -&gt; TxOut)
+-&gt; Lens TxOut TxOut (Maybe DatumHash) (TxOutDatum CtxTx BabbageEra)
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><span class="hs-identifier hs-var">L.lens</span></span><span>
+</span><span id="line-170"></span><span>  </span><span class="annot"><span class="annottext">TxOut -&gt; Maybe DatumHash
+</span><a href="Ledger.Tx.Internal.html#txOutDatumHash"><span class="hs-identifier hs-var">txOutDatumHash</span></a></span><span>
+</span><span id="line-171"></span><span>  </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">C.TxOut</span></span><span> </span><span id="local-6989586621679741912"><span class="annot"><span class="annottext">AddressInEra BabbageEra
+</span><a href="#local-6989586621679741912"><span class="hs-identifier hs-var">aie</span></a></span></span><span> </span><span id="local-6989586621679741911"><span class="annot"><span class="annottext">TxOutValue BabbageEra
+</span><a href="#local-6989586621679741911"><span class="hs-identifier hs-var">tov</span></a></span></span><span> </span><span class="annot"><span class="annottext">TxOutDatum CtxTx BabbageEra
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679741910"><span class="annot"><span class="annottext">ReferenceScript BabbageEra
+</span><a href="#local-6989586621679741910"><span class="hs-identifier hs-var">rs</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span id="local-6989586621679741909"><span class="annot"><span class="annottext">TxOutDatum CtxTx BabbageEra
+</span><a href="#local-6989586621679741909"><span class="hs-identifier hs-var">tod</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TxOut CtxTx BabbageEra -&gt; TxOut
+</span><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-var">TxOut</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AddressInEra BabbageEra
+-&gt; TxOutValue BabbageEra
+-&gt; TxOutDatum CtxTx BabbageEra
+-&gt; ReferenceScript BabbageEra
+-&gt; TxOut CtxTx BabbageEra
+forall ctx era.
+AddressInEra era
+-&gt; TxOutValue era
+-&gt; TxOutDatum ctx era
+-&gt; ReferenceScript era
+-&gt; TxOut ctx era
+</span><span class="hs-identifier hs-var">C.TxOut</span></span><span> </span><span class="annot"><span class="annottext">AddressInEra BabbageEra
+</span><a href="#local-6989586621679741912"><span class="hs-identifier hs-var">aie</span></a></span><span> </span><span class="annot"><span class="annottext">TxOutValue BabbageEra
+</span><a href="#local-6989586621679741911"><span class="hs-identifier hs-var">tov</span></a></span><span> </span><span class="annot"><span class="annottext">TxOutDatum CtxTx BabbageEra
+</span><a href="#local-6989586621679741909"><span class="hs-identifier hs-var">tod</span></a></span><span> </span><span class="annot"><span class="annottext">ReferenceScript BabbageEra
+</span><a href="#local-6989586621679741910"><span class="hs-identifier hs-var">rs</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-172"></span><span>
+</span><span id="line-173"></span><span class="hs-keyword">type</span><span> </span><span id="ReferenceScript"><span class="annot"><a href="Ledger.Tx.Internal.html#ReferenceScript"><span class="hs-identifier hs-var">ReferenceScript</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.ReferenceScript</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.BabbageEra</span></span><span>
+</span><span id="line-174"></span><span>
+</span><span id="line-175"></span><span class="annot"><a href="Ledger.Tx.Internal.html#txOutReferenceScript"><span class="hs-identifier hs-type">txOutReferenceScript</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Ledger.Tx.Internal.html#ReferenceScript"><span class="hs-identifier hs-type">ReferenceScript</span></a></span><span>
+</span><span id="line-176"></span><span id="txOutReferenceScript"><span class="annot"><span class="annottext">txOutReferenceScript :: TxOut -&gt; ReferenceScript BabbageEra
+</span><a href="Ledger.Tx.Internal.html#txOutReferenceScript"><span class="hs-identifier hs-var hs-var">txOutReferenceScript</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">C.TxOut</span></span><span> </span><span id="local-6989586621679741906"><span class="annot"><span class="annottext">AddressInEra BabbageEra
+</span><a href="#local-6989586621679741906"><span class="hs-identifier hs-var">_aie</span></a></span></span><span> </span><span id="local-6989586621679741905"><span class="annot"><span class="annottext">TxOutValue BabbageEra
+</span><a href="#local-6989586621679741905"><span class="hs-identifier hs-var">_tov</span></a></span></span><span> </span><span id="local-6989586621679741904"><span class="annot"><span class="annottext">TxOutDatum CtxTx BabbageEra
+</span><a href="#local-6989586621679741904"><span class="hs-identifier hs-var">_tod</span></a></span></span><span> </span><span id="local-6989586621679741903"><span class="annot"><span class="annottext">ReferenceScript BabbageEra
+</span><a href="#local-6989586621679741903"><span class="hs-identifier hs-var">rs</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ReferenceScript BabbageEra
+</span><a href="#local-6989586621679741903"><span class="hs-identifier hs-var">rs</span></a></span><span>
+</span><span id="line-177"></span><span>
+</span><span id="line-178"></span><span class="annot"><a href="Ledger.Tx.Internal.html#outReferenceScript"><span class="hs-identifier hs-type">outReferenceScript</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">L.Lens'</span></span><span> </span><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="annot"><a href="Ledger.Tx.Internal.html#ReferenceScript"><span class="hs-identifier hs-type">ReferenceScript</span></a></span><span>
+</span><span id="line-179"></span><span id="outReferenceScript"><span class="annot"><span class="annottext">outReferenceScript :: (ReferenceScript BabbageEra -&gt; f (ReferenceScript BabbageEra))
+-&gt; TxOut -&gt; f TxOut
+</span><a href="Ledger.Tx.Internal.html#outReferenceScript"><span class="hs-identifier hs-var hs-var">outReferenceScript</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(TxOut -&gt; ReferenceScript BabbageEra)
+-&gt; (TxOut -&gt; ReferenceScript BabbageEra -&gt; TxOut)
+-&gt; Lens
+     TxOut
+     TxOut
+     (ReferenceScript BabbageEra)
+     (ReferenceScript BabbageEra)
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><span class="hs-identifier hs-var">L.lens</span></span><span>
+</span><span id="line-180"></span><span>  </span><span class="annot"><span class="annottext">TxOut -&gt; ReferenceScript BabbageEra
+</span><a href="Ledger.Tx.Internal.html#txOutReferenceScript"><span class="hs-identifier hs-var">txOutReferenceScript</span></a></span><span>
+</span><span id="line-181"></span><span>  </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">C.TxOut</span></span><span> </span><span id="local-6989586621679741901"><span class="annot"><span class="annottext">AddressInEra BabbageEra
+</span><a href="#local-6989586621679741901"><span class="hs-identifier hs-var">aie</span></a></span></span><span> </span><span id="local-6989586621679741900"><span class="annot"><span class="annottext">TxOutValue BabbageEra
+</span><a href="#local-6989586621679741900"><span class="hs-identifier hs-var">tov</span></a></span></span><span> </span><span id="local-6989586621679741899"><span class="annot"><span class="annottext">TxOutDatum CtxTx BabbageEra
+</span><a href="#local-6989586621679741899"><span class="hs-identifier hs-var">tod</span></a></span></span><span> </span><span class="annot"><span class="annottext">ReferenceScript BabbageEra
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span id="local-6989586621679741898"><span class="annot"><span class="annottext">ReferenceScript BabbageEra
+</span><a href="#local-6989586621679741898"><span class="hs-identifier hs-var">rs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TxOut CtxTx BabbageEra -&gt; TxOut
+</span><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-var">TxOut</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AddressInEra BabbageEra
+-&gt; TxOutValue BabbageEra
+-&gt; TxOutDatum CtxTx BabbageEra
+-&gt; ReferenceScript BabbageEra
+-&gt; TxOut CtxTx BabbageEra
+forall ctx era.
+AddressInEra era
+-&gt; TxOutValue era
+-&gt; TxOutDatum ctx era
+-&gt; ReferenceScript era
+-&gt; TxOut ctx era
+</span><span class="hs-identifier hs-var">C.TxOut</span></span><span> </span><span class="annot"><span class="annottext">AddressInEra BabbageEra
+</span><a href="#local-6989586621679741901"><span class="hs-identifier hs-var">aie</span></a></span><span> </span><span class="annot"><span class="annottext">TxOutValue BabbageEra
+</span><a href="#local-6989586621679741900"><span class="hs-identifier hs-var">tov</span></a></span><span> </span><span class="annot"><span class="annottext">TxOutDatum CtxTx BabbageEra
+</span><a href="#local-6989586621679741899"><span class="hs-identifier hs-var">tod</span></a></span><span> </span><span class="annot"><span class="annottext">ReferenceScript BabbageEra
+</span><a href="#local-6989586621679741898"><span class="hs-identifier hs-var">rs</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-182"></span><span>
+</span><span id="line-183"></span><span class="annot"><a href="Ledger.Tx.Internal.html#lookupScript"><span class="hs-identifier hs-type">lookupScript</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Ledger.Tx.Internal.html#ScriptsMap"><span class="hs-identifier hs-type">ScriptsMap</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ScriptHash</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Versioned</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Script</span></span><span class="hs-special">)</span><span>
+</span><span id="line-184"></span><span id="lookupScript"><span class="annot"><span class="annottext">lookupScript :: ScriptsMap -&gt; ScriptHash -&gt; Maybe (Versioned Script)
+</span><a href="Ledger.Tx.Internal.html#lookupScript"><span class="hs-identifier hs-var hs-var">lookupScript</span></a></span></span><span> </span><span id="local-6989586621679741896"><span class="annot"><span class="annottext">ScriptsMap
+</span><a href="#local-6989586621679741896"><span class="hs-identifier hs-var">txScripts</span></a></span></span><span> </span><span id="local-6989586621679741895"><span class="annot"><span class="annottext">ScriptHash
+</span><a href="#local-6989586621679741895"><span class="hs-identifier hs-var">hash</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ScriptHash -&gt; ScriptsMap -&gt; Maybe (Versioned Script)
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Map.lookup</span></span><span> </span><span class="annot"><span class="annottext">ScriptHash
+</span><a href="#local-6989586621679741895"><span class="hs-identifier hs-var">hash</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptsMap
+</span><a href="#local-6989586621679741896"><span class="hs-identifier hs-var">txScripts</span></a></span><span>
+</span><span id="line-185"></span><span>
+</span><span id="line-186"></span><span class="annot"><a href="Ledger.Tx.Internal.html#lookupValidator"><span class="hs-identifier hs-type">lookupValidator</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Ledger.Tx.Internal.html#ScriptsMap"><span class="hs-identifier hs-type">ScriptsMap</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ValidatorHash</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Versioned</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Validator</span></span><span class="hs-special">)</span><span>
+</span><span id="line-187"></span><span id="lookupValidator"><span class="annot"><span class="annottext">lookupValidator :: ScriptsMap -&gt; ValidatorHash -&gt; Maybe (Versioned Validator)
+</span><a href="Ledger.Tx.Internal.html#lookupValidator"><span class="hs-identifier hs-var hs-var">lookupValidator</span></a></span></span><span> </span><span id="local-6989586621679741892"><span class="annot"><span class="annottext">ScriptsMap
+</span><a href="#local-6989586621679741892"><span class="hs-identifier hs-var">txScripts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Versioned Script -&gt; Versioned Validator)
+-&gt; Maybe (Versioned Script) -&gt; Maybe (Versioned Validator)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">((Versioned Script -&gt; Versioned Validator)
+ -&gt; Maybe (Versioned Script) -&gt; Maybe (Versioned Validator))
+-&gt; ((Script -&gt; Validator)
+    -&gt; Versioned Script -&gt; Versioned Validator)
+-&gt; (Script -&gt; Validator)
+-&gt; Maybe (Versioned Script)
+-&gt; Maybe (Versioned Validator)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Script -&gt; Validator) -&gt; Versioned Script -&gt; Versioned Validator
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fmap</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Script -&gt; Validator
+</span><span class="hs-identifier hs-var">Validator</span></span><span> </span><span class="annot"><span class="annottext">(Maybe (Versioned Script) -&gt; Maybe (Versioned Validator))
+-&gt; (ValidatorHash -&gt; Maybe (Versioned Script))
+-&gt; ValidatorHash
+-&gt; Maybe (Versioned Validator)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptsMap -&gt; ScriptHash -&gt; Maybe (Versioned Script)
+</span><a href="Ledger.Tx.Internal.html#lookupScript"><span class="hs-identifier hs-var">lookupScript</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptsMap
+</span><a href="#local-6989586621679741892"><span class="hs-identifier hs-var">txScripts</span></a></span><span> </span><span class="annot"><span class="annottext">(ScriptHash -&gt; Maybe (Versioned Script))
+-&gt; (ValidatorHash -&gt; ScriptHash)
+-&gt; ValidatorHash
+-&gt; Maybe (Versioned Script)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ValidatorHash -&gt; ScriptHash
+</span><a href="#local-6989586621679741890"><span class="hs-identifier hs-var">toScriptHash</span></a></span><span>
+</span><span id="line-188"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-189"></span><span>        </span><span id="local-6989586621679741890"><span class="annot"><span class="annottext">toScriptHash :: ValidatorHash -&gt; ScriptHash
+</span><a href="#local-6989586621679741890"><span class="hs-identifier hs-var hs-var">toScriptHash</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">ValidatorHash</span></span><span> </span><span id="local-6989586621679741888"><span class="annot"><span class="annottext">BuiltinByteString
+</span><a href="#local-6989586621679741888"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BuiltinByteString -&gt; ScriptHash
+</span><span class="hs-identifier hs-var">ScriptHash</span></span><span> </span><span class="annot"><span class="annottext">BuiltinByteString
+</span><a href="#local-6989586621679741888"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-190"></span><span>
+</span><span id="line-191"></span><span class="annot"><a href="Ledger.Tx.Internal.html#lookupMintingPolicy"><span class="hs-identifier hs-type">lookupMintingPolicy</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Ledger.Tx.Internal.html#ScriptsMap"><span class="hs-identifier hs-type">ScriptsMap</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MintingPolicyHash</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Versioned</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">MintingPolicy</span></span><span class="hs-special">)</span><span>
+</span><span id="line-192"></span><span id="lookupMintingPolicy"><span class="annot"><span class="annottext">lookupMintingPolicy :: ScriptsMap -&gt; MintingPolicyHash -&gt; Maybe (Versioned MintingPolicy)
+</span><a href="Ledger.Tx.Internal.html#lookupMintingPolicy"><span class="hs-identifier hs-var hs-var">lookupMintingPolicy</span></a></span></span><span> </span><span id="local-6989586621679741885"><span class="annot"><span class="annottext">ScriptsMap
+</span><a href="#local-6989586621679741885"><span class="hs-identifier hs-var">txScripts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Versioned Script -&gt; Versioned MintingPolicy)
+-&gt; Maybe (Versioned Script) -&gt; Maybe (Versioned MintingPolicy)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">((Versioned Script -&gt; Versioned MintingPolicy)
+ -&gt; Maybe (Versioned Script) -&gt; Maybe (Versioned MintingPolicy))
+-&gt; ((Script -&gt; MintingPolicy)
+    -&gt; Versioned Script -&gt; Versioned MintingPolicy)
+-&gt; (Script -&gt; MintingPolicy)
+-&gt; Maybe (Versioned Script)
+-&gt; Maybe (Versioned MintingPolicy)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Script -&gt; MintingPolicy)
+-&gt; Versioned Script -&gt; Versioned MintingPolicy
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fmap</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Script -&gt; MintingPolicy
+</span><span class="hs-identifier hs-var">MintingPolicy</span></span><span> </span><span class="annot"><span class="annottext">(Maybe (Versioned Script) -&gt; Maybe (Versioned MintingPolicy))
+-&gt; (MintingPolicyHash -&gt; Maybe (Versioned Script))
+-&gt; MintingPolicyHash
+-&gt; Maybe (Versioned MintingPolicy)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptsMap -&gt; ScriptHash -&gt; Maybe (Versioned Script)
+</span><a href="Ledger.Tx.Internal.html#lookupScript"><span class="hs-identifier hs-var">lookupScript</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptsMap
+</span><a href="#local-6989586621679741885"><span class="hs-identifier hs-var">txScripts</span></a></span><span> </span><span class="annot"><span class="annottext">(ScriptHash -&gt; Maybe (Versioned Script))
+-&gt; (MintingPolicyHash -&gt; ScriptHash)
+-&gt; MintingPolicyHash
+-&gt; Maybe (Versioned Script)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">MintingPolicyHash -&gt; ScriptHash
+</span><a href="#local-6989586621679741883"><span class="hs-identifier hs-var">toScriptHash</span></a></span><span>
+</span><span id="line-193"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-194"></span><span>        </span><span id="local-6989586621679741883"><span class="annot"><span class="annottext">toScriptHash :: MintingPolicyHash -&gt; ScriptHash
+</span><a href="#local-6989586621679741883"><span class="hs-identifier hs-var hs-var">toScriptHash</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">MintingPolicyHash</span></span><span> </span><span id="local-6989586621679741881"><span class="annot"><span class="annottext">BuiltinByteString
+</span><a href="#local-6989586621679741881"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BuiltinByteString -&gt; ScriptHash
+</span><span class="hs-identifier hs-var">ScriptHash</span></span><span> </span><span class="annot"><span class="annottext">BuiltinByteString
+</span><a href="#local-6989586621679741881"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-195"></span><span>
+</span><span id="line-196"></span><span class="annot"><a href="Ledger.Tx.Internal.html#lookupStakeValidator"><span class="hs-identifier hs-type">lookupStakeValidator</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Ledger.Tx.Internal.html#ScriptsMap"><span class="hs-identifier hs-type">ScriptsMap</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">StakeValidatorHash</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Versioned</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">StakeValidator</span></span><span class="hs-special">)</span><span>
+</span><span id="line-197"></span><span id="lookupStakeValidator"><span class="annot"><span class="annottext">lookupStakeValidator :: ScriptsMap
+-&gt; StakeValidatorHash -&gt; Maybe (Versioned StakeValidator)
+</span><a href="Ledger.Tx.Internal.html#lookupStakeValidator"><span class="hs-identifier hs-var hs-var">lookupStakeValidator</span></a></span></span><span> </span><span id="local-6989586621679741879"><span class="annot"><span class="annottext">ScriptsMap
+</span><a href="#local-6989586621679741879"><span class="hs-identifier hs-var">txScripts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Versioned Script -&gt; Versioned StakeValidator)
+-&gt; Maybe (Versioned Script) -&gt; Maybe (Versioned StakeValidator)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">((Versioned Script -&gt; Versioned StakeValidator)
+ -&gt; Maybe (Versioned Script) -&gt; Maybe (Versioned StakeValidator))
+-&gt; ((Script -&gt; StakeValidator)
+    -&gt; Versioned Script -&gt; Versioned StakeValidator)
+-&gt; (Script -&gt; StakeValidator)
+-&gt; Maybe (Versioned Script)
+-&gt; Maybe (Versioned StakeValidator)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Script -&gt; StakeValidator)
+-&gt; Versioned Script -&gt; Versioned StakeValidator
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fmap</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Script -&gt; StakeValidator
+</span><span class="hs-identifier hs-var">StakeValidator</span></span><span> </span><span class="annot"><span class="annottext">(Maybe (Versioned Script) -&gt; Maybe (Versioned StakeValidator))
+-&gt; (StakeValidatorHash -&gt; Maybe (Versioned Script))
+-&gt; StakeValidatorHash
+-&gt; Maybe (Versioned StakeValidator)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptsMap -&gt; ScriptHash -&gt; Maybe (Versioned Script)
+</span><a href="Ledger.Tx.Internal.html#lookupScript"><span class="hs-identifier hs-var">lookupScript</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptsMap
+</span><a href="#local-6989586621679741879"><span class="hs-identifier hs-var">txScripts</span></a></span><span> </span><span class="annot"><span class="annottext">(ScriptHash -&gt; Maybe (Versioned Script))
+-&gt; (StakeValidatorHash -&gt; ScriptHash)
+-&gt; StakeValidatorHash
+-&gt; Maybe (Versioned Script)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">StakeValidatorHash -&gt; ScriptHash
+</span><a href="#local-6989586621679741877"><span class="hs-identifier hs-var">toScriptHash</span></a></span><span>
+</span><span id="line-198"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-199"></span><span>        </span><span id="local-6989586621679741877"><span class="annot"><span class="annottext">toScriptHash :: StakeValidatorHash -&gt; ScriptHash
+</span><a href="#local-6989586621679741877"><span class="hs-identifier hs-var hs-var">toScriptHash</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">StakeValidatorHash</span></span><span> </span><span id="local-6989586621679741875"><span class="annot"><span class="annottext">BuiltinByteString
+</span><a href="#local-6989586621679741875"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BuiltinByteString -&gt; ScriptHash
+</span><span class="hs-identifier hs-var">ScriptHash</span></span><span> </span><span class="annot"><span class="annottext">BuiltinByteString
+</span><a href="#local-6989586621679741875"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-200"></span><span>
+</span><span id="line-201"></span><span class="annot"><a href="Ledger.Tx.Internal.html#emptyTxBodyContent"><span class="hs-identifier hs-type">emptyTxBodyContent</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.TxBodyContent</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.BuildTx</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.BabbageEra</span></span><span>
+</span><span id="line-202"></span><span id="emptyTxBodyContent"><span class="annot"><span class="annottext">emptyTxBodyContent :: TxBodyContent BuildTx BabbageEra
+</span><a href="Ledger.Tx.Internal.html#emptyTxBodyContent"><span class="hs-identifier hs-var hs-var">emptyTxBodyContent</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxBodyContent :: forall build era.
+TxIns build era
+-&gt; TxInsCollateral era
+-&gt; TxInsReference build era
+-&gt; [TxOut CtxTx era]
+-&gt; TxTotalCollateral era
+-&gt; TxReturnCollateral CtxTx era
+-&gt; TxFee era
+-&gt; (TxValidityLowerBound era, TxValidityUpperBound era)
+-&gt; TxMetadataInEra era
+-&gt; TxAuxScripts era
+-&gt; TxExtraKeyWitnesses era
+-&gt; BuildTxWith build (Maybe ProtocolParameters)
+-&gt; TxWithdrawals build era
+-&gt; TxCertificates build era
+-&gt; TxUpdateProposal era
+-&gt; TxMintValue build era
+-&gt; TxScriptValidity era
+-&gt; TxBodyContent build era
+</span><span class="hs-identifier hs-type">C.TxBodyContent</span></span><span>
+</span><span id="line-203"></span><span>   </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">txIns :: TxIns BuildTx BabbageEra
+</span><span class="hs-identifier hs-var">txIns</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-204"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">txInsCollateral :: TxInsCollateral BabbageEra
+</span><span class="hs-identifier hs-var">txInsCollateral</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxInsCollateral BabbageEra
+forall era. TxInsCollateral era
+</span><span class="hs-identifier hs-var">C.TxInsCollateralNone</span></span><span>
+</span><span id="line-205"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">txMintValue :: TxMintValue BuildTx BabbageEra
+</span><span class="hs-identifier hs-var">txMintValue</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxMintValue BuildTx BabbageEra
+forall build era. TxMintValue build era
+</span><span class="hs-identifier hs-var">C.TxMintNone</span></span><span>
+</span><span id="line-206"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">txFee :: TxFee BabbageEra
+</span><span class="hs-identifier hs-var">txFee</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxFeesExplicitInEra BabbageEra -&gt; Lovelace -&gt; TxFee BabbageEra
+forall era. TxFeesExplicitInEra era -&gt; Lovelace -&gt; TxFee era
+</span><span class="hs-identifier hs-var">C.TxFeeExplicit</span></span><span> </span><span class="annot"><span class="annottext">TxFeesExplicitInEra BabbageEra
+</span><span class="hs-identifier hs-var">C.TxFeesExplicitInBabbageEra</span></span><span> </span><span class="annot"><span class="annottext">Lovelace
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-207"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">txOuts :: [TxOut CtxTx BabbageEra]
+</span><span class="hs-identifier hs-var">txOuts</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-208"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">txProtocolParams :: BuildTxWith BuildTx (Maybe ProtocolParameters)
+</span><span class="hs-identifier hs-var">txProtocolParams</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe ProtocolParameters
+-&gt; BuildTxWith BuildTx (Maybe ProtocolParameters)
+forall a. a -&gt; BuildTxWith BuildTx a
+</span><span class="hs-identifier hs-var">C.BuildTxWith</span></span><span> </span><span class="annot"><span class="annottext">(Maybe ProtocolParameters
+ -&gt; BuildTxWith BuildTx (Maybe ProtocolParameters))
+-&gt; Maybe ProtocolParameters
+-&gt; BuildTxWith BuildTx (Maybe ProtocolParameters)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParameters -&gt; Maybe ProtocolParameters
+forall a. a -&gt; Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(ProtocolParameters -&gt; Maybe ProtocolParameters)
+-&gt; ProtocolParameters -&gt; Maybe ProtocolParameters
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra BabbageEra
+-&gt; PParams (ShelleyLedgerEra BabbageEra) -&gt; ProtocolParameters
+forall era.
+ShelleyBasedEra era
+-&gt; PParams (ShelleyLedgerEra era) -&gt; ProtocolParameters
+</span><span class="hs-identifier hs-var">C.fromLedgerPParams</span></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra BabbageEra
+</span><span class="hs-identifier hs-var">C.ShelleyBasedEraBabbage</span></span><span> </span><span class="annot"><span class="annottext">PParams (ShelleyLedgerEra BabbageEra)
+forall a. Default a =&gt; a
+</span><span class="hs-identifier hs-var">def</span></span><span>
+</span><span id="line-209"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">txInsReference :: TxInsReference BuildTx BabbageEra
+</span><span class="hs-identifier hs-var">txInsReference</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxInsReference BuildTx BabbageEra
+forall build era. TxInsReference build era
+</span><span class="hs-identifier hs-var">C.TxInsReferenceNone</span></span><span>
+</span><span id="line-210"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">txTotalCollateral :: TxTotalCollateral BabbageEra
+</span><span class="hs-identifier hs-var">txTotalCollateral</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxTotalCollateral BabbageEra
+forall era. TxTotalCollateral era
+</span><span class="hs-identifier hs-var">C.TxTotalCollateralNone</span></span><span>
+</span><span id="line-211"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">txReturnCollateral :: TxReturnCollateral CtxTx BabbageEra
+</span><span class="hs-identifier hs-var">txReturnCollateral</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxReturnCollateral CtxTx BabbageEra
+forall ctx era. TxReturnCollateral ctx era
+</span><span class="hs-identifier hs-var">C.TxReturnCollateralNone</span></span><span>
+</span><span id="line-212"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">txValidityRange :: (TxValidityLowerBound BabbageEra, TxValidityUpperBound BabbageEra)
+</span><span class="hs-identifier hs-var">txValidityRange</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">TxValidityLowerBound BabbageEra
+forall era. TxValidityLowerBound era
+</span><span class="hs-identifier hs-var">C.TxValidityNoLowerBound</span></span><span>
+</span><span id="line-213"></span><span>                       </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ValidityNoUpperBoundSupportedInEra BabbageEra
+-&gt; TxValidityUpperBound BabbageEra
+forall era.
+ValidityNoUpperBoundSupportedInEra era -&gt; TxValidityUpperBound era
+</span><span class="hs-identifier hs-var">C.TxValidityNoUpperBound</span></span><span> </span><span class="annot"><span class="annottext">ValidityNoUpperBoundSupportedInEra BabbageEra
+</span><span class="hs-identifier hs-var">C.ValidityNoUpperBoundInBabbageEra</span></span><span class="hs-special">)</span><span>
+</span><span id="line-214"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">txScriptValidity :: TxScriptValidity BabbageEra
+</span><span class="hs-identifier hs-var">txScriptValidity</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxScriptValidity BabbageEra
+forall era. TxScriptValidity era
+</span><span class="hs-identifier hs-var">C.TxScriptValidityNone</span></span><span>
+</span><span id="line-215"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">txExtraKeyWits :: TxExtraKeyWitnesses BabbageEra
+</span><span class="hs-identifier hs-var">txExtraKeyWits</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxExtraKeyWitnesses BabbageEra
+forall era. TxExtraKeyWitnesses era
+</span><span class="hs-identifier hs-var">C.TxExtraKeyWitnessesNone</span></span><span>
+</span><span id="line-216"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">txMetadata :: TxMetadataInEra BabbageEra
+</span><span class="hs-identifier hs-var">txMetadata</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxMetadataInEra BabbageEra
+forall era. TxMetadataInEra era
+</span><span class="hs-identifier hs-var">C.TxMetadataNone</span></span><span>
+</span><span id="line-217"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">txAuxScripts :: TxAuxScripts BabbageEra
+</span><span class="hs-identifier hs-var">txAuxScripts</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxAuxScripts BabbageEra
+forall era. TxAuxScripts era
+</span><span class="hs-identifier hs-var">C.TxAuxScriptsNone</span></span><span>
+</span><span id="line-218"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">txWithdrawals :: TxWithdrawals BuildTx BabbageEra
+</span><span class="hs-identifier hs-var">txWithdrawals</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxWithdrawals BuildTx BabbageEra
+forall build era. TxWithdrawals build era
+</span><span class="hs-identifier hs-var">C.TxWithdrawalsNone</span></span><span>
+</span><span id="line-219"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">txCertificates :: TxCertificates BuildTx BabbageEra
+</span><span class="hs-identifier hs-var">txCertificates</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxCertificates BuildTx BabbageEra
+forall build era. TxCertificates build era
+</span><span class="hs-identifier hs-var">C.TxCertificatesNone</span></span><span>
+</span><span id="line-220"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">txUpdateProposal :: TxUpdateProposal BabbageEra
+</span><span class="hs-identifier hs-var">txUpdateProposal</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxUpdateProposal BabbageEra
+forall era. TxUpdateProposal era
+</span><span class="hs-identifier hs-var">C.TxUpdateProposalNone</span></span><span>
+</span><span id="line-221"></span><span>   </span><span class="hs-special">}</span><span>
+</span><span id="line-222"></span></pre></body></html>

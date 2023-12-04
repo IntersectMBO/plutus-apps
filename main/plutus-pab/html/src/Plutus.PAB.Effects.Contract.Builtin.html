@@ -1,0 +1,782 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE AllowAmbiguousTypes #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE ConstraintKinds     #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DataKinds           #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE DerivingStrategies  #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE EmptyDataDeriving   #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts    #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE GADTs               #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase          #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns      #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings   #-}</span><span>
+</span><span id="line-11"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes          #-}</span><span>
+</span><span id="line-12"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-13"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications    #-}</span><span>
+</span><span id="line-14"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies        #-}</span><span>
+</span><span id="line-15"></span><span class="hs-pragma">{-# LANGUAGE TypeOperators       #-}</span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-comment">{-
+Builtin contracts that are compiled together with the PAB.
+-}</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Plutus.PAB.Effects.Contract.Builtin</span><span class="hs-special">(</span><span>
+</span><span id="line-21"></span><span>    </span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#Builtin"><span class="hs-identifier">Builtin</span></a></span><span>
+</span><span id="line-22"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#ContractConstraints"><span class="hs-identifier">ContractConstraints</span></a></span><span>
+</span><span id="line-23"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#SomeBuiltin"><span class="hs-identifier">SomeBuiltin</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#SomeBuiltinState"><span class="hs-identifier">SomeBuiltinState</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#BuiltinHandler"><span class="hs-identifier">BuiltinHandler</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#handleBuiltin"><span class="hs-identifier">handleBuiltin</span></a></span><span>
+</span><span id="line-27"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Extracting schemas from contracts</span></span><span>
+</span><span id="line-28"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">type</span><span> </span><span class="annot"><span class="hs-operator">(.\\)</span></span><span>
+</span><span id="line-29"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">type</span><span> </span><span class="annot"><span class="hs-operator">(.\/)</span></span><span>
+</span><span id="line-30"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">EmptySchema</span></span><span>
+</span><span id="line-31"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Empty</span></span><span>
+</span><span id="line-32"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#getResponse"><span class="hs-identifier">getResponse</span></a></span><span>
+</span><span id="line-33"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#fromResponse"><span class="hs-identifier">fromResponse</span></a></span><span>
+</span><span id="line-34"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#HasDefinitions"><span class="hs-identifier">HasDefinitions</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Control.Monad</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">unless</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Freer</span></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Freer.Error</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Error</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">throwError</span></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Freer.Extras.Log</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">LogMsg</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">LMessage</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">logDebug</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">logError</span></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">FromJSON</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ToJSON</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Value</span></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">JSON</span></span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Data.Foldable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">foldlM</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">traverse_</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.OpenApi</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">OpenApi</span></span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Data.Proxy</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Proxy</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Proxy</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Row</span></span><span>
+</span><span id="line-48"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.Contract</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">ContractInstanceId</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">EmptySchema</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">IsContract</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">toContract</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.Contract.Effects</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">PABReq</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">PABResp</span></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.Contract.Resumable</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Response</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">responses</span></span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.Contract.Schema</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Input</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Output</span></span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.Contract.State</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">ContractResponse</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">ContractResponse</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">newState</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">State</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">State</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">record</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.Contract.State</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">ContractState</span></span><span>
+</span><span id="line-55"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.Contract.Types</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">ResumableResult</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">ResumableResult</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">_finalState</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">_lastLogs</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">_lastState</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-56"></span><span>                              </span><span class="annot"><span class="hs-identifier">SuspendedContract</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">SuspendedContract</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">_resumableResult</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html"><span class="hs-identifier">Plutus.PAB.Core.ContractInstance.RequestHandlers</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#ContractInstanceMsg"><span class="hs-identifier">ContractInstanceMsg</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#ContractLog"><span class="hs-identifier">ContractLog</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#ProcessFirstInboxMessage"><span class="hs-identifier">ProcessFirstInboxMessage</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Plutus.PAB.Effects.Contract.html"><span class="hs-identifier">Plutus.PAB.Effects.Contract</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Effects.Contract.html#ContractEffect"><span class="hs-identifier">ContractEffect</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Effects.Contract.html#InitialState"><span class="hs-identifier">InitialState</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.PAB.Effects.Contract.html#UpdateContract"><span class="hs-identifier">UpdateContract</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-59"></span><span>                                    </span><span class="annot"><a href="Plutus.PAB.Effects.Contract.html#PABContract"><span class="hs-identifier">PABContract</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Effects.Contract.html#ContractDef"><span class="hs-identifier">ContractDef</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.PAB.Effects.Contract.html#State"><span class="hs-identifier">State</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.PAB.Effects.Contract.html#serialisableState"><span class="hs-identifier">serialisableState</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Plutus.PAB.Monitoring.PABLogMsg.html"><span class="hs-identifier">Plutus.PAB.Monitoring.PABLogMsg</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Monitoring.PABLogMsg.html#PABMultiAgentMsg"><span class="hs-identifier">PABMultiAgentMsg</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Monitoring.PABLogMsg.html#ContractInstanceLog"><span class="hs-identifier">ContractInstanceLog</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Plutus.PAB.Types.html"><span class="hs-identifier">Plutus.PAB.Types</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Types.html#PABError"><span class="hs-identifier">PABError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Types.html#ContractCommandError"><span class="hs-identifier">ContractCommandError</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.Trace.Emulator.Types</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">ContractInstanceStateInternal</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">ContractInstanceStateInternal</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">cisiSuspState</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.Trace.Emulator.Types</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Emulator</span></span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span class="hs-comment">-- | Contracts that are built into the PAB (ie. compiled with it) and receive</span><span>
+</span><span id="line-66"></span><span class="hs-comment">--   an initial value of type 'a'.</span><span>
+</span><span id="line-67"></span><span class="hs-comment">--</span><span>
+</span><span id="line-68"></span><span class="hs-comment">-- We have a dummy constructor so that we can convert this datatype in</span><span>
+</span><span id="line-69"></span><span class="hs-comment">-- Purescript with '(equal &lt;*&gt; (genericShow &lt;*&gt; mkSumType)) (Proxy @(Builtin A))'.</span><span>
+</span><span id="line-70"></span><span id="local-6989586621680274835"><span id="local-6989586621680274836"></span></span><span class="hs-keyword">data</span><span> </span><span id="Builtin"><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#Builtin"><span class="hs-identifier hs-var">Builtin</span></a></span></span><span> </span><span id="local-6989586621680274834"><span class="annot"><a href="#local-6989586621680274834"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Builtin"><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#Builtin"><span class="hs-identifier hs-var">Builtin</span></a></span></span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621680274829"><span id="local-6989586621680274831"><span class="annot"><span class="annottext">Builtin a -&gt; Builtin a -&gt; Bool
+(Builtin a -&gt; Builtin a -&gt; Bool)
+-&gt; (Builtin a -&gt; Builtin a -&gt; Bool) -&gt; Eq (Builtin a)
+forall a. Builtin a -&gt; Builtin a -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: Builtin a -&gt; Builtin a -&gt; Bool
+$c/= :: forall a. Builtin a -&gt; Builtin a -&gt; Bool
+== :: Builtin a -&gt; Builtin a -&gt; Bool
+$c== :: forall a. Builtin a -&gt; Builtin a -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. Builtin a -&gt; Rep (Builtin a) x)
+-&gt; (forall x. Rep (Builtin a) x -&gt; Builtin a)
+-&gt; Generic (Builtin a)
+forall x. Rep (Builtin a) x -&gt; Builtin a
+forall x. Builtin a -&gt; Rep (Builtin a) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall a x. Rep (Builtin a) x -&gt; Builtin a
+forall a x. Builtin a -&gt; Rep (Builtin a) x
+$cto :: forall a x. Rep (Builtin a) x -&gt; Builtin a
+$cfrom :: forall a x. Builtin a -&gt; Rep (Builtin a) x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span id="local-6989586621680274824"><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">OpenApi.ToSchema</span></span><span> </span><span class="annot"><a href="#local-6989586621680274824"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">OpenApi.ToSchema</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#Builtin"><span class="hs-identifier hs-type">Builtin</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680274824"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-73"></span><span>    </span><span id="local-6989586621680274820"><span class="annot"><span class="annottext">declareNamedSchema :: Proxy (Builtin t) -&gt; Declare (Definitions Schema) NamedSchema
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">declareNamedSchema</span></span></span><span> </span><span class="annot"><span class="annottext">Proxy (Builtin t)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Proxy t -&gt; Declare (Definitions Schema) NamedSchema
+forall a.
+ToSchema a =&gt;
+Proxy a -&gt; Declare (Definitions Schema) NamedSchema
+</span><span class="hs-identifier hs-var">OpenApi.declareNamedSchema</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy t
+forall k (t :: k). Proxy t
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Proxy</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Proxy</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680274824"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span class="hs-keyword">type</span><span> </span><span id="ContractConstraints"><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#ContractConstraints"><span class="hs-identifier hs-var">ContractConstraints</span></a></span></span><span> </span><span id="local-6989586621680274818"><span class="annot"><a href="#local-6989586621680274818"><span class="hs-identifier hs-type">w</span></a></span></span><span> </span><span id="local-6989586621680274817"><span class="annot"><a href="#local-6989586621680274817"><span class="hs-identifier hs-type">schema</span></a></span></span><span> </span><span id="local-6989586621680274816"><span class="annot"><a href="#local-6989586621680274816"><span class="hs-identifier hs-type">error</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-76"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680274818"><span class="hs-identifier hs-type">w</span></a></span><span>
+</span><span id="line-77"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Forall</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Output</span></span><span> </span><span class="annot"><a href="#local-6989586621680274817"><span class="hs-identifier hs-type">schema</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span>
+</span><span id="line-78"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Forall</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Input</span></span><span> </span><span class="annot"><a href="#local-6989586621680274817"><span class="hs-identifier hs-type">schema</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span>
+</span><span id="line-79"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Forall</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Input</span></span><span> </span><span class="annot"><a href="#local-6989586621680274817"><span class="hs-identifier hs-type">schema</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span>
+</span><span id="line-80"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><a href="#local-6989586621680274816"><span class="hs-identifier hs-type">error</span></a></span><span>
+</span><span id="line-81"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><a href="#local-6989586621680274818"><span class="hs-identifier hs-type">w</span></a></span><span>
+</span><span id="line-82"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="#local-6989586621680274818"><span class="hs-identifier hs-type">w</span></a></span><span>
+</span><span id="line-83"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">AllUniqueLabels</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Input</span></span><span> </span><span class="annot"><a href="#local-6989586621680274817"><span class="hs-identifier hs-type">schema</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-84"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span class="hs-comment">-- | Plutus contract with all parameters existentially quantified. Can be any contract that satisfies the</span><span>
+</span><span id="line-87"></span><span class="hs-comment">--   'ContractConstraints'.</span><span>
+</span><span id="line-88"></span><span class="hs-keyword">data</span><span> </span><span id="SomeBuiltin"><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#SomeBuiltin"><span class="hs-identifier hs-var">SomeBuiltin</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-89"></span><span>    </span><span id="SomeBuiltin"><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#SomeBuiltin"><span class="hs-identifier hs-var">SomeBuiltin</span></a></span></span><span>
+</span><span id="line-90"></span><span>        </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621680274812"><span class="annot"><a href="#local-6989586621680274812"><span class="hs-identifier hs-type">contract</span></a></span></span><span> </span><span id="local-6989586621680274811"><span class="annot"><a href="#local-6989586621680274811"><span class="hs-identifier hs-type">w</span></a></span></span><span> </span><span id="local-6989586621680274810"><span class="annot"><a href="#local-6989586621680274810"><span class="hs-identifier hs-type">schema</span></a></span></span><span> </span><span id="local-6989586621680274809"><span class="annot"><a href="#local-6989586621680274809"><span class="hs-identifier hs-type">error</span></a></span></span><span> </span><span id="local-6989586621680274808"><span class="annot"><a href="#local-6989586621680274808"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-91"></span><span>         </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#ContractConstraints"><span class="hs-identifier hs-type">ContractConstraints</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680274811"><span class="hs-identifier hs-type">w</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680274810"><span class="hs-identifier hs-type">schema</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680274809"><span class="hs-identifier hs-type">error</span></a></span><span>
+</span><span id="line-92"></span><span>         </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IsContract</span></span><span> </span><span class="annot"><a href="#local-6989586621680274812"><span class="hs-identifier hs-type">contract</span></a></span><span>
+</span><span id="line-93"></span><span>         </span><span class="hs-special">)</span><span>
+</span><span id="line-94"></span><span>        </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621680274812"><span class="hs-identifier hs-type">contract</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680274811"><span class="hs-identifier hs-type">w</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680274810"><span class="hs-identifier hs-type">schema</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680274809"><span class="hs-identifier hs-type">error</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680274808"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#SomeBuiltin"><span class="hs-identifier hs-type">SomeBuiltin</span></a></span><span>
+</span><span id="line-95"></span><span>
+</span><span id="line-96"></span><span class="hs-keyword">data</span><span> </span><span id="SomeBuiltinState"><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#SomeBuiltinState"><span class="hs-identifier hs-var">SomeBuiltinState</span></a></span></span><span> </span><span id="local-6989586621680274807"><span class="annot"><a href="#local-6989586621680274807"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-97"></span><span>    </span><span id="SomeBuiltinState"><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#SomeBuiltinState"><span class="hs-identifier hs-var">SomeBuiltinState</span></a></span></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-98"></span><span>        </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621680274968"><span class="annot"><a href="#local-6989586621680274968"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span id="local-6989586621680274805"><span class="annot"><a href="#local-6989586621680274805"><span class="hs-identifier hs-type">w</span></a></span></span><span> </span><span id="local-6989586621680274804"><span class="annot"><a href="#local-6989586621680274804"><span class="hs-identifier hs-type">schema</span></a></span></span><span> </span><span id="local-6989586621680274803"><span class="annot"><a href="#local-6989586621680274803"><span class="hs-identifier hs-type">error</span></a></span></span><span> </span><span id="local-6989586621680274802"><span class="annot"><a href="#local-6989586621680274802"><span class="hs-identifier hs-type">b</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-99"></span><span>        </span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#ContractConstraints"><span class="hs-identifier hs-type">ContractConstraints</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680274805"><span class="hs-identifier hs-type">w</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680274804"><span class="hs-identifier hs-type">schema</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680274803"><span class="hs-identifier hs-type">error</span></a></span><span>
+</span><span id="line-100"></span><span>        </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Emulator.ContractInstanceStateInternal</span></span><span> </span><span class="annot"><a href="#local-6989586621680274805"><span class="hs-identifier hs-type">w</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680274804"><span class="hs-identifier hs-type">schema</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680274803"><span class="hs-identifier hs-type">error</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680274802"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-comment">-- ^ Internal state</span><span>
+</span><span id="line-101"></span><span>        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621680274805"><span class="hs-identifier hs-type">w</span></a></span><span> </span><span class="hs-comment">-- ^ Observable state (stored separately)</span><span>
+</span><span id="line-102"></span><span>        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#SomeBuiltinState"><span class="hs-identifier hs-type">SomeBuiltinState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680274968"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-103"></span><span>
+</span><span id="line-104"></span><span id="local-6989586621680274801"><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Plutus.PAB.Effects.Contract.html#PABContract"><span class="hs-identifier hs-type">PABContract</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#Builtin"><span class="hs-identifier hs-type">Builtin</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680274801"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-105"></span><span>    </span><span class="hs-keyword">type</span><span> </span><span id="ContractDef"><span class="annot"><a href="Plutus.PAB.Effects.Contract.html#ContractDef"><span class="hs-identifier hs-var">ContractDef</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#Builtin"><span class="hs-identifier hs-type">Builtin</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680274801"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621680274801"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-106"></span><span>    </span><span class="hs-keyword">type</span><span> </span><span id="State"><span class="annot"><a href="Plutus.PAB.Effects.Contract.html#State"><span class="hs-identifier hs-var">State</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#Builtin"><span class="hs-identifier hs-type">Builtin</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680274801"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#SomeBuiltinState"><span class="hs-identifier hs-type">SomeBuiltinState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680274801"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-107"></span><span>    </span><span id="local-6989586621680274798"><span class="annot"><span class="annottext">serialisableState :: Proxy (Builtin a)
+-&gt; State (Builtin a) -&gt; ContractResponse Value Value PABResp PABReq
+</span><a href="#local-6989586621680274798"><span class="hs-identifier hs-var hs-var hs-var hs-var">serialisableState</span></a></span></span><span> </span><span class="annot"><span class="annottext">Proxy (Builtin a)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">State (Builtin a) -&gt; ContractResponse Value Value PABResp PABReq
+forall a.
+SomeBuiltinState a -&gt; ContractResponse Value Value PABResp PABReq
+</span><a href="Plutus.PAB.Effects.Contract.Builtin.html#getResponse"><span class="hs-identifier hs-var">getResponse</span></a></span></span><span>
+</span><span id="line-108"></span><span>
+</span><span id="line-109"></span><span class="hs-comment">-- | Allows contract type `a` to specify its available contract definitions.</span><span>
+</span><span id="line-110"></span><span class="hs-comment">-- Also, for each contract type, we specify its contract function and its</span><span>
+</span><span id="line-111"></span><span class="hs-comment">-- schemas.</span><span>
+</span><span id="line-112"></span><span class="hs-keyword">class</span><span> </span><span id="HasDefinitions"><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#HasDefinitions"><span class="hs-identifier hs-var">HasDefinitions</span></a></span></span><span> </span><span id="local-6989586621680275110"><span class="annot"><a href="#local-6989586621680275110"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-113"></span><span>    </span><span id="getDefinitions"><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#getDefinitions"><span class="hs-identifier hs-type">getDefinitions</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621680275110"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-comment">-- ^ Available contract definitions for a contract type `a`</span><span>
+</span><span id="line-114"></span><span>    </span><span id="getContract"><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#getContract"><span class="hs-identifier hs-type">getContract</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621680275110"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#SomeBuiltin"><span class="hs-identifier hs-type">SomeBuiltin</span></a></span><span> </span><span class="hs-comment">-- ^ The actual contract function of contract type `a`</span><span>
+</span><span id="line-115"></span><span>
+</span><span id="line-116"></span><span class="hs-comment">-- | Defined in order to prevent type errors like: &quot;Couldn't match type 'effs'</span><span>
+</span><span id="line-117"></span><span class="hs-comment">-- with 'effs1'&quot;.</span><span>
+</span><span id="line-118"></span><span class="hs-keyword">newtype</span><span> </span><span id="BuiltinHandler"><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#BuiltinHandler"><span class="hs-identifier hs-var">BuiltinHandler</span></a></span></span><span> </span><span id="local-6989586621680275119"><span class="annot"><a href="#local-6989586621680275119"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="BuiltinHandler"><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#BuiltinHandler"><span class="hs-identifier hs-var">BuiltinHandler</span></a></span></span><span>
+</span><span id="line-119"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="contractHandler"><span class="annot"><span class="annottext">BuiltinHandler a
+-&gt; forall (effs :: [* -&gt; *]).
+   (Member (Error PABError) effs,
+    Member (LogMsg (PABMultiAgentMsg (Builtin a))) effs) =&gt;
+   ContractEffect (Builtin a) ~&gt; Eff effs
+</span><a href="Plutus.PAB.Effects.Contract.Builtin.html#contractHandler"><span class="hs-identifier hs-var hs-var">contractHandler</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621680275127"><span class="annot"><a href="#local-6989586621680275127"><span class="hs-identifier hs-type">effs</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-120"></span><span>                         </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Member</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Error</span></span><span> </span><span class="annot"><a href="Plutus.PAB.Types.html#PABError"><span class="hs-identifier hs-type">PABError</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621680275127"><span class="hs-identifier hs-type">effs</span></a></span><span>
+</span><span id="line-121"></span><span>                         </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Member</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">LogMsg</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Monitoring.PABLogMsg.html#PABMultiAgentMsg"><span class="hs-identifier hs-type">PABMultiAgentMsg</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#Builtin"><span class="hs-identifier hs-type">Builtin</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680275119"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621680275127"><span class="hs-identifier hs-type">effs</span></a></span><span>
+</span><span id="line-122"></span><span>                         </span><span class="hs-special">)</span><span>
+</span><span id="line-123"></span><span>                      </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Plutus.PAB.Effects.Contract.html#ContractEffect"><span class="hs-identifier hs-type">ContractEffect</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#Builtin"><span class="hs-identifier hs-type">Builtin</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680275119"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-operator hs-type">~&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Eff</span></span><span> </span><span class="annot"><a href="#local-6989586621680275127"><span class="hs-identifier hs-type">effs</span></a></span><span>
+</span><span id="line-124"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-125"></span><span>
+</span><span id="line-126"></span><span class="hs-comment">-- | Handle the 'ContractEffect' for a builtin contract type with parameter</span><span>
+</span><span id="line-127"></span><span class="hs-comment">--   @a@.</span><span>
+</span><span id="line-128"></span><span id="local-6989586621680274793"><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#handleBuiltin"><span class="hs-identifier hs-type">handleBuiltin</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#HasDefinitions"><span class="hs-identifier hs-type">HasDefinitions</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680274793"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#BuiltinHandler"><span class="hs-identifier hs-type">BuiltinHandler</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680274793"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-129"></span><span id="handleBuiltin"><span class="annot"><span class="annottext">handleBuiltin :: BuiltinHandler a
+</span><a href="Plutus.PAB.Effects.Contract.Builtin.html#handleBuiltin"><span class="hs-identifier hs-var hs-var">handleBuiltin</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(forall (effs :: [* -&gt; *]).
+ (Member (Error PABError) effs,
+  Member (LogMsg (PABMultiAgentMsg (Builtin a))) effs) =&gt;
+ ContractEffect (Builtin a) ~&gt; Eff effs)
+-&gt; BuiltinHandler a
+forall a.
+(forall (effs :: [* -&gt; *]).
+ (Member (Error PABError) effs,
+  Member (LogMsg (PABMultiAgentMsg (Builtin a))) effs) =&gt;
+ ContractEffect (Builtin a) ~&gt; Eff effs)
+-&gt; BuiltinHandler a
+</span><a href="Plutus.PAB.Effects.Contract.Builtin.html#BuiltinHandler"><span class="hs-identifier hs-var">BuiltinHandler</span></a></span><span> </span><span class="annot"><span class="annottext">((forall (effs :: [* -&gt; *]).
+  (Member (Error PABError) effs,
+   Member (LogMsg (PABMultiAgentMsg (Builtin a))) effs) =&gt;
+  ContractEffect (Builtin a) ~&gt; Eff effs)
+ -&gt; BuiltinHandler a)
+-&gt; (forall (effs :: [* -&gt; *]).
+    (Member (Error PABError) effs,
+     Member (LogMsg (PABMultiAgentMsg (Builtin a))) effs) =&gt;
+    ContractEffect (Builtin a) ~&gt; Eff effs)
+-&gt; BuiltinHandler a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-130"></span><span>    </span><span class="annot"><a href="Plutus.PAB.Effects.Contract.html#InitialState"><span class="hs-identifier hs-type">InitialState</span></a></span><span> </span><span id="local-6989586621680274792"><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680274792"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span id="local-6989586621680274791"><span class="annot"><span class="annottext">ContractDef (Builtin a)
+</span><a href="#local-6989586621680274791"><span class="hs-identifier hs-var">c</span></a></span></span><span>           </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">a -&gt; SomeBuiltin
+forall a. HasDefinitions a =&gt; a -&gt; SomeBuiltin
+</span><a href="Plutus.PAB.Effects.Contract.Builtin.html#getContract"><span class="hs-identifier hs-var">getContract</span></a></span><span> </span><span class="annot"><span class="annottext">a
+ContractDef (Builtin a)
+</span><a href="#local-6989586621680274791"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="hs-keyword">of</span><span> </span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#SomeBuiltin"><span class="hs-identifier hs-type">SomeBuiltin</span></a></span><span> </span><span id="local-6989586621680274790"><span class="annot"><span class="annottext">contract w schema error a
+</span><a href="#local-6989586621680274790"><span class="hs-identifier hs-var">c'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ContractInstanceId
+-&gt; contract w schema error a -&gt; Eff effs (SomeBuiltinState a)
+forall (effs :: [* -&gt; *]) a (contract :: * -&gt; Row * -&gt; * -&gt; * -&gt; *)
+       w (schema :: Row *) error b.
+(ContractConstraints w schema error,
+ Member (LogMsg (PABMultiAgentMsg (Builtin a))) effs,
+ IsContract contract) =&gt;
+ContractInstanceId
+-&gt; contract w schema error b -&gt; Eff effs (SomeBuiltinState a)
+</span><a href="Plutus.PAB.Effects.Contract.Builtin.html#initBuiltin"><span class="hs-identifier hs-var">initBuiltin</span></a></span><span> </span><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680274792"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">contract w schema error a
+</span><a href="#local-6989586621680274790"><span class="hs-identifier hs-var">c'</span></a></span><span>
+</span><span id="line-131"></span><span>    </span><span class="annot"><a href="Plutus.PAB.Effects.Contract.html#UpdateContract"><span class="hs-identifier hs-type">UpdateContract</span></a></span><span> </span><span id="local-6989586621680274788"><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680274788"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="annot"><span class="annottext">ContractDef (Builtin a)
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621680274787"><span class="annot"><span class="annottext">State (Builtin a)
+</span><a href="#local-6989586621680274787"><span class="hs-identifier hs-var">state</span></a></span></span><span> </span><span id="local-6989586621680274786"><span class="annot"><span class="annottext">Response PABResp
+</span><a href="#local-6989586621680274786"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">State (Builtin a)
+</span><a href="#local-6989586621680274787"><span class="hs-identifier hs-var">state</span></a></span><span> </span><span class="hs-keyword">of</span><span> </span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#SomeBuiltinState"><span class="hs-identifier hs-type">SomeBuiltinState</span></a></span><span> </span><span id="local-6989586621680274785"><span class="annot"><a href="#local-6989586621680274785"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span id="local-6989586621680274784"><span class="annot"><a href="#local-6989586621680274784"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ContractInstanceId
+-&gt; ContractInstanceStateInternal w schema error b
+-&gt; w
+-&gt; Response PABResp
+-&gt; Eff effs (SomeBuiltinState a)
+forall (effs :: [* -&gt; *]) a w (schema :: Row *) error b.
+(ContractConstraints w schema error, Member (Error PABError) effs,
+ Member (LogMsg (PABMultiAgentMsg (Builtin a))) effs) =&gt;
+ContractInstanceId
+-&gt; ContractInstanceStateInternal w schema error b
+-&gt; w
+-&gt; Response PABResp
+-&gt; Eff effs (SomeBuiltinState a)
+</span><a href="Plutus.PAB.Effects.Contract.Builtin.html#updateBuiltin"><span class="hs-identifier hs-var">updateBuiltin</span></a></span><span> </span><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680274788"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">ContractInstanceStateInternal w schema error b
+</span><a href="#local-6989586621680274785"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">w
+</span><a href="#local-6989586621680274784"><span class="hs-identifier hs-var">w</span></a></span><span> </span><span class="annot"><span class="annottext">Response PABResp
+</span><a href="#local-6989586621680274786"><span class="hs-identifier hs-var">p</span></a></span><span>
+</span><span id="line-132"></span><span>
+</span><span id="line-133"></span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#getResponse"><span class="hs-identifier hs-type">getResponse</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621680275133"><span class="annot"><a href="#local-6989586621680275133"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#SomeBuiltinState"><span class="hs-identifier hs-type">SomeBuiltinState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680275133"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ContractResponse</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">PABResp</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">PABReq</span></span><span>
+</span><span id="line-134"></span><span id="getResponse"><span class="annot"><span class="annottext">getResponse :: SomeBuiltinState a -&gt; ContractResponse Value Value PABResp PABReq
+</span><a href="Plutus.PAB.Effects.Contract.Builtin.html#getResponse"><span class="hs-identifier hs-var hs-var">getResponse</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#SomeBuiltinState"><span class="hs-identifier hs-type">SomeBuiltinState</span></a></span><span> </span><span id="local-6989586621680274782"><span class="annot"><span class="annottext">ContractInstanceStateInternal w schema error b
+</span><a href="#local-6989586621680274782"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span id="local-6989586621680274781"><span class="annot"><span class="annottext">w
+</span><a href="#local-6989586621680274781"><span class="hs-identifier hs-var">w</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-135"></span><span>    </span><span class="annot"><span class="annottext">(error -&gt; Value)
+-&gt; ContractResponse Value error PABResp PABReq
+-&gt; ContractResponse Value Value PABResp PABReq
+forall e f w s h.
+(e -&gt; f) -&gt; ContractResponse w e s h -&gt; ContractResponse w f s h
+</span><span class="hs-identifier hs-var">ContractState.mapE</span></span><span> </span><span class="annot"><span class="annottext">error -&gt; Value
+forall a. ToJSON a =&gt; a -&gt; Value
+</span><span class="hs-identifier hs-var">JSON.toJSON</span></span><span>
+</span><span id="line-136"></span><span>    </span><span class="annot"><span class="annottext">(ContractResponse Value error PABResp PABReq
+ -&gt; ContractResponse Value Value PABResp PABReq)
+-&gt; ContractResponse Value error PABResp PABReq
+-&gt; ContractResponse Value Value PABResp PABReq
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(w -&gt; Value)
+-&gt; ContractResponse w error PABResp PABReq
+-&gt; ContractResponse Value error PABResp PABReq
+forall w q e s h.
+(w -&gt; q) -&gt; ContractResponse w e s h -&gt; ContractResponse q e s h
+</span><span class="hs-identifier hs-var">ContractState.mapW</span></span><span> </span><span class="annot"><span class="annottext">w -&gt; Value
+forall a. ToJSON a =&gt; a -&gt; Value
+</span><span class="hs-identifier hs-var">JSON.toJSON</span></span><span>
+</span><span id="line-137"></span><span>    </span><span class="annot"><span class="annottext">(ContractResponse w error PABResp PABReq
+ -&gt; ContractResponse Value error PABResp PABReq)
+-&gt; ContractResponse w error PABResp PABReq
+-&gt; ContractResponse Value error PABResp PABReq
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">w
+-&gt; ResumableResult w error PABResp PABReq b
+-&gt; ContractResponse w error PABResp PABReq
+forall w e s h a.
+Monoid w =&gt;
+w -&gt; ResumableResult w e s h a -&gt; ContractResponse w e s h
+</span><span class="hs-identifier hs-var">ContractState.mkResponse</span></span><span> </span><span class="annot"><span class="annottext">w
+</span><a href="#local-6989586621680274781"><span class="hs-identifier hs-var">w</span></a></span><span>
+</span><span id="line-138"></span><span>    </span><span class="annot"><span class="annottext">(ResumableResult w error PABResp PABReq b
+ -&gt; ContractResponse w error PABResp PABReq)
+-&gt; ResumableResult w error PABResp PABReq b
+-&gt; ContractResponse w error PABResp PABReq
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ContractInstanceState w schema error b
+-&gt; ResumableResult w error PABResp PABReq b
+forall w (s :: Row *) e a.
+ContractInstanceState w s e a
+-&gt; ResumableResult w e PABResp PABReq a
+</span><span class="hs-identifier hs-var hs-var">Emulator.instContractState</span></span><span>
+</span><span id="line-139"></span><span>    </span><span class="annot"><span class="annottext">(ContractInstanceState w schema error b
+ -&gt; ResumableResult w error PABResp PABReq b)
+-&gt; ContractInstanceState w schema error b
+-&gt; ResumableResult w error PABResp PABReq b
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ContractInstanceStateInternal w schema error b
+-&gt; ContractInstanceState w schema error b
+forall w (s :: Row *) e a.
+ContractInstanceStateInternal w s e a
+-&gt; ContractInstanceState w s e a
+</span><span class="hs-identifier hs-var">Emulator.toInstanceState</span></span><span> </span><span class="annot"><span class="annottext">ContractInstanceStateInternal w schema error b
+</span><a href="#local-6989586621680274782"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-140"></span><span>
+</span><span id="line-141"></span><span class="hs-comment">-- | Reconstruct a state from a serialised response by replaying back the</span><span>
+</span><span id="line-142"></span><span class="hs-comment">-- actions.</span><span>
+</span><span id="line-143"></span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#fromResponse"><span class="hs-identifier hs-type">fromResponse</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621680274774"><span class="annot"><a href="#local-6989586621680274774"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span id="local-6989586621680274773"><span class="annot"><a href="#local-6989586621680274773"><span class="hs-identifier hs-type">effs</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-144"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Member</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">LogMsg</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Monitoring.PABLogMsg.html#PABMultiAgentMsg"><span class="hs-identifier hs-type">PABMultiAgentMsg</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#Builtin"><span class="hs-identifier hs-type">Builtin</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680274774"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621680274773"><span class="hs-identifier hs-type">effs</span></a></span><span>
+</span><span id="line-145"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Member</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Error</span></span><span> </span><span class="annot"><a href="Plutus.PAB.Types.html#PABError"><span class="hs-identifier hs-type">PABError</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621680274773"><span class="hs-identifier hs-type">effs</span></a></span><span>
+</span><span id="line-146"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-147"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ContractInstanceId</span></span><span>
+</span><span id="line-148"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#SomeBuiltin"><span class="hs-identifier hs-type">SomeBuiltin</span></a></span><span>
+</span><span id="line-149"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ContractResponse</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">PABResp</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">PABReq</span></span><span>
+</span><span id="line-150"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Eff</span></span><span> </span><span class="annot"><a href="#local-6989586621680274773"><span class="hs-identifier hs-type">effs</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#SomeBuiltinState"><span class="hs-identifier hs-type">SomeBuiltinState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680274774"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-151"></span><span id="fromResponse"><span class="annot"><span class="annottext">fromResponse :: ContractInstanceId
+-&gt; SomeBuiltin
+-&gt; ContractResponse Value Value PABResp PABReq
+-&gt; Eff effs (SomeBuiltinState a)
+</span><a href="Plutus.PAB.Effects.Contract.Builtin.html#fromResponse"><span class="hs-identifier hs-var hs-var">fromResponse</span></a></span></span><span> </span><span id="local-6989586621680274772"><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680274772"><span class="hs-identifier hs-var">cid</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#SomeBuiltin"><span class="hs-identifier hs-type">SomeBuiltin</span></a></span><span> </span><span id="local-6989586621680274771"><span class="annot"><span class="annottext">contract w schema error a
+</span><a href="#local-6989586621680274771"><span class="hs-identifier hs-var">contract</span></a></span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ContractResponse</span></span><span class="hs-special">{</span><span class="annot"><span class="annottext">newState :: forall w e s h.
+ContractResponse w e s h -&gt; State w (CheckpointKey, s)
+</span><span class="hs-identifier hs-var">newState</span></span><span class="hs-glyph">=</span><span class="annot"><span class="hs-identifier hs-type">State</span></span><span class="hs-special">{</span><span id="local-6989586621680274770"><span class="annot"><span class="annottext">Responses (CheckpointKey, PABResp)
+record :: Responses (CheckpointKey, PABResp)
+record :: forall w e. State w e -&gt; Responses e
+</span><a href="#local-6989586621680274770"><span class="hs-identifier hs-var hs-var">record</span></a></span></span><span class="hs-special">}</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-152"></span><span>  </span><span id="local-6989586621680274769"><span class="annot"><span class="annottext">SomeBuiltinState a
+</span><a href="#local-6989586621680274769"><span class="hs-identifier hs-var">initialState</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ContractInstanceId
+-&gt; contract w schema error a -&gt; Eff effs (SomeBuiltinState a)
+forall (effs :: [* -&gt; *]) a (contract :: * -&gt; Row * -&gt; * -&gt; * -&gt; *)
+       w (schema :: Row *) error b.
+(ContractConstraints w schema error,
+ Member (LogMsg (PABMultiAgentMsg (Builtin a))) effs,
+ IsContract contract) =&gt;
+ContractInstanceId
+-&gt; contract w schema error b -&gt; Eff effs (SomeBuiltinState a)
+</span><a href="Plutus.PAB.Effects.Contract.Builtin.html#initBuiltinSilently"><span class="hs-identifier hs-var">initBuiltinSilently</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621680274773"><span class="hs-identifier hs-type">effs</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621680274774"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680274772"><span class="hs-identifier hs-var">cid</span></a></span><span> </span><span class="annot"><span class="annottext">contract w schema error a
+</span><a href="#local-6989586621680274771"><span class="hs-identifier hs-var">contract</span></a></span><span>
+</span><span id="line-153"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680274767"><span class="annot"><span class="annottext">runUpdate :: SomeBuiltinState a
+-&gt; Response (CheckpointKey, PABResp)
+-&gt; Eff effs (SomeBuiltinState a)
+</span><a href="#local-6989586621680274767"><span class="hs-identifier hs-var hs-var">runUpdate</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#SomeBuiltinState"><span class="hs-identifier hs-type">SomeBuiltinState</span></a></span><span> </span><span id="local-6989586621680274766"><span class="annot"><span class="annottext">ContractInstanceStateInternal w schema error b
+</span><a href="#local-6989586621680274766"><span class="hs-identifier hs-var">oldS</span></a></span></span><span> </span><span id="local-6989586621680274765"><span class="annot"><span class="annottext">w
+</span><a href="#local-6989586621680274765"><span class="hs-identifier hs-var">oldW</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621680274764"><span class="annot"><span class="annottext">Response (CheckpointKey, PABResp)
+</span><a href="#local-6989586621680274764"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-154"></span><span>          </span><span class="annot"><span class="annottext">ContractInstanceId
+-&gt; ContractInstanceStateInternal w schema error b
+-&gt; w
+-&gt; Response PABResp
+-&gt; Eff effs (SomeBuiltinState a)
+forall (effs :: [* -&gt; *]) a w (schema :: Row *) error b.
+(ContractConstraints w schema error, Member (Error PABError) effs,
+ Member (LogMsg (PABMultiAgentMsg (Builtin a))) effs) =&gt;
+ContractInstanceId
+-&gt; ContractInstanceStateInternal w schema error b
+-&gt; w
+-&gt; Response PABResp
+-&gt; Eff effs (SomeBuiltinState a)
+</span><a href="Plutus.PAB.Effects.Contract.Builtin.html#updateBuiltinSilently"><span class="hs-identifier hs-var">updateBuiltinSilently</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621680274773"><span class="hs-identifier hs-type">effs</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621680274774"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680274772"><span class="hs-identifier hs-var">cid</span></a></span><span> </span><span class="annot"><span class="annottext">ContractInstanceStateInternal w schema error b
+</span><a href="#local-6989586621680274766"><span class="hs-identifier hs-var">oldS</span></a></span><span> </span><span class="annot"><span class="annottext">w
+</span><a href="#local-6989586621680274765"><span class="hs-identifier hs-var">oldW</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(CheckpointKey, PABResp) -&gt; PABResp
+forall a b. (a, b) -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">snd</span></a></span><span> </span><span class="annot"><span class="annottext">((CheckpointKey, PABResp) -&gt; PABResp)
+-&gt; Response (CheckpointKey, PABResp) -&gt; Response PABResp
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Response (CheckpointKey, PABResp)
+</span><a href="#local-6989586621680274764"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-155"></span><span>  </span><span class="annot"><span class="annottext">(SomeBuiltinState a
+ -&gt; Response (CheckpointKey, PABResp)
+ -&gt; Eff effs (SomeBuiltinState a))
+-&gt; SomeBuiltinState a
+-&gt; [Response (CheckpointKey, PABResp)]
+-&gt; Eff effs (SomeBuiltinState a)
+forall (t :: * -&gt; *) (m :: * -&gt; *) b a.
+(Foldable t, Monad m) =&gt;
+(b -&gt; a -&gt; m b) -&gt; b -&gt; t a -&gt; m b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">foldlM</span></a></span><span> </span><span class="annot"><span class="annottext">SomeBuiltinState a
+-&gt; Response (CheckpointKey, PABResp)
+-&gt; Eff effs (SomeBuiltinState a)
+</span><a href="#local-6989586621680274767"><span class="hs-identifier hs-var">runUpdate</span></a></span><span> </span><span class="annot"><span class="annottext">SomeBuiltinState a
+</span><a href="#local-6989586621680274769"><span class="hs-identifier hs-var">initialState</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Responses (CheckpointKey, PABResp)
+-&gt; [Response (CheckpointKey, PABResp)]
+forall i. Responses i -&gt; [Response i]
+</span><span class="hs-identifier hs-var">responses</span></span><span> </span><span class="annot"><span class="annottext">Responses (CheckpointKey, PABResp)
+</span><a href="#local-6989586621680274770"><span class="hs-identifier hs-var">record</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-156"></span><span>
+</span><span id="line-157"></span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#initBuiltin"><span class="hs-identifier hs-type">initBuiltin</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#initBuiltinSilently"><span class="hs-identifier hs-type">initBuiltinSilently</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-158"></span><span>    </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621680275097"><span class="annot"><a href="#local-6989586621680275097"><span class="hs-identifier hs-type">effs</span></a></span></span><span> </span><span id="local-6989586621680275098"><span class="annot"><a href="#local-6989586621680275098"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span id="local-6989586621680275096"><span class="annot"><a href="#local-6989586621680275096"><span class="hs-identifier hs-type">contract</span></a></span></span><span> </span><span id="local-6989586621680275102"><span class="annot"><a href="#local-6989586621680275102"><span class="hs-identifier hs-type">w</span></a></span></span><span> </span><span id="local-6989586621680275101"><span class="annot"><a href="#local-6989586621680275101"><span class="hs-identifier hs-type">schema</span></a></span></span><span> </span><span id="local-6989586621680275100"><span class="annot"><a href="#local-6989586621680275100"><span class="hs-identifier hs-type">error</span></a></span></span><span> </span><span id="local-6989586621680275094"><span class="annot"><a href="#local-6989586621680275094"><span class="hs-identifier hs-type">b</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-159"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#ContractConstraints"><span class="hs-identifier hs-type">ContractConstraints</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680275102"><span class="hs-identifier hs-type">w</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680275101"><span class="hs-identifier hs-type">schema</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680275100"><span class="hs-identifier hs-type">error</span></a></span><span>
+</span><span id="line-160"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Member</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">LogMsg</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Monitoring.PABLogMsg.html#PABMultiAgentMsg"><span class="hs-identifier hs-type">PABMultiAgentMsg</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#Builtin"><span class="hs-identifier hs-type">Builtin</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680275098"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621680275097"><span class="hs-identifier hs-type">effs</span></a></span><span>
+</span><span id="line-161"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IsContract</span></span><span> </span><span class="annot"><a href="#local-6989586621680275096"><span class="hs-identifier hs-type">contract</span></a></span><span>
+</span><span id="line-162"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-163"></span><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ContractInstanceId</span></span><span>
+</span><span id="line-164"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621680275096"><span class="hs-identifier hs-type">contract</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680275102"><span class="hs-identifier hs-type">w</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680275101"><span class="hs-identifier hs-type">schema</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680275100"><span class="hs-identifier hs-type">error</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680275094"><span class="hs-identifier hs-type">b</span></a></span><span>
+</span><span id="line-165"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Eff</span></span><span> </span><span class="annot"><a href="#local-6989586621680275097"><span class="hs-identifier hs-type">effs</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#SomeBuiltinState"><span class="hs-identifier hs-type">SomeBuiltinState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680275098"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-166"></span><span id="initBuiltin"><span class="annot"><span class="annottext">initBuiltin :: ContractInstanceId
+-&gt; contract w schema error b -&gt; Eff effs (SomeBuiltinState a)
+</span><a href="Plutus.PAB.Effects.Contract.Builtin.html#initBuiltin"><span class="hs-identifier hs-var hs-var">initBuiltin</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+-&gt; ContractInstanceId
+-&gt; contract w schema error b
+-&gt; Eff effs (SomeBuiltinState a)
+forall (effs :: [* -&gt; *]) a (contract :: * -&gt; Row * -&gt; * -&gt; * -&gt; *)
+       w (schema :: Row *) error b.
+(ContractConstraints w schema error,
+ Member (LogMsg (PABMultiAgentMsg (Builtin a))) effs,
+ IsContract contract) =&gt;
+Bool
+-&gt; ContractInstanceId
+-&gt; contract w schema error b
+-&gt; Eff effs (SomeBuiltinState a)
+</span><a href="Plutus.PAB.Effects.Contract.Builtin.html#initBuiltin%27"><span class="hs-identifier hs-var">initBuiltin'</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-167"></span><span id="initBuiltinSilently"><span class="annot"><span class="annottext">initBuiltinSilently :: ContractInstanceId
+-&gt; contract w schema error b -&gt; Eff effs (SomeBuiltinState a)
+</span><a href="Plutus.PAB.Effects.Contract.Builtin.html#initBuiltinSilently"><span class="hs-identifier hs-var hs-var">initBuiltinSilently</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+-&gt; ContractInstanceId
+-&gt; contract w schema error b
+-&gt; Eff effs (SomeBuiltinState a)
+forall (effs :: [* -&gt; *]) a (contract :: * -&gt; Row * -&gt; * -&gt; * -&gt; *)
+       w (schema :: Row *) error b.
+(ContractConstraints w schema error,
+ Member (LogMsg (PABMultiAgentMsg (Builtin a))) effs,
+ IsContract contract) =&gt;
+Bool
+-&gt; ContractInstanceId
+-&gt; contract w schema error b
+-&gt; Eff effs (SomeBuiltinState a)
+</span><a href="Plutus.PAB.Effects.Contract.Builtin.html#initBuiltin%27"><span class="hs-identifier hs-var">initBuiltin'</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-168"></span><span>
+</span><span id="line-169"></span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#initBuiltin%27"><span class="hs-identifier hs-type">initBuiltin'</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-170"></span><span>    </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621680275008"><span class="annot"><a href="#local-6989586621680275008"><span class="hs-identifier hs-type">effs</span></a></span></span><span> </span><span id="local-6989586621680275009"><span class="annot"><a href="#local-6989586621680275009"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span id="local-6989586621680275007"><span class="annot"><a href="#local-6989586621680275007"><span class="hs-identifier hs-type">contract</span></a></span></span><span> </span><span id="local-6989586621680275012"><span class="annot"><a href="#local-6989586621680275012"><span class="hs-identifier hs-type">w</span></a></span></span><span> </span><span id="local-6989586621680275011"><span class="annot"><a href="#local-6989586621680275011"><span class="hs-identifier hs-type">schema</span></a></span></span><span> </span><span id="local-6989586621680275010"><span class="annot"><a href="#local-6989586621680275010"><span class="hs-identifier hs-type">error</span></a></span></span><span> </span><span id="local-6989586621680275006"><span class="annot"><a href="#local-6989586621680275006"><span class="hs-identifier hs-type">b</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-171"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#ContractConstraints"><span class="hs-identifier hs-type">ContractConstraints</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680275012"><span class="hs-identifier hs-type">w</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680275011"><span class="hs-identifier hs-type">schema</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680275010"><span class="hs-identifier hs-type">error</span></a></span><span>
+</span><span id="line-172"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Member</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">LogMsg</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Monitoring.PABLogMsg.html#PABMultiAgentMsg"><span class="hs-identifier hs-type">PABMultiAgentMsg</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#Builtin"><span class="hs-identifier hs-type">Builtin</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680275009"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621680275008"><span class="hs-identifier hs-type">effs</span></a></span><span>
+</span><span id="line-173"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IsContract</span></span><span> </span><span class="annot"><a href="#local-6989586621680275007"><span class="hs-identifier hs-type">contract</span></a></span><span>
+</span><span id="line-174"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-175"></span><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">Bool</span></a></span><span> </span><span class="hs-comment">-- ^ If True, log new messages, otherwise stay silent.</span><span>
+</span><span id="line-176"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ContractInstanceId</span></span><span>
+</span><span id="line-177"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621680275007"><span class="hs-identifier hs-type">contract</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680275012"><span class="hs-identifier hs-type">w</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680275011"><span class="hs-identifier hs-type">schema</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680275010"><span class="hs-identifier hs-type">error</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680275006"><span class="hs-identifier hs-type">b</span></a></span><span>
+</span><span id="line-178"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Eff</span></span><span> </span><span class="annot"><a href="#local-6989586621680275008"><span class="hs-identifier hs-type">effs</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#SomeBuiltinState"><span class="hs-identifier hs-type">SomeBuiltinState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680275009"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-179"></span><span id="initBuiltin%27"><span class="annot"><span class="annottext">initBuiltin' :: Bool
+-&gt; ContractInstanceId
+-&gt; contract w schema error b
+-&gt; Eff effs (SomeBuiltinState a)
+</span><a href="Plutus.PAB.Effects.Contract.Builtin.html#initBuiltin%27"><span class="hs-identifier hs-var hs-var">initBuiltin'</span></a></span></span><span> </span><span id="local-6989586621680274760"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621680274760"><span class="hs-identifier hs-var">silent</span></a></span></span><span> </span><span id="local-6989586621680274759"><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680274759"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span id="local-6989586621680274758"><span class="annot"><span class="annottext">contract w schema error b
+</span><a href="#local-6989586621680274758"><span class="hs-identifier hs-var">con</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-180"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680274757"><span class="annot"><span class="annottext">initialState :: ContractInstanceStateInternal w schema error b
+</span><a href="#local-6989586621680274757"><span class="hs-identifier hs-var hs-var">initialState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Contract w schema error b
+-&gt; ContractInstanceStateInternal w schema error b
+forall w (s :: Row *) e a.
+Monoid w =&gt;
+Contract w s e a -&gt; ContractInstanceStateInternal w s e a
+</span><span class="hs-identifier hs-var">Emulator.emptyInstanceState</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">contract w schema error b -&gt; Contract w schema error b
+forall (c :: * -&gt; Row * -&gt; * -&gt; * -&gt; *) w (s :: Row *) e a.
+IsContract c =&gt;
+c w s e a -&gt; Contract w s e a
+</span><span class="hs-identifier hs-var">toContract</span></span><span> </span><span class="annot"><span class="annottext">contract w schema error b
+</span><a href="#local-6989586621680274758"><span class="hs-identifier hs-var">con</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-181"></span><span>    </span><span class="annot"><span class="annottext">Bool -&gt; Eff effs () -&gt; Eff effs ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">unless</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621680274760"><span class="hs-identifier hs-var">silent</span></a></span><span> </span><span class="annot"><span class="annottext">(Eff effs () -&gt; Eff effs ()) -&gt; Eff effs () -&gt; Eff effs ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ContractInstanceId
+-&gt; ContractInstanceStateInternal w schema error b -&gt; Eff effs ()
+forall b w (s :: Row *) e a (effs :: [* -&gt; *]).
+(Member (LogMsg (PABMultiAgentMsg (Builtin b))) effs, ToJSON e) =&gt;
+ContractInstanceId
+-&gt; ContractInstanceStateInternal w s e a -&gt; Eff effs ()
+</span><a href="Plutus.PAB.Effects.Contract.Builtin.html#logNewMessages"><span class="hs-identifier hs-var">logNewMessages</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621680275009"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680274759"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">ContractInstanceStateInternal w schema error b
+</span><a href="#local-6989586621680274757"><span class="hs-identifier hs-var">initialState</span></a></span><span>
+</span><span id="line-182"></span><span>    </span><span class="annot"><span class="annottext">SomeBuiltinState a -&gt; Eff effs (SomeBuiltinState a)
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(SomeBuiltinState a -&gt; Eff effs (SomeBuiltinState a))
+-&gt; SomeBuiltinState a -&gt; Eff effs (SomeBuiltinState a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ContractInstanceStateInternal w schema error b
+-&gt; w -&gt; SomeBuiltinState a
+forall a w (schema :: Row *) error b.
+ContractConstraints w schema error =&gt;
+ContractInstanceStateInternal w schema error b
+-&gt; w -&gt; SomeBuiltinState a
+</span><a href="Plutus.PAB.Effects.Contract.Builtin.html#SomeBuiltinState"><span class="hs-identifier hs-var">SomeBuiltinState</span></a></span><span> </span><span class="annot"><span class="annottext">ContractInstanceStateInternal w schema error b
+</span><a href="#local-6989586621680274757"><span class="hs-identifier hs-var">initialState</span></a></span><span> </span><span class="annot"><span class="annottext">w
+forall a. Monoid a =&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-183"></span><span>
+</span><span id="line-184"></span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#updateBuiltin"><span class="hs-identifier hs-type">updateBuiltin</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#updateBuiltinSilently"><span class="hs-identifier hs-type">updateBuiltinSilently</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-185"></span><span>    </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621680275084"><span class="annot"><a href="#local-6989586621680275084"><span class="hs-identifier hs-type">effs</span></a></span></span><span> </span><span id="local-6989586621680275083"><span class="annot"><a href="#local-6989586621680275083"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span id="local-6989586621680275087"><span class="annot"><a href="#local-6989586621680275087"><span class="hs-identifier hs-type">w</span></a></span></span><span> </span><span id="local-6989586621680275086"><span class="annot"><a href="#local-6989586621680275086"><span class="hs-identifier hs-type">schema</span></a></span></span><span> </span><span id="local-6989586621680275085"><span class="annot"><a href="#local-6989586621680275085"><span class="hs-identifier hs-type">error</span></a></span></span><span> </span><span id="local-6989586621680275082"><span class="annot"><a href="#local-6989586621680275082"><span class="hs-identifier hs-type">b</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-186"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#ContractConstraints"><span class="hs-identifier hs-type">ContractConstraints</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680275087"><span class="hs-identifier hs-type">w</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680275086"><span class="hs-identifier hs-type">schema</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680275085"><span class="hs-identifier hs-type">error</span></a></span><span>
+</span><span id="line-187"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Member</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Error</span></span><span> </span><span class="annot"><a href="Plutus.PAB.Types.html#PABError"><span class="hs-identifier hs-type">PABError</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621680275084"><span class="hs-identifier hs-type">effs</span></a></span><span>
+</span><span id="line-188"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Member</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">LogMsg</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Monitoring.PABLogMsg.html#PABMultiAgentMsg"><span class="hs-identifier hs-type">PABMultiAgentMsg</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#Builtin"><span class="hs-identifier hs-type">Builtin</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680275083"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621680275084"><span class="hs-identifier hs-type">effs</span></a></span><span>
+</span><span id="line-189"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-190"></span><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ContractInstanceId</span></span><span>
+</span><span id="line-191"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Emulator.ContractInstanceStateInternal</span></span><span> </span><span class="annot"><a href="#local-6989586621680275087"><span class="hs-identifier hs-type">w</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680275086"><span class="hs-identifier hs-type">schema</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680275085"><span class="hs-identifier hs-type">error</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680275082"><span class="hs-identifier hs-type">b</span></a></span><span>
+</span><span id="line-192"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621680275087"><span class="hs-identifier hs-type">w</span></a></span><span>
+</span><span id="line-193"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Response</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">PABResp</span></span><span>
+</span><span id="line-194"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Eff</span></span><span> </span><span class="annot"><a href="#local-6989586621680275084"><span class="hs-identifier hs-type">effs</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#SomeBuiltinState"><span class="hs-identifier hs-type">SomeBuiltinState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680275083"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-195"></span><span id="updateBuiltin"><span class="annot"><span class="annottext">updateBuiltin :: ContractInstanceId
+-&gt; ContractInstanceStateInternal w schema error b
+-&gt; w
+-&gt; Response PABResp
+-&gt; Eff effs (SomeBuiltinState a)
+</span><a href="Plutus.PAB.Effects.Contract.Builtin.html#updateBuiltin"><span class="hs-identifier hs-var hs-var">updateBuiltin</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+-&gt; ContractInstanceId
+-&gt; ContractInstanceStateInternal w schema error b
+-&gt; w
+-&gt; Response PABResp
+-&gt; Eff effs (SomeBuiltinState a)
+forall (effs :: [* -&gt; *]) a w (schema :: Row *) error b.
+(ContractConstraints w schema error, Member (Error PABError) effs,
+ Member (LogMsg (PABMultiAgentMsg (Builtin a))) effs) =&gt;
+Bool
+-&gt; ContractInstanceId
+-&gt; ContractInstanceStateInternal w schema error b
+-&gt; w
+-&gt; Response PABResp
+-&gt; Eff effs (SomeBuiltinState a)
+</span><a href="Plutus.PAB.Effects.Contract.Builtin.html#updateBuiltin%27"><span class="hs-identifier hs-var">updateBuiltin'</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-196"></span><span id="updateBuiltinSilently"><span class="annot"><span class="annottext">updateBuiltinSilently :: ContractInstanceId
+-&gt; ContractInstanceStateInternal w schema error b
+-&gt; w
+-&gt; Response PABResp
+-&gt; Eff effs (SomeBuiltinState a)
+</span><a href="Plutus.PAB.Effects.Contract.Builtin.html#updateBuiltinSilently"><span class="hs-identifier hs-var hs-var">updateBuiltinSilently</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+-&gt; ContractInstanceId
+-&gt; ContractInstanceStateInternal w schema error b
+-&gt; w
+-&gt; Response PABResp
+-&gt; Eff effs (SomeBuiltinState a)
+forall (effs :: [* -&gt; *]) a w (schema :: Row *) error b.
+(ContractConstraints w schema error, Member (Error PABError) effs,
+ Member (LogMsg (PABMultiAgentMsg (Builtin a))) effs) =&gt;
+Bool
+-&gt; ContractInstanceId
+-&gt; ContractInstanceStateInternal w schema error b
+-&gt; w
+-&gt; Response PABResp
+-&gt; Eff effs (SomeBuiltinState a)
+</span><a href="Plutus.PAB.Effects.Contract.Builtin.html#updateBuiltin%27"><span class="hs-identifier hs-var">updateBuiltin'</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-197"></span><span>
+</span><span id="line-198"></span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#updateBuiltin%27"><span class="hs-identifier hs-type">updateBuiltin'</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-199"></span><span>    </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621680274957"><span class="annot"><a href="#local-6989586621680274957"><span class="hs-identifier hs-type">effs</span></a></span></span><span> </span><span id="local-6989586621680274956"><span class="annot"><a href="#local-6989586621680274956"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span id="local-6989586621680274960"><span class="annot"><a href="#local-6989586621680274960"><span class="hs-identifier hs-type">w</span></a></span></span><span> </span><span id="local-6989586621680274959"><span class="annot"><a href="#local-6989586621680274959"><span class="hs-identifier hs-type">schema</span></a></span></span><span> </span><span id="local-6989586621680274958"><span class="annot"><a href="#local-6989586621680274958"><span class="hs-identifier hs-type">error</span></a></span></span><span> </span><span id="local-6989586621680274955"><span class="annot"><a href="#local-6989586621680274955"><span class="hs-identifier hs-type">b</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-200"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#ContractConstraints"><span class="hs-identifier hs-type">ContractConstraints</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680274960"><span class="hs-identifier hs-type">w</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680274959"><span class="hs-identifier hs-type">schema</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680274958"><span class="hs-identifier hs-type">error</span></a></span><span>
+</span><span id="line-201"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Member</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Error</span></span><span> </span><span class="annot"><a href="Plutus.PAB.Types.html#PABError"><span class="hs-identifier hs-type">PABError</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621680274957"><span class="hs-identifier hs-type">effs</span></a></span><span>
+</span><span id="line-202"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Member</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">LogMsg</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Monitoring.PABLogMsg.html#PABMultiAgentMsg"><span class="hs-identifier hs-type">PABMultiAgentMsg</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#Builtin"><span class="hs-identifier hs-type">Builtin</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680274956"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621680274957"><span class="hs-identifier hs-type">effs</span></a></span><span>
+</span><span id="line-203"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-204"></span><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-205"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ContractInstanceId</span></span><span>
+</span><span id="line-206"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Emulator.ContractInstanceStateInternal</span></span><span> </span><span class="annot"><a href="#local-6989586621680274960"><span class="hs-identifier hs-type">w</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680274959"><span class="hs-identifier hs-type">schema</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680274958"><span class="hs-identifier hs-type">error</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680274955"><span class="hs-identifier hs-type">b</span></a></span><span>
+</span><span id="line-207"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621680274960"><span class="hs-identifier hs-type">w</span></a></span><span>
+</span><span id="line-208"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Response</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">PABResp</span></span><span>
+</span><span id="line-209"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Eff</span></span><span> </span><span class="annot"><a href="#local-6989586621680274957"><span class="hs-identifier hs-type">effs</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#SomeBuiltinState"><span class="hs-identifier hs-type">SomeBuiltinState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680274956"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-210"></span><span id="updateBuiltin%27"><span class="annot"><span class="annottext">updateBuiltin' :: Bool
+-&gt; ContractInstanceId
+-&gt; ContractInstanceStateInternal w schema error b
+-&gt; w
+-&gt; Response PABResp
+-&gt; Eff effs (SomeBuiltinState a)
+</span><a href="Plutus.PAB.Effects.Contract.Builtin.html#updateBuiltin%27"><span class="hs-identifier hs-var hs-var">updateBuiltin'</span></a></span></span><span> </span><span id="local-6989586621680274753"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621680274753"><span class="hs-identifier hs-var">silent</span></a></span></span><span> </span><span id="local-6989586621680274752"><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680274752"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span id="local-6989586621680274751"><span class="annot"><span class="annottext">ContractInstanceStateInternal w schema error b
+</span><a href="#local-6989586621680274751"><span class="hs-identifier hs-var">oldState</span></a></span></span><span> </span><span id="local-6989586621680274750"><span class="annot"><span class="annottext">w
+</span><a href="#local-6989586621680274750"><span class="hs-identifier hs-var">oldW</span></a></span></span><span> </span><span id="local-6989586621680274749"><span class="annot"><span class="annottext">Response PABResp
+</span><a href="#local-6989586621680274749"><span class="hs-identifier hs-var">resp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-211"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680274748"><span class="annot"><span class="annottext">newState :: Maybe (ContractInstanceStateInternal w schema error b)
+</span><a href="#local-6989586621680274748"><span class="hs-identifier hs-var hs-var">newState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Response PABResp
+-&gt; ContractInstanceStateInternal w schema error b
+-&gt; Maybe (ContractInstanceStateInternal w schema error b)
+forall w (s :: Row *) e a.
+Monoid w =&gt;
+Response PABResp
+-&gt; ContractInstanceStateInternal w s e a
+-&gt; Maybe (ContractInstanceStateInternal w s e a)
+</span><span class="hs-identifier hs-var">Emulator.addEventInstanceState</span></span><span> </span><span class="annot"><span class="annottext">Response PABResp
+</span><a href="#local-6989586621680274749"><span class="hs-identifier hs-var">resp</span></a></span><span> </span><span class="annot"><span class="annottext">ContractInstanceStateInternal w schema error b
+</span><a href="#local-6989586621680274751"><span class="hs-identifier hs-var">oldState</span></a></span><span>
+</span><span id="line-212"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe (ContractInstanceStateInternal w schema error b)
+</span><a href="#local-6989586621680274748"><span class="hs-identifier hs-var">newState</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-213"></span><span>        </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621680274746"><span class="annot"><span class="annottext">ContractInstanceStateInternal w schema error b
+</span><a href="#local-6989586621680274746"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-214"></span><span>            </span><span class="annot"><span class="annottext">PABMultiAgentMsg (Builtin a) -&gt; Eff effs ()
+forall a (effs :: [* -&gt; *]).
+Member (LogMsg a) effs =&gt;
+a -&gt; Eff effs ()
+</span><span class="hs-identifier hs-var">logDebug</span></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Monitoring.PABLogMsg.html#PABMultiAgentMsg"><span class="hs-identifier hs-type">PABMultiAgentMsg</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#Builtin"><span class="hs-identifier hs-type">Builtin</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680274956"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-215"></span><span>                     </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ContractInstanceMsg (Builtin a) -&gt; PABMultiAgentMsg (Builtin a)
+forall t. ContractInstanceMsg t -&gt; PABMultiAgentMsg t
+</span><a href="Plutus.PAB.Monitoring.PABLogMsg.html#ContractInstanceLog"><span class="hs-identifier hs-var">ContractInstanceLog</span></a></span><span> </span><span class="annot"><span class="annottext">(ContractInstanceMsg (Builtin a) -&gt; PABMultiAgentMsg (Builtin a))
+-&gt; ContractInstanceMsg (Builtin a) -&gt; PABMultiAgentMsg (Builtin a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ContractInstanceId
+-&gt; Response PABResp -&gt; ContractInstanceMsg (Builtin a)
+forall t.
+ContractInstanceId -&gt; Response PABResp -&gt; ContractInstanceMsg t
+</span><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#ProcessFirstInboxMessage"><span class="hs-identifier hs-var">ProcessFirstInboxMessage</span></a></span><span> </span><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680274752"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">Response PABResp
+</span><a href="#local-6989586621680274749"><span class="hs-identifier hs-var">resp</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-216"></span><span>            </span><span class="annot"><span class="annottext">Bool -&gt; Eff effs () -&gt; Eff effs ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">unless</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621680274753"><span class="hs-identifier hs-var">silent</span></a></span><span> </span><span class="annot"><span class="annottext">(Eff effs () -&gt; Eff effs ()) -&gt; Eff effs () -&gt; Eff effs ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ContractInstanceId
+-&gt; ContractInstanceStateInternal w schema error b -&gt; Eff effs ()
+forall b w (s :: Row *) e a (effs :: [* -&gt; *]).
+(Member (LogMsg (PABMultiAgentMsg (Builtin b))) effs, ToJSON e) =&gt;
+ContractInstanceId
+-&gt; ContractInstanceStateInternal w s e a -&gt; Eff effs ()
+</span><a href="Plutus.PAB.Effects.Contract.Builtin.html#logNewMessages"><span class="hs-identifier hs-var">logNewMessages</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621680274956"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680274752"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">ContractInstanceStateInternal w schema error b
+</span><a href="#local-6989586621680274746"><span class="hs-identifier hs-var">k</span></a></span><span>
+</span><span id="line-217"></span><span>            </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680274745"><span class="annot"><span class="annottext">newW :: w
+</span><a href="#local-6989586621680274745"><span class="hs-identifier hs-var hs-var">newW</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">w
+</span><a href="#local-6989586621680274750"><span class="hs-identifier hs-var">oldW</span></a></span><span> </span><span class="annot"><span class="annottext">w -&gt; w -&gt; w
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ResumableResult w error PABResp PABReq b -&gt; w
+forall w e i o a. ResumableResult w e i o a -&gt; w
+</span><span class="hs-identifier hs-var hs-var">_lastState</span></span><span> </span><span class="annot"><span class="annottext">(ResumableResult w error PABResp PABReq b -&gt; w)
+-&gt; ResumableResult w error PABResp PABReq b -&gt; w
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">SuspendedContract w error PABResp PABReq b
+-&gt; ResumableResult w error PABResp PABReq b
+forall w e i o a.
+SuspendedContract w e i o a -&gt; ResumableResult w e i o a
+</span><span class="hs-identifier hs-var hs-var">_resumableResult</span></span><span> </span><span class="annot"><span class="annottext">(SuspendedContract w error PABResp PABReq b
+ -&gt; ResumableResult w error PABResp PABReq b)
+-&gt; SuspendedContract w error PABResp PABReq b
+-&gt; ResumableResult w error PABResp PABReq b
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ContractInstanceStateInternal w schema error b
+-&gt; SuspendedContract w error PABResp PABReq b
+forall w (s :: Row *) e a.
+ContractInstanceStateInternal w s e a
+-&gt; SuspendedContract w e PABResp PABReq a
+</span><span class="hs-identifier hs-var hs-var">Emulator.cisiSuspState</span></span><span> </span><span class="annot"><span class="annottext">ContractInstanceStateInternal w schema error b
+</span><a href="#local-6989586621680274751"><span class="hs-identifier hs-var">oldState</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-218"></span><span>            </span><span class="annot"><span class="annottext">SomeBuiltinState a -&gt; Eff effs (SomeBuiltinState a)
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ContractInstanceStateInternal w schema error b
+-&gt; w -&gt; SomeBuiltinState a
+forall a w (schema :: Row *) error b.
+ContractConstraints w schema error =&gt;
+ContractInstanceStateInternal w schema error b
+-&gt; w -&gt; SomeBuiltinState a
+</span><a href="Plutus.PAB.Effects.Contract.Builtin.html#SomeBuiltinState"><span class="hs-identifier hs-var">SomeBuiltinState</span></a></span><span> </span><span class="annot"><span class="annottext">ContractInstanceStateInternal w schema error b
+</span><a href="#local-6989586621680274746"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">w
+</span><a href="#local-6989586621680274745"><span class="hs-identifier hs-var">newW</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-219"></span><span>        </span><span class="annot"><span class="annottext">Maybe (ContractInstanceStateInternal w schema error b)
+</span><span class="hs-identifier">_</span></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">PABError -&gt; Eff effs (SomeBuiltinState a)
+forall e (effs :: [* -&gt; *]) a.
+Member (Error e) effs =&gt;
+e -&gt; Eff effs a
+</span><span class="hs-identifier hs-var">throwError</span></span><span> </span><span class="annot"><span class="annottext">(PABError -&gt; Eff effs (SomeBuiltinState a))
+-&gt; PABError -&gt; Eff effs (SomeBuiltinState a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Text -&gt; PABError
+</span><a href="Plutus.PAB.Types.html#ContractCommandError"><span class="hs-identifier hs-var">ContractCommandError</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;failed to update contract&quot;</span></span><span>
+</span><span id="line-220"></span><span>
+</span><span id="line-221"></span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#logNewMessages"><span class="hs-identifier hs-type">logNewMessages</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-222"></span><span>    </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621680274980"><span class="annot"><a href="#local-6989586621680274980"><span class="hs-identifier hs-type">b</span></a></span></span><span> </span><span id="local-6989586621680274977"><span class="annot"><a href="#local-6989586621680274977"><span class="hs-identifier hs-type">w</span></a></span></span><span> </span><span id="local-6989586621680274976"><span class="annot"><a href="#local-6989586621680274976"><span class="hs-identifier hs-type">s</span></a></span></span><span> </span><span id="local-6989586621680274978"><span class="annot"><a href="#local-6989586621680274978"><span class="hs-identifier hs-type">e</span></a></span></span><span> </span><span id="local-6989586621680274975"><span class="annot"><a href="#local-6989586621680274975"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span id="local-6989586621680274979"><span class="annot"><a href="#local-6989586621680274979"><span class="hs-identifier hs-type">effs</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-223"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Member</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">LogMsg</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Monitoring.PABLogMsg.html#PABMultiAgentMsg"><span class="hs-identifier hs-type">PABMultiAgentMsg</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#Builtin"><span class="hs-identifier hs-type">Builtin</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680274980"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621680274979"><span class="hs-identifier hs-type">effs</span></a></span><span>
+</span><span id="line-224"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><a href="#local-6989586621680274978"><span class="hs-identifier hs-type">e</span></a></span><span>
+</span><span id="line-225"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-226"></span><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ContractInstanceId</span></span><span>
+</span><span id="line-227"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ContractInstanceStateInternal</span></span><span> </span><span class="annot"><a href="#local-6989586621680274977"><span class="hs-identifier hs-type">w</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680274976"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680274978"><span class="hs-identifier hs-type">e</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680274975"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-228"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Eff</span></span><span> </span><span class="annot"><a href="#local-6989586621680274979"><span class="hs-identifier hs-type">effs</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-229"></span><span id="logNewMessages"><span class="annot"><span class="annottext">logNewMessages :: ContractInstanceId
+-&gt; ContractInstanceStateInternal w s e a -&gt; Eff effs ()
+</span><a href="Plutus.PAB.Effects.Contract.Builtin.html#logNewMessages"><span class="hs-identifier hs-var hs-var">logNewMessages</span></a></span></span><span>
+</span><span id="line-230"></span><span>    </span><span id="local-6989586621680274744"><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680274744"><span class="hs-identifier hs-var">i</span></a></span></span><span>
+</span><span id="line-231"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">ContractInstanceStateInternal</span></span><span>
+</span><span id="line-232"></span><span>        </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">cisiSuspState :: forall w (s :: Row *) e a.
+ContractInstanceStateInternal w s e a
+-&gt; SuspendedContract w e PABResp PABReq a
+</span><span class="hs-identifier hs-var">cisiSuspState</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">SuspendedContract</span></span><span>
+</span><span id="line-233"></span><span>            </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">_resumableResult :: forall w e i o a.
+SuspendedContract w e i o a -&gt; ResumableResult w e i o a
+</span><span class="hs-identifier hs-var">_resumableResult</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ResumableResult</span></span><span> </span><span class="hs-special">{</span><span> </span><span id="local-6989586621680274743"><span class="annot"><span class="annottext">Seq (LogMessage Value)
+_lastLogs :: Seq (LogMessage Value)
+_lastLogs :: forall w e i o a.
+ResumableResult w e i o a -&gt; Seq (LogMessage Value)
+</span><a href="#local-6989586621680274743"><span class="hs-identifier hs-var hs-var">_lastLogs</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680274742"><span class="annot"><span class="annottext">Either e (Maybe a)
+_finalState :: Either e (Maybe a)
+_finalState :: forall w e i o a. ResumableResult w e i o a -&gt; Either e (Maybe a)
+</span><a href="#local-6989586621680274742"><span class="hs-identifier hs-var hs-var">_finalState</span></a></span></span><span> </span><span class="hs-special">}</span><span class="hs-special">}</span><span>
+</span><span id="line-234"></span><span>        </span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-235"></span><span>    </span><span class="annot"><span class="annottext">(LogMessage Value -&gt; Eff effs ())
+-&gt; Seq (LogMessage Value) -&gt; Eff effs ()
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Foldable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f ()
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">traverse_</span></a></span><span>
+</span><span id="line-236"></span><span>        </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">forall (effs :: [* -&gt; *]) a.
+Member (LogMsg (PABMultiAgentMsg (Builtin b))) effs =&gt;
+LogMsg (PABMultiAgentMsg (Builtin b)) a -&gt; Eff effs a
+forall (eff :: * -&gt; *) (effs :: [* -&gt; *]) a.
+Member eff effs =&gt;
+eff a -&gt; Eff effs a
+</span><span class="hs-identifier hs-var">send</span></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">LogMsg</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Monitoring.PABLogMsg.html#PABMultiAgentMsg"><span class="hs-identifier hs-type">PABMultiAgentMsg</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#Builtin"><span class="hs-identifier hs-type">Builtin</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680274980"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-237"></span><span>        </span><span class="annot"><span class="annottext">(LogMsg (PABMultiAgentMsg (Builtin b)) () -&gt; Eff effs ())
+-&gt; (LogMessage Value -&gt; LogMsg (PABMultiAgentMsg (Builtin b)) ())
+-&gt; LogMessage Value
+-&gt; Eff effs ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">LogMessage (PABMultiAgentMsg (Builtin b))
+-&gt; LogMsg (PABMultiAgentMsg (Builtin b)) ()
+forall a. LogMessage a -&gt; LogMsg a ()
+</span><span class="hs-identifier hs-var">LMessage</span></span><span>
+</span><span id="line-238"></span><span>        </span><span class="annot"><span class="annottext">(LogMessage (PABMultiAgentMsg (Builtin b))
+ -&gt; LogMsg (PABMultiAgentMsg (Builtin b)) ())
+-&gt; (LogMessage Value -&gt; LogMessage (PABMultiAgentMsg (Builtin b)))
+-&gt; LogMessage Value
+-&gt; LogMsg (PABMultiAgentMsg (Builtin b)) ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Value -&gt; PABMultiAgentMsg (Builtin b))
+-&gt; LogMessage Value -&gt; LogMessage (PABMultiAgentMsg (Builtin b))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ContractInstanceMsg (Builtin b) -&gt; PABMultiAgentMsg (Builtin b)
+forall t. ContractInstanceMsg t -&gt; PABMultiAgentMsg t
+</span><a href="Plutus.PAB.Monitoring.PABLogMsg.html#ContractInstanceLog"><span class="hs-identifier hs-var">ContractInstanceLog</span></a></span><span> </span><span class="annot"><span class="annottext">(ContractInstanceMsg (Builtin b) -&gt; PABMultiAgentMsg (Builtin b))
+-&gt; (Value -&gt; ContractInstanceMsg (Builtin b))
+-&gt; Value
+-&gt; PABMultiAgentMsg (Builtin b)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ContractInstanceId -&gt; Value -&gt; ContractInstanceMsg (Builtin b)
+forall t. ContractInstanceId -&gt; Value -&gt; ContractInstanceMsg t
+</span><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#ContractLog"><span class="hs-identifier hs-var">ContractLog</span></a></span><span> </span><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680274744"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-239"></span><span>        </span><span class="hs-special">)</span><span>
+</span><span id="line-240"></span><span>        </span><span class="annot"><span class="annottext">Seq (LogMessage Value)
+</span><a href="#local-6989586621680274743"><span class="hs-identifier hs-var">_lastLogs</span></a></span><span>
+</span><span id="line-241"></span><span>
+</span><span id="line-242"></span><span>    </span><span class="hs-comment">-- If an error was thrown in a 'Contract', we log it.</span><span>
+</span><span id="line-243"></span><span>    </span><span class="annot"><span class="annottext">(e -&gt; Eff effs ())
+-&gt; (Maybe a -&gt; Eff effs ()) -&gt; Either e (Maybe a) -&gt; Eff effs ()
+forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">either</span></a></span><span>
+</span><span id="line-244"></span><span>        </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">forall (effs :: [* -&gt; *]).
+Member (LogMsg (PABMultiAgentMsg (Builtin b))) effs =&gt;
+PABMultiAgentMsg (Builtin b) -&gt; Eff effs ()
+forall a (effs :: [* -&gt; *]).
+Member (LogMsg a) effs =&gt;
+a -&gt; Eff effs ()
+</span><span class="hs-identifier hs-var">logError</span></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Monitoring.PABLogMsg.html#PABMultiAgentMsg"><span class="hs-identifier hs-type">PABMultiAgentMsg</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Effects.Contract.Builtin.html#Builtin"><span class="hs-identifier hs-type">Builtin</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680274980"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-245"></span><span>        </span><span class="annot"><span class="annottext">(PABMultiAgentMsg (Builtin b) -&gt; Eff effs ())
+-&gt; (e -&gt; PABMultiAgentMsg (Builtin b)) -&gt; e -&gt; Eff effs ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ContractInstanceMsg (Builtin b) -&gt; PABMultiAgentMsg (Builtin b)
+forall t. ContractInstanceMsg t -&gt; PABMultiAgentMsg t
+</span><a href="Plutus.PAB.Monitoring.PABLogMsg.html#ContractInstanceLog"><span class="hs-identifier hs-var">ContractInstanceLog</span></a></span><span>
+</span><span id="line-246"></span><span>        </span><span class="annot"><span class="annottext">(ContractInstanceMsg (Builtin b) -&gt; PABMultiAgentMsg (Builtin b))
+-&gt; (e -&gt; ContractInstanceMsg (Builtin b))
+-&gt; e
+-&gt; PABMultiAgentMsg (Builtin b)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ContractInstanceId -&gt; Value -&gt; ContractInstanceMsg (Builtin b)
+forall t. ContractInstanceId -&gt; Value -&gt; ContractInstanceMsg t
+</span><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#ContractLog"><span class="hs-identifier hs-var">ContractLog</span></a></span><span> </span><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680274744"><span class="hs-identifier hs-var">i</span></a></span><span>
+</span><span id="line-247"></span><span>        </span><span class="annot"><span class="annottext">(Value -&gt; ContractInstanceMsg (Builtin b))
+-&gt; (e -&gt; Value) -&gt; e -&gt; ContractInstanceMsg (Builtin b)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">e -&gt; Value
+forall a. ToJSON a =&gt; a -&gt; Value
+</span><span class="hs-identifier hs-var">JSON.toJSON</span></span><span>
+</span><span id="line-248"></span><span>        </span><span class="hs-special">)</span><span>
+</span><span id="line-249"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Eff effs () -&gt; Maybe a -&gt; Eff effs ()
+forall a b. a -&gt; b -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="annot"><span class="annottext">(Eff effs () -&gt; Maybe a -&gt; Eff effs ())
+-&gt; Eff effs () -&gt; Maybe a -&gt; Eff effs ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">() -&gt; Eff effs ()
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-250"></span><span>        </span><span class="annot"><span class="annottext">Either e (Maybe a)
+</span><a href="#local-6989586621680274742"><span class="hs-identifier hs-var">_finalState</span></a></span><span>
+</span><span id="line-251"></span><span>
+</span><span id="line-252"></span></pre></body></html>

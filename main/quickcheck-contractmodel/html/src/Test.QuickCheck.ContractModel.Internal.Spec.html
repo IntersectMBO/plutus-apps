@@ -1,0 +1,1099 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.QuickCheck.ContractModel.Internal.Spec</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Morph</span></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.State</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">State</span></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Reader</span></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Writer</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Writer</span></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Test.QuickCheck.StateModel</span></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Map</span></span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.Api</span></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Symbolics.html"><span class="hs-identifier">Test.QuickCheck.ContractModel.Internal.Symbolics</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Common.html"><span class="hs-identifier">Test.QuickCheck.ContractModel.Internal.Common</span></a></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Lens</span></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Data.Foldable</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Data.Coerce</span></a></span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-comment">-- | The `ModelState` models the state of the blockchain. It contains,</span><span>
+</span><span id="line-17"></span><span class="hs-comment">--</span><span>
+</span><span id="line-18"></span><span class="hs-comment">--   * the contract-specific state (`contractState`)</span><span>
+</span><span id="line-19"></span><span class="hs-comment">--   * the current slot (`currentSlot`)</span><span>
+</span><span id="line-20"></span><span class="hs-comment">--   * the wallet balances (`balances`)</span><span>
+</span><span id="line-21"></span><span class="hs-comment">--   * the amount that has been minted (`minted`)</span><span>
+</span><span id="line-22"></span><span id="local-6989586621679447483"><span id="local-6989586621679447484"></span></span><span class="hs-keyword">data</span><span> </span><span id="ModelState"><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#ModelState"><span class="hs-identifier hs-var">ModelState</span></a></span></span><span> </span><span id="local-6989586621679447703"><span class="annot"><a href="#local-6989586621679447703"><span class="hs-identifier hs-type">state</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ModelState"><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#ModelState"><span class="hs-identifier hs-var">ModelState</span></a></span></span><span>
+</span><span id="line-23"></span><span>        </span><span class="hs-special">{</span><span> </span><span id="_currentSlot"><span class="annot"><span class="annottext">ModelState state -&gt; SlotNo
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#_currentSlot"><span class="hs-identifier hs-var hs-var">_currentSlot</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">SlotNo</span></span><span>
+</span><span id="line-24"></span><span>        </span><span class="hs-special">,</span><span> </span><span id="_balanceChanges"><span class="annot"><span class="annottext">ModelState state -&gt; Map (AddressInEra Era) SymValue
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#_balanceChanges"><span class="hs-identifier hs-var hs-var">_balanceChanges</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">AddressInEra</span></span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Common.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Symbolics.html#SymValue"><span class="hs-identifier hs-type">SymValue</span></a></span><span>
+</span><span id="line-25"></span><span>        </span><span class="hs-special">,</span><span> </span><span id="_minted"><span class="annot"><span class="annottext">ModelState state -&gt; SymValue
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#_minted"><span class="hs-identifier hs-var hs-var">_minted</span></a></span></span><span>         </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Symbolics.html#SymValue"><span class="hs-identifier hs-type">SymValue</span></a></span><span>
+</span><span id="line-26"></span><span>        </span><span class="hs-special">,</span><span> </span><span id="_symbolics"><span class="annot"><span class="annottext">ModelState state -&gt; SymCollectionIndex
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#_symbolics"><span class="hs-identifier hs-var hs-var">_symbolics</span></a></span></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Symbolics.html#SymCollectionIndex"><span class="hs-identifier hs-type">SymCollectionIndex</span></a></span><span>
+</span><span id="line-27"></span><span>        </span><span class="hs-special">,</span><span> </span><span id="_assertions"><span class="annot"><span class="annottext">ModelState state -&gt; [(String, Bool)]
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#_assertions"><span class="hs-identifier hs-var hs-var">_assertions</span></a></span></span><span>     </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">Bool</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-28"></span><span>        </span><span class="hs-special">,</span><span> </span><span id="_assertionsOk"><span class="annot"><span class="annottext">ModelState state -&gt; Bool
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#_assertionsOk"><span class="hs-identifier hs-var hs-var">_assertionsOk</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-29"></span><span>        </span><span class="hs-special">,</span><span> </span><span id="_contractState"><span class="annot"><span class="annottext">ModelState state -&gt; state
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#_contractState"><span class="hs-identifier hs-var hs-var">_contractState</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679447703"><span class="hs-identifier hs-type">state</span></a></span><span>
+</span><span id="line-30"></span><span>        </span><span class="hs-special">}</span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679447469"><span id="local-6989586621679447471"><span id="local-6989586621679447473"><span class="annot"><span class="annottext">Int -&gt; ModelState state -&gt; ShowS
+[ModelState state] -&gt; ShowS
+ModelState state -&gt; String
+(Int -&gt; ModelState state -&gt; ShowS)
+-&gt; (ModelState state -&gt; String)
+-&gt; ([ModelState state] -&gt; ShowS)
+-&gt; Show (ModelState state)
+forall state. Show state =&gt; Int -&gt; ModelState state -&gt; ShowS
+forall state. Show state =&gt; [ModelState state] -&gt; ShowS
+forall state. Show state =&gt; ModelState state -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [ModelState state] -&gt; ShowS
+$cshowList :: forall state. Show state =&gt; [ModelState state] -&gt; ShowS
+show :: ModelState state -&gt; String
+$cshow :: forall state. Show state =&gt; ModelState state -&gt; String
+showsPrec :: Int -&gt; ModelState state -&gt; ShowS
+$cshowsPrec :: forall state. Show state =&gt; Int -&gt; ModelState state -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. ModelState state -&gt; Rep (ModelState state) x)
+-&gt; (forall x. Rep (ModelState state) x -&gt; ModelState state)
+-&gt; Generic (ModelState state)
+forall x. Rep (ModelState state) x -&gt; ModelState state
+forall x. ModelState state -&gt; Rep (ModelState state) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall state x. Rep (ModelState state) x -&gt; ModelState state
+forall state x. ModelState state -&gt; Rep (ModelState state) x
+$cto :: forall state x. Rep (ModelState state) x -&gt; ModelState state
+$cfrom :: forall state x. ModelState state -&gt; Rep (ModelState state) x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679447462"><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Functor</span></a></span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#ModelState"><span class="hs-identifier hs-type">ModelState</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-34"></span><span>  </span><span id="local-6989586621679447460"><span class="annot"><span class="annottext">fmap :: (a -&gt; b) -&gt; ModelState a -&gt; ModelState b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">fmap</span></a></span></span><span> </span><span id="local-6989586621679447459"><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679447459"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679447458"><span class="annot"><span class="annottext">ModelState a
+</span><a href="#local-6989586621679447458"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ModelState a
+</span><a href="#local-6989586621679447458"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">_contractState :: b
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#_contractState"><span class="hs-identifier hs-var">_contractState</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679447459"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ModelState a -&gt; a
+forall state. ModelState state -&gt; state
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#_contractState"><span class="hs-identifier hs-var hs-var">_contractState</span></a></span><span> </span><span class="annot"><span class="annottext">ModelState a
+</span><a href="#local-6989586621679447458"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- | The `Spec` monad is a state monad over the `ModelState` with reader and writer components to keep track</span><span>
+</span><span id="line-37"></span><span class="hs-comment">--   of newly created symbolic tokens. It is used exclusively by the `nextState` function to model the effects</span><span>
+</span><span id="line-38"></span><span class="hs-comment">--   of an action on the blockchain.</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">newtype</span><span> </span><span id="Spec"><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#Spec"><span class="hs-identifier hs-var">Spec</span></a></span></span><span> </span><span id="local-6989586621679447651"><span class="annot"><a href="#local-6989586621679447651"><span class="hs-identifier hs-type">state</span></a></span></span><span> </span><span id="local-6989586621679447650"><span class="annot"><a href="#local-6989586621679447650"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Spec"><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#Spec"><span class="hs-identifier hs-var">Spec</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="unSpec"><span class="annot"><span class="annottext">Spec state a
+-&gt; WriterT
+     SymCreationIndex
+     (ReaderT (Var SymIndex) (State (ModelState state)))
+     a
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#unSpec"><span class="hs-identifier hs-var hs-var">unSpec</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">WriterT</span></span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Symbolics.html#SymCreationIndex"><span class="hs-identifier hs-type">SymCreationIndex</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">ReaderT</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Var</span></span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Symbolics.html#SymIndex"><span class="hs-identifier hs-type">SymIndex</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">State</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#ModelState"><span class="hs-identifier hs-type">ModelState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447651"><span class="hs-identifier hs-type">state</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679447650"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-40"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679447452"><span id="local-6989586621679447454"><span class="annot"><span class="annottext">a -&gt; Spec state b -&gt; Spec state a
+(a -&gt; b) -&gt; Spec state a -&gt; Spec state b
+(forall a b. (a -&gt; b) -&gt; Spec state a -&gt; Spec state b)
+-&gt; (forall a b. a -&gt; Spec state b -&gt; Spec state a)
+-&gt; Functor (Spec state)
+forall a b. a -&gt; Spec state b -&gt; Spec state a
+forall a b. (a -&gt; b) -&gt; Spec state a -&gt; Spec state b
+forall state a b. a -&gt; Spec state b -&gt; Spec state a
+forall state a b. (a -&gt; b) -&gt; Spec state a -&gt; Spec state b
+forall (f :: * -&gt; *).
+(forall a b. (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b. a -&gt; f b -&gt; f a) -&gt; Functor f
+&lt;$ :: a -&gt; Spec state b -&gt; Spec state a
+$c&lt;$ :: forall state a b. a -&gt; Spec state b -&gt; Spec state a
+fmap :: (a -&gt; b) -&gt; Spec state a -&gt; Spec state b
+$cfmap :: forall state a b. (a -&gt; b) -&gt; Spec state a -&gt; Spec state b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Functor</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679447441"><span id="local-6989586621679447443"><span id="local-6989586621679447445"><span id="local-6989586621679447447"><span id="local-6989586621679447449"><span class="annot"><span class="annottext">Functor (Spec state)
+a -&gt; Spec state a
+Functor (Spec state)
+-&gt; (forall a. a -&gt; Spec state a)
+-&gt; (forall a b.
+    Spec state (a -&gt; b) -&gt; Spec state a -&gt; Spec state b)
+-&gt; (forall a b c.
+    (a -&gt; b -&gt; c) -&gt; Spec state a -&gt; Spec state b -&gt; Spec state c)
+-&gt; (forall a b. Spec state a -&gt; Spec state b -&gt; Spec state b)
+-&gt; (forall a b. Spec state a -&gt; Spec state b -&gt; Spec state a)
+-&gt; Applicative (Spec state)
+Spec state a -&gt; Spec state b -&gt; Spec state b
+Spec state a -&gt; Spec state b -&gt; Spec state a
+Spec state (a -&gt; b) -&gt; Spec state a -&gt; Spec state b
+(a -&gt; b -&gt; c) -&gt; Spec state a -&gt; Spec state b -&gt; Spec state c
+forall state. Functor (Spec state)
+forall a. a -&gt; Spec state a
+forall state a. a -&gt; Spec state a
+forall a b. Spec state a -&gt; Spec state b -&gt; Spec state a
+forall a b. Spec state a -&gt; Spec state b -&gt; Spec state b
+forall a b. Spec state (a -&gt; b) -&gt; Spec state a -&gt; Spec state b
+forall state a b. Spec state a -&gt; Spec state b -&gt; Spec state a
+forall state a b. Spec state a -&gt; Spec state b -&gt; Spec state b
+forall state a b.
+Spec state (a -&gt; b) -&gt; Spec state a -&gt; Spec state b
+forall a b c.
+(a -&gt; b -&gt; c) -&gt; Spec state a -&gt; Spec state b -&gt; Spec state c
+forall state a b c.
+(a -&gt; b -&gt; c) -&gt; Spec state a -&gt; Spec state b -&gt; Spec state c
+forall (f :: * -&gt; *).
+Functor f
+-&gt; (forall a. a -&gt; f a)
+-&gt; (forall a b. f (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b c. (a -&gt; b -&gt; c) -&gt; f a -&gt; f b -&gt; f c)
+-&gt; (forall a b. f a -&gt; f b -&gt; f b)
+-&gt; (forall a b. f a -&gt; f b -&gt; f a)
+-&gt; Applicative f
+&lt;* :: Spec state a -&gt; Spec state b -&gt; Spec state a
+$c&lt;* :: forall state a b. Spec state a -&gt; Spec state b -&gt; Spec state a
+*&gt; :: Spec state a -&gt; Spec state b -&gt; Spec state b
+$c*&gt; :: forall state a b. Spec state a -&gt; Spec state b -&gt; Spec state b
+liftA2 :: (a -&gt; b -&gt; c) -&gt; Spec state a -&gt; Spec state b -&gt; Spec state c
+$cliftA2 :: forall state a b c.
+(a -&gt; b -&gt; c) -&gt; Spec state a -&gt; Spec state b -&gt; Spec state c
+&lt;*&gt; :: Spec state (a -&gt; b) -&gt; Spec state a -&gt; Spec state b
+$c&lt;*&gt; :: forall state a b.
+Spec state (a -&gt; b) -&gt; Spec state a -&gt; Spec state b
+pure :: a -&gt; Spec state a
+$cpure :: forall state a. a -&gt; Spec state a
+$cp1Applicative :: forall state. Functor (Spec state)
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Applicative</span></a></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679447433"><span id="local-6989586621679447435"><span id="local-6989586621679447437"><span class="annot"><span class="annottext">Applicative (Spec state)
+a -&gt; Spec state a
+Applicative (Spec state)
+-&gt; (forall a b.
+    Spec state a -&gt; (a -&gt; Spec state b) -&gt; Spec state b)
+-&gt; (forall a b. Spec state a -&gt; Spec state b -&gt; Spec state b)
+-&gt; (forall a. a -&gt; Spec state a)
+-&gt; Monad (Spec state)
+Spec state a -&gt; (a -&gt; Spec state b) -&gt; Spec state b
+Spec state a -&gt; Spec state b -&gt; Spec state b
+forall state. Applicative (Spec state)
+forall a. a -&gt; Spec state a
+forall state a. a -&gt; Spec state a
+forall a b. Spec state a -&gt; Spec state b -&gt; Spec state b
+forall a b. Spec state a -&gt; (a -&gt; Spec state b) -&gt; Spec state b
+forall state a b. Spec state a -&gt; Spec state b -&gt; Spec state b
+forall state a b.
+Spec state a -&gt; (a -&gt; Spec state b) -&gt; Spec state b
+forall (m :: * -&gt; *).
+Applicative m
+-&gt; (forall a b. m a -&gt; (a -&gt; m b) -&gt; m b)
+-&gt; (forall a b. m a -&gt; m b -&gt; m b)
+-&gt; (forall a. a -&gt; m a)
+-&gt; Monad m
+return :: a -&gt; Spec state a
+$creturn :: forall state a. a -&gt; Spec state a
+&gt;&gt; :: Spec state a -&gt; Spec state b -&gt; Spec state b
+$c&gt;&gt; :: forall state a b. Spec state a -&gt; Spec state b -&gt; Spec state b
+&gt;&gt;= :: Spec state a -&gt; (a -&gt; Spec state b) -&gt; Spec state b
+$c&gt;&gt;= :: forall state a b.
+Spec state a -&gt; (a -&gt; Spec state b) -&gt; Spec state b
+$cp1Monad :: forall state. Applicative (Spec state)
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Monad</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#coerceSpec"><span class="hs-identifier hs-type">coerceSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679447430"><span class="annot"><a href="#local-6989586621679447430"><span class="hs-identifier hs-type">s</span></a></span></span><span> </span><span id="local-6989586621679447429"><span class="annot"><a href="#local-6989586621679447429"><span class="hs-identifier hs-type">s'</span></a></span></span><span> </span><span id="local-6989586621679447428"><span class="annot"><a href="#local-6989586621679447428"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">Coercible</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447430"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447429"><span class="hs-identifier hs-type">s'</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447430"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447428"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447429"><span class="hs-identifier hs-type">s'</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447428"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-43"></span><span id="coerceSpec"><span class="annot"><span class="annottext">coerceSpec :: Spec s a -&gt; Spec s' a
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#coerceSpec"><span class="hs-identifier hs-var hs-var">coerceSpec</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span> </span><span id="local-6989586621679447427"><span class="annot"><span class="annottext">WriterT
+  SymCreationIndex (ReaderT (Var SymIndex) (State (ModelState s))) a
+</span><a href="#local-6989586621679447427"><span class="hs-identifier hs-var">spec</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-44"></span><span>  </span><span id="local-6989586621679447426"><span class="annot"><span class="annottext">ModelState s'
+</span><a href="#local-6989586621679447426"><span class="hs-identifier hs-var">s'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">WriterT
+  SymCreationIndex
+  (ReaderT (Var SymIndex) (State (ModelState s')))
+  (ModelState s')
+-&gt; Spec s' (ModelState s')
+forall state a.
+WriterT
+  SymCreationIndex
+  (ReaderT (Var SymIndex) (State (ModelState state)))
+  a
+-&gt; Spec state a
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#Spec"><span class="hs-identifier hs-var">Spec</span></a></span><span> </span><span class="annot"><span class="annottext">(WriterT
+   SymCreationIndex
+   (ReaderT (Var SymIndex) (State (ModelState s')))
+   (ModelState s')
+ -&gt; Spec s' (ModelState s'))
+-&gt; WriterT
+     SymCreationIndex
+     (ReaderT (Var SymIndex) (State (ModelState s')))
+     (ModelState s')
+-&gt; Spec s' (ModelState s')
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">WriterT
+  SymCreationIndex
+  (ReaderT (Var SymIndex) (State (ModelState s')))
+  (ModelState s')
+forall s (m :: * -&gt; *). MonadState s m =&gt; m s
+</span><span class="hs-identifier hs-var">get</span></span><span>
+</span><span id="line-45"></span><span>  </span><span class="annot"><span class="annottext">WriterT
+  SymCreationIndex (ReaderT (Var SymIndex) (State (ModelState s'))) a
+-&gt; Spec s' a
+forall state a.
+WriterT
+  SymCreationIndex
+  (ReaderT (Var SymIndex) (State (ModelState state)))
+  a
+-&gt; Spec state a
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#Spec"><span class="hs-identifier hs-var">Spec</span></a></span><span> </span><span class="annot"><span class="annottext">(WriterT
+   SymCreationIndex (ReaderT (Var SymIndex) (State (ModelState s'))) a
+ -&gt; Spec s' a)
+-&gt; WriterT
+     SymCreationIndex (ReaderT (Var SymIndex) (State (ModelState s'))) a
+-&gt; Spec s' a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(forall a.
+ ReaderT (Var SymIndex) (State (ModelState s)) a
+ -&gt; ReaderT (Var SymIndex) (State (ModelState s')) a)
+-&gt; WriterT
+     SymCreationIndex (ReaderT (Var SymIndex) (State (ModelState s))) a
+-&gt; WriterT
+     SymCreationIndex (ReaderT (Var SymIndex) (State (ModelState s'))) a
+forall k (t :: (* -&gt; *) -&gt; k -&gt; *) (m :: * -&gt; *) (n :: * -&gt; *)
+       (b :: k).
+(MFunctor t, Monad m) =&gt;
+(forall a. m a -&gt; n a) -&gt; t m b -&gt; t n b
+</span><span class="hs-identifier hs-var">hoist</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(forall a. State (ModelState s) a -&gt; State (ModelState s') a)
+-&gt; ReaderT (Var SymIndex) (State (ModelState s)) a
+-&gt; ReaderT (Var SymIndex) (State (ModelState s')) a
+forall k (t :: (* -&gt; *) -&gt; k -&gt; *) (m :: * -&gt; *) (n :: * -&gt; *)
+       (b :: k).
+(MFunctor t, Monad m) =&gt;
+(forall a. m a -&gt; n a) -&gt; t m b -&gt; t n b
+</span><span class="hs-identifier hs-var">hoist</span></span><span> </span><span class="annot"><span class="annottext">((forall a. State (ModelState s) a -&gt; State (ModelState s') a)
+ -&gt; ReaderT (Var SymIndex) (State (ModelState s)) a
+ -&gt; ReaderT (Var SymIndex) (State (ModelState s')) a)
+-&gt; (forall a. State (ModelState s) a -&gt; State (ModelState s') a)
+-&gt; ReaderT (Var SymIndex) (State (ModelState s)) a
+-&gt; ReaderT (Var SymIndex) (State (ModelState s')) a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span> </span><span id="local-6989586621679447423"><span class="annot"><span class="annottext">State (ModelState s) a
+</span><a href="#local-6989586621679447423"><span class="hs-identifier hs-var">stateful</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">let</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679447422"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679447422"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679447421"><span class="annot"><span class="annottext">ModelState s
+</span><a href="#local-6989586621679447421"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">State (ModelState s) a -&gt; ModelState s -&gt; (a, ModelState s)
+forall s a. State s a -&gt; s -&gt; (a, s)
+</span><span class="hs-identifier hs-var">runState</span></span><span> </span><span class="annot"><span class="annottext">State (ModelState s) a
+</span><a href="#local-6989586621679447423"><span class="hs-identifier hs-var">stateful</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ModelState s' -&gt; ModelState s
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var">coerce</span></a></span><span> </span><span class="annot"><span class="annottext">ModelState s'
+</span><a href="#local-6989586621679447426"><span class="hs-identifier hs-var">s'</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">ModelState s' -&gt; State (ModelState s') ()
+forall s (m :: * -&gt; *). MonadState s m =&gt; s -&gt; m ()
+</span><span class="hs-identifier hs-var">put</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ModelState s -&gt; ModelState s'
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var">coerce</span></a></span><span> </span><span class="annot"><span class="annottext">ModelState s
+</span><a href="#local-6989586621679447421"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">State (ModelState s') ()
+-&gt; State (ModelState s') a -&gt; State (ModelState s') a
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; m b -&gt; m b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; State (ModelState s') a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679447422"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">WriterT
+  SymCreationIndex (ReaderT (Var SymIndex) (State (ModelState s))) a
+</span><a href="#local-6989586621679447427"><span class="hs-identifier hs-var">spec</span></a></span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span id="local-6989586621679447418"><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadState</span></span><span> </span><span class="annot"><a href="#local-6989586621679447418"><span class="hs-identifier hs-type">state</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447418"><span class="hs-identifier hs-type">state</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-48"></span><span>  </span><span id="local-6989586621679447412"><span class="annot"><span class="annottext">state :: (state -&gt; (a, state)) -&gt; Spec state a
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">state</span></span></span><span> </span><span id="local-6989586621679447410"><span class="annot"><span class="annottext">state -&gt; (a, state)
+</span><a href="#local-6989586621679447410"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">WriterT
+  SymCreationIndex
+  (ReaderT (Var SymIndex) (State (ModelState state)))
+  a
+-&gt; Spec state a
+forall state a.
+WriterT
+  SymCreationIndex
+  (ReaderT (Var SymIndex) (State (ModelState state)))
+  a
+-&gt; Spec state a
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#Spec"><span class="hs-identifier hs-var">Spec</span></a></span><span> </span><span class="annot"><span class="annottext">(WriterT
+   SymCreationIndex
+   (ReaderT (Var SymIndex) (State (ModelState state)))
+   a
+ -&gt; Spec state a)
+-&gt; WriterT
+     SymCreationIndex
+     (ReaderT (Var SymIndex) (State (ModelState state)))
+     a
+-&gt; Spec state a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(ModelState state -&gt; (a, ModelState state))
+-&gt; WriterT
+     SymCreationIndex
+     (ReaderT (Var SymIndex) (State (ModelState state)))
+     a
+forall s (m :: * -&gt; *) a. MonadState s m =&gt; (s -&gt; (a, s)) -&gt; m a
+</span><span class="hs-identifier hs-var">State.state</span></span><span> </span><span class="annot"><span class="annottext">((ModelState state -&gt; (a, ModelState state))
+ -&gt; WriterT
+      SymCreationIndex
+      (ReaderT (Var SymIndex) (State (ModelState state)))
+      a)
+-&gt; (ModelState state -&gt; (a, ModelState state))
+-&gt; WriterT
+     SymCreationIndex
+     (ReaderT (Var SymIndex) (State (ModelState state)))
+     a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679447409"><span class="annot"><span class="annottext">ModelState state
+</span><a href="#local-6989586621679447409"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">state -&gt; (a, state)
+</span><a href="#local-6989586621679447410"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ModelState state -&gt; state
+forall state. ModelState state -&gt; state
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#_contractState"><span class="hs-identifier hs-var hs-var">_contractState</span></a></span><span> </span><span class="annot"><span class="annottext">ModelState state
+</span><a href="#local-6989586621679447409"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-49"></span><span>      </span><span class="hs-special">(</span><span id="local-6989586621679447408"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679447408"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679447407"><span class="annot"><span class="annottext">state
+</span><a href="#local-6989586621679447407"><span class="hs-identifier hs-var">cs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679447408"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ModelState state
+</span><a href="#local-6989586621679447409"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">_contractState :: state
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#_contractState"><span class="hs-identifier hs-var">_contractState</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">state
+</span><a href="#local-6989586621679447407"><span class="hs-identifier hs-var">cs</span></a></span><span> </span><span class="hs-special">}</span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><span class="hs-pragma hs-type">state</span></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span>  </span><span id="local-6989586621679447406"><span class="annot"><span class="annottext">get :: Spec state state
+</span><a href="#local-6989586621679447406"><span class="hs-identifier hs-var hs-var hs-var hs-var">get</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">WriterT
+  SymCreationIndex
+  (ReaderT (Var SymIndex) (State (ModelState state)))
+  state
+-&gt; Spec state state
+forall state a.
+WriterT
+  SymCreationIndex
+  (ReaderT (Var SymIndex) (State (ModelState state)))
+  a
+-&gt; Spec state a
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#Spec"><span class="hs-identifier hs-var">Spec</span></a></span><span> </span><span class="annot"><span class="annottext">(WriterT
+   SymCreationIndex
+   (ReaderT (Var SymIndex) (State (ModelState state)))
+   state
+ -&gt; Spec state state)
+-&gt; WriterT
+     SymCreationIndex
+     (ReaderT (Var SymIndex) (State (ModelState state)))
+     state
+-&gt; Spec state state
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(ModelState state -&gt; state)
+-&gt; WriterT
+     SymCreationIndex
+     (ReaderT (Var SymIndex) (State (ModelState state)))
+     (ModelState state)
+-&gt; WriterT
+     SymCreationIndex
+     (ReaderT (Var SymIndex) (State (ModelState state)))
+     state
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">ModelState state -&gt; state
+forall state. ModelState state -&gt; state
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#_contractState"><span class="hs-identifier hs-var hs-var">_contractState</span></a></span><span> </span><span class="annot"><span class="annottext">WriterT
+  SymCreationIndex
+  (ReaderT (Var SymIndex) (State (ModelState state)))
+  (ModelState state)
+forall s (m :: * -&gt; *). MonadState s m =&gt; m s
+</span><span class="hs-identifier hs-var">State.get</span></span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><span class="hs-pragma hs-type">get</span></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span>  </span><span id="local-6989586621679447405"><span class="annot"><span class="annottext">put :: state -&gt; Spec state ()
+</span><a href="#local-6989586621679447405"><span class="hs-identifier hs-var hs-var hs-var hs-var">put</span></a></span></span><span> </span><span id="local-6989586621679447404"><span class="annot"><span class="annottext">state
+</span><a href="#local-6989586621679447404"><span class="hs-identifier hs-var">cs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">WriterT
+  SymCreationIndex
+  (ReaderT (Var SymIndex) (State (ModelState state)))
+  ()
+-&gt; Spec state ()
+forall state a.
+WriterT
+  SymCreationIndex
+  (ReaderT (Var SymIndex) (State (ModelState state)))
+  a
+-&gt; Spec state a
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#Spec"><span class="hs-identifier hs-var">Spec</span></a></span><span> </span><span class="annot"><span class="annottext">(WriterT
+   SymCreationIndex
+   (ReaderT (Var SymIndex) (State (ModelState state)))
+   ()
+ -&gt; Spec state ())
+-&gt; WriterT
+     SymCreationIndex
+     (ReaderT (Var SymIndex) (State (ModelState state)))
+     ()
+-&gt; Spec state ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(ModelState state -&gt; ModelState state)
+-&gt; WriterT
+     SymCreationIndex
+     (ReaderT (Var SymIndex) (State (ModelState state)))
+     ()
+forall s (m :: * -&gt; *). MonadState s m =&gt; (s -&gt; s) -&gt; m ()
+</span><span class="hs-identifier hs-var">State.modify'</span></span><span> </span><span class="annot"><span class="annottext">((ModelState state -&gt; ModelState state)
+ -&gt; WriterT
+      SymCreationIndex
+      (ReaderT (Var SymIndex) (State (ModelState state)))
+      ())
+-&gt; (ModelState state -&gt; ModelState state)
+-&gt; WriterT
+     SymCreationIndex
+     (ReaderT (Var SymIndex) (State (ModelState state)))
+     ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679447402"><span class="annot"><span class="annottext">ModelState state
+</span><a href="#local-6989586621679447402"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ModelState state
+</span><a href="#local-6989586621679447402"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">_contractState :: state
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#_contractState"><span class="hs-identifier hs-var">_contractState</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">state
+</span><a href="#local-6989586621679447404"><span class="hs-identifier hs-var">cs</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><span class="hs-pragma hs-type">put</span></span><span> </span><span class="hs-pragma">#-}</span></span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span class="hs-comment">-- | Lens for the contract-specific part of the model state.</span><span>
+</span><span id="line-59"></span><span id="contractState"><span id="local-6989586621679447552"><span id="local-6989586621679447703"><span class="hs-identifier">makeLensesFor</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="hs-string">&quot;_contractState&quot;</span><span class="hs-special">,</span><span>  </span><span class="hs-string">&quot;contractState&quot;</span><span class="hs-special">)</span><span class="hs-special">]</span><span>   </span><span class="hs-special">'</span><span class="hs-identifier">ModelState</span></span></span></span><span>
+</span><span id="line-60"></span><span id="currentSlotL"><span id="local-6989586621679447703"><span class="hs-identifier">makeLensesFor</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="hs-string">&quot;_currentSlot&quot;</span><span class="hs-special">,</span><span>    </span><span class="hs-string">&quot;currentSlotL&quot;</span><span class="hs-special">)</span><span class="hs-special">]</span><span>    </span><span class="hs-special">'</span><span class="hs-identifier">ModelState</span></span></span><span>
+</span><span id="line-61"></span><span class="hs-identifier">makeLensesFor</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="hs-string">&quot;_lastSlot&quot;</span><span class="hs-special">,</span><span>       </span><span class="hs-string">&quot;lastSlotL&quot;</span><span class="hs-special">)</span><span class="hs-special">]</span><span>       </span><span class="hs-special">'</span><span class="hs-identifier">ModelState</span><span>
+</span><span id="line-62"></span><span id="balanceChangesL"><span id="local-6989586621679447703"><span class="hs-identifier">makeLensesFor</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="hs-string">&quot;_balanceChanges&quot;</span><span class="hs-special">,</span><span> </span><span class="hs-string">&quot;balanceChangesL&quot;</span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="hs-special">'</span><span class="hs-identifier">ModelState</span></span></span><span>
+</span><span id="line-63"></span><span id="mintedL"><span id="local-6989586621679447703"><span class="hs-identifier">makeLensesFor</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="hs-string">&quot;_minted&quot;</span><span class="hs-special">,</span><span>         </span><span class="hs-string">&quot;mintedL&quot;</span><span class="hs-special">)</span><span class="hs-special">]</span><span>         </span><span class="hs-special">'</span><span class="hs-identifier">ModelState</span></span></span><span>
+</span><span id="line-64"></span><span id="assertions"><span id="local-6989586621679447703"><span class="hs-identifier">makeLensesFor</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="hs-string">&quot;_assertions&quot;</span><span class="hs-special">,</span><span> </span><span class="hs-string">&quot;assertions&quot;</span><span class="hs-special">)</span><span class="hs-special">]</span><span>          </span><span class="hs-special">'</span><span class="hs-identifier">ModelState</span></span></span><span>
+</span><span id="line-65"></span><span id="assertionsOk"><span id="local-6989586621679447703"><span class="hs-identifier">makeLensesFor</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="hs-string">&quot;_assertionsOk&quot;</span><span class="hs-special">,</span><span> </span><span class="hs-string">&quot;assertionsOk&quot;</span><span class="hs-special">)</span><span class="hs-special">]</span><span>      </span><span class="hs-special">'</span><span class="hs-identifier">ModelState</span></span></span><span>
+</span><span id="line-66"></span><span id="symbolics"><span id="local-6989586621679447703"><span class="hs-identifier">makeLensesFor</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="hs-string">&quot;_symbolics&quot;</span><span class="hs-special">,</span><span> </span><span class="hs-string">&quot;symbolics&quot;</span><span class="hs-special">)</span><span class="hs-special">]</span><span>            </span><span class="hs-special">'</span><span class="hs-identifier">ModelState</span></span></span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span class="hs-comment">-- | Get the current slot.</span><span>
+</span><span id="line-69"></span><span class="hs-comment">--</span><span>
+</span><span id="line-70"></span><span class="hs-comment">--   `Spec` monad update functions: `wait` and `waitUntil`.</span><span>
+</span><span id="line-71"></span><span id="local-6989586621679447394"><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#currentSlot"><span class="hs-identifier hs-type">currentSlot</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Getter</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#ModelState"><span class="hs-identifier hs-type">ModelState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447394"><span class="hs-identifier hs-type">state</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-identifier hs-type">SlotNo</span></span></span><span>
+</span><span id="line-72"></span><span id="currentSlot"><span class="annot"><span class="annottext">currentSlot :: (SlotNo -&gt; f SlotNo) -&gt; ModelState state -&gt; f (ModelState state)
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#currentSlot"><span class="hs-identifier hs-var hs-var">currentSlot</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(SlotNo -&gt; f SlotNo) -&gt; ModelState state -&gt; f (ModelState state)
+forall state. Lens' (ModelState state) SlotNo
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#currentSlotL"><span class="hs-identifier hs-var">currentSlotL</span></a></span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span class="hs-comment">-- | Get the current wallet balance changes. These are delta balances, so they start out at zero and</span><span>
+</span><span id="line-75"></span><span class="hs-comment">--   can be negative. The absolute balances used by the emulator can be set in the `CheckOptions`</span><span>
+</span><span id="line-76"></span><span class="hs-comment">--   argument to `propRunActionsWithOptions`.</span><span>
+</span><span id="line-77"></span><span class="hs-comment">--</span><span>
+</span><span id="line-78"></span><span class="hs-comment">--   `Spec` monad update functions: `withdraw`, `deposit`, `transfer`.</span><span>
+</span><span id="line-79"></span><span id="local-6989586621679447581"><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#balanceChanges"><span class="hs-identifier hs-type">balanceChanges</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Getter</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#ModelState"><span class="hs-identifier hs-type">ModelState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447581"><span class="hs-identifier hs-type">state</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">AddressInEra</span></span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Common.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Symbolics.html#SymValue"><span class="hs-identifier hs-type">SymValue</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-80"></span><span id="balanceChanges"><span class="annot"><span class="annottext">balanceChanges :: (Map (AddressInEra Era) SymValue
+ -&gt; f (Map (AddressInEra Era) SymValue))
+-&gt; ModelState state -&gt; f (ModelState state)
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#balanceChanges"><span class="hs-identifier hs-var hs-var">balanceChanges</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Map (AddressInEra Era) SymValue
+ -&gt; f (Map (AddressInEra Era) SymValue))
+-&gt; ModelState state -&gt; f (ModelState state)
+forall state.
+Lens' (ModelState state) (Map (AddressInEra Era) SymValue)
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#balanceChangesL"><span class="hs-identifier hs-var">balanceChangesL</span></a></span><span>
+</span><span id="line-81"></span><span>
+</span><span id="line-82"></span><span class="hs-comment">-- | Get the current balance change for a wallet. This is the delta balance, so it starts out at zero and</span><span>
+</span><span id="line-83"></span><span class="hs-comment">--   can be negative. The absolute balance used by the emulator can be set in the `CheckOptions`</span><span>
+</span><span id="line-84"></span><span class="hs-comment">--   argument to `propRunActionsWithOptions`.</span><span>
+</span><span id="line-85"></span><span class="hs-comment">--</span><span>
+</span><span id="line-86"></span><span class="hs-comment">--   `Spec` monad update functions: `withdraw`, `deposit`, `transfer`.</span><span>
+</span><span id="line-87"></span><span id="local-6989586621679447391"><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#balanceChange"><span class="hs-identifier hs-type">balanceChange</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">AddressInEra</span></span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Common.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">AddressInEra</span></span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Common.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Getter</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#ModelState"><span class="hs-identifier hs-type">ModelState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447391"><span class="hs-identifier hs-type">state</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Symbolics.html#SymValue"><span class="hs-identifier hs-type">SymValue</span></a></span></span><span>
+</span><span id="line-88"></span><span id="balanceChange"><span class="annot"><span class="annottext">balanceChange :: AddressInEra Era -&gt; Getter (ModelState state) SymValue
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#balanceChange"><span class="hs-identifier hs-var hs-var">balanceChange</span></a></span></span><span> </span><span id="local-6989586621679447389"><span class="annot"><span class="annottext">AddressInEra Era
+</span><a href="#local-6989586621679447389"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Map (AddressInEra Era) SymValue
+ -&gt; f (Map (AddressInEra Era) SymValue))
+-&gt; ModelState state -&gt; f (ModelState state)
+forall state.
+Lens' (ModelState state) (Map (AddressInEra Era) SymValue)
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#balanceChangesL"><span class="hs-identifier hs-var">balanceChangesL</span></a></span><span> </span><span class="annot"><span class="annottext">((Map (AddressInEra Era) SymValue
+  -&gt; f (Map (AddressInEra Era) SymValue))
+ -&gt; ModelState state -&gt; f (ModelState state))
+-&gt; ((SymValue -&gt; f SymValue)
+    -&gt; Map (AddressInEra Era) SymValue
+    -&gt; f (Map (AddressInEra Era) SymValue))
+-&gt; (SymValue -&gt; f SymValue)
+-&gt; ModelState state
+-&gt; f (ModelState state)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Index (Map (AddressInEra Era) SymValue)
+-&gt; Lens'
+     (Map (AddressInEra Era) SymValue)
+     (Maybe (IxValue (Map (AddressInEra Era) SymValue)))
+forall m. At m =&gt; Index m -&gt; Lens' m (Maybe (IxValue m))
+</span><span class="hs-identifier hs-var">at</span></span><span> </span><span class="annot"><span class="annottext">AddressInEra Era
+Index (Map (AddressInEra Era) SymValue)
+</span><a href="#local-6989586621679447389"><span class="hs-identifier hs-var">w</span></a></span><span> </span><span class="annot"><span class="annottext">((Maybe SymValue -&gt; f (Maybe SymValue))
+ -&gt; Map (AddressInEra Era) SymValue
+ -&gt; f (Map (AddressInEra Era) SymValue))
+-&gt; ((SymValue -&gt; f SymValue)
+    -&gt; Maybe SymValue -&gt; f (Maybe SymValue))
+-&gt; (SymValue -&gt; f SymValue)
+-&gt; Map (AddressInEra Era) SymValue
+-&gt; f (Map (AddressInEra Era) SymValue)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">SymValue -&gt; Iso' (Maybe SymValue) SymValue
+forall a. Eq a =&gt; a -&gt; Iso' (Maybe a) a
+</span><span class="hs-identifier hs-var">non</span></span><span> </span><span class="annot"><span class="annottext">SymValue
+forall a. Monoid a =&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-89"></span><span>
+</span><span id="line-90"></span><span class="hs-comment">-- | Get the amount of tokens minted so far. This is used to compute `lockedValue`.</span><span>
+</span><span id="line-91"></span><span class="hs-comment">--</span><span>
+</span><span id="line-92"></span><span class="hs-comment">--   `Spec` monad update functions: `mint` and `burn`.</span><span>
+</span><span id="line-93"></span><span id="local-6989586621679447585"><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#minted"><span class="hs-identifier hs-type">minted</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Getter</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#ModelState"><span class="hs-identifier hs-type">ModelState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447585"><span class="hs-identifier hs-type">state</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Symbolics.html#SymValue"><span class="hs-identifier hs-type">SymValue</span></a></span></span><span>
+</span><span id="line-94"></span><span id="minted"><span class="annot"><span class="annottext">minted :: (SymValue -&gt; f SymValue)
+-&gt; ModelState state -&gt; f (ModelState state)
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#minted"><span class="hs-identifier hs-var hs-var">minted</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(SymValue -&gt; f SymValue)
+-&gt; ModelState state -&gt; f (ModelState state)
+forall state. Lens' (ModelState state) SymValue
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#mintedL"><span class="hs-identifier hs-var">mintedL</span></a></span><span>
+</span><span id="line-95"></span><span>
+</span><span id="line-96"></span><span class="hs-comment">-- | How much value is currently locked by contracts. This computed by subtracting the wallet</span><span>
+</span><span id="line-97"></span><span class="hs-comment">--   `balances` from the `minted` value.</span><span>
+</span><span id="line-98"></span><span id="local-6989586621679447384"><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#lockedValue"><span class="hs-identifier hs-type">lockedValue</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#ModelState"><span class="hs-identifier hs-type">ModelState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447384"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Symbolics.html#SymValue"><span class="hs-identifier hs-type">SymValue</span></a></span></span><span>
+</span><span id="line-99"></span><span id="lockedValue"><span class="annot"><span class="annottext">lockedValue :: ModelState s -&gt; SymValue
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#lockedValue"><span class="hs-identifier hs-var hs-var">lockedValue</span></a></span></span><span> </span><span id="local-6989586621679447382"><span class="annot"><span class="annottext">ModelState s
+</span><a href="#local-6989586621679447382"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ModelState s
+</span><a href="#local-6989586621679447382"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">ModelState s
+-&gt; Getting SymValue (ModelState s) SymValue -&gt; SymValue
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting SymValue (ModelState s) SymValue
+forall state. Getter (ModelState state) SymValue
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#minted"><span class="hs-identifier hs-var">minted</span></a></span><span> </span><span class="annot"><span class="annottext">SymValue -&gt; SymValue -&gt; SymValue
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">SymValue -&gt; SymValue
+</span><a href="Test.QuickCheck.ContractModel.Internal.Symbolics.html#inv"><span class="hs-identifier hs-var">inv</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map (AddressInEra Era) SymValue -&gt; SymValue
+forall (t :: * -&gt; *) m. (Foldable t, Monoid m) =&gt; t m -&gt; m
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fold</span></a></span><span> </span><span class="annot"><span class="annottext">(Map (AddressInEra Era) SymValue -&gt; SymValue)
+-&gt; Map (AddressInEra Era) SymValue -&gt; SymValue
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ModelState s
+</span><a href="#local-6989586621679447382"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">ModelState s
+-&gt; Getting
+     (Map (AddressInEra Era) SymValue)
+     (ModelState s)
+     (Map (AddressInEra Era) SymValue)
+-&gt; Map (AddressInEra Era) SymValue
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting
+  (Map (AddressInEra Era) SymValue)
+  (ModelState s)
+  (Map (AddressInEra Era) SymValue)
+forall state.
+Getter (ModelState state) (Map (AddressInEra Era) SymValue)
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#balanceChanges"><span class="hs-identifier hs-var">balanceChanges</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-100"></span><span>
+</span><span id="line-101"></span><span class="hs-comment">-- | Modify a field in the `ModelState`</span><span>
+</span><span id="line-102"></span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#modState"><span class="hs-identifier hs-type">modState</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679447504"><span class="annot"><a href="#local-6989586621679447504"><span class="hs-identifier hs-type">state</span></a></span></span><span> </span><span id="local-6989586621679447503"><span class="annot"><a href="#local-6989586621679447503"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Setter'</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#ModelState"><span class="hs-identifier hs-type">ModelState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447504"><span class="hs-identifier hs-type">state</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679447503"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679447503"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679447503"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447504"><span class="hs-identifier hs-type">state</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-103"></span><span id="modState"><span class="annot"><span class="annottext">modState :: Setter' (ModelState state) a -&gt; (a -&gt; a) -&gt; Spec state ()
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#modState"><span class="hs-identifier hs-var hs-var">modState</span></a></span></span><span> </span><span id="local-6989586621679447377"><span class="annot"><span class="annottext">Setter' (ModelState state) a
+</span><a href="#local-6989586621679447377"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span id="local-6989586621679447376"><span class="annot"><span class="annottext">a -&gt; a
+</span><a href="#local-6989586621679447376"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">WriterT
+  SymCreationIndex
+  (ReaderT (Var SymIndex) (State (ModelState state)))
+  ()
+-&gt; Spec state ()
+forall state a.
+WriterT
+  SymCreationIndex
+  (ReaderT (Var SymIndex) (State (ModelState state)))
+  a
+-&gt; Spec state a
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#Spec"><span class="hs-identifier hs-var">Spec</span></a></span><span> </span><span class="annot"><span class="annottext">(WriterT
+   SymCreationIndex
+   (ReaderT (Var SymIndex) (State (ModelState state)))
+   ()
+ -&gt; Spec state ())
+-&gt; WriterT
+     SymCreationIndex
+     (ReaderT (Var SymIndex) (State (ModelState state)))
+     ()
+-&gt; Spec state ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(ModelState state -&gt; ModelState state)
+-&gt; WriterT
+     SymCreationIndex
+     (ReaderT (Var SymIndex) (State (ModelState state)))
+     ()
+forall s (m :: * -&gt; *). MonadState s m =&gt; (s -&gt; s) -&gt; m ()
+</span><span class="hs-identifier hs-var">State.modify</span></span><span> </span><span class="annot"><span class="annottext">((ModelState state -&gt; ModelState state)
+ -&gt; WriterT
+      SymCreationIndex
+      (ReaderT (Var SymIndex) (State (ModelState state)))
+      ())
+-&gt; (ModelState state -&gt; ModelState state)
+-&gt; WriterT
+     SymCreationIndex
+     (ReaderT (Var SymIndex) (State (ModelState state)))
+     ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ASetter (ModelState state) (ModelState state) a a
+-&gt; (a -&gt; a) -&gt; ModelState state -&gt; ModelState state
+forall s t a b. ASetter s t a b -&gt; (a -&gt; b) -&gt; s -&gt; t
+</span><span class="hs-identifier hs-var">over</span></span><span> </span><span class="annot"><span class="annottext">ASetter (ModelState state) (ModelState state) a a
+Setter' (ModelState state) a
+</span><a href="#local-6989586621679447377"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a
+</span><a href="#local-6989586621679447376"><span class="hs-identifier hs-var">f</span></a></span><span>
+</span><span id="line-104"></span><span>
+</span><span id="line-105"></span><span class="hs-comment">-- | Monads with read access to the model state: the `Spec` monad used in `nextState`, and the `DL`</span><span>
+</span><span id="line-106"></span><span class="hs-comment">--   monad used to construct test scenarios.</span><span>
+</span><span id="line-107"></span><span class="hs-keyword">class</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447567"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span id="GetModelState"><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#GetModelState"><span class="hs-identifier hs-var">GetModelState</span></a></span></span><span> </span><span id="local-6989586621679447567"><span class="annot"><a href="#local-6989586621679447567"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-108"></span><span>    </span><span class="hs-comment">-- | The contract state type of the monad. For both `Spec` and `DL` this is simply the @state@</span><span>
+</span><span id="line-109"></span><span>    </span><span class="hs-comment">--   parameter of the respective monad.</span><span>
+</span><span id="line-110"></span><span>    </span><span class="hs-keyword">type</span><span> </span><span id="StateType"><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#StateType"><span class="hs-identifier hs-var">StateType</span></a></span></span><span> </span><span id="local-6989586621679447567"><span class="annot"><a href="#local-6989586621679447567"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-operator">*</span></span><span>
+</span><span id="line-111"></span><span>
+</span><span id="line-112"></span><span>    </span><span class="hs-comment">-- | Get the current model state.</span><span>
+</span><span id="line-113"></span><span>    </span><span id="getModelState"><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#getModelState"><span class="hs-identifier hs-type">getModelState</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679447567"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#ModelState"><span class="hs-identifier hs-type">ModelState</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#StateType"><span class="hs-identifier hs-type">StateType</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447567"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-114"></span><span>
+</span><span id="line-115"></span><span class="hs-comment">-- | Get the contract state part of the model state.</span><span>
+</span><span id="line-116"></span><span id="local-6989586621679447372"><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#getContractState"><span class="hs-identifier hs-type">getContractState</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#GetModelState"><span class="hs-identifier hs-type">GetModelState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447372"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679447372"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#StateType"><span class="hs-identifier hs-type">StateType</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447372"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-117"></span><span id="getContractState"><span class="annot"><span class="annottext">getContractState :: m (StateType m)
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#getContractState"><span class="hs-identifier hs-var hs-var">getContractState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ModelState (StateType m) -&gt; StateType m
+forall state. ModelState state -&gt; state
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#_contractState"><span class="hs-identifier hs-var hs-var">_contractState</span></a></span><span> </span><span class="annot"><span class="annottext">(ModelState (StateType m) -&gt; StateType m)
+-&gt; m (ModelState (StateType m)) -&gt; m (StateType m)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m (ModelState (StateType m))
+forall (m :: * -&gt; *).
+GetModelState m =&gt;
+m (ModelState (StateType m))
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#getModelState"><span class="hs-identifier hs-var">getModelState</span></a></span><span>
+</span><span id="line-118"></span><span>
+</span><span id="line-119"></span><span class="hs-comment">-- | Get a component of the model state.</span><span>
+</span><span id="line-120"></span><span id="local-6989586621679447560"><span id="local-6989586621679447561"><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#askModelState"><span class="hs-identifier hs-type">askModelState</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#GetModelState"><span class="hs-identifier hs-type">GetModelState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447561"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#ModelState"><span class="hs-identifier hs-type">ModelState</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#StateType"><span class="hs-identifier hs-type">StateType</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447561"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679447560"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679447561"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447560"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-121"></span><span id="askModelState"><span class="annot"><span class="annottext">askModelState :: (ModelState (StateType m) -&gt; a) -&gt; m a
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#askModelState"><span class="hs-identifier hs-var hs-var">askModelState</span></a></span></span><span> </span><span id="local-6989586621679447368"><span class="annot"><span class="annottext">ModelState (StateType m) -&gt; a
+</span><a href="#local-6989586621679447368"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ModelState (StateType m) -&gt; a
+</span><a href="#local-6989586621679447368"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">(ModelState (StateType m) -&gt; a)
+-&gt; m (ModelState (StateType m)) -&gt; m a
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m (ModelState (StateType m))
+forall (m :: * -&gt; *).
+GetModelState m =&gt;
+m (ModelState (StateType m))
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#getModelState"><span class="hs-identifier hs-var">getModelState</span></a></span><span>
+</span><span id="line-122"></span><span>
+</span><span id="line-123"></span><span class="hs-comment">-- | Get a component of the contract state.</span><span>
+</span><span id="line-124"></span><span id="local-6989586621679447366"><span id="local-6989586621679447367"><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#askContractState"><span class="hs-identifier hs-type">askContractState</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#GetModelState"><span class="hs-identifier hs-type">GetModelState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447367"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#StateType"><span class="hs-identifier hs-type">StateType</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447367"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679447366"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679447367"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447366"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-125"></span><span id="askContractState"><span class="annot"><span class="annottext">askContractState :: (StateType m -&gt; a) -&gt; m a
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#askContractState"><span class="hs-identifier hs-var hs-var">askContractState</span></a></span></span><span> </span><span id="local-6989586621679447364"><span class="annot"><span class="annottext">StateType m -&gt; a
+</span><a href="#local-6989586621679447364"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(ModelState (StateType m) -&gt; a) -&gt; m a
+forall (m :: * -&gt; *) a.
+GetModelState m =&gt;
+(ModelState (StateType m) -&gt; a) -&gt; m a
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#askModelState"><span class="hs-identifier hs-var">askModelState</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">StateType m -&gt; a
+</span><a href="#local-6989586621679447364"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">(StateType m -&gt; a)
+-&gt; (ModelState (StateType m) -&gt; StateType m)
+-&gt; ModelState (StateType m)
+-&gt; a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ModelState (StateType m) -&gt; StateType m
+forall state. ModelState state -&gt; state
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#_contractState"><span class="hs-identifier hs-var hs-var">_contractState</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-126"></span><span>
+</span><span id="line-127"></span><span class="hs-comment">-- | Get a component of the model state using a lens.</span><span>
+</span><span id="line-128"></span><span id="local-6989586621679447554"><span id="local-6989586621679447555"><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#viewModelState"><span class="hs-identifier hs-type">viewModelState</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#GetModelState"><span class="hs-identifier hs-type">GetModelState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447555"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Getting</span></span><span> </span><span class="annot"><a href="#local-6989586621679447554"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#ModelState"><span class="hs-identifier hs-type">ModelState</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#StateType"><span class="hs-identifier hs-type">StateType</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447555"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679447554"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679447555"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447554"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-129"></span><span id="viewModelState"><span class="annot"><span class="annottext">viewModelState :: Getting a (ModelState (StateType m)) a -&gt; m a
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#viewModelState"><span class="hs-identifier hs-var hs-var">viewModelState</span></a></span></span><span> </span><span id="local-6989586621679447362"><span class="annot"><span class="annottext">Getting a (ModelState (StateType m)) a
+</span><a href="#local-6989586621679447362"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(ModelState (StateType m) -&gt; a) -&gt; m a
+forall (m :: * -&gt; *) a.
+GetModelState m =&gt;
+(ModelState (StateType m) -&gt; a) -&gt; m a
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#askModelState"><span class="hs-identifier hs-var">askModelState</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ModelState (StateType m)
+-&gt; Getting a (ModelState (StateType m)) a -&gt; a
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting a (ModelState (StateType m)) a
+</span><a href="#local-6989586621679447362"><span class="hs-identifier hs-var">l</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-130"></span><span>
+</span><span id="line-131"></span><span class="hs-comment">-- | Get a component of the contract state using a lens.</span><span>
+</span><span id="line-132"></span><span id="local-6989586621679447360"><span id="local-6989586621679447361"><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#viewContractState"><span class="hs-identifier hs-type">viewContractState</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#GetModelState"><span class="hs-identifier hs-type">GetModelState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447361"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Getting</span></span><span> </span><span class="annot"><a href="#local-6989586621679447360"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#StateType"><span class="hs-identifier hs-type">StateType</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447361"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679447360"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679447361"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447360"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-133"></span><span id="viewContractState"><span class="annot"><span class="annottext">viewContractState :: Getting a (StateType m) a -&gt; m a
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#viewContractState"><span class="hs-identifier hs-var hs-var">viewContractState</span></a></span></span><span> </span><span id="local-6989586621679447358"><span class="annot"><span class="annottext">Getting a (StateType m) a
+</span><a href="#local-6989586621679447358"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Getting a (ModelState (StateType m)) a -&gt; m a
+forall (m :: * -&gt; *) a.
+GetModelState m =&gt;
+Getting a (ModelState (StateType m)) a -&gt; m a
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#viewModelState"><span class="hs-identifier hs-var">viewModelState</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(StateType m -&gt; Const a (StateType m))
+-&gt; ModelState (StateType m) -&gt; Const a (ModelState (StateType m))
+forall state state.
+Lens (ModelState state) (ModelState state) state state
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#contractState"><span class="hs-identifier hs-var">contractState</span></a></span><span> </span><span class="annot"><span class="annottext">((StateType m -&gt; Const a (StateType m))
+ -&gt; ModelState (StateType m) -&gt; Const a (ModelState (StateType m)))
+-&gt; Getting a (StateType m) a
+-&gt; Getting a (ModelState (StateType m)) a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting a (StateType m) a
+</span><a href="#local-6989586621679447358"><span class="hs-identifier hs-var">l</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-134"></span><span>
+</span><span id="line-135"></span><span id="local-6989586621679447357"><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#GetModelState"><span class="hs-identifier hs-type">GetModelState</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447357"><span class="hs-identifier hs-type">state</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-136"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="StateType"><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#StateType"><span class="hs-identifier hs-var">StateType</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447357"><span class="hs-identifier hs-type">state</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679447357"><span class="hs-identifier hs-type">state</span></a></span><span>
+</span><span id="line-137"></span><span>  </span><span id="local-6989586621679447353"><span class="annot"><span class="annottext">getModelState :: Spec state (ModelState (StateType (Spec state)))
+</span><a href="#local-6989586621679447353"><span class="hs-identifier hs-var hs-var hs-var hs-var">getModelState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">WriterT
+  SymCreationIndex
+  (ReaderT (Var SymIndex) (State (ModelState state)))
+  (ModelState state)
+-&gt; Spec state (ModelState state)
+forall state a.
+WriterT
+  SymCreationIndex
+  (ReaderT (Var SymIndex) (State (ModelState state)))
+  a
+-&gt; Spec state a
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#Spec"><span class="hs-identifier hs-var">Spec</span></a></span><span> </span><span class="annot"><span class="annottext">WriterT
+  SymCreationIndex
+  (ReaderT (Var SymIndex) (State (ModelState state)))
+  (ModelState state)
+forall s (m :: * -&gt; *). MonadState s m =&gt; m s
+</span><span class="hs-identifier hs-var">State.get</span></span></span><span>
+</span><span id="line-138"></span><span>
+</span><span id="line-139"></span><span id="local-6989586621679447352"><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#runSpec"><span class="hs-identifier hs-type">runSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447352"><span class="hs-identifier hs-type">state</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-140"></span><span>        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Var</span></span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Symbolics.html#SymIndex"><span class="hs-identifier hs-type">SymIndex</span></a></span><span>
+</span><span id="line-141"></span><span>        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#ModelState"><span class="hs-identifier hs-type">ModelState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447352"><span class="hs-identifier hs-type">state</span></a></span><span>
+</span><span id="line-142"></span><span>        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#ModelState"><span class="hs-identifier hs-type">ModelState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447352"><span class="hs-identifier hs-type">state</span></a></span></span><span>
+</span><span id="line-143"></span><span id="runSpec"><span class="annot"><span class="annottext">runSpec :: Spec state ()
+-&gt; Var SymIndex -&gt; ModelState state -&gt; ModelState state
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#runSpec"><span class="hs-identifier hs-var hs-var">runSpec</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span> </span><span id="local-6989586621679447350"><span class="annot"><span class="annottext">WriterT
+  SymCreationIndex
+  (ReaderT (Var SymIndex) (State (ModelState state)))
+  ()
+</span><a href="#local-6989586621679447350"><span class="hs-identifier hs-var">spec</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679447349"><span class="annot"><span class="annottext">Var SymIndex
+</span><a href="#local-6989586621679447349"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679447348"><span class="annot"><span class="annottext">ModelState state
+</span><a href="#local-6989586621679447348"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(State (ModelState state) ()
+ -&gt; ModelState state -&gt; ModelState state)
+-&gt; ModelState state
+-&gt; State (ModelState state) ()
+-&gt; ModelState state
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="annot"><span class="annottext">State (ModelState state) () -&gt; ModelState state -&gt; ModelState state
+forall s a. State s a -&gt; s -&gt; s
+</span><span class="hs-identifier hs-var">State.execState</span></span><span> </span><span class="annot"><span class="annottext">ModelState state
+</span><a href="#local-6989586621679447348"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">(State (ModelState state) () -&gt; ModelState state)
+-&gt; State (ModelState state) () -&gt; ModelState state
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-144"></span><span>  </span><span id="local-6989586621679447345"><span class="annot"><span class="annottext">SymCreationIndex
+</span><a href="#local-6989586621679447345"><span class="hs-identifier hs-var">ci</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ReaderT (Var SymIndex) (State (ModelState state)) SymCreationIndex
+-&gt; Var SymIndex -&gt; State (ModelState state) SymCreationIndex
+forall r (m :: * -&gt; *) a. ReaderT r m a -&gt; r -&gt; m a
+</span><span class="hs-identifier hs-var hs-var">runReaderT</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">((), SymCreationIndex) -&gt; SymCreationIndex
+forall a b. (a, b) -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">snd</span></a></span><span> </span><span class="annot"><span class="annottext">(((), SymCreationIndex) -&gt; SymCreationIndex)
+-&gt; ReaderT
+     (Var SymIndex) (State (ModelState state)) ((), SymCreationIndex)
+-&gt; ReaderT
+     (Var SymIndex) (State (ModelState state)) SymCreationIndex
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">WriterT
+  SymCreationIndex
+  (ReaderT (Var SymIndex) (State (ModelState state)))
+  ()
+-&gt; ReaderT
+     (Var SymIndex) (State (ModelState state)) ((), SymCreationIndex)
+forall w (m :: * -&gt; *) a. WriterT w m a -&gt; m (a, w)
+</span><span class="hs-identifier hs-var hs-var">Writer.runWriterT</span></span><span> </span><span class="annot"><span class="annottext">WriterT
+  SymCreationIndex
+  (ReaderT (Var SymIndex) (State (ModelState state)))
+  ()
+</span><a href="#local-6989586621679447350"><span class="hs-identifier hs-var">spec</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Var SymIndex
+</span><a href="#local-6989586621679447349"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-145"></span><span>  </span><span class="annot"><span class="annottext">(SymCollectionIndex -&gt; Identity SymCollectionIndex)
+-&gt; ModelState state -&gt; Identity (ModelState state)
+forall state. Lens' (ModelState state) SymCollectionIndex
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#symbolics"><span class="hs-identifier hs-var">symbolics</span></a></span><span> </span><span class="annot"><span class="annottext">((SymCollectionIndex -&gt; Identity SymCollectionIndex)
+ -&gt; ModelState state -&gt; Identity (ModelState state))
+-&gt; SymCollectionIndex -&gt; State (ModelState state) ()
+forall s (m :: * -&gt; *) a.
+(MonadState s m, Semigroup a) =&gt;
+ASetter' s a -&gt; a -&gt; m ()
+</span><span class="hs-operator hs-var">&lt;&gt;=</span></span><span> </span><span class="annot"><span class="annottext">SymCreationIndex -&gt; Var SymIndex -&gt; SymCollectionIndex
+</span><a href="Test.QuickCheck.ContractModel.Internal.Symbolics.html#makeSymCollection"><span class="hs-identifier hs-var">makeSymCollection</span></a></span><span> </span><span class="annot"><span class="annottext">SymCreationIndex
+</span><a href="#local-6989586621679447345"><span class="hs-identifier hs-var">ci</span></a></span><span> </span><span class="annot"><span class="annottext">Var SymIndex
+</span><a href="#local-6989586621679447349"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-146"></span><span>
+</span><span id="line-147"></span><span id="local-6989586621679447340"><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#symbolicsCreatedBy"><span class="hs-identifier hs-type">symbolicsCreatedBy</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447340"><span class="hs-identifier hs-type">state</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-148"></span><span>                   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Var</span></span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Symbolics.html#SymIndex"><span class="hs-identifier hs-type">SymIndex</span></a></span><span>
+</span><span id="line-149"></span><span>                   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#ModelState"><span class="hs-identifier hs-type">ModelState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447340"><span class="hs-identifier hs-type">state</span></a></span><span>
+</span><span id="line-150"></span><span>                   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Symbolics.html#SymCreationIndex"><span class="hs-identifier hs-type">SymCreationIndex</span></a></span></span><span>
+</span><span id="line-151"></span><span id="symbolicsCreatedBy"><span class="annot"><span class="annottext">symbolicsCreatedBy :: Spec state ()
+-&gt; Var SymIndex -&gt; ModelState state -&gt; SymCreationIndex
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#symbolicsCreatedBy"><span class="hs-identifier hs-var hs-var">symbolicsCreatedBy</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span> </span><span id="local-6989586621679447338"><span class="annot"><span class="annottext">WriterT
+  SymCreationIndex
+  (ReaderT (Var SymIndex) (State (ModelState state)))
+  ()
+</span><a href="#local-6989586621679447338"><span class="hs-identifier hs-var">spec</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679447337"><span class="annot"><span class="annottext">Var SymIndex
+</span><a href="#local-6989586621679447337"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679447336"><span class="annot"><span class="annottext">ModelState state
+</span><a href="#local-6989586621679447336"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(State (ModelState state) SymCreationIndex
+ -&gt; ModelState state -&gt; SymCreationIndex)
+-&gt; ModelState state
+-&gt; State (ModelState state) SymCreationIndex
+-&gt; SymCreationIndex
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="annot"><span class="annottext">State (ModelState state) SymCreationIndex
+-&gt; ModelState state -&gt; SymCreationIndex
+forall s a. State s a -&gt; s -&gt; a
+</span><span class="hs-identifier hs-var">State.evalState</span></span><span> </span><span class="annot"><span class="annottext">ModelState state
+</span><a href="#local-6989586621679447336"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">(State (ModelState state) SymCreationIndex -&gt; SymCreationIndex)
+-&gt; State (ModelState state) SymCreationIndex -&gt; SymCreationIndex
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ReaderT (Var SymIndex) (State (ModelState state)) SymCreationIndex
+-&gt; Var SymIndex -&gt; State (ModelState state) SymCreationIndex
+forall r (m :: * -&gt; *) a. ReaderT r m a -&gt; r -&gt; m a
+</span><span class="hs-identifier hs-var hs-var">runReaderT</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">((), SymCreationIndex) -&gt; SymCreationIndex
+forall a b. (a, b) -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">snd</span></a></span><span> </span><span class="annot"><span class="annottext">(((), SymCreationIndex) -&gt; SymCreationIndex)
+-&gt; ReaderT
+     (Var SymIndex) (State (ModelState state)) ((), SymCreationIndex)
+-&gt; ReaderT
+     (Var SymIndex) (State (ModelState state)) SymCreationIndex
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">WriterT
+  SymCreationIndex
+  (ReaderT (Var SymIndex) (State (ModelState state)))
+  ()
+-&gt; ReaderT
+     (Var SymIndex) (State (ModelState state)) ((), SymCreationIndex)
+forall w (m :: * -&gt; *) a. WriterT w m a -&gt; m (a, w)
+</span><span class="hs-identifier hs-var hs-var">Writer.runWriterT</span></span><span> </span><span class="annot"><span class="annottext">WriterT
+  SymCreationIndex
+  (ReaderT (Var SymIndex) (State (ModelState state)))
+  ()
+</span><a href="#local-6989586621679447338"><span class="hs-identifier hs-var">spec</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Var SymIndex
+</span><a href="#local-6989586621679447337"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-152"></span><span>
+</span><span id="line-153"></span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#createSymbolic"><span class="hs-identifier hs-type">createSymbolic</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679447512"><span class="annot"><a href="#local-6989586621679447512"><span class="hs-identifier hs-type">t</span></a></span></span><span> </span><span id="local-6989586621679447511"><span class="annot"><a href="#local-6989586621679447511"><span class="hs-identifier hs-type">state</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Symbolics.html#HasSymbolicRep"><span class="hs-identifier hs-type">HasSymbolicRep</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447512"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447511"><span class="hs-identifier hs-type">state</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Symbolics.html#Symbolic"><span class="hs-identifier hs-type">Symbolic</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447512"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-154"></span><span id="createSymbolic"><span class="annot"><span class="annottext">createSymbolic :: String -&gt; Spec state (Symbolic t)
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#createSymbolic"><span class="hs-identifier hs-var hs-var">createSymbolic</span></a></span></span><span> </span><span id="local-6989586621679447333"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679447333"><span class="hs-identifier hs-var">key</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">WriterT
+  SymCreationIndex
+  (ReaderT (Var SymIndex) (State (ModelState state)))
+  (Symbolic t)
+-&gt; Spec state (Symbolic t)
+forall state a.
+WriterT
+  SymCreationIndex
+  (ReaderT (Var SymIndex) (State (ModelState state)))
+  a
+-&gt; Spec state a
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#Spec"><span class="hs-identifier hs-var">Spec</span></a></span><span> </span><span class="annot"><span class="annottext">(WriterT
+   SymCreationIndex
+   (ReaderT (Var SymIndex) (State (ModelState state)))
+   (Symbolic t)
+ -&gt; Spec state (Symbolic t))
+-&gt; WriterT
+     SymCreationIndex
+     (ReaderT (Var SymIndex) (State (ModelState state)))
+     (Symbolic t)
+-&gt; Spec state (Symbolic t)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-155"></span><span>  </span><span id="local-6989586621679447332"><span class="annot"><span class="annottext">Var SymIndex
+</span><a href="#local-6989586621679447332"><span class="hs-identifier hs-var">var</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">WriterT
+  SymCreationIndex
+  (ReaderT (Var SymIndex) (State (ModelState state)))
+  (Var SymIndex)
+forall r (m :: * -&gt; *). MonadReader r m =&gt; m r
+</span><span class="hs-identifier hs-var">ask</span></span><span>
+</span><span id="line-156"></span><span>  </span><span class="annot"><span class="annottext">SymCreationIndex
+-&gt; WriterT
+     SymCreationIndex
+     (ReaderT (Var SymIndex) (State (ModelState state)))
+     ()
+forall w (m :: * -&gt; *). MonadWriter w m =&gt; w -&gt; m ()
+</span><span class="hs-identifier hs-var">Writer.tell</span></span><span> </span><span class="annot"><span class="annottext">(SymCreationIndex
+ -&gt; WriterT
+      SymCreationIndex
+      (ReaderT (Var SymIndex) (State (ModelState state)))
+      ())
+-&gt; SymCreationIndex
+-&gt; WriterT
+     SymCreationIndex
+     (ReaderT (Var SymIndex) (State (ModelState state)))
+     ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; SymCreationIndex
+forall t. HasSymbolicRep t =&gt; String -&gt; SymCreationIndex
+</span><a href="Test.QuickCheck.ContractModel.Internal.Symbolics.html#createIndex"><span class="hs-identifier hs-var">createIndex</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679447512"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679447333"><span class="hs-identifier hs-var">key</span></a></span><span>
+</span><span id="line-157"></span><span>  </span><span class="annot"><span class="annottext">Symbolic t
+-&gt; WriterT
+     SymCreationIndex
+     (ReaderT (Var SymIndex) (State (ModelState state)))
+     (Symbolic t)
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(Symbolic t
+ -&gt; WriterT
+      SymCreationIndex
+      (ReaderT (Var SymIndex) (State (ModelState state)))
+      (Symbolic t))
+-&gt; Symbolic t
+-&gt; WriterT
+     SymCreationIndex
+     (ReaderT (Var SymIndex) (State (ModelState state)))
+     (Symbolic t)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Var SymIndex -&gt; String -&gt; Symbolic t
+forall k (t :: k). Var SymIndex -&gt; String -&gt; Symbolic t
+</span><a href="Test.QuickCheck.ContractModel.Internal.Symbolics.html#Symbolic"><span class="hs-identifier hs-var">Symbolic</span></a></span><span> </span><span class="annot"><span class="annottext">Var SymIndex
+</span><a href="#local-6989586621679447332"><span class="hs-identifier hs-var">var</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679447333"><span class="hs-identifier hs-var">key</span></a></span><span>
+</span><span id="line-158"></span><span>
+</span><span id="line-159"></span><span class="hs-comment">-- | Create a new symbolic token in `nextState` - must have a</span><span>
+</span><span id="line-160"></span><span class="hs-comment">-- corresponding `registerToken` call in `perform`</span><span>
+</span><span id="line-161"></span><span id="local-6989586621679447327"><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#createToken"><span class="hs-identifier hs-type">createToken</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447327"><span class="hs-identifier hs-type">state</span></a></span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Symbolics.html#SymToken"><span class="hs-identifier hs-type">SymToken</span></a></span></span><span>
+</span><span id="line-162"></span><span id="createToken"><span class="annot"><span class="annottext">createToken :: String -&gt; Spec state SymToken
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#createToken"><span class="hs-identifier hs-var hs-var">createToken</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Spec state SymToken
+forall t state.
+HasSymbolicRep t =&gt;
+String -&gt; Spec state (Symbolic t)
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#createSymbolic"><span class="hs-identifier hs-var">createSymbolic</span></a></span><span>
+</span><span id="line-163"></span><span>
+</span><span id="line-164"></span><span class="hs-comment">-- | Create a new symbolic TxOut in `nextState` - must have a</span><span>
+</span><span id="line-165"></span><span class="hs-comment">-- corresponding `registerTxOut` call in `perform`</span><span>
+</span><span id="line-166"></span><span id="local-6989586621679447325"><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#createTxOut"><span class="hs-identifier hs-type">createTxOut</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447325"><span class="hs-identifier hs-type">state</span></a></span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Symbolics.html#SymTxOut"><span class="hs-identifier hs-type">SymTxOut</span></a></span></span><span>
+</span><span id="line-167"></span><span id="createTxOut"><span class="annot"><span class="annottext">createTxOut :: String -&gt; Spec state SymTxOut
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#createTxOut"><span class="hs-identifier hs-var hs-var">createTxOut</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Spec state SymTxOut
+forall t state.
+HasSymbolicRep t =&gt;
+String -&gt; Spec state (Symbolic t)
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#createSymbolic"><span class="hs-identifier hs-var">createSymbolic</span></a></span><span>
+</span><span id="line-168"></span><span>
+</span><span id="line-169"></span><span class="hs-comment">-- | Create a new symbolic TxIn in `nextState` - must have a</span><span>
+</span><span id="line-170"></span><span class="hs-comment">-- corresponding `registerTxIn` call in `perform`</span><span>
+</span><span id="line-171"></span><span id="local-6989586621679447323"><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#createTxIn"><span class="hs-identifier hs-type">createTxIn</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447323"><span class="hs-identifier hs-type">state</span></a></span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Symbolics.html#SymTxIn"><span class="hs-identifier hs-type">SymTxIn</span></a></span></span><span>
+</span><span id="line-172"></span><span id="createTxIn"><span class="annot"><span class="annottext">createTxIn :: String -&gt; Spec state SymTxIn
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#createTxIn"><span class="hs-identifier hs-var hs-var">createTxIn</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Spec state SymTxIn
+forall t state.
+HasSymbolicRep t =&gt;
+String -&gt; Spec state (Symbolic t)
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#createSymbolic"><span class="hs-identifier hs-var">createSymbolic</span></a></span><span>
+</span><span id="line-173"></span><span>
+</span><span id="line-174"></span><span class="hs-comment">-- | Mint tokens. Minted tokens start out as `lockedValue` (i.e. owned by the contract) and can be</span><span>
+</span><span id="line-175"></span><span class="hs-comment">--   transferred to wallets using `deposit`.</span><span>
+</span><span id="line-176"></span><span id="local-6989586621679447497"><span id="local-6989586621679447498"><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#mint"><span class="hs-identifier hs-type">mint</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Symbolics.html#SymValueLike"><span class="hs-identifier hs-type">SymValueLike</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447498"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679447498"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447497"><span class="hs-identifier hs-type">state</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-177"></span><span id="mint"><span class="annot"><span class="annottext">mint :: v -&gt; Spec state ()
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#mint"><span class="hs-identifier hs-var hs-var">mint</span></a></span></span><span> </span><span id="local-6989586621679447320"><span class="annot"><span class="annottext">v
+</span><a href="#local-6989586621679447320"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Setter' (ModelState state) SymValue
+-&gt; (SymValue -&gt; SymValue) -&gt; Spec state ()
+forall state a.
+Setter' (ModelState state) a -&gt; (a -&gt; a) -&gt; Spec state ()
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#modState"><span class="hs-identifier hs-var">modState</span></a></span><span> </span><span class="annot"><span class="annottext">forall state. Lens' (ModelState state) SymValue
+Setter' (ModelState state) SymValue
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#mintedL"><span class="hs-identifier hs-var">mintedL</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SymValue -&gt; SymValue -&gt; SymValue
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">v -&gt; SymValue
+forall v. SymValueLike v =&gt; v -&gt; SymValue
+</span><a href="Test.QuickCheck.ContractModel.Internal.Symbolics.html#toSymValue"><span class="hs-identifier hs-var">toSymValue</span></a></span><span> </span><span class="annot"><span class="annottext">v
+</span><a href="#local-6989586621679447320"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-178"></span><span>
+</span><span id="line-179"></span><span class="hs-comment">-- | Burn tokens. Equivalent to @`mint` . `inv`@.</span><span>
+</span><span id="line-180"></span><span id="local-6989586621679447317"><span id="local-6989586621679447318"><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#burn"><span class="hs-identifier hs-type">burn</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Symbolics.html#SymValueLike"><span class="hs-identifier hs-type">SymValueLike</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447318"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679447318"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447317"><span class="hs-identifier hs-type">state</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-181"></span><span id="burn"><span class="annot"><span class="annottext">burn :: v -&gt; Spec state ()
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#burn"><span class="hs-identifier hs-var hs-var">burn</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SymValue -&gt; Spec state ()
+forall v state. SymValueLike v =&gt; v -&gt; Spec state ()
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#mint"><span class="hs-identifier hs-var">mint</span></a></span><span> </span><span class="annot"><span class="annottext">(SymValue -&gt; Spec state ())
+-&gt; (v -&gt; SymValue) -&gt; v -&gt; Spec state ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">SymValue -&gt; SymValue
+</span><a href="Test.QuickCheck.ContractModel.Internal.Symbolics.html#inv"><span class="hs-identifier hs-var">inv</span></a></span><span> </span><span class="annot"><span class="annottext">(SymValue -&gt; SymValue) -&gt; (v -&gt; SymValue) -&gt; v -&gt; SymValue
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">v -&gt; SymValue
+forall v. SymValueLike v =&gt; v -&gt; SymValue
+</span><a href="Test.QuickCheck.ContractModel.Internal.Symbolics.html#toSymValue"><span class="hs-identifier hs-var">toSymValue</span></a></span><span>
+</span><span id="line-182"></span><span>
+</span><span id="line-183"></span><span class="hs-comment">-- | Add tokens to the `balanceChange` of an address. The added tokens are subtracted from the</span><span>
+</span><span id="line-184"></span><span class="hs-comment">--   `lockedValue` of tokens held by contracts.</span><span>
+</span><span id="line-185"></span><span id="local-6989586621679447488"><span id="local-6989586621679447489"><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#deposit"><span class="hs-identifier hs-type">deposit</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Symbolics.html#SymValueLike"><span class="hs-identifier hs-type">SymValueLike</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447489"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">AddressInEra</span></span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Common.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679447489"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447488"><span class="hs-identifier hs-type">state</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-186"></span><span id="deposit"><span class="annot"><span class="annottext">deposit :: AddressInEra Era -&gt; v -&gt; Spec state ()
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#deposit"><span class="hs-identifier hs-var hs-var">deposit</span></a></span></span><span> </span><span id="local-6989586621679447314"><span class="annot"><span class="annottext">AddressInEra Era
+</span><a href="#local-6989586621679447314"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span id="local-6989586621679447313"><span class="annot"><span class="annottext">v
+</span><a href="#local-6989586621679447313"><span class="hs-identifier hs-var">val</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Setter' (ModelState state) (Maybe SymValue)
+-&gt; (Maybe SymValue -&gt; Maybe SymValue) -&gt; Spec state ()
+forall state a.
+Setter' (ModelState state) a -&gt; (a -&gt; a) -&gt; Spec state ()
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#modState"><span class="hs-identifier hs-var">modState</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Map (AddressInEra Era) SymValue
+ -&gt; f (Map (AddressInEra Era) SymValue))
+-&gt; ModelState state -&gt; f (ModelState state)
+forall state.
+Lens' (ModelState state) (Map (AddressInEra Era) SymValue)
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#balanceChangesL"><span class="hs-identifier hs-var">balanceChangesL</span></a></span><span> </span><span class="annot"><span class="annottext">((Map (AddressInEra Era) SymValue
+  -&gt; f (Map (AddressInEra Era) SymValue))
+ -&gt; ModelState state -&gt; f (ModelState state))
+-&gt; ((Maybe SymValue -&gt; f (Maybe SymValue))
+    -&gt; Map (AddressInEra Era) SymValue
+    -&gt; f (Map (AddressInEra Era) SymValue))
+-&gt; (Maybe SymValue -&gt; f (Maybe SymValue))
+-&gt; ModelState state
+-&gt; f (ModelState state)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Index (Map (AddressInEra Era) SymValue)
+-&gt; Lens'
+     (Map (AddressInEra Era) SymValue)
+     (Maybe (IxValue (Map (AddressInEra Era) SymValue)))
+forall m. At m =&gt; Index m -&gt; Lens' m (Maybe (IxValue m))
+</span><span class="hs-identifier hs-var">at</span></span><span> </span><span class="annot"><span class="annottext">AddressInEra Era
+Index (Map (AddressInEra Era) SymValue)
+</span><a href="#local-6989586621679447314"><span class="hs-identifier hs-var">w</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SymValue -&gt; Maybe SymValue
+forall a. a -&gt; Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(SymValue -&gt; Maybe SymValue)
+-&gt; (Maybe SymValue -&gt; SymValue) -&gt; Maybe SymValue -&gt; Maybe SymValue
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">SymValue -&gt; (SymValue -&gt; SymValue) -&gt; Maybe SymValue -&gt; SymValue
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">v -&gt; SymValue
+forall v. SymValueLike v =&gt; v -&gt; SymValue
+</span><a href="Test.QuickCheck.ContractModel.Internal.Symbolics.html#toSymValue"><span class="hs-identifier hs-var">toSymValue</span></a></span><span> </span><span class="annot"><span class="annottext">v
+</span><a href="#local-6989586621679447313"><span class="hs-identifier hs-var">val</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SymValue -&gt; SymValue -&gt; SymValue
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">v -&gt; SymValue
+forall v. SymValueLike v =&gt; v -&gt; SymValue
+</span><a href="Test.QuickCheck.ContractModel.Internal.Symbolics.html#toSymValue"><span class="hs-identifier hs-var">toSymValue</span></a></span><span> </span><span class="annot"><span class="annottext">v
+</span><a href="#local-6989586621679447313"><span class="hs-identifier hs-var">val</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-187"></span><span>
+</span><span id="line-188"></span><span class="hs-comment">-- | Withdraw tokens from an address. The withdrawn tokens are added to the `lockedValue` of tokens</span><span>
+</span><span id="line-189"></span><span class="hs-comment">--   held by contracts.</span><span>
+</span><span id="line-190"></span><span id="local-6989586621679447310"><span id="local-6989586621679447311"><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#withdraw"><span class="hs-identifier hs-type">withdraw</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Symbolics.html#SymValueLike"><span class="hs-identifier hs-type">SymValueLike</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447311"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">AddressInEra</span></span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Common.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679447311"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447310"><span class="hs-identifier hs-type">state</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-191"></span><span id="withdraw"><span class="annot"><span class="annottext">withdraw :: AddressInEra Era -&gt; v -&gt; Spec state ()
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#withdraw"><span class="hs-identifier hs-var hs-var">withdraw</span></a></span></span><span> </span><span id="local-6989586621679447308"><span class="annot"><span class="annottext">AddressInEra Era
+</span><a href="#local-6989586621679447308"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span id="local-6989586621679447307"><span class="annot"><span class="annottext">v
+</span><a href="#local-6989586621679447307"><span class="hs-identifier hs-var">val</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AddressInEra Era -&gt; SymValue -&gt; Spec state ()
+forall v state.
+SymValueLike v =&gt;
+AddressInEra Era -&gt; v -&gt; Spec state ()
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#deposit"><span class="hs-identifier hs-var">deposit</span></a></span><span> </span><span class="annot"><span class="annottext">AddressInEra Era
+</span><a href="#local-6989586621679447308"><span class="hs-identifier hs-var">w</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SymValue -&gt; SymValue
+</span><a href="Test.QuickCheck.ContractModel.Internal.Symbolics.html#inv"><span class="hs-identifier hs-var">inv</span></a></span><span> </span><span class="annot"><span class="annottext">(SymValue -&gt; SymValue) -&gt; (v -&gt; SymValue) -&gt; v -&gt; SymValue
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">v -&gt; SymValue
+forall v. SymValueLike v =&gt; v -&gt; SymValue
+</span><a href="Test.QuickCheck.ContractModel.Internal.Symbolics.html#toSymValue"><span class="hs-identifier hs-var">toSymValue</span></a></span><span> </span><span class="annot"><span class="annottext">(v -&gt; SymValue) -&gt; v -&gt; SymValue
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">v
+</span><a href="#local-6989586621679447307"><span class="hs-identifier hs-var">val</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-192"></span><span>
+</span><span id="line-193"></span><span class="hs-comment">-- | Transfer tokens between wallets, updating their `balances`.</span><span>
+</span><span id="line-194"></span><span id="local-6989586621679447305"><span id="local-6989586621679447306"><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#transfer"><span class="hs-identifier hs-type">transfer</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Symbolics.html#SymValueLike"><span class="hs-identifier hs-type">SymValueLike</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447306"><span class="hs-identifier hs-type">v</span></a></span><span>
+</span><span id="line-195"></span><span>         </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">AddressInEra</span></span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Common.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span>  </span><span class="hs-comment">-- ^ Transfer from this address</span><span>
+</span><span id="line-196"></span><span>         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">AddressInEra</span></span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Common.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span>  </span><span class="hs-comment">-- ^ to this address</span><span>
+</span><span id="line-197"></span><span>         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679447306"><span class="hs-identifier hs-type">v</span></a></span><span>                 </span><span class="hs-comment">-- ^ this much value</span><span>
+</span><span id="line-198"></span><span>         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447305"><span class="hs-identifier hs-type">state</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-199"></span><span id="transfer"><span class="annot"><span class="annottext">transfer :: AddressInEra Era -&gt; AddressInEra Era -&gt; v -&gt; Spec state ()
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#transfer"><span class="hs-identifier hs-var hs-var">transfer</span></a></span></span><span> </span><span id="local-6989586621679447303"><span class="annot"><span class="annottext">AddressInEra Era
+</span><a href="#local-6989586621679447303"><span class="hs-identifier hs-var">fromW</span></a></span></span><span> </span><span id="local-6989586621679447302"><span class="annot"><span class="annottext">AddressInEra Era
+</span><a href="#local-6989586621679447302"><span class="hs-identifier hs-var">toW</span></a></span></span><span> </span><span id="local-6989586621679447301"><span class="annot"><span class="annottext">v
+</span><a href="#local-6989586621679447301"><span class="hs-identifier hs-var">val</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AddressInEra Era -&gt; v -&gt; Spec state ()
+forall v state.
+SymValueLike v =&gt;
+AddressInEra Era -&gt; v -&gt; Spec state ()
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#withdraw"><span class="hs-identifier hs-var">withdraw</span></a></span><span> </span><span class="annot"><span class="annottext">AddressInEra Era
+</span><a href="#local-6989586621679447303"><span class="hs-identifier hs-var">fromW</span></a></span><span> </span><span class="annot"><span class="annottext">v
+</span><a href="#local-6989586621679447301"><span class="hs-identifier hs-var">val</span></a></span><span> </span><span class="annot"><span class="annottext">Spec state () -&gt; Spec state () -&gt; Spec state ()
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; m b -&gt; m b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">AddressInEra Era -&gt; v -&gt; Spec state ()
+forall v state.
+SymValueLike v =&gt;
+AddressInEra Era -&gt; v -&gt; Spec state ()
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#deposit"><span class="hs-identifier hs-var">deposit</span></a></span><span> </span><span class="annot"><span class="annottext">AddressInEra Era
+</span><a href="#local-6989586621679447302"><span class="hs-identifier hs-var">toW</span></a></span><span> </span><span class="annot"><span class="annottext">v
+</span><a href="#local-6989586621679447301"><span class="hs-identifier hs-var">val</span></a></span><span>
+</span><span id="line-200"></span><span>
+</span><span id="line-201"></span><span class="hs-comment">-- | Assert that a particular predicate holds at a point in the specification</span><span>
+</span><span id="line-202"></span><span id="local-6989586621679447300"><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#assertSpec"><span class="hs-identifier hs-type">assertSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">Bool</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447300"><span class="hs-identifier hs-type">state</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-203"></span><span id="assertSpec"><span class="annot"><span class="annottext">assertSpec :: String -&gt; Bool -&gt; Spec state ()
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#assertSpec"><span class="hs-identifier hs-var hs-var">assertSpec</span></a></span></span><span> </span><span id="local-6989586621679447298"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679447298"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span id="local-6989586621679447297"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679447297"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-204"></span><span>  </span><span class="annot"><span class="annottext">Setter' (ModelState state) [(String, Bool)]
+-&gt; ([(String, Bool)] -&gt; [(String, Bool)]) -&gt; Spec state ()
+forall state a.
+Setter' (ModelState state) a -&gt; (a -&gt; a) -&gt; Spec state ()
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#modState"><span class="hs-identifier hs-var">modState</span></a></span><span> </span><span class="annot"><span class="annottext">forall state. Lens' (ModelState state) [(String, Bool)]
+Setter' (ModelState state) [(String, Bool)]
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#assertions"><span class="hs-identifier hs-var">assertions</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679447298"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679447297"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">)</span><span class="annot"><span class="annottext">(String, Bool) -&gt; [(String, Bool)] -&gt; [(String, Bool)]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-glyph hs-var">:</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-205"></span><span>  </span><span class="annot"><span class="annottext">Setter' (ModelState state) Bool -&gt; (Bool -&gt; Bool) -&gt; Spec state ()
+forall state a.
+Setter' (ModelState state) a -&gt; (a -&gt; a) -&gt; Spec state ()
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#modState"><span class="hs-identifier hs-var">modState</span></a></span><span> </span><span class="annot"><span class="annottext">forall state. Lens' (ModelState state) Bool
+Setter' (ModelState state) Bool
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#assertionsOk"><span class="hs-identifier hs-var">assertionsOk</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-operator hs-var">&amp;&amp;</span></a></span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679447297"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-206"></span></pre></body></html>

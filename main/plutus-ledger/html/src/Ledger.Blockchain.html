@@ -1,0 +1,186 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DerivingVia       #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts  #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE ViewPatterns      #-}</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Ledger.Blockchain</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-8"></span><span>    </span><span class="annot"><a href="Ledger.Index.Internal.html#OnChainTx"><span class="hs-identifier">OnChainTx</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>    </span><span class="annot"><a href="Ledger.Blockchain.html#Block"><span class="hs-identifier">Block</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>    </span><span class="annot"><a href="Ledger.Blockchain.html#BlockId"><span class="hs-identifier">BlockId</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>    </span><span class="annot"><a href="Ledger.Blockchain.html#Blockchain"><span class="hs-identifier">Blockchain</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>    </span><span class="annot"><span class="hs-identifier">Context</span></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>    </span><span class="annot"><a href="Ledger.Index.Internal.html#eitherTx"><span class="hs-identifier">eitherTx</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>    </span><span class="annot"><a href="Ledger.Index.Internal.html#unOnChain"><span class="hs-identifier">unOnChain</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>    </span><span class="annot"><a href="Ledger.Blockchain.html#onChainTxIsValid"><span class="hs-identifier">onChainTxIsValid</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>    </span><span class="annot"><a href="Ledger.Blockchain.html#consumableInputs"><span class="hs-identifier">consumableInputs</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>    </span><span class="annot"><a href="Ledger.Blockchain.html#outputsProduced"><span class="hs-identifier">outputsProduced</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">FromJSON</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ToJSON</span></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">JSON</span></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Data.Aeson.Extras.html"><span class="hs-identifier">Data.Aeson.Extras</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">JSON</span></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteString</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BS</span></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Data.Either</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">fromRight</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Map</span></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Text</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Text</span></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Text.Encoding</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">decodeUtf8'</span></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Prettyprinter</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Pretty</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.Api</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">C</span></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Ledger.Index.Internal.html"><span class="hs-identifier">Ledger.Index.Internal</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Index.Internal.html#OnChainTx"><span class="hs-identifier">OnChainTx</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Index.Internal.html#eitherTx"><span class="hs-identifier">eitherTx</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Index.Internal.html#unOnChain"><span class="hs-identifier">unOnChain</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Ledger.Tx.html"><span class="hs-identifier">Ledger.Tx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier">TxOut</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Tx.html#getCardanoTxCollateralInputs"><span class="hs-identifier">getCardanoTxCollateralInputs</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Tx.html#getCardanoTxInputs"><span class="hs-identifier">getCardanoTxInputs</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Tx.html#getCardanoTxProducedOutputs"><span class="hs-identifier">getCardanoTxProducedOutputs</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span>                  </span><span class="annot"><a href="Ledger.Tx.html#getCardanoTxProducedReturnCollateral"><span class="hs-identifier">getCardanoTxProducedReturnCollateral</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.V1.Ledger.Scripts</span></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- | Block identifier (usually a hash)</span><span>
+</span><span id="line-38"></span><span id="local-6989586621679744081"><span id="local-6989586621679744082"></span></span><span class="hs-keyword">newtype</span><span> </span><span id="BlockId"><span class="annot"><a href="Ledger.Blockchain.html#BlockId"><span class="hs-identifier hs-var">BlockId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="BlockId"><span class="annot"><a href="Ledger.Blockchain.html#BlockId"><span class="hs-identifier hs-var">BlockId</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="getBlockId"><span class="annot"><span class="annottext">BlockId -&gt; ByteString
+</span><a href="Ledger.Blockchain.html#getBlockId"><span class="hs-identifier hs-var hs-var">getBlockId</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">BS.ByteString</span></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-39"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679744075"><span id="local-6989586621679744077"><span class="annot"><span class="annottext">BlockId -&gt; BlockId -&gt; Bool
+(BlockId -&gt; BlockId -&gt; Bool)
+-&gt; (BlockId -&gt; BlockId -&gt; Bool) -&gt; Eq BlockId
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: BlockId -&gt; BlockId -&gt; Bool
+$c/= :: BlockId -&gt; BlockId -&gt; Bool
+== :: BlockId -&gt; BlockId -&gt; Bool
+$c== :: BlockId -&gt; BlockId -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679744059"><span id="local-6989586621679744061"><span id="local-6989586621679744063"><span id="local-6989586621679744065"><span id="local-6989586621679744067"><span id="local-6989586621679744069"><span id="local-6989586621679744071"><span class="annot"><span class="annottext">Eq BlockId
+Eq BlockId
+-&gt; (BlockId -&gt; BlockId -&gt; Ordering)
+-&gt; (BlockId -&gt; BlockId -&gt; Bool)
+-&gt; (BlockId -&gt; BlockId -&gt; Bool)
+-&gt; (BlockId -&gt; BlockId -&gt; Bool)
+-&gt; (BlockId -&gt; BlockId -&gt; Bool)
+-&gt; (BlockId -&gt; BlockId -&gt; BlockId)
+-&gt; (BlockId -&gt; BlockId -&gt; BlockId)
+-&gt; Ord BlockId
+BlockId -&gt; BlockId -&gt; Bool
+BlockId -&gt; BlockId -&gt; Ordering
+BlockId -&gt; BlockId -&gt; BlockId
+forall a.
+Eq a
+-&gt; (a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+min :: BlockId -&gt; BlockId -&gt; BlockId
+$cmin :: BlockId -&gt; BlockId -&gt; BlockId
+max :: BlockId -&gt; BlockId -&gt; BlockId
+$cmax :: BlockId -&gt; BlockId -&gt; BlockId
+&gt;= :: BlockId -&gt; BlockId -&gt; Bool
+$c&gt;= :: BlockId -&gt; BlockId -&gt; Bool
+&gt; :: BlockId -&gt; BlockId -&gt; Bool
+$c&gt; :: BlockId -&gt; BlockId -&gt; Bool
+&lt;= :: BlockId -&gt; BlockId -&gt; Bool
+$c&lt;= :: BlockId -&gt; BlockId -&gt; Bool
+&lt; :: BlockId -&gt; BlockId -&gt; Bool
+$c&lt; :: BlockId -&gt; BlockId -&gt; Bool
+compare :: BlockId -&gt; BlockId -&gt; Ordering
+$ccompare :: BlockId -&gt; BlockId -&gt; Ordering
+$cp1Ord :: Eq BlockId
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. BlockId -&gt; Rep BlockId x)
+-&gt; (forall x. Rep BlockId x -&gt; BlockId) -&gt; Generic BlockId
+forall x. Rep BlockId x -&gt; BlockId
+forall x. BlockId -&gt; Rep BlockId x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep BlockId x -&gt; BlockId
+$cfrom :: forall x. BlockId -&gt; Rep BlockId x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679744050"><span id="local-6989586621679744053"><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="annot"><a href="Ledger.Blockchain.html#BlockId"><span class="hs-identifier hs-type">BlockId</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-42"></span><span>    </span><span id="local-6989586621679744048"><span class="annot"><span class="annottext">show :: BlockId -&gt; String
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">show</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; String
+</span><span class="hs-identifier hs-var">Text.unpack</span></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; String) -&gt; (BlockId -&gt; Text) -&gt; BlockId -&gt; String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Text
+</span><a href="Data.Aeson.Extras.html#encodeByteString"><span class="hs-identifier hs-var">JSON.encodeByteString</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Text) -&gt; (BlockId -&gt; ByteString) -&gt; BlockId -&gt; Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">BlockId -&gt; ByteString
+</span><a href="Ledger.Blockchain.html#getBlockId"><span class="hs-identifier hs-var hs-var">getBlockId</span></a></span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679744037"><span id="local-6989586621679744039"><span id="local-6989586621679744041"><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><a href="Ledger.Blockchain.html#BlockId"><span class="hs-identifier hs-type">BlockId</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-45"></span><span>    </span><span id="local-6989586621679744035"><span class="annot"><span class="annottext">toJSON :: BlockId -&gt; Value
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">JSON.String</span></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Value) -&gt; (BlockId -&gt; Text) -&gt; BlockId -&gt; Value
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Text
+</span><a href="Data.Aeson.Extras.html#encodeByteString"><span class="hs-identifier hs-var">JSON.encodeByteString</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Text) -&gt; (BlockId -&gt; ByteString) -&gt; BlockId -&gt; Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">BlockId -&gt; ByteString
+</span><a href="Ledger.Blockchain.html#getBlockId"><span class="hs-identifier hs-var hs-var">getBlockId</span></a></span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679744030"><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="Ledger.Blockchain.html#BlockId"><span class="hs-identifier hs-type">BlockId</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-48"></span><span>    </span><span id="local-6989586621679744028"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser BlockId
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></span></span><span> </span><span id="local-6989586621679744026"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679744026"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; BlockId
+</span><a href="Ledger.Blockchain.html#BlockId"><span class="hs-identifier hs-var">BlockId</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; BlockId) -&gt; Parser ByteString -&gt; Parser BlockId
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Value -&gt; Parser ByteString
+</span><a href="Data.Aeson.Extras.html#decodeByteString"><span class="hs-identifier hs-var">JSON.decodeByteString</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679744026"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679744021"><span class="annot"><span class="hs-identifier hs-type">Pretty</span></span><span> </span><span class="annot"><a href="Ledger.Blockchain.html#BlockId"><span class="hs-identifier hs-type">BlockId</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-51"></span><span>    </span><span id="local-6989586621679744019"><span class="annot"><span class="annottext">pretty :: BlockId -&gt; Doc ann
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">pretty</span></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Blockchain.html#BlockId"><span class="hs-identifier hs-type">BlockId</span></a></span><span> </span><span id="local-6989586621679744017"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679744017"><span class="hs-identifier hs-var">blockId</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-52"></span><span>        </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;BlockId &quot;</span></span><span>
+</span><span id="line-53"></span><span>     </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; Either UnicodeException Text -&gt; Text
+forall b a. b -&gt; Either a b -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fromRight</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; Text
+</span><a href="Data.Aeson.Extras.html#encodeByteString"><span class="hs-identifier hs-var">JSON.encodeByteString</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679744017"><span class="hs-identifier hs-var">blockId</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Either UnicodeException Text -&gt; Text)
+-&gt; Either UnicodeException Text -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Either UnicodeException Text
+</span><span class="hs-identifier hs-var">decodeUtf8'</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679744017"><span class="hs-identifier hs-var">blockId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- | A block on the blockchain. This is just a list of transactions</span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- following on from the chain so far.</span><span>
+</span><span id="line-57"></span><span class="hs-keyword">type</span><span> </span><span id="Block"><span class="annot"><a href="Ledger.Blockchain.html#Block"><span class="hs-identifier hs-var">Block</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Ledger.Index.Internal.html#OnChainTx"><span class="hs-identifier hs-type">OnChainTx</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-58"></span><span class="hs-comment">-- | A blockchain, which is just a list of blocks, starting with the newest.</span><span>
+</span><span id="line-59"></span><span class="hs-keyword">type</span><span> </span><span id="Blockchain"><span class="annot"><a href="Ledger.Blockchain.html#Blockchain"><span class="hs-identifier hs-var">Blockchain</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Ledger.Blockchain.html#Block"><span class="hs-identifier hs-type">Block</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="annot"><a href="Ledger.Blockchain.html#onChainTxIsValid"><span class="hs-identifier hs-type">onChainTxIsValid</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Ledger.Index.Internal.html#OnChainTx"><span class="hs-identifier hs-type">OnChainTx</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-62"></span><span id="onChainTxIsValid"><span class="annot"><span class="annottext">onChainTxIsValid :: OnChainTx -&gt; Bool
+</span><a href="Ledger.Blockchain.html#onChainTxIsValid"><span class="hs-identifier hs-var hs-var">onChainTxIsValid</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(CardanoTx -&gt; Bool) -&gt; (CardanoTx -&gt; Bool) -&gt; OnChainTx -&gt; Bool
+forall r. (CardanoTx -&gt; r) -&gt; (CardanoTx -&gt; r) -&gt; OnChainTx -&gt; r
+</span><a href="Ledger.Index.Internal.html#eitherTx"><span class="hs-identifier hs-var">eitherTx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; CardanoTx -&gt; Bool
+forall a b. a -&gt; b -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var">False</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; CardanoTx -&gt; Bool
+forall a b. a -&gt; b -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var">True</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span>
+</span><span id="line-64"></span><span class="hs-comment">-- | Outputs consumed from the UTXO set by the 'OnChainTx'</span><span>
+</span><span id="line-65"></span><span class="annot"><a href="Ledger.Blockchain.html#consumableInputs"><span class="hs-identifier hs-type">consumableInputs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Ledger.Index.Internal.html#OnChainTx"><span class="hs-identifier hs-type">OnChainTx</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">C.TxIn</span></span><span class="hs-special">]</span><span>
+</span><span id="line-66"></span><span id="consumableInputs"><span class="annot"><span class="annottext">consumableInputs :: OnChainTx -&gt; [TxIn]
+</span><a href="Ledger.Blockchain.html#consumableInputs"><span class="hs-identifier hs-var hs-var">consumableInputs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(CardanoTx -&gt; [TxIn])
+-&gt; (CardanoTx -&gt; [TxIn]) -&gt; OnChainTx -&gt; [TxIn]
+forall r. (CardanoTx -&gt; r) -&gt; (CardanoTx -&gt; r) -&gt; OnChainTx -&gt; r
+</span><a href="Ledger.Index.Internal.html#eitherTx"><span class="hs-identifier hs-var">eitherTx</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoTx -&gt; [TxIn]
+</span><a href="Ledger.Tx.html#getCardanoTxCollateralInputs"><span class="hs-identifier hs-var">getCardanoTxCollateralInputs</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoTx -&gt; [TxIn]
+</span><a href="Ledger.Tx.html#getCardanoTxInputs"><span class="hs-identifier hs-var">getCardanoTxInputs</span></a></span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span class="hs-comment">-- | Outputs added to the UTXO set by the 'OnChainTx'</span><span>
+</span><span id="line-69"></span><span class="annot"><a href="Ledger.Blockchain.html#outputsProduced"><span class="hs-identifier hs-type">outputsProduced</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Ledger.Index.Internal.html#OnChainTx"><span class="hs-identifier hs-type">OnChainTx</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.TxIn</span></span><span> </span><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span>
+</span><span id="line-70"></span><span id="outputsProduced"><span class="annot"><span class="annottext">outputsProduced :: OnChainTx -&gt; Map TxIn TxOut
+</span><a href="Ledger.Blockchain.html#outputsProduced"><span class="hs-identifier hs-var hs-var">outputsProduced</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(CardanoTx -&gt; Map TxIn TxOut)
+-&gt; (CardanoTx -&gt; Map TxIn TxOut) -&gt; OnChainTx -&gt; Map TxIn TxOut
+forall r. (CardanoTx -&gt; r) -&gt; (CardanoTx -&gt; r) -&gt; OnChainTx -&gt; r
+</span><a href="Ledger.Index.Internal.html#eitherTx"><span class="hs-identifier hs-var">eitherTx</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoTx -&gt; Map TxIn TxOut
+</span><a href="Ledger.Tx.html#getCardanoTxProducedReturnCollateral"><span class="hs-identifier hs-var">getCardanoTxProducedReturnCollateral</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoTx -&gt; Map TxIn TxOut
+</span><a href="Ledger.Tx.html#getCardanoTxProducedOutputs"><span class="hs-identifier hs-var">getCardanoTxProducedOutputs</span></a></span><span>
+</span><span id="line-71"></span></pre></body></html>

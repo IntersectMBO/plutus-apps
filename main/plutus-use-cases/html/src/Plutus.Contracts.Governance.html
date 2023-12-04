@@ -1,0 +1,1494 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds          #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass     #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DerivingStrategies #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts   #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns     #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE NoImplicitPrelude  #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings  #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE RecordWildCards    #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE TemplateHaskell    #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications   #-}</span><span>
+</span><span id="line-11"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies       #-}</span><span>
+</span><span id="line-12"></span><span class="hs-pragma">{-# LANGUAGE TypeOperators      #-}</span><span>
+</span><span id="line-13"></span><span class="hs-pragma">{-# OPTIONS_GHC -fno-ignore-interface-pragmas #-}</span><span>
+</span><span id="line-14"></span><span class="hs-pragma">{-# OPTIONS_GHC -fno-omit-interface-pragmas #-}</span><span>
+</span><span id="line-15"></span><span class="hs-pragma">{-# OPTIONS_GHC -fno-specialise #-}</span><span>
+</span><span id="line-16"></span><span class="hs-pragma">{-# OPTIONS_GHC -fno-spec-constr #-}</span><span>
+</span><span id="line-17"></span><span class="hs-pragma">{-# OPTIONS_GHC -g -fplugin-opt PlutusTx.Plugin:coverage-all #-}</span><span>
+</span><span id="line-18"></span><span class="hs-pragma">{-# LANGUAGE ViewPatterns       #-}</span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- | A basic governance contract in Plutus.</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Plutus.Contracts.Governance</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-21"></span><span>    </span><span class="annot"><span class="hs-comment">-- $governance</span></span><span>
+</span><span id="line-22"></span><span>      </span><span class="annot"><a href="Plutus.Contracts.Governance.html#contract"><span class="hs-identifier">contract</span></a></span><span>
+</span><span id="line-23"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#proposalContract"><span class="hs-identifier">proposalContract</span></a></span><span>
+</span><span id="line-24"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#Params"><span class="hs-identifier">Params</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#Proposal"><span class="hs-identifier">Proposal</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#Schema"><span class="hs-identifier">Schema</span></a></span><span>
+</span><span id="line-27"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#mkTokenName"><span class="hs-identifier">mkTokenName</span></a></span><span>
+</span><span id="line-28"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#typedValidator"><span class="hs-identifier">typedValidator</span></a></span><span>
+</span><span id="line-29"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#mkValidator"><span class="hs-identifier">mkValidator</span></a></span><span>
+</span><span id="line-30"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#GovState"><span class="hs-identifier">GovState</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#Law"><span class="hs-identifier">Law</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#Voting"><span class="hs-identifier">Voting</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#votingValue"><span class="hs-identifier">votingValue</span></a></span><span>
+</span><span id="line-34"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#GovError"><span class="hs-identifier">GovError</span></a></span><span>
+</span><span id="line-35"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#covIdx"><span class="hs-identifier">covIdx</span></a></span><span>
+</span><span id="line-36"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#covIdx%27"><span class="hs-identifier">covIdx'</span></a></span><span>
+</span><span id="line-37"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#getLaw"><span class="hs-identifier">getLaw</span></a></span><span>
+</span><span id="line-38"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Lens</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">makeClassyPrisms</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">review</span></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Control.Monad</span></a></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">FromJSON</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ToJSON</span></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Data.Semigroup</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Sum</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Data.String</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">fromString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Text</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Text</span></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Ledger</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Address</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">POSIXTime</span></span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Ledger.Tx.Constraints</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">TxConstraints</span></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Ledger.Tx.Constraints</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Constraints</span></span><span>
+</span><span id="line-50"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Ledger.Tx.Constraints.ValidityInterval</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Interval</span></span><span>
+</span><span id="line-51"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Ledger.Typed.Scripts</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Scripts</span></span><span>
+</span><span id="line-52"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.Contract</span></span><span>
+</span><span id="line-53"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.Contract.StateMachine</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">AsSMContractError</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">State</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">StateMachine</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Void</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.Contract.StateMachine</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">SM</span></span><span>
+</span><span id="line-55"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.Contract.Test.Coverage.Analysis</span></span><span>
+</span><span id="line-56"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.Script.Utils.Ada</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Ada</span></span><span>
+</span><span id="line-57"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.Script.Utils.V2.Scripts</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">MintingPolicyHash</span></span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.Script.Utils.V2.Typed.Scripts</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">V2</span></span><span>
+</span><span id="line-59"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.Script.Utils.Value</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">TokenName</span></span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.Script.Utils.Value</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Value</span></span><span>
+</span><span id="line-61"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">PlutusTx</span></span><span> </span><span class="hs-keyword">qualified</span><span>
+</span><span id="line-62"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">PlutusTx.AssocMap</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">AssocMap</span></span><span>
+</span><span id="line-63"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">PlutusTx.Code</span></span><span>
+</span><span id="line-64"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">PlutusTx.Coverage</span></span><span>
+</span><span id="line-65"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">PlutusTx.Prelude</span></span><span>
+</span><span id="line-66"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Haskell</span></span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span class="hs-comment">-- $governance</span><span>
+</span><span id="line-69"></span><span class="hs-comment">-- * When the contract starts it produces a number of tokens that represent voting rights.</span><span>
+</span><span id="line-70"></span><span class="hs-comment">-- * Holders of those tokens can propose changes to the state of the contract and vote on them.</span><span>
+</span><span id="line-71"></span><span class="hs-comment">-- * After a certain period of time the voting ends and the proposal is rejected or accepted.</span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span id="local-6989586621680916585"><span id="local-6989586621680916586"></span></span><span class="hs-keyword">newtype</span><span> </span><span id="Law"><span class="annot"><a href="Plutus.Contracts.Governance.html#Law"><span class="hs-identifier hs-var">Law</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Law"><span class="annot"><a href="Plutus.Contracts.Governance.html#Law"><span class="hs-identifier hs-var">Law</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="unLaw"><span class="annot"><span class="annottext">Law -&gt; BuiltinByteString
+</span><a href="Plutus.Contracts.Governance.html#unLaw"><span class="hs-identifier hs-var hs-var">unLaw</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">BuiltinByteString</span></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-74"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680916579"><span id="local-6989586621680916581"><span class="annot"><span class="annottext">Law -&gt; Law -&gt; Bool
+(Law -&gt; Law -&gt; Bool) -&gt; (Law -&gt; Law -&gt; Bool) -&gt; Eq Law
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: Law -&gt; Law -&gt; Bool
+$c/= :: Law -&gt; Law -&gt; Bool
+== :: Law -&gt; Law -&gt; Bool
+$c== :: Law -&gt; Law -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Haskell.Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680916572"><span id="local-6989586621680916574"><span id="local-6989586621680916576"><span class="annot"><span class="annottext">Int -&gt; Law -&gt; ShowS
+[Law] -&gt; ShowS
+Law -&gt; String
+(Int -&gt; Law -&gt; ShowS)
+-&gt; (Law -&gt; String) -&gt; ([Law] -&gt; ShowS) -&gt; Show Law
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [Law] -&gt; ShowS
+$cshowList :: [Law] -&gt; ShowS
+show :: Law -&gt; String
+$cshow :: Law -&gt; String
+showsPrec :: Int -&gt; Law -&gt; ShowS
+$cshowsPrec :: Int -&gt; Law -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Haskell.Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. Law -&gt; Rep Law x)
+-&gt; (forall x. Rep Law x -&gt; Law) -&gt; Generic Law
+forall x. Rep Law x -&gt; Law
+forall x. Law -&gt; Rep Law x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep Law x -&gt; Law
+$cfrom :: forall x. Law -&gt; Rep Law x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680916560"><span id="local-6989586621680916562"><span id="local-6989586621680916564"><span id="local-6989586621680916566"><span class="annot"><span class="annottext">[Law] -&gt; Encoding
+[Law] -&gt; Value
+Law -&gt; Encoding
+Law -&gt; Value
+(Law -&gt; Value)
+-&gt; (Law -&gt; Encoding)
+-&gt; ([Law] -&gt; Value)
+-&gt; ([Law] -&gt; Encoding)
+-&gt; ToJSON Law
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; ToJSON a
+toEncodingList :: [Law] -&gt; Encoding
+$ctoEncodingList :: [Law] -&gt; Encoding
+toJSONList :: [Law] -&gt; Value
+$ctoJSONList :: [Law] -&gt; Value
+toEncoding :: Law -&gt; Encoding
+$ctoEncoding :: Law -&gt; Encoding
+toJSON :: Law -&gt; Value
+$ctoJSON :: Law -&gt; Value
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680916555"><span id="local-6989586621680916557"><span class="annot"><span class="annottext">Value -&gt; Parser [Law]
+Value -&gt; Parser Law
+(Value -&gt; Parser Law) -&gt; (Value -&gt; Parser [Law]) -&gt; FromJSON Law
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+parseJSONList :: Value -&gt; Parser [Law]
+$cparseJSONList :: Value -&gt; Parser [Law]
+parseJSON :: Value -&gt; Parser Law
+$cparseJSON :: Value -&gt; Parser Law
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span class="hs-comment">-- | The parameters for the proposal contract.</span><span>
+</span><span id="line-78"></span><span id="local-6989586621680916552"><span id="local-6989586621680916553"></span></span><span class="hs-keyword">data</span><span> </span><span id="Proposal"><span class="annot"><a href="Plutus.Contracts.Governance.html#Proposal"><span class="hs-identifier hs-var">Proposal</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Proposal"><span class="annot"><a href="Plutus.Contracts.Governance.html#Proposal"><span class="hs-identifier hs-var">Proposal</span></a></span></span><span>
+</span><span id="line-79"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="newLaw"><span class="annot"><span class="annottext">Proposal -&gt; Law
+</span><a href="Plutus.Contracts.Governance.html#newLaw"><span class="hs-identifier hs-var hs-var">newLaw</span></a></span></span><span>         </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#Law"><span class="hs-identifier hs-type">Law</span></a></span><span>
+</span><span id="line-80"></span><span>    </span><span class="hs-comment">-- ^ The new contents of the law</span><span>
+</span><span id="line-81"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="tokenName"><span class="annot"><span class="annottext">Proposal -&gt; TokenName
+</span><a href="Plutus.Contracts.Governance.html#tokenName"><span class="hs-identifier hs-var hs-var">tokenName</span></a></span></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">TokenName</span></span><span>
+</span><span id="line-82"></span><span>    </span><span class="hs-comment">-- ^ The name of the voting tokens. Only voting token owners are allowed to propose changes.</span><span>
+</span><span id="line-83"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="votingDeadline"><span class="annot"><span class="annottext">Proposal -&gt; POSIXTime
+</span><a href="Plutus.Contracts.Governance.html#votingDeadline"><span class="hs-identifier hs-var hs-var">votingDeadline</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">POSIXTime</span></span><span>
+</span><span id="line-84"></span><span>    </span><span class="hs-comment">-- ^ The time when voting ends and the votes are tallied.</span><span>
+</span><span id="line-85"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-86"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680916542"><span id="local-6989586621680916544"><span id="local-6989586621680916546"><span class="annot"><span class="annottext">Int -&gt; Proposal -&gt; ShowS
+[Proposal] -&gt; ShowS
+Proposal -&gt; String
+(Int -&gt; Proposal -&gt; ShowS)
+-&gt; (Proposal -&gt; String) -&gt; ([Proposal] -&gt; ShowS) -&gt; Show Proposal
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [Proposal] -&gt; ShowS
+$cshowList :: [Proposal] -&gt; ShowS
+show :: Proposal -&gt; String
+$cshow :: Proposal -&gt; String
+showsPrec :: Int -&gt; Proposal -&gt; ShowS
+$cshowsPrec :: Int -&gt; Proposal -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Haskell.Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. Proposal -&gt; Rep Proposal x)
+-&gt; (forall x. Rep Proposal x -&gt; Proposal) -&gt; Generic Proposal
+forall x. Rep Proposal x -&gt; Proposal
+forall x. Proposal -&gt; Rep Proposal x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep Proposal x -&gt; Proposal
+$cfrom :: forall x. Proposal -&gt; Rep Proposal x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-87"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680916532"><span id="local-6989586621680916534"><span id="local-6989586621680916536"><span id="local-6989586621680916538"><span class="annot"><span class="annottext">[Proposal] -&gt; Encoding
+[Proposal] -&gt; Value
+Proposal -&gt; Encoding
+Proposal -&gt; Value
+(Proposal -&gt; Value)
+-&gt; (Proposal -&gt; Encoding)
+-&gt; ([Proposal] -&gt; Value)
+-&gt; ([Proposal] -&gt; Encoding)
+-&gt; ToJSON Proposal
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; ToJSON a
+toEncodingList :: [Proposal] -&gt; Encoding
+$ctoEncodingList :: [Proposal] -&gt; Encoding
+toJSONList :: [Proposal] -&gt; Value
+$ctoJSONList :: [Proposal] -&gt; Value
+toEncoding :: Proposal -&gt; Encoding
+$ctoEncoding :: Proposal -&gt; Encoding
+toJSON :: Proposal -&gt; Value
+$ctoJSON :: Proposal -&gt; Value
+</span><a href="#local-6989586621680916532"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680916528"><span id="local-6989586621680916530"><span class="annot"><span class="annottext">Value -&gt; Parser [Proposal]
+Value -&gt; Parser Proposal
+(Value -&gt; Parser Proposal)
+-&gt; (Value -&gt; Parser [Proposal]) -&gt; FromJSON Proposal
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+parseJSONList :: Value -&gt; Parser [Proposal]
+$cparseJSONList :: Value -&gt; Parser [Proposal]
+parseJSON :: Value -&gt; Parser Proposal
+$cparseJSON :: Value -&gt; Parser Proposal
+</span><a href="#local-6989586621680916528"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span>
+</span><span id="line-89"></span><span id="local-6989586621680916526"><span id="local-6989586621680916527"></span></span><span class="hs-keyword">data</span><span> </span><span id="Voting"><span class="annot"><a href="Plutus.Contracts.Governance.html#Voting"><span class="hs-identifier hs-var">Voting</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Voting"><span class="annot"><a href="Plutus.Contracts.Governance.html#Voting"><span class="hs-identifier hs-var">Voting</span></a></span></span><span>
+</span><span id="line-90"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="proposal"><span class="annot"><span class="annottext">Voting -&gt; Proposal
+</span><a href="Plutus.Contracts.Governance.html#proposal"><span class="hs-identifier hs-var hs-var">proposal</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#Proposal"><span class="hs-identifier hs-type">Proposal</span></a></span><span>
+</span><span id="line-91"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="votes"><span class="annot"><span class="annottext">Voting -&gt; Map TokenName Bool
+</span><a href="Plutus.Contracts.Governance.html#votes"><span class="hs-identifier hs-var hs-var">votes</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">AssocMap.Map</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">TokenName</span></span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-92"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-93"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680916517"><span id="local-6989586621680916519"><span id="local-6989586621680916521"><span class="annot"><span class="annottext">Int -&gt; Voting -&gt; ShowS
+[Voting] -&gt; ShowS
+Voting -&gt; String
+(Int -&gt; Voting -&gt; ShowS)
+-&gt; (Voting -&gt; String) -&gt; ([Voting] -&gt; ShowS) -&gt; Show Voting
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [Voting] -&gt; ShowS
+$cshowList :: [Voting] -&gt; ShowS
+show :: Voting -&gt; String
+$cshow :: Voting -&gt; String
+showsPrec :: Int -&gt; Voting -&gt; ShowS
+$cshowsPrec :: Int -&gt; Voting -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Haskell.Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. Voting -&gt; Rep Voting x)
+-&gt; (forall x. Rep Voting x -&gt; Voting) -&gt; Generic Voting
+forall x. Rep Voting x -&gt; Voting
+forall x. Voting -&gt; Rep Voting x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep Voting x -&gt; Voting
+$cfrom :: forall x. Voting -&gt; Rep Voting x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-94"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680916507"><span id="local-6989586621680916509"><span id="local-6989586621680916511"><span id="local-6989586621680916513"><span class="annot"><span class="annottext">[Voting] -&gt; Encoding
+[Voting] -&gt; Value
+Voting -&gt; Encoding
+Voting -&gt; Value
+(Voting -&gt; Value)
+-&gt; (Voting -&gt; Encoding)
+-&gt; ([Voting] -&gt; Value)
+-&gt; ([Voting] -&gt; Encoding)
+-&gt; ToJSON Voting
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; ToJSON a
+toEncodingList :: [Voting] -&gt; Encoding
+$ctoEncodingList :: [Voting] -&gt; Encoding
+toJSONList :: [Voting] -&gt; Value
+$ctoJSONList :: [Voting] -&gt; Value
+toEncoding :: Voting -&gt; Encoding
+$ctoEncoding :: Voting -&gt; Encoding
+toJSON :: Voting -&gt; Value
+$ctoJSON :: Voting -&gt; Value
+</span><a href="#local-6989586621680916507"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680916503"><span id="local-6989586621680916505"><span class="annot"><span class="annottext">Value -&gt; Parser [Voting]
+Value -&gt; Parser Voting
+(Value -&gt; Parser Voting)
+-&gt; (Value -&gt; Parser [Voting]) -&gt; FromJSON Voting
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+parseJSONList :: Value -&gt; Parser [Voting]
+$cparseJSONList :: Value -&gt; Parser [Voting]
+parseJSON :: Value -&gt; Parser Voting
+$cparseJSON :: Value -&gt; Parser Voting
+</span><a href="#local-6989586621680916503"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-95"></span><span>
+</span><span id="line-96"></span><span id="local-6989586621680916501"><span id="local-6989586621680916502"></span></span><span class="hs-keyword">data</span><span> </span><span id="GovState"><span class="annot"><a href="Plutus.Contracts.Governance.html#GovState"><span class="hs-identifier hs-var">GovState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="GovState"><span class="annot"><a href="Plutus.Contracts.Governance.html#GovState"><span class="hs-identifier hs-var">GovState</span></a></span></span><span>
+</span><span id="line-97"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="law"><span class="annot"><span class="annottext">GovState -&gt; Law
+</span><a href="Plutus.Contracts.Governance.html#law"><span class="hs-identifier hs-var hs-var">law</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#Law"><span class="hs-identifier hs-type">Law</span></a></span><span>
+</span><span id="line-98"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="mph"><span class="annot"><span class="annottext">GovState -&gt; MintingPolicyHash
+</span><a href="Plutus.Contracts.Governance.html#mph"><span class="hs-identifier hs-var hs-var">mph</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MintingPolicyHash</span></span><span>
+</span><span id="line-99"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="voting"><span class="annot"><span class="annottext">GovState -&gt; Maybe Voting
+</span><a href="Plutus.Contracts.Governance.html#voting"><span class="hs-identifier hs-var hs-var">voting</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#Voting"><span class="hs-identifier hs-type">Voting</span></a></span><span>
+</span><span id="line-100"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-101"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680916491"><span id="local-6989586621680916493"><span id="local-6989586621680916495"><span class="annot"><span class="annottext">Int -&gt; GovState -&gt; ShowS
+[GovState] -&gt; ShowS
+GovState -&gt; String
+(Int -&gt; GovState -&gt; ShowS)
+-&gt; (GovState -&gt; String) -&gt; ([GovState] -&gt; ShowS) -&gt; Show GovState
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [GovState] -&gt; ShowS
+$cshowList :: [GovState] -&gt; ShowS
+show :: GovState -&gt; String
+$cshow :: GovState -&gt; String
+showsPrec :: Int -&gt; GovState -&gt; ShowS
+$cshowsPrec :: Int -&gt; GovState -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Haskell.Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. GovState -&gt; Rep GovState x)
+-&gt; (forall x. Rep GovState x -&gt; GovState) -&gt; Generic GovState
+forall x. Rep GovState x -&gt; GovState
+forall x. GovState -&gt; Rep GovState x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep GovState x -&gt; GovState
+$cfrom :: forall x. GovState -&gt; Rep GovState x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-102"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680916481"><span id="local-6989586621680916483"><span id="local-6989586621680916485"><span id="local-6989586621680916487"><span class="annot"><span class="annottext">[GovState] -&gt; Encoding
+[GovState] -&gt; Value
+GovState -&gt; Encoding
+GovState -&gt; Value
+(GovState -&gt; Value)
+-&gt; (GovState -&gt; Encoding)
+-&gt; ([GovState] -&gt; Value)
+-&gt; ([GovState] -&gt; Encoding)
+-&gt; ToJSON GovState
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; ToJSON a
+toEncodingList :: [GovState] -&gt; Encoding
+$ctoEncodingList :: [GovState] -&gt; Encoding
+toJSONList :: [GovState] -&gt; Value
+$ctoJSONList :: [GovState] -&gt; Value
+toEncoding :: GovState -&gt; Encoding
+$ctoEncoding :: GovState -&gt; Encoding
+toJSON :: GovState -&gt; Value
+$ctoJSON :: GovState -&gt; Value
+</span><a href="#local-6989586621680916481"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680916477"><span id="local-6989586621680916479"><span class="annot"><span class="annottext">Value -&gt; Parser [GovState]
+Value -&gt; Parser GovState
+(Value -&gt; Parser GovState)
+-&gt; (Value -&gt; Parser [GovState]) -&gt; FromJSON GovState
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+parseJSONList :: Value -&gt; Parser [GovState]
+$cparseJSONList :: Value -&gt; Parser [GovState]
+parseJSON :: Value -&gt; Parser GovState
+$cparseJSON :: Value -&gt; Parser GovState
+</span><a href="#local-6989586621680916477"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-103"></span><span>
+</span><span id="line-104"></span><span id="local-6989586621680916475"><span id="local-6989586621680916476"></span></span><span class="hs-keyword">data</span><span> </span><span id="GovInput"><span class="annot"><a href="Plutus.Contracts.Governance.html#GovInput"><span class="hs-identifier hs-var">GovInput</span></a></span></span><span>
+</span><span id="line-105"></span><span>    </span><span class="hs-glyph">=</span><span> </span><span id="MintTokens"><span class="annot"><a href="Plutus.Contracts.Governance.html#MintTokens"><span class="hs-identifier hs-var">MintTokens</span></a></span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">TokenName</span></span><span class="hs-special">]</span><span>
+</span><span id="line-106"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="ProposeChange"><span class="annot"><a href="Plutus.Contracts.Governance.html#ProposeChange"><span class="hs-identifier hs-var">ProposeChange</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Address</span></span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#Proposal"><span class="hs-identifier hs-type">Proposal</span></a></span><span>
+</span><span id="line-107"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="AddVote"><span class="annot"><a href="Plutus.Contracts.Governance.html#AddVote"><span class="hs-identifier hs-var">AddVote</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Address</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">TokenName</span></span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-108"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="FinishVoting"><span class="annot"><a href="Plutus.Contracts.Governance.html#FinishVoting"><span class="hs-identifier hs-var">FinishVoting</span></a></span></span><span>
+</span><span id="line-109"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="Check"><span class="annot"><a href="Plutus.Contracts.Governance.html#Check"><span class="hs-identifier hs-var">Check</span></a></span></span><span>
+</span><span id="line-110"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680916464"><span id="local-6989586621680916466"><span id="local-6989586621680916468"><span class="annot"><span class="annottext">Int -&gt; GovInput -&gt; ShowS
+[GovInput] -&gt; ShowS
+GovInput -&gt; String
+(Int -&gt; GovInput -&gt; ShowS)
+-&gt; (GovInput -&gt; String) -&gt; ([GovInput] -&gt; ShowS) -&gt; Show GovInput
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [GovInput] -&gt; ShowS
+$cshowList :: [GovInput] -&gt; ShowS
+show :: GovInput -&gt; String
+$cshow :: GovInput -&gt; String
+showsPrec :: Int -&gt; GovInput -&gt; ShowS
+$cshowsPrec :: Int -&gt; GovInput -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Haskell.Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. GovInput -&gt; Rep GovInput x)
+-&gt; (forall x. Rep GovInput x -&gt; GovInput) -&gt; Generic GovInput
+forall x. Rep GovInput x -&gt; GovInput
+forall x. GovInput -&gt; Rep GovInput x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep GovInput x -&gt; GovInput
+$cfrom :: forall x. GovInput -&gt; Rep GovInput x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-111"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680916454"><span id="local-6989586621680916456"><span id="local-6989586621680916458"><span id="local-6989586621680916460"><span class="annot"><span class="annottext">[GovInput] -&gt; Encoding
+[GovInput] -&gt; Value
+GovInput -&gt; Encoding
+GovInput -&gt; Value
+(GovInput -&gt; Value)
+-&gt; (GovInput -&gt; Encoding)
+-&gt; ([GovInput] -&gt; Value)
+-&gt; ([GovInput] -&gt; Encoding)
+-&gt; ToJSON GovInput
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; ToJSON a
+toEncodingList :: [GovInput] -&gt; Encoding
+$ctoEncodingList :: [GovInput] -&gt; Encoding
+toJSONList :: [GovInput] -&gt; Value
+$ctoJSONList :: [GovInput] -&gt; Value
+toEncoding :: GovInput -&gt; Encoding
+$ctoEncoding :: GovInput -&gt; Encoding
+toJSON :: GovInput -&gt; Value
+$ctoJSON :: GovInput -&gt; Value
+</span><a href="#local-6989586621680916454"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680916450"><span id="local-6989586621680916452"><span class="annot"><span class="annottext">Value -&gt; Parser [GovInput]
+Value -&gt; Parser GovInput
+(Value -&gt; Parser GovInput)
+-&gt; (Value -&gt; Parser [GovInput]) -&gt; FromJSON GovInput
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+parseJSONList :: Value -&gt; Parser [GovInput]
+$cparseJSONList :: Value -&gt; Parser [GovInput]
+parseJSON :: Value -&gt; Parser GovInput
+$cparseJSON :: Value -&gt; Parser GovInput
+</span><a href="#local-6989586621680916450"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-112"></span><span>
+</span><span id="line-113"></span><span class="annot"><a href="Plutus.Contracts.Governance.html#getLaw"><span class="hs-identifier hs-type">getLaw</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#GovState"><span class="hs-identifier hs-type">GovState</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">BuiltinByteString</span></span><span>
+</span><span id="line-114"></span><span id="getLaw"><span class="annot"><span class="annottext">getLaw :: GovState -&gt; BuiltinByteString
+</span><a href="Plutus.Contracts.Governance.html#getLaw"><span class="hs-identifier hs-var hs-var">getLaw</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.Contracts.Governance.html#GovState"><span class="hs-identifier hs-type">GovState</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.Contracts.Governance.html#Law"><span class="hs-identifier hs-type">Law</span></a></span><span> </span><span id="local-6989586621680916449"><span class="annot"><span class="annottext">BuiltinByteString
+</span><a href="#local-6989586621680916449"><span class="hs-identifier hs-var">l</span></a></span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">MintingPolicyHash
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Maybe Voting
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BuiltinByteString
+</span><a href="#local-6989586621680916449"><span class="hs-identifier hs-var">l</span></a></span><span>
+</span><span id="line-115"></span><span>
+</span><span id="line-116"></span><span class="hs-comment">-- | The endpoints of governance contracts are</span><span>
+</span><span id="line-117"></span><span class="hs-comment">--</span><span>
+</span><span id="line-118"></span><span class="hs-comment">-- * @new-law@ to create a new law and distribute voting tokens</span><span>
+</span><span id="line-119"></span><span class="hs-comment">-- * @add-vote@ to vote on a proposal with the name of the voting token and a boolean to vote in favor or against.</span><span>
+</span><span id="line-120"></span><span class="hs-keyword">type</span><span> </span><span id="Schema"><span class="annot"><a href="Plutus.Contracts.Governance.html#Schema"><span class="hs-identifier hs-var">Schema</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-121"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Endpoint</span></span><span> </span><span class="annot"><span class="hs-string">&quot;new-law&quot;</span></span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#Law"><span class="hs-identifier hs-type">Law</span></a></span><span>
+</span><span id="line-122"></span><span>        </span><span class="annot"><span class="hs-operator hs-type">.\/</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Endpoint</span></span><span> </span><span class="annot"><span class="hs-string">&quot;add-vote&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Address</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">TokenName</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">Bool</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-123"></span><span>
+</span><span id="line-124"></span><span class="hs-comment">-- | The governace contract parameters.</span><span>
+</span><span id="line-125"></span><span class="hs-keyword">data</span><span> </span><span id="Params"><span class="annot"><a href="Plutus.Contracts.Governance.html#Params"><span class="hs-identifier hs-var">Params</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Params"><span class="annot"><a href="Plutus.Contracts.Governance.html#Params"><span class="hs-identifier hs-var">Params</span></a></span></span><span>
+</span><span id="line-126"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="baseTokenName"><span class="annot"><span class="annottext">Params -&gt; TokenName
+</span><a href="Plutus.Contracts.Governance.html#baseTokenName"><span class="hs-identifier hs-var hs-var">baseTokenName</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">TokenName</span></span><span>
+</span><span id="line-127"></span><span>    </span><span class="hs-comment">-- ^ The token names that allow voting are generated by adding an increasing number to the base token name. See `mkTokenName`.</span><span>
+</span><span id="line-128"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="initialHolders"><span class="annot"><span class="annottext">Params -&gt; [Address]
+</span><a href="Plutus.Contracts.Governance.html#initialHolders"><span class="hs-identifier hs-var hs-var">initialHolders</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Address</span></span><span class="hs-special">]</span><span>
+</span><span id="line-129"></span><span>    </span><span class="hs-comment">-- ^ The public key hashes of the initial holders of the voting tokens.</span><span>
+</span><span id="line-130"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="requiredVotes"><span class="annot"><span class="annottext">Params -&gt; Integer
+</span><a href="Plutus.Contracts.Governance.html#requiredVotes"><span class="hs-identifier hs-var hs-var">requiredVotes</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/integer-gmp-1.0.3.0/src"><span class="hs-identifier hs-type">Integer</span></a></span><span>
+</span><span id="line-131"></span><span>    </span><span class="hs-comment">-- ^ The number of votes in favor required for a proposal to be accepted.</span><span>
+</span><span id="line-132"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-133"></span><span>
+</span><span id="line-134"></span><span id="local-6989586621680916441"><span id="local-6989586621680916442"></span></span><span class="hs-keyword">data</span><span> </span><span id="GovError"><span class="annot"><a href="Plutus.Contracts.Governance.html#GovError"><span class="hs-identifier hs-var">GovError</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-135"></span><span>    </span><span id="GovContractError"><span class="annot"><a href="Plutus.Contracts.Governance.html#GovContractError"><span class="hs-identifier hs-var">GovContractError</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ContractError</span></span><span>
+</span><span id="line-136"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="GovStateMachineError"><span class="annot"><a href="Plutus.Contracts.Governance.html#GovStateMachineError"><span class="hs-identifier hs-var">GovStateMachineError</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">SM.SMContractError</span></span><span>
+</span><span id="line-137"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680916435"><span id="local-6989586621680916437"><span class="annot"><span class="annottext">GovError -&gt; GovError -&gt; Bool
+(GovError -&gt; GovError -&gt; Bool)
+-&gt; (GovError -&gt; GovError -&gt; Bool) -&gt; Eq GovError
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: GovError -&gt; GovError -&gt; Bool
+$c/= :: GovError -&gt; GovError -&gt; Bool
+== :: GovError -&gt; GovError -&gt; Bool
+$c== :: GovError -&gt; GovError -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Haskell.Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680916429"><span id="local-6989586621680916431"><span id="local-6989586621680916433"><span class="annot"><span class="annottext">Int -&gt; GovError -&gt; ShowS
+[GovError] -&gt; ShowS
+GovError -&gt; String
+(Int -&gt; GovError -&gt; ShowS)
+-&gt; (GovError -&gt; String) -&gt; ([GovError] -&gt; ShowS) -&gt; Show GovError
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [GovError] -&gt; ShowS
+$cshowList :: [GovError] -&gt; ShowS
+show :: GovError -&gt; String
+$cshow :: GovError -&gt; String
+showsPrec :: Int -&gt; GovError -&gt; ShowS
+$cshowsPrec :: Int -&gt; GovError -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Haskell.Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. GovError -&gt; Rep GovError x)
+-&gt; (forall x. Rep GovError x -&gt; GovError) -&gt; Generic GovError
+forall x. Rep GovError x -&gt; GovError
+forall x. GovError -&gt; Rep GovError x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep GovError x -&gt; GovError
+$cfrom :: forall x. GovError -&gt; Rep GovError x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-138"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680916419"><span id="local-6989586621680916421"><span id="local-6989586621680916423"><span id="local-6989586621680916425"><span class="annot"><span class="annottext">[GovError] -&gt; Encoding
+[GovError] -&gt; Value
+GovError -&gt; Encoding
+GovError -&gt; Value
+(GovError -&gt; Value)
+-&gt; (GovError -&gt; Encoding)
+-&gt; ([GovError] -&gt; Value)
+-&gt; ([GovError] -&gt; Encoding)
+-&gt; ToJSON GovError
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; ToJSON a
+toEncodingList :: [GovError] -&gt; Encoding
+$ctoEncodingList :: [GovError] -&gt; Encoding
+toJSONList :: [GovError] -&gt; Value
+$ctoJSONList :: [GovError] -&gt; Value
+toEncoding :: GovError -&gt; Encoding
+$ctoEncoding :: GovError -&gt; Encoding
+toJSON :: GovError -&gt; Value
+$ctoJSON :: GovError -&gt; Value
+</span><a href="#local-6989586621680916419"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680916415"><span id="local-6989586621680916417"><span class="annot"><span class="annottext">Value -&gt; Parser [GovError]
+Value -&gt; Parser GovError
+(Value -&gt; Parser GovError)
+-&gt; (Value -&gt; Parser [GovError]) -&gt; FromJSON GovError
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+parseJSONList :: Value -&gt; Parser [GovError]
+$cparseJSONList :: Value -&gt; Parser [GovError]
+parseJSON :: Value -&gt; Parser GovError
+$cparseJSON :: Value -&gt; Parser GovError
+</span><a href="#local-6989586621680916415"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-139"></span><span>
+</span><span id="line-140"></span><span id="_GovStateMachineError"><span id="_GovContractError"><span id="_GovError"><span id="local-6989586621680916407"><span id="local-6989586621680916409"><span id="local-6989586621680916411"><span id="local-6989586621680916413"><span id="local-6989586621680916414"><span id="AsGovError"><span id="local-6989586621680916822"><span class="hs-identifier">makeClassyPrisms</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">GovError</span></span></span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-141"></span><span>
+</span><span id="line-142"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621680916386"><span id="local-6989586621680916388"><span id="local-6989586621680916390"><span id="local-6989586621680916392"><span id="local-6989586621680916394"><span id="local-6989586621680916396"><span id="local-6989586621680916398"><span id="local-6989586621680916400"><span class="annot"><span class="hs-identifier hs-type">AsContractError</span></span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#GovError"><span class="hs-identifier hs-type">GovError</span></a></span></span></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-143"></span><span>    </span><span id="local-6989586621680916384"><span class="annot"><span class="annottext">_ContractError :: p ContractError (f ContractError) -&gt; p GovError (f GovError)
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">_ContractError</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">p ContractError (f ContractError) -&gt; p GovError (f GovError)
+forall r. AsGovError r =&gt; Prism' r ContractError
+</span><a href="Plutus.Contracts.Governance.html#_GovContractError"><span class="hs-identifier hs-var">_GovContractError</span></a></span><span>
+</span><span id="line-144"></span><span>
+</span><span id="line-145"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621680916376"><span id="local-6989586621680916378"><span id="local-6989586621680916380"><span class="annot"><span class="hs-identifier hs-type">AsSMContractError</span></span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#GovError"><span class="hs-identifier hs-type">GovError</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-146"></span><span>    </span><span id="local-6989586621680916374"><span class="annot"><span class="annottext">_SMContractError :: p SMContractError (f SMContractError) -&gt; p GovError (f GovError)
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">_SMContractError</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">p SMContractError (f SMContractError) -&gt; p GovError (f GovError)
+forall r. AsGovError r =&gt; Prism' r SMContractError
+</span><a href="Plutus.Contracts.Governance.html#_GovStateMachineError"><span class="hs-identifier hs-var">_GovStateMachineError</span></a></span><span>
+</span><span id="line-147"></span><span>
+</span><span id="line-148"></span><span class="hs-keyword">type</span><span> </span><span id="GovernanceMachine"><span class="annot"><a href="Plutus.Contracts.Governance.html#GovernanceMachine"><span class="hs-identifier hs-var">GovernanceMachine</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">StateMachine</span></span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#GovState"><span class="hs-identifier hs-type">GovState</span></a></span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#GovInput"><span class="hs-identifier hs-type">GovInput</span></a></span><span>
+</span><span id="line-149"></span><span>
+</span><span id="line-150"></span><span class="hs-pragma">{-# INLINABLE</span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#machine"><span class="hs-pragma hs-type">machine</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-151"></span><span class="annot"><a href="Plutus.Contracts.Governance.html#machine"><span class="hs-identifier hs-type">machine</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#Params"><span class="hs-identifier hs-type">Params</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#GovernanceMachine"><span class="hs-identifier hs-type">GovernanceMachine</span></a></span><span>
+</span><span id="line-152"></span><span id="machine"><span class="annot"><span class="annottext">machine :: Params -&gt; GovernanceMachine
+</span><a href="Plutus.Contracts.Governance.html#machine"><span class="hs-identifier hs-var hs-var">machine</span></a></span></span><span> </span><span id="local-6989586621680916371"><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621680916371"><span class="hs-identifier hs-var">params</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe ThreadToken
+-&gt; (State GovState
+    -&gt; GovInput -&gt; Maybe (TxConstraints Void Void, State GovState))
+-&gt; (GovState -&gt; Bool)
+-&gt; GovernanceMachine
+forall s i.
+Maybe ThreadToken
+-&gt; (State s -&gt; i -&gt; Maybe (TxConstraints Void Void, State s))
+-&gt; (s -&gt; Bool)
+-&gt; StateMachine s i
+</span><span class="hs-identifier hs-var">SM.mkStateMachine</span></span><span> </span><span class="annot"><span class="annottext">Maybe ThreadToken
+forall a. Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Params
+-&gt; State GovState
+-&gt; GovInput
+-&gt; Maybe (TxConstraints Void Void, State GovState)
+</span><a href="Plutus.Contracts.Governance.html#transition"><span class="hs-identifier hs-var">transition</span></a></span><span> </span><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621680916371"><span class="hs-identifier hs-var">params</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">GovState -&gt; Bool
+forall p. p -&gt; Bool
+</span><a href="#local-6989586621680916368"><span class="hs-identifier hs-var">isFinal</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-153"></span><span>    </span><span class="hs-pragma">{-# INLINABLE</span><span> </span><span class="annot"><a href="#local-6989586621680916368"><span class="hs-pragma hs-type">isFinal</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-154"></span><span>    </span><span id="local-6989586621680916368"><span class="annot"><span class="annottext">isFinal :: p -&gt; Bool
+</span><a href="#local-6989586621680916368"><span class="hs-identifier hs-var hs-var">isFinal</span></a></span></span><span> </span><span class="annot"><span class="annottext">p
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-155"></span><span>
+</span><span id="line-156"></span><span class="hs-pragma">{-# INLINABLE</span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#mkValidator"><span class="hs-pragma hs-type">mkValidator</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-157"></span><span class="annot"><a href="Plutus.Contracts.Governance.html#mkValidator"><span class="hs-identifier hs-type">mkValidator</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#Params"><span class="hs-identifier hs-type">Params</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">V2.ValidatorType</span></span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#GovernanceMachine"><span class="hs-identifier hs-type">GovernanceMachine</span></a></span><span>
+</span><span id="line-158"></span><span id="mkValidator"><span class="annot"><span class="annottext">mkValidator :: Params -&gt; ValidatorType GovernanceMachine
+</span><a href="Plutus.Contracts.Governance.html#mkValidator"><span class="hs-identifier hs-var hs-var">mkValidator</span></a></span></span><span> </span><span id="local-6989586621680916367"><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621680916367"><span class="hs-identifier hs-var">params</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">GovernanceMachine -&gt; GovState -&gt; GovInput -&gt; ScriptContext -&gt; Bool
+forall s i.
+ToData s =&gt;
+StateMachine s i -&gt; ValidatorType (StateMachine s i)
+</span><span class="hs-identifier hs-var">SM.mkValidator</span></span><span> </span><span class="annot"><span class="annottext">(GovernanceMachine
+ -&gt; GovState -&gt; GovInput -&gt; ScriptContext -&gt; Bool)
+-&gt; GovernanceMachine
+-&gt; GovState
+-&gt; GovInput
+-&gt; ScriptContext
+-&gt; Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Params -&gt; GovernanceMachine
+</span><a href="Plutus.Contracts.Governance.html#machine"><span class="hs-identifier hs-var">machine</span></a></span><span> </span><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621680916367"><span class="hs-identifier hs-var">params</span></a></span><span>
+</span><span id="line-159"></span><span>
+</span><span id="line-160"></span><span class="annot"><a href="Plutus.Contracts.Governance.html#typedValidator"><span class="hs-identifier hs-type">typedValidator</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#Params"><span class="hs-identifier hs-type">Params</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">V2.TypedValidator</span></span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#GovernanceMachine"><span class="hs-identifier hs-type">GovernanceMachine</span></a></span><span>
+</span><span id="line-161"></span><span id="typedValidator"><span class="annot"><span class="annottext">typedValidator :: Params -&gt; TypedValidator GovernanceMachine
+</span><a href="Plutus.Contracts.Governance.html#typedValidator"><span class="hs-identifier hs-var hs-var">typedValidator</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CompiledCode (Params -&gt; ValidatorType GovernanceMachine)
+-&gt; CompiledCode
+     (ValidatorType GovernanceMachine -&gt; UntypedValidator)
+-&gt; Params
+-&gt; TypedValidator GovernanceMachine
+forall a param.
+Lift DefaultUni param =&gt;
+CompiledCode (param -&gt; ValidatorType a)
+-&gt; CompiledCode (ValidatorType a -&gt; UntypedValidator)
+-&gt; param
+-&gt; TypedValidator a
+</span><span class="hs-identifier hs-var">V2.mkTypedValidatorParam</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="Plutus.Contracts.Governance.html#GovernanceMachine"><span class="hs-identifier hs-type">GovernanceMachine</span></a></span><span>
+</span><span id="line-162"></span><span>    </span><span class="hs-special">$$(</span><span class="annot"><span class="hs-identifier hs-type">PlutusTx.compile</span></span><span> </span><span class="hs-special">[||</span><span> </span><span class="hs-identifier">mkValidator</span><span> </span><span class="hs-special">||]</span><span class="hs-special">)</span><span>
+</span><span id="line-163"></span><span>    </span><span class="hs-special">$$(</span><span class="annot"><span class="hs-identifier hs-type">PlutusTx.compile</span></span><span> </span><span class="hs-special">[||</span><span> </span><span class="hs-identifier">wrap</span><span> </span><span class="hs-special">||]</span><span class="hs-special">)</span><span>
+</span><span id="line-164"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-165"></span><span>        </span><span id="local-6989586621680916360"><span class="annot"><span class="annottext">wrap :: (GovState -&gt; GovInput -&gt; ScriptContext -&gt; Bool) -&gt; UntypedValidator
+</span><a href="#local-6989586621680916360"><span class="hs-identifier hs-var hs-var">wrap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(GovState -&gt; GovInput -&gt; ScriptContext -&gt; Bool) -&gt; UntypedValidator
+forall sc d r.
+(IsScriptContext sc, UnsafeFromData d, UnsafeFromData r) =&gt;
+(d -&gt; r -&gt; sc -&gt; Bool) -&gt; UntypedValidator
+</span><span class="hs-identifier hs-var">Scripts.mkUntypedValidator</span></span><span>
+</span><span id="line-166"></span><span>
+</span><span id="line-167"></span><span class="annot"><a href="Plutus.Contracts.Governance.html#client"><span class="hs-identifier hs-type">client</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#Params"><span class="hs-identifier hs-type">Params</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">SM.StateMachineClient</span></span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#GovState"><span class="hs-identifier hs-type">GovState</span></a></span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#GovInput"><span class="hs-identifier hs-type">GovInput</span></a></span><span>
+</span><span id="line-168"></span><span id="client"><span class="annot"><span class="annottext">client :: Params -&gt; StateMachineClient GovState GovInput
+</span><a href="Plutus.Contracts.Governance.html#client"><span class="hs-identifier hs-var hs-var">client</span></a></span></span><span> </span><span id="local-6989586621680916357"><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621680916357"><span class="hs-identifier hs-var">params</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StateMachineInstance GovState GovInput
+-&gt; StateMachineClient GovState GovInput
+forall state input.
+StateMachineInstance state input -&gt; StateMachineClient state input
+</span><span class="hs-identifier hs-var">SM.mkStateMachineClient</span></span><span> </span><span class="annot"><span class="annottext">(StateMachineInstance GovState GovInput
+ -&gt; StateMachineClient GovState GovInput)
+-&gt; StateMachineInstance GovState GovInput
+-&gt; StateMachineClient GovState GovInput
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">GovernanceMachine
+-&gt; TypedValidator GovernanceMachine
+-&gt; StateMachineInstance GovState GovInput
+forall s i.
+StateMachine s i
+-&gt; TypedValidator (StateMachine s i) -&gt; StateMachineInstance s i
+</span><span class="hs-identifier hs-var">SM.StateMachineInstance</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Params -&gt; GovernanceMachine
+</span><a href="Plutus.Contracts.Governance.html#machine"><span class="hs-identifier hs-var">machine</span></a></span><span> </span><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621680916357"><span class="hs-identifier hs-var">params</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Params -&gt; TypedValidator GovernanceMachine
+</span><a href="Plutus.Contracts.Governance.html#typedValidator"><span class="hs-identifier hs-var">typedValidator</span></a></span><span> </span><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621680916357"><span class="hs-identifier hs-var">params</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-169"></span><span>
+</span><span id="line-170"></span><span class="hs-comment">-- | Generate a voting token name by tagging on a number after the base token name.</span><span>
+</span><span id="line-171"></span><span class="annot"><a href="Plutus.Contracts.Governance.html#mkTokenName"><span class="hs-identifier hs-type">mkTokenName</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">TokenName</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/integer-gmp-1.0.3.0/src"><span class="hs-identifier hs-type">Integer</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">TokenName</span></span><span>
+</span><span id="line-172"></span><span id="mkTokenName"><span class="annot"><span class="annottext">mkTokenName :: TokenName -&gt; Integer -&gt; TokenName
+</span><a href="Plutus.Contracts.Governance.html#mkTokenName"><span class="hs-identifier hs-var hs-var">mkTokenName</span></a></span></span><span> </span><span id="local-6989586621680916354"><span class="annot"><span class="annottext">TokenName
+</span><a href="#local-6989586621680916354"><span class="hs-identifier hs-var">base</span></a></span></span><span> </span><span id="local-6989586621680916353"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621680916353"><span class="hs-identifier hs-var">ix</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; TokenName
+forall a. IsString a =&gt; String -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fromString</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TokenName -&gt; String
+</span><span class="hs-identifier hs-var">Value.toString</span></span><span> </span><span class="annot"><span class="annottext">TokenName
+</span><a href="#local-6989586621680916354"><span class="hs-identifier hs-var">base</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Haskell.show</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621680916353"><span class="hs-identifier hs-var">ix</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-173"></span><span>
+</span><span id="line-174"></span><span class="hs-pragma">{-# INLINABLE</span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#votingValue"><span class="hs-pragma hs-type">votingValue</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-175"></span><span class="annot"><a href="Plutus.Contracts.Governance.html#votingValue"><span class="hs-identifier hs-type">votingValue</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MintingPolicyHash</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">TokenName</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value.Value</span></span><span>
+</span><span id="line-176"></span><span id="votingValue"><span class="annot"><span class="annottext">votingValue :: MintingPolicyHash -&gt; TokenName -&gt; Value
+</span><a href="Plutus.Contracts.Governance.html#votingValue"><span class="hs-identifier hs-var hs-var">votingValue</span></a></span></span><span> </span><span id="local-6989586621680916349"><span class="annot"><span class="annottext">MintingPolicyHash
+</span><a href="#local-6989586621680916349"><span class="hs-identifier hs-var">mph</span></a></span></span><span> </span><span id="local-6989586621680916348"><span class="annot"><span class="annottext">TokenName
+</span><a href="#local-6989586621680916348"><span class="hs-identifier hs-var">tokenName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-177"></span><span>    </span><span class="annot"><span class="annottext">CurrencySymbol -&gt; TokenName -&gt; Integer -&gt; Value
+</span><span class="hs-identifier hs-var">Value.singleton</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">MintingPolicyHash -&gt; CurrencySymbol
+</span><span class="hs-identifier hs-var">Value.mpsSymbol</span></span><span> </span><span class="annot"><span class="annottext">MintingPolicyHash
+</span><a href="#local-6989586621680916349"><span class="hs-identifier hs-var">mph</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">TokenName
+</span><a href="#local-6989586621680916348"><span class="hs-identifier hs-var">tokenName</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-178"></span><span>
+</span><span id="line-179"></span><span class="hs-pragma">{-# INLINABLE</span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#ownsVotingToken"><span class="hs-pragma hs-type">ownsVotingToken</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-180"></span><span class="annot"><a href="Plutus.Contracts.Governance.html#ownsVotingToken"><span class="hs-identifier hs-type">ownsVotingToken</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Address</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MintingPolicyHash</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">TokenName</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">TxConstraints</span></span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Void</span></a></span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Void</span></a></span><span>
+</span><span id="line-181"></span><span id="ownsVotingToken"><span class="annot"><span class="annottext">ownsVotingToken :: Address
+-&gt; MintingPolicyHash -&gt; TokenName -&gt; TxConstraints Void Void
+</span><a href="Plutus.Contracts.Governance.html#ownsVotingToken"><span class="hs-identifier hs-var hs-var">ownsVotingToken</span></a></span></span><span> </span><span id="local-6989586621680916344"><span class="annot"><span class="annottext">Address
+</span><a href="#local-6989586621680916344"><span class="hs-identifier hs-var">owner</span></a></span></span><span> </span><span id="local-6989586621680916343"><span class="annot"><span class="annottext">MintingPolicyHash
+</span><a href="#local-6989586621680916343"><span class="hs-identifier hs-var">mph</span></a></span></span><span> </span><span id="local-6989586621680916342"><span class="annot"><span class="annottext">TokenName
+</span><a href="#local-6989586621680916342"><span class="hs-identifier hs-var">tokenName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Address -&gt; Value -&gt; TxConstraints Void Void
+forall i o. Address -&gt; Value -&gt; TxConstraints i o
+</span><span class="hs-identifier hs-var">Constraints.mustPayToAddress</span></span><span> </span><span class="annot"><span class="annottext">Address
+</span><a href="#local-6989586621680916344"><span class="hs-identifier hs-var">owner</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">MintingPolicyHash -&gt; TokenName -&gt; Value
+</span><a href="Plutus.Contracts.Governance.html#votingValue"><span class="hs-identifier hs-var">votingValue</span></a></span><span> </span><span class="annot"><span class="annottext">MintingPolicyHash
+</span><a href="#local-6989586621680916343"><span class="hs-identifier hs-var">mph</span></a></span><span> </span><span class="annot"><span class="annottext">TokenName
+</span><a href="#local-6989586621680916342"><span class="hs-identifier hs-var">tokenName</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-182"></span><span>
+</span><span id="line-183"></span><span class="hs-pragma">{-# INLINABLE</span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#transition"><span class="hs-pragma hs-type">transition</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-184"></span><span class="annot"><a href="Plutus.Contracts.Governance.html#transition"><span class="hs-identifier hs-type">transition</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#Params"><span class="hs-identifier hs-type">Params</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">State</span></span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#GovState"><span class="hs-identifier hs-type">GovState</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#GovInput"><span class="hs-identifier hs-type">GovInput</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">TxConstraints</span></span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Void</span></a></span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Void</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">State</span></span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#GovState"><span class="hs-identifier hs-type">GovState</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-185"></span><span id="transition"><span class="annot"><span class="annottext">transition :: Params
+-&gt; State GovState
+-&gt; GovInput
+-&gt; Maybe (TxConstraints Void Void, State GovState)
+</span><a href="Plutus.Contracts.Governance.html#transition"><span class="hs-identifier hs-var hs-var">transition</span></a></span></span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#Params"><span class="hs-identifier hs-type">Params</span></a></span><span class="hs-special">{</span><span id="local-6989586621680916338"><span id="local-6989586621680916339"><span id="local-6989586621680916340"><span class="annot"><span class="annottext">Integer
+[Address]
+TokenName
+requiredVotes :: Integer
+initialHolders :: [Address]
+baseTokenName :: TokenName
+requiredVotes :: Params -&gt; Integer
+initialHolders :: Params -&gt; [Address]
+baseTokenName :: Params -&gt; TokenName
+</span><a href="#local-6989586621680916338"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span><span class="hs-special">}</span><span> </span><span class="annot"><span class="hs-identifier hs-type">State</span></span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">stateData :: forall s. State s -&gt; s
+</span><span class="hs-identifier hs-var">stateData</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621680916335"><span class="annot"><span class="annottext">GovState
+</span><a href="#local-6989586621680916335"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680916334"><span class="annot"><span class="annottext">Value
+stateValue :: forall s. State s -&gt; Value
+stateValue :: Value
+</span><span class="hs-identifier hs-var hs-var">stateValue</span></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621680916332"><span class="annot"><span class="annottext">GovInput
+</span><a href="#local-6989586621680916332"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">GovState
+</span><a href="#local-6989586621680916335"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">GovInput
+</span><a href="#local-6989586621680916332"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-186"></span><span>
+</span><span id="line-187"></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.Contracts.Governance.html#GovState"><span class="hs-identifier hs-type">GovState</span></a></span><span class="hs-special">{</span><span id="local-6989586621680916331"><span class="annot"><span class="annottext">MintingPolicyHash
+mph :: MintingPolicyHash
+mph :: GovState -&gt; MintingPolicyHash
+</span><a href="#local-6989586621680916331"><span class="hs-identifier hs-var hs-var">mph</span></a></span></span><span class="hs-special">}</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#MintTokens"><span class="hs-identifier hs-type">MintTokens</span></a></span><span> </span><span id="local-6989586621680916330"><span class="annot"><span class="annottext">[TokenName]
+</span><a href="#local-6989586621680916330"><span class="hs-identifier hs-var">tokenNames</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-188"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span class="hs-special">(</span><span id="local-6989586621680916329"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680916329"><span class="hs-identifier hs-var">total</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680916328"><span class="annot"><span class="annottext">TxConstraints Void Void
+</span><a href="#local-6989586621680916328"><span class="hs-identifier hs-var">constraints</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">((Address, TokenName) -&gt; (Value, TxConstraints Void Void))
+-&gt; [(Address, TokenName)] -&gt; (Value, TxConstraints Void Void)
+forall (t :: * -&gt; *) m a.
+(Foldable t, Monoid m) =&gt;
+(a -&gt; m) -&gt; t a -&gt; m
+</span><span class="hs-identifier hs-var">foldMap</span></span><span>
+</span><span id="line-189"></span><span>                </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621680916326"><span class="annot"><span class="annottext">Address
+</span><a href="#local-6989586621680916326"><span class="hs-identifier hs-var">addr</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680916325"><span class="annot"><span class="annottext">TokenName
+</span><a href="#local-6989586621680916325"><span class="hs-identifier hs-var">nm</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680916324"><span class="annot"><span class="annottext">v :: Value
+</span><a href="#local-6989586621680916324"><span class="hs-identifier hs-var hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MintingPolicyHash -&gt; TokenName -&gt; Value
+</span><a href="Plutus.Contracts.Governance.html#votingValue"><span class="hs-identifier hs-var">votingValue</span></a></span><span> </span><span class="annot"><span class="annottext">MintingPolicyHash
+</span><a href="#local-6989586621680916331"><span class="hs-identifier hs-var">mph</span></a></span><span> </span><span class="annot"><span class="annottext">TokenName
+</span><a href="#local-6989586621680916325"><span class="hs-identifier hs-var">nm</span></a></span><span> </span><span class="hs-keyword">in</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680916324"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Address -&gt; Value -&gt; TxConstraints Void Void
+forall i o. Address -&gt; Value -&gt; TxConstraints i o
+</span><span class="hs-identifier hs-var">Constraints.mustPayToAddress</span></span><span> </span><span class="annot"><span class="annottext">Address
+</span><a href="#local-6989586621680916326"><span class="hs-identifier hs-var">addr</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680916324"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-190"></span><span>                </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Address] -&gt; [TokenName] -&gt; [(Address, TokenName)]
+forall a b. [a] -&gt; [b] -&gt; [(a, b)]
+</span><span class="hs-identifier hs-var">zip</span></span><span> </span><span class="annot"><span class="annottext">[Address]
+</span><a href="#local-6989586621680916339"><span class="hs-identifier hs-var">initialHolders</span></a></span><span> </span><span class="annot"><span class="annottext">[TokenName]
+</span><a href="#local-6989586621680916330"><span class="hs-identifier hs-var">tokenNames</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-191"></span><span>        </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">(TxConstraints Void Void, State GovState)
+-&gt; Maybe (TxConstraints Void Void, State GovState)
+forall a. a -&gt; Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxConstraints Void Void
+</span><a href="#local-6989586621680916328"><span class="hs-identifier hs-var">constraints</span></a></span><span> </span><span class="annot"><span class="annottext">TxConstraints Void Void
+-&gt; TxConstraints Void Void -&gt; TxConstraints Void Void
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Value -&gt; TxConstraints Void Void
+forall i o. Value -&gt; TxConstraints i o
+</span><span class="hs-identifier hs-var">Constraints.mustMintValue</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Value -&gt; Value
+</span><span class="hs-identifier hs-var">Value.noAdaValue</span></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680916329"><span class="hs-identifier hs-var">total</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">GovState -&gt; Value -&gt; State GovState
+forall s. s -&gt; Value -&gt; State s
+</span><span class="hs-identifier hs-var">State</span></span><span> </span><span class="annot"><span class="annottext">GovState
+</span><a href="#local-6989586621680916335"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680916334"><span class="hs-identifier hs-var">stateValue</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-192"></span><span>
+</span><span id="line-193"></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.Contracts.Governance.html#GovState"><span class="hs-identifier hs-type">GovState</span></a></span><span> </span><span id="local-6989586621680916319"><span class="annot"><span class="annottext">Law
+</span><a href="#local-6989586621680916319"><span class="hs-identifier hs-var">law</span></a></span></span><span> </span><span id="local-6989586621680916318"><span class="annot"><span class="annottext">MintingPolicyHash
+</span><a href="#local-6989586621680916318"><span class="hs-identifier hs-var">mph</span></a></span></span><span> </span><span class="annot"><span class="annottext">Maybe Voting
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#ProposeChange"><span class="hs-identifier hs-type">ProposeChange</span></a></span><span> </span><span id="local-6989586621680916317"><span class="annot"><span class="annottext">Address
+</span><a href="#local-6989586621680916317"><span class="hs-identifier hs-var">owner</span></a></span></span><span> </span><span id="local-6989586621680916316"><span class="annot"><span class="annottext">proposal :: Proposal
+</span><a href="#local-6989586621680916316"><span class="hs-identifier hs-var">proposal</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Plutus.Contracts.Governance.html#Proposal"><span class="hs-identifier hs-type">Proposal</span></a></span><span class="hs-special">{</span><span id="local-6989586621680916315"><span class="annot"><span class="annottext">TokenName
+tokenName :: TokenName
+tokenName :: Proposal -&gt; TokenName
+</span><a href="#local-6989586621680916315"><span class="hs-identifier hs-var hs-var">tokenName</span></a></span></span><span class="hs-special">}</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-194"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680916314"><span class="annot"><span class="annottext">constraints :: TxConstraints Void Void
+</span><a href="#local-6989586621680916314"><span class="hs-identifier hs-var hs-var">constraints</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Address
+-&gt; MintingPolicyHash -&gt; TokenName -&gt; TxConstraints Void Void
+</span><a href="Plutus.Contracts.Governance.html#ownsVotingToken"><span class="hs-identifier hs-var">ownsVotingToken</span></a></span><span> </span><span class="annot"><span class="annottext">Address
+</span><a href="#local-6989586621680916317"><span class="hs-identifier hs-var">owner</span></a></span><span> </span><span class="annot"><span class="annottext">MintingPolicyHash
+</span><a href="#local-6989586621680916318"><span class="hs-identifier hs-var">mph</span></a></span><span> </span><span class="annot"><span class="annottext">TokenName
+</span><a href="#local-6989586621680916315"><span class="hs-identifier hs-var">tokenName</span></a></span><span>
+</span><span id="line-195"></span><span>        </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">(TxConstraints Void Void, State GovState)
+-&gt; Maybe (TxConstraints Void Void, State GovState)
+forall a. a -&gt; Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxConstraints Void Void
+</span><a href="#local-6989586621680916314"><span class="hs-identifier hs-var">constraints</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">GovState -&gt; Value -&gt; State GovState
+forall s. s -&gt; Value -&gt; State s
+</span><span class="hs-identifier hs-var">State</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Law -&gt; MintingPolicyHash -&gt; Maybe Voting -&gt; GovState
+</span><a href="Plutus.Contracts.Governance.html#GovState"><span class="hs-identifier hs-var">GovState</span></a></span><span> </span><span class="annot"><span class="annottext">Law
+</span><a href="#local-6989586621680916319"><span class="hs-identifier hs-var">law</span></a></span><span> </span><span class="annot"><span class="annottext">MintingPolicyHash
+</span><a href="#local-6989586621680916318"><span class="hs-identifier hs-var">mph</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Voting -&gt; Maybe Voting
+forall a. a -&gt; Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proposal -&gt; Map TokenName Bool -&gt; Voting
+</span><a href="Plutus.Contracts.Governance.html#Voting"><span class="hs-identifier hs-var">Voting</span></a></span><span> </span><span class="annot"><span class="annottext">Proposal
+</span><a href="#local-6989586621680916316"><span class="hs-identifier hs-var">proposal</span></a></span><span> </span><span class="annot"><span class="annottext">Map TokenName Bool
+forall k v. Map k v
+</span><span class="hs-identifier hs-var">AssocMap.empty</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680916334"><span class="hs-identifier hs-var">stateValue</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-196"></span><span>
+</span><span id="line-197"></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.Contracts.Governance.html#GovState"><span class="hs-identifier hs-type">GovState</span></a></span><span> </span><span id="local-6989586621680916312"><span class="annot"><span class="annottext">Law
+</span><a href="#local-6989586621680916312"><span class="hs-identifier hs-var">law</span></a></span></span><span> </span><span id="local-6989586621680916311"><span class="annot"><span class="annottext">MintingPolicyHash
+</span><a href="#local-6989586621680916311"><span class="hs-identifier hs-var">mph</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.Contracts.Governance.html#Voting"><span class="hs-identifier hs-type">Voting</span></a></span><span> </span><span id="local-6989586621680916310"><span class="annot"><span class="annottext">Proposal
+</span><a href="#local-6989586621680916310"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span id="local-6989586621680916309"><span class="annot"><span class="annottext">Map TokenName Bool
+</span><a href="#local-6989586621680916309"><span class="hs-identifier hs-var">oldMap</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#AddVote"><span class="hs-identifier hs-type">AddVote</span></a></span><span> </span><span id="local-6989586621680916308"><span class="annot"><span class="annottext">Address
+</span><a href="#local-6989586621680916308"><span class="hs-identifier hs-var">owner</span></a></span></span><span> </span><span id="local-6989586621680916307"><span class="annot"><span class="annottext">TokenName
+</span><a href="#local-6989586621680916307"><span class="hs-identifier hs-var">tokenName</span></a></span></span><span> </span><span id="local-6989586621680916306"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621680916306"><span class="hs-identifier hs-var">vote</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-198"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680916305"><span class="annot"><span class="annottext">newMap :: Map TokenName Bool
+</span><a href="#local-6989586621680916305"><span class="hs-identifier hs-var hs-var">newMap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TokenName -&gt; Bool -&gt; Map TokenName Bool -&gt; Map TokenName Bool
+forall k v. Eq k =&gt; k -&gt; v -&gt; Map k v -&gt; Map k v
+</span><span class="hs-identifier hs-var">AssocMap.insert</span></span><span> </span><span class="annot"><span class="annottext">TokenName
+</span><a href="#local-6989586621680916307"><span class="hs-identifier hs-var">tokenName</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621680916306"><span class="hs-identifier hs-var">vote</span></a></span><span> </span><span class="annot"><span class="annottext">Map TokenName Bool
+</span><a href="#local-6989586621680916309"><span class="hs-identifier hs-var">oldMap</span></a></span><span>
+</span><span id="line-199"></span><span>            </span><span id="local-6989586621680916303"><span class="annot"><span class="annottext">validityTimeRange :: ValidityInterval POSIXTime
+</span><a href="#local-6989586621680916303"><span class="hs-identifier hs-var hs-var">validityTimeRange</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">POSIXTime -&gt; ValidityInterval POSIXTime
+forall a. a -&gt; ValidityInterval a
+</span><span class="hs-identifier hs-var">Interval.lessThan</span></span><span> </span><span class="annot"><span class="annottext">(POSIXTime -&gt; ValidityInterval POSIXTime)
+-&gt; POSIXTime -&gt; ValidityInterval POSIXTime
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Proposal -&gt; POSIXTime
+</span><a href="Plutus.Contracts.Governance.html#votingDeadline"><span class="hs-identifier hs-var hs-var">votingDeadline</span></a></span><span> </span><span class="annot"><span class="annottext">Proposal
+</span><a href="#local-6989586621680916310"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">POSIXTime -&gt; POSIXTime -&gt; POSIXTime
+forall a. AdditiveGroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">POSIXTime
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-200"></span><span>            </span><span id="local-6989586621680916300"><span class="annot"><span class="annottext">constraints :: TxConstraints Void Void
+</span><a href="#local-6989586621680916300"><span class="hs-identifier hs-var hs-var">constraints</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Address
+-&gt; MintingPolicyHash -&gt; TokenName -&gt; TxConstraints Void Void
+</span><a href="Plutus.Contracts.Governance.html#ownsVotingToken"><span class="hs-identifier hs-var">ownsVotingToken</span></a></span><span> </span><span class="annot"><span class="annottext">Address
+</span><a href="#local-6989586621680916308"><span class="hs-identifier hs-var">owner</span></a></span><span> </span><span class="annot"><span class="annottext">MintingPolicyHash
+</span><a href="#local-6989586621680916311"><span class="hs-identifier hs-var">mph</span></a></span><span> </span><span class="annot"><span class="annottext">TokenName
+</span><a href="#local-6989586621680916307"><span class="hs-identifier hs-var">tokenName</span></a></span><span>
+</span><span id="line-201"></span><span>                        </span><span class="annot"><span class="annottext">TxConstraints Void Void
+-&gt; TxConstraints Void Void -&gt; TxConstraints Void Void
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">ValidityInterval POSIXTime -&gt; TxConstraints Void Void
+forall i o. ValidityInterval POSIXTime -&gt; TxConstraints i o
+</span><span class="hs-identifier hs-var">Constraints.mustValidateInTimeRange</span></span><span> </span><span class="annot"><span class="annottext">ValidityInterval POSIXTime
+</span><a href="#local-6989586621680916303"><span class="hs-identifier hs-var">validityTimeRange</span></a></span><span>
+</span><span id="line-202"></span><span>        </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">(TxConstraints Void Void, State GovState)
+-&gt; Maybe (TxConstraints Void Void, State GovState)
+forall a. a -&gt; Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxConstraints Void Void
+</span><a href="#local-6989586621680916300"><span class="hs-identifier hs-var">constraints</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">GovState -&gt; Value -&gt; State GovState
+forall s. s -&gt; Value -&gt; State s
+</span><span class="hs-identifier hs-var">State</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Law -&gt; MintingPolicyHash -&gt; Maybe Voting -&gt; GovState
+</span><a href="Plutus.Contracts.Governance.html#GovState"><span class="hs-identifier hs-var">GovState</span></a></span><span> </span><span class="annot"><span class="annottext">Law
+</span><a href="#local-6989586621680916312"><span class="hs-identifier hs-var">law</span></a></span><span> </span><span class="annot"><span class="annottext">MintingPolicyHash
+</span><a href="#local-6989586621680916311"><span class="hs-identifier hs-var">mph</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Voting -&gt; Maybe Voting
+forall a. a -&gt; Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proposal -&gt; Map TokenName Bool -&gt; Voting
+</span><a href="Plutus.Contracts.Governance.html#Voting"><span class="hs-identifier hs-var">Voting</span></a></span><span> </span><span class="annot"><span class="annottext">Proposal
+</span><a href="#local-6989586621680916310"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">Map TokenName Bool
+</span><a href="#local-6989586621680916305"><span class="hs-identifier hs-var">newMap</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680916334"><span class="hs-identifier hs-var">stateValue</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-203"></span><span>
+</span><span id="line-204"></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.Contracts.Governance.html#GovState"><span class="hs-identifier hs-type">GovState</span></a></span><span> </span><span id="local-6989586621680916298"><span class="annot"><span class="annottext">Law
+</span><a href="#local-6989586621680916298"><span class="hs-identifier hs-var">oldLaw</span></a></span></span><span> </span><span id="local-6989586621680916297"><span class="annot"><span class="annottext">MintingPolicyHash
+</span><a href="#local-6989586621680916297"><span class="hs-identifier hs-var">mph</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.Contracts.Governance.html#Voting"><span class="hs-identifier hs-type">Voting</span></a></span><span> </span><span id="local-6989586621680916296"><span class="annot"><span class="annottext">Proposal
+</span><a href="#local-6989586621680916296"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span id="local-6989586621680916295"><span class="annot"><span class="annottext">Map TokenName Bool
+</span><a href="#local-6989586621680916295"><span class="hs-identifier hs-var">votes</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">GovInput
+</span><a href="Plutus.Contracts.Governance.html#FinishVoting"><span class="hs-identifier hs-var">FinishVoting</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-205"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Sum</span></a></span><span> </span><span id="local-6989586621680916293"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621680916293"><span class="hs-identifier hs-var">ayes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; Sum Integer) -&gt; Map TokenName Bool -&gt; Sum Integer
+forall (t :: * -&gt; *) m a.
+(Foldable t, Monoid m) =&gt;
+(a -&gt; m) -&gt; t a -&gt; m
+</span><span class="hs-identifier hs-var">foldMap</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621680916292"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621680916292"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Sum Integer
+forall a. a -&gt; Sum a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Sum</span></a></span><span> </span><span class="annot"><span class="annottext">(Integer -&gt; Sum Integer) -&gt; Integer -&gt; Sum Integer
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621680916292"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">1</span></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Map TokenName Bool
+</span><a href="#local-6989586621680916295"><span class="hs-identifier hs-var">votes</span></a></span><span>
+</span><span id="line-206"></span><span>        </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">(TxConstraints Void Void, State GovState)
+-&gt; Maybe (TxConstraints Void Void, State GovState)
+forall a. a -&gt; Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxConstraints Void Void
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">GovState -&gt; Value -&gt; State GovState
+forall s. s -&gt; Value -&gt; State s
+</span><span class="hs-identifier hs-var">State</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Law -&gt; MintingPolicyHash -&gt; Maybe Voting -&gt; GovState
+</span><a href="Plutus.Contracts.Governance.html#GovState"><span class="hs-identifier hs-var">GovState</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621680916293"><span class="hs-identifier hs-var">ayes</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&gt;=</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621680916338"><span class="hs-identifier hs-var">requiredVotes</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Proposal -&gt; Law
+</span><a href="Plutus.Contracts.Governance.html#newLaw"><span class="hs-identifier hs-var hs-var">newLaw</span></a></span><span> </span><span class="annot"><span class="annottext">Proposal
+</span><a href="#local-6989586621680916296"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Law
+</span><a href="#local-6989586621680916298"><span class="hs-identifier hs-var">oldLaw</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">MintingPolicyHash
+</span><a href="#local-6989586621680916297"><span class="hs-identifier hs-var">mph</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Voting
+forall a. Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680916334"><span class="hs-identifier hs-var">stateValue</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-207"></span><span>
+</span><span id="line-208"></span><span>    </span><span class="annot"><span class="annottext">(GovState, GovInput)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe (TxConstraints Void Void, State GovState)
+forall a. Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-209"></span><span>
+</span><span id="line-210"></span><span class="hs-comment">-- | The main contract for creating a new law and for voting on proposals.</span><span>
+</span><span id="line-211"></span><span id="local-6989586621680916289"><span class="annot"><a href="Plutus.Contracts.Governance.html#contract"><span class="hs-identifier hs-type">contract</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-212"></span><span>    </span><span class="annot"><a href="Plutus.Contracts.Governance.html#AsGovError"><span class="hs-identifier hs-type">AsGovError</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680916289"><span class="hs-identifier hs-type">e</span></a></span><span>
+</span><span id="line-213"></span><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#Params"><span class="hs-identifier hs-type">Params</span></a></span><span>
+</span><span id="line-214"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Contract</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#Schema"><span class="hs-identifier hs-type">Schema</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680916289"><span class="hs-identifier hs-type">e</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-215"></span><span id="contract"><span class="annot"><span class="annottext">contract :: Params -&gt; Contract () Schema e ()
+</span><a href="Plutus.Contracts.Governance.html#contract"><span class="hs-identifier hs-var hs-var">contract</span></a></span></span><span> </span><span id="local-6989586621680916288"><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621680916288"><span class="hs-identifier hs-var">params</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Contract
+  ()
+  ('R
+     '[ &quot;add-vote&quot;
+        ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+        &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+  e
+  ()
+-&gt; Contract
+     ()
+     ('R
+        '[ &quot;add-vote&quot;
+           ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+           &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+     e
+     ()
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">forever</span></a></span><span> </span><span class="annot"><span class="annottext">(Contract
+   ()
+   ('R
+      '[ &quot;add-vote&quot;
+         ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+         &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+   e
+   ()
+ -&gt; Contract
+      ()
+      ('R
+         '[ &quot;add-vote&quot;
+            ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+            &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+      e
+      ())
+-&gt; Contract
+     ()
+     ('R
+        '[ &quot;add-vote&quot;
+           ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+           &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+     e
+     ()
+-&gt; Contract
+     ()
+     ('R
+        '[ &quot;add-vote&quot;
+           ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+           &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+     e
+     ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">(GovError -&gt; e)
+-&gt; Contract
+     ()
+     ('R
+        '[ &quot;add-vote&quot;
+           ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+           &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+     GovError
+     ()
+-&gt; Contract
+     ()
+     ('R
+        '[ &quot;add-vote&quot;
+           ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+           &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+     e
+     ()
+forall w (s :: Row *) e e' a.
+(e -&gt; e') -&gt; Contract w s e a -&gt; Contract w s e' a
+</span><span class="hs-identifier hs-var">mapError</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AReview e GovError -&gt; GovError -&gt; e
+forall b (m :: * -&gt; *) t. MonadReader b m =&gt; AReview t b -&gt; m t
+</span><span class="hs-identifier hs-var">review</span></span><span> </span><span class="annot"><span class="annottext">AReview e GovError
+forall r. AsGovError r =&gt; Prism' r GovError
+</span><a href="Plutus.Contracts.Governance.html#_GovError"><span class="hs-identifier hs-var">_GovError</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Contract
+  ()
+  ('R
+     '[ &quot;add-vote&quot;
+        ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+        &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+  GovError
+  ()
+</span><a href="#local-6989586621680916285"><span class="hs-identifier hs-var">endpoints</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-216"></span><span>    </span><span id="local-6989586621680916284"><span class="annot"><span class="annottext">theClient :: StateMachineClient GovState GovInput
+</span><a href="#local-6989586621680916284"><span class="hs-identifier hs-var hs-var">theClient</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Params -&gt; StateMachineClient GovState GovInput
+</span><a href="Plutus.Contracts.Governance.html#client"><span class="hs-identifier hs-var">client</span></a></span><span> </span><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621680916288"><span class="hs-identifier hs-var">params</span></a></span><span>
+</span><span id="line-217"></span><span>    </span><span id="local-6989586621680916285"><span class="annot"><span class="annottext">endpoints :: Contract
+  ()
+  ('R
+     '[ &quot;add-vote&quot;
+        ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+        &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+  GovError
+  ()
+</span><a href="#local-6989586621680916285"><span class="hs-identifier hs-var hs-var">endpoints</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Promise
+   ()
+   ('R
+      '[ &quot;add-vote&quot;
+         ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+         &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+   GovError
+   ()]
+-&gt; Contract
+     ()
+     ('R
+        '[ &quot;add-vote&quot;
+           ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+           &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+     GovError
+     ()
+forall w (s :: Row *) e a. [Promise w s e a] -&gt; Contract w s e a
+</span><span class="hs-identifier hs-var">selectList</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Promise
+  ()
+  ('R
+     '[ &quot;add-vote&quot;
+        ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+        &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+  GovError
+  ()
+</span><a href="#local-6989586621680916282"><span class="hs-identifier hs-var">initLaw</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Promise
+  ()
+  ('R
+     '[ &quot;add-vote&quot;
+        ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+        &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+  GovError
+  ()
+</span><a href="#local-6989586621680916281"><span class="hs-identifier hs-var">addVote</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-218"></span><span>
+</span><span id="line-219"></span><span>    </span><span id="local-6989586621680916281"><span class="annot"><span class="annottext">addVote :: Promise
+  ()
+  ('R
+     '[ &quot;add-vote&quot;
+        ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+        &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+  GovError
+  ()
+</span><a href="#local-6989586621680916281"><span class="hs-identifier hs-var hs-var">addVote</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a w (s :: Row *) e b.
+(HasEndpoint &quot;add-vote&quot; a s, AsContractError e, FromJSON a) =&gt;
+(a -&gt; Contract w s e b) -&gt; Promise w s e b
+forall (l :: Symbol) a w (s :: Row *) e b.
+(HasEndpoint l a s, AsContractError e, FromJSON a) =&gt;
+(a -&gt; Contract w s e b) -&gt; Promise w s e b
+</span><span class="hs-identifier hs-var">endpoint</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-string">&quot;add-vote&quot;</span></span><span> </span><span class="annot"><span class="annottext">(((Address, TokenName, Bool)
+  -&gt; Contract
+       ()
+       ('R
+          '[ &quot;add-vote&quot;
+             ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+             &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+       GovError
+       ())
+ -&gt; Promise
+      ()
+      ('R
+         '[ &quot;add-vote&quot;
+            ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+            &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+      GovError
+      ())
+-&gt; ((Address, TokenName, Bool)
+    -&gt; Contract
+         ()
+         ('R
+            '[ &quot;add-vote&quot;
+               ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+               &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+         GovError
+         ())
+-&gt; Promise
+     ()
+     ('R
+        '[ &quot;add-vote&quot;
+           ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+           &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+     GovError
+     ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621680916279"><span class="annot"><span class="annottext">Address
+</span><a href="#local-6989586621680916279"><span class="hs-identifier hs-var">owner</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680916278"><span class="annot"><span class="annottext">TokenName
+</span><a href="#local-6989586621680916278"><span class="hs-identifier hs-var">tokenName</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680916277"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621680916277"><span class="hs-identifier hs-var">vote</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-220"></span><span>        </span><span class="annot"><span class="annottext">Contract
+  ()
+  ('R
+     '[ &quot;add-vote&quot;
+        ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+        &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+  GovError
+  (TransitionResult GovState GovInput)
+-&gt; Contract
+     ()
+     ('R
+        '[ &quot;add-vote&quot;
+           ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+           &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+     GovError
+     ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(Contract
+   ()
+   ('R
+      '[ &quot;add-vote&quot;
+         ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+         &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+   GovError
+   (TransitionResult GovState GovInput)
+ -&gt; Contract
+      ()
+      ('R
+         '[ &quot;add-vote&quot;
+            ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+            &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+      GovError
+      ())
+-&gt; Contract
+     ()
+     ('R
+        '[ &quot;add-vote&quot;
+           ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+           &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+     GovError
+     (TransitionResult GovState GovInput)
+-&gt; Contract
+     ()
+     ('R
+        '[ &quot;add-vote&quot;
+           ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+           &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+     GovError
+     ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">StateMachineClient GovState GovInput
+-&gt; GovInput
+-&gt; Contract
+     ()
+     ('R
+        '[ &quot;add-vote&quot;
+           ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+           &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+     GovError
+     (TransitionResult GovState GovInput)
+forall w e state (schema :: Row *) input.
+(AsSMContractError e, FromData state, ToData state,
+ ToData input) =&gt;
+StateMachineClient state input
+-&gt; input -&gt; Contract w schema e (TransitionResult state input)
+</span><span class="hs-identifier hs-var">SM.runStep</span></span><span> </span><span class="annot"><span class="annottext">StateMachineClient GovState GovInput
+</span><a href="#local-6989586621680916284"><span class="hs-identifier hs-var">theClient</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Address -&gt; TokenName -&gt; Bool -&gt; GovInput
+</span><a href="Plutus.Contracts.Governance.html#AddVote"><span class="hs-identifier hs-var">AddVote</span></a></span><span> </span><span class="annot"><span class="annottext">Address
+</span><a href="#local-6989586621680916279"><span class="hs-identifier hs-var">owner</span></a></span><span> </span><span class="annot"><span class="annottext">TokenName
+</span><a href="#local-6989586621680916278"><span class="hs-identifier hs-var">tokenName</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621680916277"><span class="hs-identifier hs-var">vote</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-221"></span><span>
+</span><span id="line-222"></span><span>    </span><span id="local-6989586621680916282"><span class="annot"><span class="annottext">initLaw :: Promise
+  ()
+  ('R
+     '[ &quot;add-vote&quot;
+        ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+        &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+  GovError
+  ()
+</span><a href="#local-6989586621680916282"><span class="hs-identifier hs-var hs-var">initLaw</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a w (s :: Row *) e b.
+(HasEndpoint &quot;new-law&quot; a s, AsContractError e, FromJSON a) =&gt;
+(a -&gt; Contract w s e b) -&gt; Promise w s e b
+forall (l :: Symbol) a w (s :: Row *) e b.
+(HasEndpoint l a s, AsContractError e, FromJSON a) =&gt;
+(a -&gt; Contract w s e b) -&gt; Promise w s e b
+</span><span class="hs-identifier hs-var">endpoint</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-string">&quot;new-law&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Law
+  -&gt; Contract
+       ()
+       ('R
+          '[ &quot;add-vote&quot;
+             ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+             &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+       GovError
+       ())
+ -&gt; Promise
+      ()
+      ('R
+         '[ &quot;add-vote&quot;
+            ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+            &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+      GovError
+      ())
+-&gt; (Law
+    -&gt; Contract
+         ()
+         ('R
+            '[ &quot;add-vote&quot;
+               ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+               &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+         GovError
+         ())
+-&gt; Promise
+     ()
+     ('R
+        '[ &quot;add-vote&quot;
+           ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+           &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+     GovError
+     ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621680916274"><span class="annot"><span class="annottext">Law
+</span><a href="#local-6989586621680916274"><span class="hs-identifier hs-var">law</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-223"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680916273"><span class="annot"><span class="annottext">mph :: MintingPolicyHash
+</span><a href="#local-6989586621680916273"><span class="hs-identifier hs-var hs-var">mph</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TypedValidator GovernanceMachine -&gt; MintingPolicyHash
+forall a. TypedValidator a -&gt; MintingPolicyHash
+</span><span class="hs-identifier hs-var">Scripts.forwardingMintingPolicyHash</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Params -&gt; TypedValidator GovernanceMachine
+</span><a href="Plutus.Contracts.Governance.html#typedValidator"><span class="hs-identifier hs-var">typedValidator</span></a></span><span> </span><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621680916288"><span class="hs-identifier hs-var">params</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-224"></span><span>        </span><span class="annot"><span class="annottext">Contract
+  ()
+  ('R
+     '[ &quot;add-vote&quot;
+        ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+        &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+  GovError
+  GovState
+-&gt; Contract
+     ()
+     ('R
+        '[ &quot;add-vote&quot;
+           ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+           &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+     GovError
+     ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(Contract
+   ()
+   ('R
+      '[ &quot;add-vote&quot;
+         ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+         &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+   GovError
+   GovState
+ -&gt; Contract
+      ()
+      ('R
+         '[ &quot;add-vote&quot;
+            ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+            &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+      GovError
+      ())
+-&gt; Contract
+     ()
+     ('R
+        '[ &quot;add-vote&quot;
+           ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+           &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+     GovError
+     GovState
+-&gt; Contract
+     ()
+     ('R
+        '[ &quot;add-vote&quot;
+           ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+           &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+     GovError
+     ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">StateMachineClient GovState GovInput
+-&gt; GovState
+-&gt; Value
+-&gt; Contract
+     ()
+     ('R
+        '[ &quot;add-vote&quot;
+           ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+           &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+     GovError
+     GovState
+forall w e state (schema :: Row *) input.
+(FromData state, ToData state, ToData input,
+ AsSMContractError e) =&gt;
+StateMachineClient state input
+-&gt; state -&gt; Value -&gt; Contract w schema e state
+</span><span class="hs-identifier hs-var">SM.runInitialise</span></span><span> </span><span class="annot"><span class="annottext">StateMachineClient GovState GovInput
+</span><a href="#local-6989586621680916284"><span class="hs-identifier hs-var">theClient</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Law -&gt; MintingPolicyHash -&gt; Maybe Voting -&gt; GovState
+</span><a href="Plutus.Contracts.Governance.html#GovState"><span class="hs-identifier hs-var">GovState</span></a></span><span> </span><span class="annot"><span class="annottext">Law
+</span><a href="#local-6989586621680916274"><span class="hs-identifier hs-var">law</span></a></span><span> </span><span class="annot"><span class="annottext">MintingPolicyHash
+</span><a href="#local-6989586621680916273"><span class="hs-identifier hs-var">mph</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Voting
+forall a. Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer -&gt; Value
+</span><span class="hs-identifier hs-var">Ada.lovelaceValueOf</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span>
+</span><span id="line-225"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680916269"><span class="annot"><span class="annottext">tokens :: [TokenName]
+</span><a href="#local-6989586621680916269"><span class="hs-identifier hs-var hs-var">tokens</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Address -&gt; Integer -&gt; TokenName)
+-&gt; [Address] -&gt; [Integer] -&gt; [TokenName]
+forall a b c. (a -&gt; b -&gt; c) -&gt; [a] -&gt; [b] -&gt; [c]
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Haskell.zipWith</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Integer -&gt; TokenName) -&gt; Address -&gt; Integer -&gt; TokenName
+forall a b. a -&gt; b -&gt; a
+</span><span class="hs-identifier hs-var">const</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TokenName -&gt; Integer -&gt; TokenName
+</span><a href="Plutus.Contracts.Governance.html#mkTokenName"><span class="hs-identifier hs-var">mkTokenName</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Params -&gt; TokenName
+</span><a href="Plutus.Contracts.Governance.html#baseTokenName"><span class="hs-identifier hs-var hs-var">baseTokenName</span></a></span><span> </span><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621680916288"><span class="hs-identifier hs-var">params</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Params -&gt; [Address]
+</span><a href="Plutus.Contracts.Governance.html#initialHolders"><span class="hs-identifier hs-var hs-var">initialHolders</span></a></span><span> </span><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621680916288"><span class="hs-identifier hs-var">params</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">1</span></span><span class="hs-glyph">..</span><span class="hs-special">]</span><span>
+</span><span id="line-226"></span><span>        </span><span class="annot"><span class="annottext">Contract
+  ()
+  ('R
+     '[ &quot;add-vote&quot;
+        ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+        &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+  GovError
+  (TransitionResult GovState GovInput)
+-&gt; Contract
+     ()
+     ('R
+        '[ &quot;add-vote&quot;
+           ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+           &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+     GovError
+     ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(Contract
+   ()
+   ('R
+      '[ &quot;add-vote&quot;
+         ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+         &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+   GovError
+   (TransitionResult GovState GovInput)
+ -&gt; Contract
+      ()
+      ('R
+         '[ &quot;add-vote&quot;
+            ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+            &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+      GovError
+      ())
+-&gt; Contract
+     ()
+     ('R
+        '[ &quot;add-vote&quot;
+           ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+           &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+     GovError
+     (TransitionResult GovState GovInput)
+-&gt; Contract
+     ()
+     ('R
+        '[ &quot;add-vote&quot;
+           ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+           &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+     GovError
+     ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">StateMachineClient GovState GovInput
+-&gt; GovInput
+-&gt; Contract
+     ()
+     ('R
+        '[ &quot;add-vote&quot;
+           ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+           &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+     GovError
+     (TransitionResult GovState GovInput)
+forall w e state (schema :: Row *) input.
+(AsSMContractError e, FromData state, ToData state,
+ ToData input) =&gt;
+StateMachineClient state input
+-&gt; input -&gt; Contract w schema e (TransitionResult state input)
+</span><span class="hs-identifier hs-var">SM.runStep</span></span><span> </span><span class="annot"><span class="annottext">StateMachineClient GovState GovInput
+</span><a href="#local-6989586621680916284"><span class="hs-identifier hs-var">theClient</span></a></span><span> </span><span class="annot"><span class="annottext">(GovInput
+ -&gt; Contract
+      ()
+      ('R
+         '[ &quot;add-vote&quot;
+            ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+            &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+      GovError
+      (TransitionResult GovState GovInput))
+-&gt; GovInput
+-&gt; Contract
+     ()
+     ('R
+        '[ &quot;add-vote&quot;
+           ':-&gt; (EndpointValue (Address, TokenName, Bool), ActiveEndpoint),
+           &quot;new-law&quot; ':-&gt; (EndpointValue Law, ActiveEndpoint)])
+     GovError
+     (TransitionResult GovState GovInput)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">[TokenName] -&gt; GovInput
+</span><a href="Plutus.Contracts.Governance.html#MintTokens"><span class="hs-identifier hs-var">MintTokens</span></a></span><span> </span><span class="annot"><span class="annottext">[TokenName]
+</span><a href="#local-6989586621680916269"><span class="hs-identifier hs-var">tokens</span></a></span><span>
+</span><span id="line-227"></span><span>
+</span><span id="line-228"></span><span class="hs-comment">-- | The contract for proposing changes to a law.</span><span>
+</span><span id="line-229"></span><span id="local-6989586621680916266"><span class="annot"><a href="Plutus.Contracts.Governance.html#proposalContract"><span class="hs-identifier hs-type">proposalContract</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-230"></span><span>    </span><span class="annot"><a href="Plutus.Contracts.Governance.html#AsGovError"><span class="hs-identifier hs-type">AsGovError</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680916266"><span class="hs-identifier hs-type">e</span></a></span><span>
+</span><span id="line-231"></span><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#Params"><span class="hs-identifier hs-type">Params</span></a></span><span>
+</span><span id="line-232"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Address</span></span><span>
+</span><span id="line-233"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Plutus.Contracts.Governance.html#Proposal"><span class="hs-identifier hs-type">Proposal</span></a></span><span>
+</span><span id="line-234"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Contract</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-identifier hs-type">EmptySchema</span></span><span> </span><span class="annot"><a href="#local-6989586621680916266"><span class="hs-identifier hs-type">e</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-235"></span><span id="proposalContract"><span class="annot"><span class="annottext">proposalContract :: Params -&gt; Address -&gt; Proposal -&gt; Contract () EmptySchema e ()
+</span><a href="Plutus.Contracts.Governance.html#proposalContract"><span class="hs-identifier hs-var hs-var">proposalContract</span></a></span></span><span> </span><span id="local-6989586621680916265"><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621680916265"><span class="hs-identifier hs-var">params</span></a></span></span><span> </span><span id="local-6989586621680916264"><span class="annot"><span class="annottext">Address
+</span><a href="#local-6989586621680916264"><span class="hs-identifier hs-var">owner</span></a></span></span><span> </span><span id="local-6989586621680916263"><span class="annot"><span class="annottext">Proposal
+</span><a href="#local-6989586621680916263"><span class="hs-identifier hs-var">proposal</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(GovError -&gt; e)
+-&gt; Contract () EmptySchema GovError ()
+-&gt; Contract () EmptySchema e ()
+forall w (s :: Row *) e e' a.
+(e -&gt; e') -&gt; Contract w s e a -&gt; Contract w s e' a
+</span><span class="hs-identifier hs-var">mapError</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AReview e GovError -&gt; GovError -&gt; e
+forall b (m :: * -&gt; *) t. MonadReader b m =&gt; AReview t b -&gt; m t
+</span><span class="hs-identifier hs-var">review</span></span><span> </span><span class="annot"><span class="annottext">AReview e GovError
+forall r. AsGovError r =&gt; Prism' r GovError
+</span><a href="Plutus.Contracts.Governance.html#_GovError"><span class="hs-identifier hs-var">_GovError</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Contract () EmptySchema GovError ()
+</span><a href="#local-6989586621680916262"><span class="hs-identifier hs-var">propose</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-236"></span><span>    </span><span id="local-6989586621680916261"><span class="annot"><span class="annottext">theClient :: StateMachineClient GovState GovInput
+</span><a href="#local-6989586621680916261"><span class="hs-identifier hs-var hs-var">theClient</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Params -&gt; StateMachineClient GovState GovInput
+</span><a href="Plutus.Contracts.Governance.html#client"><span class="hs-identifier hs-var">client</span></a></span><span> </span><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621680916265"><span class="hs-identifier hs-var">params</span></a></span><span>
+</span><span id="line-237"></span><span>    </span><span id="local-6989586621680916262"><span class="annot"><span class="annottext">propose :: Contract () EmptySchema GovError ()
+</span><a href="#local-6989586621680916262"><span class="hs-identifier hs-var hs-var">propose</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-238"></span><span>        </span><span class="annot"><span class="annottext">Contract
+  () EmptySchema GovError (TransitionResult GovState GovInput)
+-&gt; Contract () EmptySchema GovError ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(Contract
+   () EmptySchema GovError (TransitionResult GovState GovInput)
+ -&gt; Contract () EmptySchema GovError ())
+-&gt; Contract
+     () EmptySchema GovError (TransitionResult GovState GovInput)
+-&gt; Contract () EmptySchema GovError ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">StateMachineClient GovState GovInput
+-&gt; GovInput
+-&gt; Contract
+     () EmptySchema GovError (TransitionResult GovState GovInput)
+forall w e state (schema :: Row *) input.
+(AsSMContractError e, FromData state, ToData state,
+ ToData input) =&gt;
+StateMachineClient state input
+-&gt; input -&gt; Contract w schema e (TransitionResult state input)
+</span><span class="hs-identifier hs-var">SM.runStep</span></span><span> </span><span class="annot"><span class="annottext">StateMachineClient GovState GovInput
+</span><a href="#local-6989586621680916261"><span class="hs-identifier hs-var">theClient</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Address -&gt; Proposal -&gt; GovInput
+</span><a href="Plutus.Contracts.Governance.html#ProposeChange"><span class="hs-identifier hs-var">ProposeChange</span></a></span><span> </span><span class="annot"><span class="annottext">Address
+</span><a href="#local-6989586621680916264"><span class="hs-identifier hs-var">owner</span></a></span><span> </span><span class="annot"><span class="annottext">Proposal
+</span><a href="#local-6989586621680916263"><span class="hs-identifier hs-var">proposal</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-239"></span><span>
+</span><span id="line-240"></span><span>        </span><span class="annot"><span class="annottext">Text -&gt; Contract () EmptySchema GovError ()
+forall a w (s :: Row *) e. ToJSON a =&gt; a -&gt; Contract w s e ()
+</span><span class="hs-identifier hs-var">logInfo</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Voting started. Waiting for the voting deadline to count the votes.&quot;</span></span><span>
+</span><span id="line-241"></span><span>        </span><span class="annot"><span class="annottext">Contract () EmptySchema GovError POSIXTime
+-&gt; Contract () EmptySchema GovError ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(Contract () EmptySchema GovError POSIXTime
+ -&gt; Contract () EmptySchema GovError ())
+-&gt; Contract () EmptySchema GovError POSIXTime
+-&gt; Contract () EmptySchema GovError ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">POSIXTime -&gt; Contract () EmptySchema GovError POSIXTime
+forall w (s :: Row *) e.
+AsContractError e =&gt;
+POSIXTime -&gt; Contract w s e POSIXTime
+</span><span class="hs-identifier hs-var">awaitTime</span></span><span> </span><span class="annot"><span class="annottext">(POSIXTime -&gt; Contract () EmptySchema GovError POSIXTime)
+-&gt; POSIXTime -&gt; Contract () EmptySchema GovError POSIXTime
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Proposal -&gt; POSIXTime
+</span><a href="Plutus.Contracts.Governance.html#votingDeadline"><span class="hs-identifier hs-var hs-var">votingDeadline</span></a></span><span> </span><span class="annot"><span class="annottext">Proposal
+</span><a href="#local-6989586621680916263"><span class="hs-identifier hs-var">proposal</span></a></span><span>
+</span><span id="line-242"></span><span>
+</span><span id="line-243"></span><span>        </span><span class="annot"><span class="annottext">Text -&gt; Contract () EmptySchema GovError ()
+forall a w (s :: Row *) e. ToJSON a =&gt; a -&gt; Contract w s e ()
+</span><span class="hs-identifier hs-var">logInfo</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Voting finished. Counting the votes.&quot;</span></span><span>
+</span><span id="line-244"></span><span>        </span><span class="annot"><span class="annottext">Contract
+  () EmptySchema GovError (TransitionResult GovState GovInput)
+-&gt; Contract () EmptySchema GovError ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(Contract
+   () EmptySchema GovError (TransitionResult GovState GovInput)
+ -&gt; Contract () EmptySchema GovError ())
+-&gt; Contract
+     () EmptySchema GovError (TransitionResult GovState GovInput)
+-&gt; Contract () EmptySchema GovError ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">StateMachineClient GovState GovInput
+-&gt; GovInput
+-&gt; Contract
+     () EmptySchema GovError (TransitionResult GovState GovInput)
+forall w e state (schema :: Row *) input.
+(AsSMContractError e, FromData state, ToData state,
+ ToData input) =&gt;
+StateMachineClient state input
+-&gt; input -&gt; Contract w schema e (TransitionResult state input)
+</span><span class="hs-identifier hs-var">SM.runStep</span></span><span> </span><span class="annot"><span class="annottext">StateMachineClient GovState GovInput
+</span><a href="#local-6989586621680916261"><span class="hs-identifier hs-var">theClient</span></a></span><span> </span><span class="annot"><span class="annottext">GovInput
+</span><a href="Plutus.Contracts.Governance.html#FinishVoting"><span class="hs-identifier hs-var">FinishVoting</span></a></span><span>
+</span><span id="line-245"></span><span>
+</span><span id="line-246"></span><span id="local-6989586621680916255"><span id="local-6989586621680916257"><span class="hs-identifier">PlutusTx.makeLift</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">Params</span></span></span><span>
+</span><span id="line-247"></span><span id="local-6989586621680916245"><span id="local-6989586621680916247"><span id="local-6989586621680916249"><span class="hs-identifier">PlutusTx.unstableMakeIsData</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">Law</span></span></span></span><span>
+</span><span id="line-248"></span><span id="local-6989586621680916235"><span id="local-6989586621680916237"><span class="hs-identifier">PlutusTx.makeLift</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">Law</span></span></span><span>
+</span><span id="line-249"></span><span id="local-6989586621680916229"><span id="local-6989586621680916231"><span id="local-6989586621680916233"><span class="hs-identifier">PlutusTx.unstableMakeIsData</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">Proposal</span></span></span></span><span>
+</span><span id="line-250"></span><span id="local-6989586621680916225"><span id="local-6989586621680916227"><span class="hs-identifier">PlutusTx.makeLift</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">Proposal</span></span></span><span>
+</span><span id="line-251"></span><span id="local-6989586621680916219"><span id="local-6989586621680916221"><span id="local-6989586621680916223"><span class="hs-identifier">PlutusTx.unstableMakeIsData</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">Voting</span></span></span></span><span>
+</span><span id="line-252"></span><span id="local-6989586621680916215"><span id="local-6989586621680916217"><span class="hs-identifier">PlutusTx.makeLift</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">Voting</span></span></span><span>
+</span><span id="line-253"></span><span id="local-6989586621680916209"><span id="local-6989586621680916211"><span id="local-6989586621680916213"><span class="hs-identifier">PlutusTx.unstableMakeIsData</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">GovState</span></span></span></span><span>
+</span><span id="line-254"></span><span id="local-6989586621680916205"><span id="local-6989586621680916207"><span class="hs-identifier">PlutusTx.makeLift</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">GovState</span></span></span><span>
+</span><span id="line-255"></span><span id="local-6989586621680916199"><span id="local-6989586621680916201"><span id="local-6989586621680916203"><span class="hs-identifier">PlutusTx.unstableMakeIsData</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">GovInput</span></span></span></span><span>
+</span><span id="line-256"></span><span id="local-6989586621680916195"><span id="local-6989586621680916197"><span class="hs-identifier">PlutusTx.makeLift</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">GovInput</span></span></span><span>
+</span><span id="line-257"></span><span>
+</span><span id="line-258"></span><span class="annot"><a href="Plutus.Contracts.Governance.html#covIdx"><span class="hs-identifier hs-type">covIdx</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">CoverageIndex</span></span><span>
+</span><span id="line-259"></span><span id="covIdx"><span class="annot"><span class="annottext">covIdx :: CoverageIndex
+</span><a href="Plutus.Contracts.Governance.html#covIdx"><span class="hs-identifier hs-var hs-var">covIdx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">CompiledCode
+  (Params -&gt; GovState -&gt; GovInput -&gt; ScriptContext -&gt; Bool)
+-&gt; CoverageIndex
+forall (uni :: * -&gt; *) fun a.
+CompiledCodeIn uni fun a -&gt; CoverageIndex
+</span><span class="hs-identifier hs-var">getCovIdx</span></span><span> </span><span class="hs-special">$$(</span><span class="annot"><span class="hs-identifier hs-type">PlutusTx.compile</span></span><span> </span><span class="hs-special">[||</span><span> </span><span class="hs-identifier">mkValidator</span><span> </span><span class="hs-special">||]</span><span class="hs-special">)</span><span>
+</span><span id="line-260"></span><span>
+</span><span id="line-261"></span><span class="annot"><a href="Plutus.Contracts.Governance.html#covIdx%27"><span class="hs-identifier hs-type">covIdx'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">CoverageIndex</span></span><span>
+</span><span id="line-262"></span><span id="covIdx%27"><span class="annot"><span class="annottext">covIdx' :: CoverageIndex
+</span><a href="Plutus.Contracts.Governance.html#covIdx%27"><span class="hs-identifier hs-var hs-var">covIdx'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CompiledCodeIn
+  DefaultUni
+  DefaultFun
+  (Params -&gt; GovState -&gt; GovInput -&gt; ScriptContext -&gt; ())
+-&gt; CoverageIndex
+forall a. CompiledCodeIn DefaultUni DefaultFun a -&gt; CoverageIndex
+</span><span class="hs-identifier hs-var">computeRefinedCoverageIndex</span></span><span> </span><span class="hs-special">$$(</span><span class="annot"><span class="hs-identifier hs-type">PlutusTx.compile</span></span><span> </span><span class="hs-special">[||</span><span> </span><span class="hs-glyph">\</span><span class="hs-identifier">a</span><span> </span><span class="hs-identifier">b</span><span> </span><span class="hs-identifier">c</span><span> </span><span class="hs-identifier">d</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier">check</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">mkValidator</span><span> </span><span class="hs-identifier">a</span><span> </span><span class="hs-identifier">b</span><span> </span><span class="hs-identifier">c</span><span> </span><span class="hs-identifier">d</span><span class="hs-special">)</span><span> </span><span class="hs-special">||]</span><span class="hs-special">)</span><span>
+</span><span id="line-263"></span></pre></body></html>

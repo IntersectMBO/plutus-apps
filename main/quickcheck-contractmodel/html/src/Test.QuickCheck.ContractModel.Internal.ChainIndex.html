@@ -1,0 +1,413 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.QuickCheck.ContractModel.Internal.ChainIndex</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.State</span></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Reader</span></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Writer</span></span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Data.Ord</span></a></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Data.List</span></a></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Map</span></span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.Api</span></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.Api.Shelley</span></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.Ledger.Shelley.TxBody</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">WitVKey</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.Ledger.Keys</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">hashKey</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">coerceKeyRole</span></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Common.html"><span class="hs-identifier">Test.QuickCheck.ContractModel.Internal.Common</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Utils.html"><span class="hs-identifier">Test.QuickCheck.ContractModel.Internal.Utils</span></a></span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">data</span><span> </span><span id="ChainState"><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#ChainState"><span class="hs-identifier hs-var">ChainState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ChainState"><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#ChainState"><span class="hs-identifier hs-var">ChainState</span></a></span></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="slot"><span class="annot"><span class="annottext">ChainState -&gt; SlotNo
+</span><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#slot"><span class="hs-identifier hs-var hs-var">slot</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">SlotNo</span></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="utxo"><span class="annot"><span class="annottext">ChainState -&gt; UTxO Era
+</span><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#utxo"><span class="hs-identifier hs-var hs-var">utxo</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">UTxO</span></span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Common.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">data</span><span> </span><span id="TxInState"><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#TxInState"><span class="hs-identifier hs-var">TxInState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="TxInState"><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#TxInState"><span class="hs-identifier hs-var">TxInState</span></a></span></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="tx"><span class="annot"><span class="annottext">TxInState -&gt; Tx Era
+</span><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#tx"><span class="hs-identifier hs-var hs-var">tx</span></a></span></span><span>         </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Tx</span></span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Common.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="chainState"><span class="annot"><span class="annottext">TxInState -&gt; ChainState
+</span><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#chainState"><span class="hs-identifier hs-var hs-var">chainState</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#ChainState"><span class="hs-identifier hs-type">ChainState</span></a></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="accepted"><span class="annot"><span class="annottext">TxInState -&gt; Bool
+</span><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#accepted"><span class="hs-identifier hs-var hs-var">accepted</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">data</span><span> </span><span id="ChainIndex"><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#ChainIndex"><span class="hs-identifier hs-var">ChainIndex</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ChainIndex"><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#ChainIndex"><span class="hs-identifier hs-var">ChainIndex</span></a></span></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="transactions"><span class="annot"><span class="annottext">ChainIndex -&gt; [TxInState]
+</span><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#transactions"><span class="hs-identifier hs-var hs-var">transactions</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#TxInState"><span class="hs-identifier hs-type">TxInState</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="networkId"><span class="annot"><span class="annottext">ChainIndex -&gt; NetworkId
+</span><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#networkId"><span class="hs-identifier hs-var hs-var">networkId</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">NetworkId</span></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679447882"><span id="local-6989586621679447884"><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Semigroup</span></a></span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#ChainIndex"><span class="hs-identifier hs-type">ChainIndex</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-37"></span><span>  </span><span id="local-6989586621679447880"><span class="annot"><span class="annottext">ChainIndex
+</span><a href="#local-6989586621679447880"><span class="hs-identifier hs-var">ci</span></a></span></span><span> </span><span id="local-6989586621679447879"><span class="annot"><span class="annottext">&lt;&gt; :: ChainIndex -&gt; ChainIndex -&gt; ChainIndex
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var hs-var hs-var hs-var">&lt;&gt;</span></a></span></span><span> </span><span id="local-6989586621679447878"><span class="annot"><span class="annottext">ChainIndex
+</span><a href="#local-6989586621679447878"><span class="hs-identifier hs-var">ci'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ChainIndex :: [TxInState] -&gt; NetworkId -&gt; ChainIndex
+</span><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#ChainIndex"><span class="hs-identifier hs-type">ChainIndex</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">transactions :: [TxInState]
+</span><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#transactions"><span class="hs-identifier hs-var">transactions</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(TxInState -&gt; TxInState -&gt; Ordering) -&gt; [TxInState] -&gt; [TxInState]
+forall a. (a -&gt; a -&gt; Ordering) -&gt; [a] -&gt; [a]
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">sortBy</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(TxInState -&gt; SlotNo) -&gt; TxInState -&gt; TxInState -&gt; Ordering
+forall a b. Ord a =&gt; (b -&gt; a) -&gt; b -&gt; b -&gt; Ordering
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">comparing</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ChainState -&gt; SlotNo
+</span><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#slot"><span class="hs-identifier hs-var hs-var">slot</span></a></span><span> </span><span class="annot"><span class="annottext">(ChainState -&gt; SlotNo)
+-&gt; (TxInState -&gt; ChainState) -&gt; TxInState -&gt; SlotNo
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">TxInState -&gt; ChainState
+</span><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#chainState"><span class="hs-identifier hs-var hs-var">chainState</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>                                        </span><span class="annot"><span class="annottext">([TxInState] -&gt; [TxInState]) -&gt; [TxInState] -&gt; [TxInState]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ChainIndex -&gt; [TxInState]
+</span><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#transactions"><span class="hs-identifier hs-var hs-var">transactions</span></a></span><span> </span><span class="annot"><span class="annottext">ChainIndex
+</span><a href="#local-6989586621679447880"><span class="hs-identifier hs-var">ci</span></a></span><span> </span><span class="annot"><span class="annottext">[TxInState] -&gt; [TxInState] -&gt; [TxInState]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">ChainIndex -&gt; [TxInState]
+</span><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#transactions"><span class="hs-identifier hs-var hs-var">transactions</span></a></span><span> </span><span class="annot"><span class="annottext">ChainIndex
+</span><a href="#local-6989586621679447878"><span class="hs-identifier hs-var">ci'</span></a></span><span>
+</span><span id="line-39"></span><span>                         </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">networkId :: NetworkId
+</span><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#networkId"><span class="hs-identifier hs-var">networkId</span></a></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ChainIndex -&gt; NetworkId
+</span><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#networkId"><span class="hs-identifier hs-var hs-var">networkId</span></a></span><span> </span><span class="annot"><span class="annottext">ChainIndex
+</span><a href="#local-6989586621679447880"><span class="hs-identifier hs-var">ci</span></a></span><span>
+</span><span id="line-40"></span><span>                         </span><span class="hs-special">}</span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">class</span><span> </span><span id="HasChainIndex"><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#HasChainIndex"><span class="hs-identifier hs-var">HasChainIndex</span></a></span></span><span> </span><span id="local-6989586621679447909"><span class="annot"><a href="#local-6989586621679447909"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-43"></span><span>  </span><span id="getChainIndex"><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#getChainIndex"><span class="hs-identifier hs-type">getChainIndex</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679447909"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#ChainIndex"><span class="hs-identifier hs-type">ChainIndex</span></a></span><span>
+</span><span id="line-44"></span><span>  </span><span id="getChainState"><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#getChainState"><span class="hs-identifier hs-type">getChainState</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679447909"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#ChainState"><span class="hs-identifier hs-type">ChainState</span></a></span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#allMinAda"><span class="hs-identifier hs-type">allMinAda</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#ChainIndex"><span class="hs-identifier hs-type">ChainIndex</span></a></span><span>
+</span><span id="line-47"></span><span>          </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ProtocolParameters</span></span><span>
+</span><span id="line-48"></span><span>          </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Lovelace</span></span><span class="hs-special">]</span><span>
+</span><span id="line-49"></span><span id="allMinAda"><span class="annot"><span class="annottext">allMinAda :: ChainIndex -&gt; ProtocolParameters -&gt; [Lovelace]
+</span><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#allMinAda"><span class="hs-identifier hs-var hs-var">allMinAda</span></a></span></span><span> </span><span id="local-6989586621679447871"><span class="annot"><span class="annottext">ChainIndex
+</span><a href="#local-6989586621679447871"><span class="hs-identifier hs-var">ci</span></a></span></span><span> </span><span id="local-6989586621679447870"><span class="annot"><span class="annottext">ProtocolParameters
+</span><a href="#local-6989586621679447870"><span class="hs-identifier hs-var">params</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Value -&gt; Lovelace
+</span><span class="hs-identifier hs-var">selectLovelace</span></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679447868"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#TxInState"><span class="hs-identifier hs-type">TxInState</span></a></span><span class="hs-special">{</span><span id="local-6989586621679447865"><span id="local-6989586621679447866"><span id="local-6989586621679447867"><span class="annot"><span class="annottext">Bool
+Tx Era
+ChainState
+accepted :: Bool
+chainState :: ChainState
+tx :: Tx Era
+accepted :: TxInState -&gt; Bool
+chainState :: TxInState -&gt; ChainState
+tx :: TxInState -&gt; Tx Era
+</span><a href="#local-6989586621679447865"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ChainIndex -&gt; [TxInState]
+</span><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#transactions"><span class="hs-identifier hs-var hs-var">transactions</span></a></span><span> </span><span class="annot"><span class="annottext">ChainIndex
+</span><a href="#local-6989586621679447871"><span class="hs-identifier hs-var">ci</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679447864"><span class="annot"><span class="annottext">TxOut CtxTx Era
+</span><a href="#local-6989586621679447864"><span class="hs-identifier hs-var">txOut</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Tx Era -&gt; [TxOut CtxTx Era]
+</span><a href="Test.QuickCheck.ContractModel.Internal.Utils.html#getTxOuts"><span class="hs-identifier hs-var">getTxOuts</span></a></span><span> </span><span class="annot"><span class="annottext">Tx Era
+</span><a href="#local-6989586621679447867"><span class="hs-identifier hs-var">tx</span></a></span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679447868"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679447868"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">ShelleyBasedEra Era
+-&gt; TxOut CtxTx Era
+-&gt; ProtocolParameters
+-&gt; Either MinimumUTxOError Value
+forall era.
+ShelleyBasedEra era
+-&gt; TxOut CtxTx era
+-&gt; ProtocolParameters
+-&gt; Either MinimumUTxOError Value
+</span><span class="hs-identifier hs-var">calculateMinimumUTxO</span></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra Era
+</span><a href="Test.QuickCheck.ContractModel.Internal.Common.html#era"><span class="hs-identifier hs-var">era</span></a></span><span> </span><span class="annot"><span class="annottext">TxOut CtxTx Era
+</span><a href="#local-6989586621679447864"><span class="hs-identifier hs-var">txOut</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParameters
+</span><a href="#local-6989586621679447870"><span class="hs-identifier hs-var">params</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-54"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679447865"><span class="hs-identifier hs-var">accepted</span></a></span><span>
+</span><span id="line-55"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span class="hs-keyword">type</span><span> </span><span id="FeeCalculation"><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#FeeCalculation"><span class="hs-identifier hs-var">FeeCalculation</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">NetworkId</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#TxInState"><span class="hs-identifier hs-type">TxInState</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">AddressInEra</span></span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Common.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#signerPaysFees"><span class="hs-identifier hs-type">signerPaysFees</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#FeeCalculation"><span class="hs-identifier hs-type">FeeCalculation</span></a></span><span>
+</span><span id="line-60"></span><span id="signerPaysFees"><span class="annot"><span class="annottext">signerPaysFees :: FeeCalculation
+</span><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#signerPaysFees"><span class="hs-identifier hs-var hs-var">signerPaysFees</span></a></span></span><span> </span><span id="local-6989586621679447859"><span class="annot"><span class="annottext">NetworkId
+</span><a href="#local-6989586621679447859"><span class="hs-identifier hs-var">nid</span></a></span></span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#TxInState"><span class="hs-identifier hs-type">TxInState</span></a></span><span class="hs-special">{</span><span class="annot"><span class="annottext">tx :: TxInState -&gt; Tx Era
+</span><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#tx"><span class="hs-identifier hs-var">tx</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621679447858"><span class="annot"><span class="annottext">Tx Era
+</span><a href="#local-6989586621679447858"><span class="hs-identifier hs-var">tx</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">accepted :: TxInState -&gt; Bool
+</span><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#accepted"><span class="hs-identifier hs-var">accepted</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621679447857"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679447857"><span class="hs-identifier hs-var">accepted</span></a></span></span><span class="hs-special">}</span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var">not</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679447857"><span class="hs-identifier hs-var">accepted</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; Map (AddressInEra Era) Value
+forall a. HasCallStack =&gt; [Char] -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;TODO: signerPaysFees rejected tx&quot;</span></span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Tx</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">TxBody</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxBodyContent ViewTx Era -&gt; TxFee Era
+forall build era. TxBodyContent build era -&gt; TxFee era
+</span><span class="hs-identifier hs-var hs-var">txFee</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">TxFeeExplicit</span></span><span> </span><span class="annot"><span class="annottext">TxFeesExplicitInEra Era
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679447850"><span class="annot"><span class="annottext">Lovelace
+</span><a href="#local-6989586621679447850"><span class="hs-identifier hs-var">lov</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">[</span><span id="local-6989586621679447849"><span class="annot"><span class="annottext">KeyWitness Era
+</span><a href="#local-6989586621679447849"><span class="hs-identifier hs-var">wit</span></a></span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Tx Era
+</span><a href="#local-6989586621679447858"><span class="hs-identifier hs-var">tx</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AddressInEra Era -&gt; Value -&gt; Map (AddressInEra Era) Value
+forall k a. k -&gt; a -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.singleton</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Address ShelleyAddr -&gt; AddressInEra Era
+forall era.
+IsShelleyBasedEra era =&gt;
+Address ShelleyAddr -&gt; AddressInEra era
+</span><span class="hs-identifier hs-var">shelleyAddressInEra</span></span><span> </span><span class="annot"><span class="annottext">(Address ShelleyAddr -&gt; AddressInEra Era)
+-&gt; Address ShelleyAddr -&gt; AddressInEra Era
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">NetworkId -&gt; KeyWitness Era -&gt; Address ShelleyAddr
+</span><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#mkAddrFromWitness"><span class="hs-identifier hs-var">mkAddrFromWitness</span></a></span><span> </span><span class="annot"><span class="annottext">NetworkId
+</span><a href="#local-6989586621679447859"><span class="hs-identifier hs-var">nid</span></a></span><span> </span><span class="annot"><span class="annottext">KeyWitness Era
+</span><a href="#local-6989586621679447849"><span class="hs-identifier hs-var">wit</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Lovelace -&gt; Value
+</span><span class="hs-identifier hs-var">lovelaceToValue</span></span><span> </span><span class="annot"><span class="annottext">Lovelace
+</span><a href="#local-6989586621679447850"><span class="hs-identifier hs-var">lov</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map (AddressInEra Era) Value
+forall a. Monoid a =&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span class="hs-comment">-- TODO: is this really safe?? also - why is this so complicated??</span><span>
+</span><span id="line-66"></span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#mkAddrFromWitness"><span class="hs-identifier hs-type">mkAddrFromWitness</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">NetworkId</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">KeyWitness</span></span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Common.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Address</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ShelleyAddr</span></span><span>
+</span><span id="line-67"></span><span id="mkAddrFromWitness"><span class="annot"><span class="annottext">mkAddrFromWitness :: NetworkId -&gt; KeyWitness Era -&gt; Address ShelleyAddr
+</span><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#mkAddrFromWitness"><span class="hs-identifier hs-var hs-var">mkAddrFromWitness</span></a></span></span><span> </span><span id="local-6989586621679447844"><span class="annot"><span class="annottext">NetworkId
+</span><a href="#local-6989586621679447844"><span class="hs-identifier hs-var">nid</span></a></span></span><span> </span><span id="local-6989586621679447843"><span class="annot"><span class="annottext">KeyWitness Era
+</span><a href="#local-6989586621679447843"><span class="hs-identifier hs-var">wit</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NetworkId
+-&gt; PaymentCredential
+-&gt; StakeAddressReference
+-&gt; Address ShelleyAddr
+</span><span class="hs-identifier hs-var">makeShelleyAddress</span></span><span> </span><span class="annot"><span class="annottext">NetworkId
+</span><a href="#local-6989586621679447844"><span class="hs-identifier hs-var">nid</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">KeyWitness Era -&gt; PaymentCredential
+</span><a href="#local-6989586621679447841"><span class="hs-identifier hs-var">keyHashObj</span></a></span><span> </span><span class="annot"><span class="annottext">KeyWitness Era
+</span><a href="#local-6989586621679447843"><span class="hs-identifier hs-var">wit</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">StakeAddressReference
+</span><span class="hs-identifier hs-var">NoStakeAddress</span></span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-keyword">where</span><span> </span><span class="annot"><a href="#local-6989586621679447841"><span class="hs-identifier hs-type">keyHashObj</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">KeyWitness</span></span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Common.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">PaymentCredential</span></span><span>
+</span><span id="line-69"></span><span>        </span><span id="local-6989586621679447841"><span class="annot"><span class="annottext">keyHashObj :: KeyWitness Era -&gt; PaymentCredential
+</span><a href="#local-6989586621679447841"><span class="hs-identifier hs-var hs-var">keyHashObj</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">ShelleyKeyWitness</span></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra Era
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">WitVKey</span></span><span> </span><span id="local-6989586621679447837"><span class="annot"><span class="annottext">VKey 'Witness StandardCrypto
+</span><a href="#local-6989586621679447837"><span class="hs-identifier hs-var">wit</span></a></span></span><span> </span><span class="annot"><span class="annottext">SignedDSIGN
+  StandardCrypto (Hash StandardCrypto EraIndependentTxBody)
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-70"></span><span>            </span><span class="annot"><span class="annottext">Hash PaymentKey -&gt; PaymentCredential
+</span><span class="hs-identifier hs-var">PaymentCredentialByKey</span></span><span>
+</span><span id="line-71"></span><span>          </span><span class="annot"><span class="annottext">(Hash PaymentKey -&gt; PaymentCredential)
+-&gt; (VKey 'Witness StandardCrypto -&gt; Hash PaymentKey)
+-&gt; VKey 'Witness StandardCrypto
+-&gt; PaymentCredential
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">KeyHash 'Payment StandardCrypto -&gt; Hash PaymentKey
+</span><span class="hs-identifier hs-var">PaymentKeyHash</span></span><span>
+</span><span id="line-72"></span><span>          </span><span class="annot"><span class="annottext">(KeyHash 'Payment StandardCrypto -&gt; Hash PaymentKey)
+-&gt; (VKey 'Witness StandardCrypto
+    -&gt; KeyHash 'Payment StandardCrypto)
+-&gt; VKey 'Witness StandardCrypto
+-&gt; Hash PaymentKey
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">VKey 'Payment StandardCrypto -&gt; KeyHash 'Payment StandardCrypto
+forall crypto (kd :: KeyRole).
+Crypto crypto =&gt;
+VKey kd crypto -&gt; KeyHash kd crypto
+</span><span class="hs-identifier hs-var">hashKey</span></span><span>
+</span><span id="line-73"></span><span>          </span><span class="annot"><span class="annottext">(VKey 'Payment StandardCrypto -&gt; KeyHash 'Payment StandardCrypto)
+-&gt; (VKey 'Witness StandardCrypto -&gt; VKey 'Payment StandardCrypto)
+-&gt; VKey 'Witness StandardCrypto
+-&gt; KeyHash 'Payment StandardCrypto
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">VKey 'Witness StandardCrypto -&gt; VKey 'Payment StandardCrypto
+forall (a :: KeyRole -&gt; * -&gt; *) (r :: KeyRole) crypto
+       (r' :: KeyRole).
+HasKeyRole a =&gt;
+a r crypto -&gt; a r' crypto
+</span><span class="hs-identifier hs-var">coerceKeyRole</span></span><span>   </span><span class="hs-comment">-- TODO: is this really safe?!?!?!</span><span>
+</span><span id="line-74"></span><span>          </span><span class="annot"><span class="annottext">(VKey 'Witness StandardCrypto -&gt; PaymentCredential)
+-&gt; VKey 'Witness StandardCrypto -&gt; PaymentCredential
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">VKey 'Witness StandardCrypto
+</span><a href="#local-6989586621679447837"><span class="hs-identifier hs-var">wit</span></a></span><span>
+</span><span id="line-75"></span><span>        </span><span class="annot"><a href="#local-6989586621679447841"><span class="hs-identifier hs-var">keyHashObj</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ShelleyBootstrapWitness</span></span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; PaymentCredential
+forall a. HasCallStack =&gt; [Char] -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;keyHashObj: ShelleyBootstrapWitness{}&quot;</span></span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span class="hs-comment">-- TODO: what about failing transactions?</span><span>
+</span><span id="line-78"></span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#getBalanceChangesDiscountingFees"><span class="hs-identifier hs-type">getBalanceChangesDiscountingFees</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#ChainIndex"><span class="hs-identifier hs-type">ChainIndex</span></a></span><span>
+</span><span id="line-79"></span><span>                                 </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#FeeCalculation"><span class="hs-identifier hs-type">FeeCalculation</span></a></span><span>
+</span><span id="line-80"></span><span>                                 </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">AddressInEra</span></span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Common.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span>
+</span><span id="line-81"></span><span id="getBalanceChangesDiscountingFees"><span class="annot"><span class="annottext">getBalanceChangesDiscountingFees :: ChainIndex -&gt; FeeCalculation -&gt; Map (AddressInEra Era) Value
+</span><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#getBalanceChangesDiscountingFees"><span class="hs-identifier hs-var hs-var">getBalanceChangesDiscountingFees</span></a></span></span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#ChainIndex"><span class="hs-identifier hs-type">ChainIndex</span></a></span><span class="hs-special">{</span><span id="local-6989586621679447831"><span id="local-6989586621679447832"><span class="annot"><span class="annottext">[TxInState]
+NetworkId
+networkId :: NetworkId
+transactions :: [TxInState]
+networkId :: ChainIndex -&gt; NetworkId
+transactions :: ChainIndex -&gt; [TxInState]
+</span><a href="#local-6989586621679447831"><span class="hs-glyph hs-var hs-var hs-var hs-var">..</span></a></span></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621679447830"><span class="annot"><span class="annottext">FeeCalculation
+</span><a href="#local-6989586621679447830"><span class="hs-identifier hs-var">computeFees</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-82"></span><span>  </span><span class="annot"><span class="annottext">(Map (AddressInEra Era) Value
+ -&gt; Map (AddressInEra Era) Value -&gt; Map (AddressInEra Era) Value)
+-&gt; Map (AddressInEra Era) Value
+-&gt; [Map (AddressInEra Era) Value]
+-&gt; Map (AddressInEra Era) Value
+forall (t :: * -&gt; *) a b.
+Foldable t =&gt;
+(a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">foldr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Value -&gt; Value -&gt; Value)
+-&gt; Map (AddressInEra Era) Value
+-&gt; Map (AddressInEra Era) Value
+-&gt; Map (AddressInEra Era) Value
+forall k a. Ord k =&gt; (a -&gt; a -&gt; a) -&gt; Map k a -&gt; Map k a -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.unionWith</span></span><span> </span><span class="annot"><span class="annottext">Value -&gt; Value -&gt; Value
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">(&lt;&gt;)</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Map (AddressInEra Era) Value
+forall a. Monoid a =&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="annot"><span class="annottext">([Map (AddressInEra Era) Value] -&gt; Map (AddressInEra Era) Value)
+-&gt; [Map (AddressInEra Era) Value] -&gt; Map (AddressInEra Era) Value
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span>  </span><span class="annot"><span class="annottext">(TxInState -&gt; Map (AddressInEra Era) Value)
+-&gt; [TxInState] -&gt; [Map (AddressInEra Era) Value]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">TxInState -&gt; Map (AddressInEra Era) Value
+</span><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#txBalanceChanges"><span class="hs-identifier hs-var">txBalanceChanges</span></a></span><span> </span><span class="annot"><span class="annottext">[TxInState]
+</span><a href="#local-6989586621679447832"><span class="hs-identifier hs-var">transactions</span></a></span><span>
+</span><span id="line-83"></span><span>                                    </span><span class="annot"><span class="annottext">[Map (AddressInEra Era) Value]
+-&gt; [Map (AddressInEra Era) Value] -&gt; [Map (AddressInEra Era) Value]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">(TxInState -&gt; Map (AddressInEra Era) Value)
+-&gt; [TxInState] -&gt; [Map (AddressInEra Era) Value]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FeeCalculation
+</span><a href="#local-6989586621679447830"><span class="hs-identifier hs-var">computeFees</span></a></span><span> </span><span class="annot"><span class="annottext">NetworkId
+</span><a href="#local-6989586621679447831"><span class="hs-identifier hs-var">networkId</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[TxInState]
+</span><a href="#local-6989586621679447832"><span class="hs-identifier hs-var">transactions</span></a></span><span>
+</span><span id="line-84"></span><span>
+</span><span id="line-85"></span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#txBalanceChanges"><span class="hs-identifier hs-type">txBalanceChanges</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#TxInState"><span class="hs-identifier hs-type">TxInState</span></a></span><span>
+</span><span id="line-86"></span><span>                 </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">AddressInEra</span></span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Common.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span>
+</span><span id="line-87"></span><span id="txBalanceChanges"><span class="annot"><span class="annottext">txBalanceChanges :: TxInState -&gt; Map (AddressInEra Era) Value
+</span><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#txBalanceChanges"><span class="hs-identifier hs-var hs-var">txBalanceChanges</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#TxInState"><span class="hs-identifier hs-type">TxInState</span></a></span><span> </span><span id="local-6989586621679447826"><span class="annot"><span class="annottext">Tx Era
+</span><a href="#local-6989586621679447826"><span class="hs-identifier hs-var">tx</span></a></span></span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#ChainState"><span class="hs-identifier hs-type">ChainState</span></a></span><span class="hs-special">{</span><span id="local-6989586621679447824"><span id="local-6989586621679447825"><span class="annot"><span class="annottext">UTxO Era
+SlotNo
+utxo :: UTxO Era
+slot :: SlotNo
+utxo :: ChainState -&gt; UTxO Era
+slot :: ChainState -&gt; SlotNo
+</span><a href="#local-6989586621679447824"><span class="hs-glyph hs-var hs-var hs-var hs-var">..</span></a></span></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621679447823"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679447823"><span class="hs-identifier hs-var">accepted</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679447823"><span class="hs-identifier hs-var">accepted</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Value -&gt; Value -&gt; Value)
+-&gt; [Map (AddressInEra Era) Value] -&gt; Map (AddressInEra Era) Value
+forall (f :: * -&gt; *) k a.
+(Foldable f, Ord k) =&gt;
+(a -&gt; a -&gt; a) -&gt; f (Map k a) -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.unionsWith</span></span><span> </span><span class="annot"><span class="annottext">Value -&gt; Value -&gt; Value
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">(&lt;&gt;)</span></a></span><span> </span><span class="annot"><span class="annottext">([Map (AddressInEra Era) Value] -&gt; Map (AddressInEra Era) Value)
+-&gt; [Map (AddressInEra Era) Value] -&gt; Map (AddressInEra Era) Value
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">AddressInEra Era -&gt; Value -&gt; Map (AddressInEra Era) Value
+forall k a. k -&gt; a -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.singleton</span></span><span> </span><span class="annot"><span class="annottext">AddressInEra Era
+</span><a href="#local-6989586621679447821"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxOutValue Era -&gt; Value
+forall era. TxOutValue era -&gt; Value
+</span><span class="hs-identifier hs-var">txOutValueToValue</span></span><span> </span><span class="annot"><span class="annottext">TxOutValue Era
+</span><a href="#local-6989586621679447819"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-89"></span><span>                                     </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="hs-identifier hs-type">TxOut</span></span><span> </span><span id="local-6989586621679447821"><span class="annot"><span class="annottext">AddressInEra Era
+</span><a href="#local-6989586621679447821"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679447819"><span class="annot"><span class="annottext">TxOutValue Era
+</span><a href="#local-6989586621679447819"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="annot"><span class="annottext">TxOutDatum CtxTx Era
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">ReferenceScript Era
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Tx Era -&gt; [TxOut CtxTx Era]
+</span><a href="Test.QuickCheck.ContractModel.Internal.Utils.html#getTxOuts"><span class="hs-identifier hs-var">getTxOuts</span></a></span><span> </span><span class="annot"><span class="annottext">Tx Era
+</span><a href="#local-6989586621679447826"><span class="hs-identifier hs-var">tx</span></a></span><span>
+</span><span id="line-90"></span><span>                                     </span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">[Map (AddressInEra Era) Value]
+-&gt; [Map (AddressInEra Era) Value] -&gt; [Map (AddressInEra Era) Value]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">++</span></a></span><span>
+</span><span id="line-91"></span><span>                                     </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">AddressInEra Era -&gt; Value -&gt; Map (AddressInEra Era) Value
+forall k a. k -&gt; a -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.singleton</span></span><span> </span><span class="annot"><span class="annottext">AddressInEra Era
+</span><a href="#local-6989586621679447817"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Value -&gt; Value
+</span><span class="hs-identifier hs-var">negateValue</span></span><span> </span><span class="annot"><span class="annottext">(Value -&gt; Value) -&gt; Value -&gt; Value
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TxOutValue Era -&gt; Value
+forall era. TxOutValue era -&gt; Value
+</span><span class="hs-identifier hs-var">txOutValueToValue</span></span><span> </span><span class="annot"><span class="annottext">TxOutValue Era
+</span><a href="#local-6989586621679447815"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-92"></span><span>                                     </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="hs-identifier hs-type">TxOut</span></span><span> </span><span id="local-6989586621679447817"><span class="annot"><span class="annottext">AddressInEra Era
+</span><a href="#local-6989586621679447817"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679447815"><span class="annot"><span class="annottext">TxOutValue Era
+</span><a href="#local-6989586621679447815"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="annot"><span class="annottext">TxOutDatum CtxUTxO Era
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">ReferenceScript Era
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Tx Era -&gt; UTxO Era -&gt; [TxOut CtxUTxO Era]
+</span><a href="Test.QuickCheck.ContractModel.Internal.Utils.html#getTxInputs"><span class="hs-identifier hs-var">getTxInputs</span></a></span><span> </span><span class="annot"><span class="annottext">Tx Era
+</span><a href="#local-6989586621679447826"><span class="hs-identifier hs-var">tx</span></a></span><span> </span><span class="annot"><span class="annottext">UTxO Era
+</span><a href="#local-6989586621679447824"><span class="hs-identifier hs-var">utxo</span></a></span><span>
+</span><span id="line-93"></span><span>                                     </span><span class="hs-special">]</span><span>
+</span><span id="line-94"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; Map (AddressInEra Era) Value
+forall a. HasCallStack =&gt; [Char] -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;TODO txBalanceChanges when removing collateral&quot;</span></span><span>
+</span><span id="line-95"></span><span>
+</span><span id="line-96"></span><span id="local-6989586621679447812"><span id="local-6989586621679447813"><span class="hs-keyword">instance</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447813"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#HasChainIndex"><span class="hs-identifier hs-type">HasChainIndex</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447813"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#HasChainIndex"><span class="hs-identifier hs-type">HasChainIndex</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">StateT</span></span><span> </span><span class="annot"><a href="#local-6989586621679447812"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447813"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-97"></span><span>  </span><span id="local-6989586621679447808"><span class="annot"><span class="annottext">getChainIndex :: StateT s m ChainIndex
+</span><a href="#local-6989586621679447808"><span class="hs-identifier hs-var hs-var hs-var hs-var">getChainIndex</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m ChainIndex -&gt; StateT s m ChainIndex
+forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><span class="hs-identifier hs-var">lift</span></span><span> </span><span class="annot"><span class="annottext">(m ChainIndex -&gt; StateT s m ChainIndex)
+-&gt; m ChainIndex -&gt; StateT s m ChainIndex
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">m ChainIndex
+forall (m :: * -&gt; *). HasChainIndex m =&gt; m ChainIndex
+</span><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#getChainIndex"><span class="hs-identifier hs-var">getChainIndex</span></a></span><span>
+</span><span id="line-98"></span><span>  </span><span id="local-6989586621679447806"><span class="annot"><span class="annottext">getChainState :: StateT s m ChainState
+</span><a href="#local-6989586621679447806"><span class="hs-identifier hs-var hs-var hs-var hs-var">getChainState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m ChainState -&gt; StateT s m ChainState
+forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><span class="hs-identifier hs-var">lift</span></span><span> </span><span class="annot"><span class="annottext">(m ChainState -&gt; StateT s m ChainState)
+-&gt; m ChainState -&gt; StateT s m ChainState
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">m ChainState
+forall (m :: * -&gt; *). HasChainIndex m =&gt; m ChainState
+</span><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#getChainState"><span class="hs-identifier hs-var">getChainState</span></a></span></span></span><span>
+</span><span id="line-99"></span><span>
+</span><span id="line-100"></span><span id="local-6989586621679447804"><span id="local-6989586621679447805"><span class="hs-keyword">instance</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447805"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#HasChainIndex"><span class="hs-identifier hs-type">HasChainIndex</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447805"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#HasChainIndex"><span class="hs-identifier hs-type">HasChainIndex</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">ReaderT</span></span><span> </span><span class="annot"><a href="#local-6989586621679447804"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447805"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-101"></span><span>  </span><span id="local-6989586621679447801"><span class="annot"><span class="annottext">getChainIndex :: ReaderT r m ChainIndex
+</span><a href="#local-6989586621679447801"><span class="hs-identifier hs-var hs-var hs-var hs-var">getChainIndex</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m ChainIndex -&gt; ReaderT r m ChainIndex
+forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><span class="hs-identifier hs-var">lift</span></span><span> </span><span class="annot"><span class="annottext">(m ChainIndex -&gt; ReaderT r m ChainIndex)
+-&gt; m ChainIndex -&gt; ReaderT r m ChainIndex
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">m ChainIndex
+forall (m :: * -&gt; *). HasChainIndex m =&gt; m ChainIndex
+</span><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#getChainIndex"><span class="hs-identifier hs-var">getChainIndex</span></a></span><span>
+</span><span id="line-102"></span><span>  </span><span id="local-6989586621679447800"><span class="annot"><span class="annottext">getChainState :: ReaderT r m ChainState
+</span><a href="#local-6989586621679447800"><span class="hs-identifier hs-var hs-var hs-var hs-var">getChainState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m ChainState -&gt; ReaderT r m ChainState
+forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><span class="hs-identifier hs-var">lift</span></span><span> </span><span class="annot"><span class="annottext">(m ChainState -&gt; ReaderT r m ChainState)
+-&gt; m ChainState -&gt; ReaderT r m ChainState
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">m ChainState
+forall (m :: * -&gt; *). HasChainIndex m =&gt; m ChainState
+</span><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#getChainState"><span class="hs-identifier hs-var">getChainState</span></a></span></span></span><span>
+</span><span id="line-103"></span><span>
+</span><span id="line-104"></span><span id="local-6989586621679447798"><span id="local-6989586621679447799"><span class="hs-keyword">instance</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447799"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447798"><span class="hs-identifier hs-type">w</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#HasChainIndex"><span class="hs-identifier hs-type">HasChainIndex</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447799"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#HasChainIndex"><span class="hs-identifier hs-type">HasChainIndex</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">WriterT</span></span><span> </span><span class="annot"><a href="#local-6989586621679447798"><span class="hs-identifier hs-type">w</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447799"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-105"></span><span>  </span><span id="local-6989586621679447795"><span class="annot"><span class="annottext">getChainIndex :: WriterT w m ChainIndex
+</span><a href="#local-6989586621679447795"><span class="hs-identifier hs-var hs-var hs-var hs-var">getChainIndex</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m ChainIndex -&gt; WriterT w m ChainIndex
+forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><span class="hs-identifier hs-var">lift</span></span><span> </span><span class="annot"><span class="annottext">(m ChainIndex -&gt; WriterT w m ChainIndex)
+-&gt; m ChainIndex -&gt; WriterT w m ChainIndex
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">m ChainIndex
+forall (m :: * -&gt; *). HasChainIndex m =&gt; m ChainIndex
+</span><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#getChainIndex"><span class="hs-identifier hs-var">getChainIndex</span></a></span><span>
+</span><span id="line-106"></span><span>  </span><span id="local-6989586621679447794"><span class="annot"><span class="annottext">getChainState :: WriterT w m ChainState
+</span><a href="#local-6989586621679447794"><span class="hs-identifier hs-var hs-var hs-var hs-var">getChainState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m ChainState -&gt; WriterT w m ChainState
+forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><span class="hs-identifier hs-var">lift</span></span><span> </span><span class="annot"><span class="annottext">(m ChainState -&gt; WriterT w m ChainState)
+-&gt; m ChainState -&gt; WriterT w m ChainState
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">m ChainState
+forall (m :: * -&gt; *). HasChainIndex m =&gt; m ChainState
+</span><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#getChainState"><span class="hs-identifier hs-var">getChainState</span></a></span></span></span><span>
+</span><span id="line-107"></span></pre></body></html>

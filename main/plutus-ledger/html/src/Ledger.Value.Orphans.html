@@ -1,0 +1,449 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass    #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DerivingVia       #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# OPTIONS_GHC -fno-warn-orphans #-}</span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Ledger.Value.Orphans</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.Api</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">C</span></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Codec.Serialise</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Serialise</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">decode</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Codec.Serialise.Class</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Serialise</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">encode</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">FromJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">parseJSON</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ToJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">toJSON</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-operator">(.:)</span></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">JSON</span></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Data.Aeson.Extras.html"><span class="hs-identifier">Data.Aeson.Extras</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">JSON</span></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteString</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BS</span></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Hashable</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Hashable</span></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Data.String</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">IsString</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">fromString</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Text</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Text</span></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Text.Encoding</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">E</span></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.V1.Ledger.Bytes</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Bytes</span></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.V1.Ledger.Value</span></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">PlutusTx.AssocMap</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">PlutusTx.Prelude</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">PlutusTx</span></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Prettyprinter</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Pretty</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">pretty</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-operator">(&lt;+&gt;)</span></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Prettyprinter.Extras.html"><span class="hs-identifier">Prettyprinter.Extras</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Prettyprinter.Extras.html#PrettyShow"><span class="hs-identifier">PrettyShow</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Prettyprinter.Extras.html#PrettyShow"><span class="hs-identifier">PrettyShow</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Prettyprinter.Util</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">reflow</span></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679737647"><span id="local-6989586621679737649"><span id="local-6989586621679737651"><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">CurrencySymbol</span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-29"></span><span>  </span><span id="local-6989586621679737645"><span class="annot"><span class="annottext">toJSON :: CurrencySymbol -&gt; Value
+</span><a href="#local-6989586621679737645"><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></a></span></span><span> </span><span id="local-6989586621679737644"><span class="annot"><span class="annottext">CurrencySymbol
+</span><a href="#local-6989586621679737644"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-30"></span><span>    </span><span class="annot"><span class="annottext">[Pair] -&gt; Value
+</span><span class="hs-identifier hs-var">JSON.object</span></span><span>
+</span><span id="line-31"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;unCurrencySymbol&quot;</span></span><span>
+</span><span id="line-32"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">JSON.String</span></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Value)
+-&gt; (CurrencySymbol -&gt; Text) -&gt; CurrencySymbol -&gt; Value
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span>
+</span><span id="line-33"></span><span>          </span><span class="annot"><span class="annottext">ByteString -&gt; Text
+</span><a href="Data.Aeson.Extras.html#encodeByteString"><span class="hs-identifier hs-var">JSON.encodeByteString</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Text)
+-&gt; (CurrencySymbol -&gt; ByteString) -&gt; CurrencySymbol -&gt; Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span>
+</span><span id="line-34"></span><span>          </span><span class="annot"><span class="annottext">BuiltinByteString -&gt; ByteString
+forall arep a. FromBuiltin arep a =&gt; arep -&gt; a
+</span><span class="hs-identifier hs-var">PlutusTx.fromBuiltin</span></span><span> </span><span class="annot"><span class="annottext">(BuiltinByteString -&gt; ByteString)
+-&gt; (CurrencySymbol -&gt; BuiltinByteString)
+-&gt; CurrencySymbol
+-&gt; ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span>
+</span><span id="line-35"></span><span>          </span><span class="annot"><span class="annottext">CurrencySymbol -&gt; BuiltinByteString
+</span><span class="hs-identifier hs-var hs-var">unCurrencySymbol</span></span><span> </span><span class="annot"><span class="annottext">(CurrencySymbol -&gt; Value) -&gt; CurrencySymbol -&gt; Value
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-36"></span><span>          </span><span class="annot"><span class="annottext">CurrencySymbol
+</span><a href="#local-6989586621679737644"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679737635"><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">CurrencySymbol</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-40"></span><span>  </span><span id="local-6989586621679737633"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser CurrencySymbol
+</span><a href="#local-6989586621679737633"><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-41"></span><span>    </span><span class="annot"><span class="annottext">String
+-&gt; (Object -&gt; Parser CurrencySymbol)
+-&gt; Value
+-&gt; Parser CurrencySymbol
+forall a. String -&gt; (Object -&gt; Parser a) -&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">JSON.withObject</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;CurrencySymbol&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Object -&gt; Parser CurrencySymbol)
+ -&gt; Value -&gt; Parser CurrencySymbol)
+-&gt; (Object -&gt; Parser CurrencySymbol)
+-&gt; Value
+-&gt; Parser CurrencySymbol
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679737631"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679737631"><span class="hs-identifier hs-var">object</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-42"></span><span>      </span><span id="local-6989586621679737630"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679737630"><span class="hs-identifier hs-var">raw</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679737631"><span class="hs-identifier hs-var">object</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Value
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;unCurrencySymbol&quot;</span></span><span>
+</span><span id="line-43"></span><span>      </span><span id="local-6989586621679737629"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679737629"><span class="hs-identifier hs-var">bytes</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Value -&gt; Parser ByteString
+</span><a href="Data.Aeson.Extras.html#decodeByteString"><span class="hs-identifier hs-var">JSON.decodeByteString</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679737630"><span class="hs-identifier hs-var">raw</span></a></span><span>
+</span><span id="line-44"></span><span>      </span><span class="annot"><span class="annottext">CurrencySymbol -&gt; Parser CurrencySymbol
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(CurrencySymbol -&gt; Parser CurrencySymbol)
+-&gt; CurrencySymbol -&gt; Parser CurrencySymbol
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">BuiltinByteString -&gt; CurrencySymbol
+</span><span class="hs-identifier hs-var">CurrencySymbol</span></span><span> </span><span class="annot"><span class="annottext">(BuiltinByteString -&gt; CurrencySymbol)
+-&gt; BuiltinByteString -&gt; CurrencySymbol
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; BuiltinByteString
+forall a arep. ToBuiltin a arep =&gt; a -&gt; arep
+</span><span class="hs-identifier hs-var">PlutusTx.toBuiltin</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679737629"><span class="hs-identifier hs-var">bytes</span></a></span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span id="local-6989586621679737622"><span id="local-6989586621679737624"><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Hashable</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">CurrencySymbol</span></span></span></span><span>
+</span><span id="line-47"></span><span id="local-6989586621679737613"><span id="local-6989586621679737615"><span id="local-6989586621679737617"><span id="local-6989586621679737619"><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Serialise</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">CurrencySymbol</span></span></span></span></span></span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span id="local-6989586621679737608"><span id="local-6989586621679737610"><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Hashable</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">TokenName</span></span></span></span><span>
+</span><span id="line-50"></span><span id="local-6989586621679737600"><span id="local-6989586621679737602"><span id="local-6989586621679737604"><span id="local-6989586621679737606"><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Serialise</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">TokenName</span></span></span></span></span></span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span class="hs-comment">{- note [Roundtripping token names]
+How to properly roundtrip a token name that is not valid UTF-8 through PureScript
+without a big rewrite of the API?
+We prefix it with a zero byte so we can recognize it when we get a bytestring value back,
+and we serialize it base16 encoded, with 0x in front so it will look as a hex string.
+(Browsers don't render the zero byte.)
+-}</span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679737593"><span id="local-6989586621679737595"><span id="local-6989586621679737597"><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">TokenName</span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-61"></span><span>    </span><span id="local-6989586621679737592"><span class="annot"><span class="annottext">toJSON :: TokenName -&gt; Value
+</span><a href="#local-6989586621679737592"><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Pair] -&gt; Value
+</span><span class="hs-identifier hs-var">JSON.object</span></span><span> </span><span class="annot"><span class="annottext">([Pair] -&gt; Value) -&gt; (TokenName -&gt; [Pair]) -&gt; TokenName -&gt; Value
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Pair -&gt; [Pair]
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(Pair -&gt; [Pair]) -&gt; (TokenName -&gt; Pair) -&gt; TokenName -&gt; [Pair]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">,</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;unTokenName&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Value -&gt; Pair) -&gt; (TokenName -&gt; Value) -&gt; TokenName -&gt; Pair
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+forall a. ToJSON a =&gt; a -&gt; Value
+</span><span class="hs-identifier hs-var">JSON.toJSON</span></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Value) -&gt; (TokenName -&gt; Text) -&gt; TokenName -&gt; Value
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span>
+</span><span id="line-62"></span><span>        </span><span class="annot"><span class="annottext">(ByteString -&gt; Text) -&gt; (Text -&gt; Text) -&gt; TokenName -&gt; Text
+forall r. (ByteString -&gt; r) -&gt; (Text -&gt; r) -&gt; TokenName -&gt; r
+</span><a href="#local-6989586621679737591"><span class="hs-identifier hs-var">fromTokenName</span></a></span><span>
+</span><span id="line-63"></span><span>            </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679737590"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679737590"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Char -&gt; Text -&gt; Text
+</span><span class="hs-identifier hs-var">Text.cons</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'\NUL'</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; Text
+</span><a href="#local-6989586621679737588"><span class="hs-identifier hs-var">asBase16</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679737590"><span class="hs-identifier hs-var">bs</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span>            </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679737587"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679737587"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Text -&gt; Text
+</span><span class="hs-identifier hs-var">Text.take</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679737587"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="hs-keyword">of</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;\NUL&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; Text
+</span><span class="hs-identifier hs-var">Text.concat</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;\NUL\NUL&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679737587"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">]</span><span class="hs-special">;</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679737587"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span>      </span><span class="hs-keyword">where</span><span>
+</span><span id="line-66"></span><span>        </span><span class="hs-comment">-- copied from 'Plutus.V1.Ledger.Value' because not exported</span><span>
+</span><span id="line-67"></span><span>        </span><span class="annot"><a href="#local-6989586621679737588"><span class="hs-identifier hs-type">asBase16</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">BS.ByteString</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Text.Text</span></span><span>
+</span><span id="line-68"></span><span>        </span><span id="local-6989586621679737588"><span class="annot"><span class="annottext">asBase16 :: ByteString -&gt; Text
+</span><a href="#local-6989586621679737588"><span class="hs-identifier hs-var hs-var">asBase16</span></a></span></span><span> </span><span id="local-6989586621679737584"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679737584"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; Text
+</span><span class="hs-identifier hs-var">Text.concat</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;0x&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Text
+</span><span class="hs-identifier hs-var">Bytes.encodeByteString</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679737584"><span class="hs-identifier hs-var">bs</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span>        </span><span id="local-6989586621679737736"><span class="annot"><a href="#local-6989586621679737591"><span class="hs-identifier hs-type">fromTokenName</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">BS.ByteString</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679737736"><span class="hs-identifier hs-type">r</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Text.Text</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679737736"><span class="hs-identifier hs-type">r</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">TokenName</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679737736"><span class="hs-identifier hs-type">r</span></a></span></span><span>
+</span><span id="line-71"></span><span>        </span><span id="local-6989586621679737591"><span class="annot"><span class="annottext">fromTokenName :: (ByteString -&gt; r) -&gt; (Text -&gt; r) -&gt; TokenName -&gt; r
+</span><a href="#local-6989586621679737591"><span class="hs-identifier hs-var hs-var">fromTokenName</span></a></span></span><span> </span><span id="local-6989586621679737582"><span class="annot"><span class="annottext">ByteString -&gt; r
+</span><a href="#local-6989586621679737582"><span class="hs-identifier hs-var">handleBytestring</span></a></span></span><span> </span><span id="local-6989586621679737581"><span class="annot"><span class="annottext">Text -&gt; r
+</span><a href="#local-6989586621679737581"><span class="hs-identifier hs-var">handleText</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">TokenName</span></span><span> </span><span id="local-6989586621679737579"><span class="annot"><span class="annottext">BuiltinByteString
+</span><a href="#local-6989586621679737579"><span class="hs-identifier hs-var">bs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(UnicodeException -&gt; r)
+-&gt; (Text -&gt; r) -&gt; Either UnicodeException Text -&gt; r
+forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">either</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">UnicodeException
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; r
+</span><a href="#local-6989586621679737582"><span class="hs-identifier hs-var">handleBytestring</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; r) -&gt; ByteString -&gt; r
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">BuiltinByteString -&gt; ByteString
+forall arep a. FromBuiltin arep a =&gt; arep -&gt; a
+</span><span class="hs-identifier hs-var">PlutusTx.fromBuiltin</span></span><span> </span><span class="annot"><span class="annottext">BuiltinByteString
+</span><a href="#local-6989586621679737579"><span class="hs-identifier hs-var">bs</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Text -&gt; r
+</span><a href="#local-6989586621679737581"><span class="hs-identifier hs-var">handleText</span></a></span><span> </span><span class="annot"><span class="annottext">(Either UnicodeException Text -&gt; r)
+-&gt; Either UnicodeException Text -&gt; r
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Either UnicodeException Text
+</span><span class="hs-identifier hs-var">E.decodeUtf8'</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">BuiltinByteString -&gt; ByteString
+forall arep a. FromBuiltin arep a =&gt; arep -&gt; a
+</span><span class="hs-identifier hs-var">PlutusTx.fromBuiltin</span></span><span> </span><span class="annot"><span class="annottext">BuiltinByteString
+</span><a href="#local-6989586621679737579"><span class="hs-identifier hs-var">bs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679737574"><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">TokenName</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-74"></span><span>    </span><span id="local-6989586621679737573"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser TokenName
+</span><a href="#local-6989586621679737573"><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-75"></span><span>        </span><span class="annot"><span class="annottext">String -&gt; (Object -&gt; Parser TokenName) -&gt; Value -&gt; Parser TokenName
+forall a. String -&gt; (Object -&gt; Parser a) -&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">JSON.withObject</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;TokenName&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Object -&gt; Parser TokenName) -&gt; Value -&gt; Parser TokenName)
+-&gt; (Object -&gt; Parser TokenName) -&gt; Value -&gt; Parser TokenName
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679737572"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679737572"><span class="hs-identifier hs-var">object</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-76"></span><span>        </span><span id="local-6989586621679737571"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679737571"><span class="hs-identifier hs-var">raw</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679737572"><span class="hs-identifier hs-var">object</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Text
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;unTokenName&quot;</span></span><span>
+</span><span id="line-77"></span><span>        </span><span class="annot"><span class="annottext">Text -&gt; Parser TokenName
+forall (m :: * -&gt; *). MonadFail m =&gt; Text -&gt; m TokenName
+</span><a href="#local-6989586621679737570"><span class="hs-identifier hs-var">fromJSONText</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679737571"><span class="hs-identifier hs-var">raw</span></a></span><span>
+</span><span id="line-78"></span><span>        </span><span class="hs-keyword">where</span><span>
+</span><span id="line-79"></span><span>            </span><span id="local-6989586621679737569"><span class="annot"><span class="annottext">fromText :: Text -&gt; TokenName
+</span><a href="#local-6989586621679737569"><span class="hs-identifier hs-var hs-var">fromText</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; TokenName
+</span><span class="hs-identifier hs-var">tokenName</span></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; TokenName)
+-&gt; (Text -&gt; ByteString) -&gt; Text -&gt; TokenName
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; ByteString
+</span><span class="hs-identifier hs-var">E.encodeUtf8</span></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; ByteString) -&gt; (Text -&gt; Text) -&gt; Text -&gt; ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Text
+</span><span class="hs-identifier hs-var">Text.pack</span></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Text) -&gt; (Text -&gt; String) -&gt; Text -&gt; Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String
+forall a. IsString a =&gt; String -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fromString</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; String) -&gt; (Text -&gt; String) -&gt; Text -&gt; String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; String
+</span><span class="hs-identifier hs-var">Text.unpack</span></span><span>
+</span><span id="line-80"></span><span>            </span><span id="local-6989586621679737570"><span class="annot"><span class="annottext">fromJSONText :: Text -&gt; m TokenName
+</span><a href="#local-6989586621679737570"><span class="hs-identifier hs-var hs-var">fromJSONText</span></a></span></span><span> </span><span id="local-6989586621679737564"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679737564"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Text -&gt; Text
+</span><span class="hs-identifier hs-var">Text.take</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">3</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679737564"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-81"></span><span>                </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;\NUL0x&quot;</span></span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(String -&gt; m TokenName)
+-&gt; (ByteString -&gt; m TokenName)
+-&gt; Either String ByteString
+-&gt; m TokenName
+forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">either</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; m TokenName
+forall (m :: * -&gt; *) a. MonadFail m =&gt; String -&gt; m a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fail</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TokenName -&gt; m TokenName
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(TokenName -&gt; m TokenName)
+-&gt; (ByteString -&gt; TokenName) -&gt; ByteString -&gt; m TokenName
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; TokenName
+</span><span class="hs-identifier hs-var">tokenName</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Either String ByteString -&gt; m TokenName)
+-&gt; (Text -&gt; Either String ByteString) -&gt; Text -&gt; m TokenName
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Either String ByteString
+</span><a href="Data.Aeson.Extras.html#tryDecode"><span class="hs-identifier hs-var">JSON.tryDecode</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Either String ByteString)
+-&gt; (Text -&gt; Text) -&gt; Text -&gt; Either String ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Text -&gt; Text
+</span><span class="hs-identifier hs-var">Text.drop</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">3</span></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; m TokenName) -&gt; Text -&gt; m TokenName
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679737564"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-82"></span><span>                </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;\NUL\NUL\NUL&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TokenName -&gt; m TokenName
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(TokenName -&gt; m TokenName)
+-&gt; (Text -&gt; TokenName) -&gt; Text -&gt; m TokenName
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; TokenName
+</span><a href="#local-6989586621679737569"><span class="hs-identifier hs-var">fromText</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; TokenName) -&gt; (Text -&gt; Text) -&gt; Text -&gt; TokenName
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Text -&gt; Text
+</span><span class="hs-identifier hs-var">Text.drop</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; m TokenName) -&gt; Text -&gt; m TokenName
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679737564"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-83"></span><span>                </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-identifier">_</span></span><span>              </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TokenName -&gt; m TokenName
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(TokenName -&gt; m TokenName)
+-&gt; (Text -&gt; TokenName) -&gt; Text -&gt; m TokenName
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; TokenName
+</span><a href="#local-6989586621679737569"><span class="hs-identifier hs-var">fromText</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; m TokenName) -&gt; Text -&gt; m TokenName
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679737564"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-84"></span><span>
+</span><span id="line-85"></span><span id="local-6989586621679737554"><span id="local-6989586621679737556"><span id="local-6989586621679737558"><span id="local-6989586621679737560"><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">AssetClass</span></span></span></span></span></span><span>
+</span><span id="line-86"></span><span id="local-6989586621679737550"><span id="local-6989586621679737552"><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">AssetClass</span></span></span></span><span>
+</span><span id="line-87"></span><span id="local-6989586621679737546"><span id="local-6989586621679737548"><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Hashable</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">AssetClass</span></span></span></span><span>
+</span><span id="line-88"></span><span id="local-6989586621679737538"><span id="local-6989586621679737540"><span id="local-6989586621679737542"><span id="local-6989586621679737544"><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Serialise</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">AssetClass</span></span></span></span></span></span><span>
+</span><span id="line-89"></span><span>
+</span><span id="line-90"></span><span id="local-6989586621679737530"><span id="local-6989586621679737532"><span id="local-6989586621679737534"><span id="local-6989586621679737536"><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span></span></span></span></span><span>
+</span><span id="line-91"></span><span id="local-6989586621679737526"><span id="local-6989586621679737528"><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span></span></span><span>
+</span><span id="line-92"></span><span id="local-6989586621679737522"><span id="local-6989586621679737524"><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Hashable</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span></span></span><span>
+</span><span id="line-93"></span><span id="local-6989586621679737514"><span id="local-6989586621679737516"><span id="local-6989586621679737518"><span id="local-6989586621679737520"><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Serialise</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span></span></span></span></span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span class="hs-comment">-- Orphan instances for 'PlutusTx.Map' to make this work</span><span>
+</span><span id="line-96"></span><span id="local-6989586621679737512"><span id="local-6989586621679737513"><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679737505"><span id="local-6989586621679737507"><span id="local-6989586621679737509"><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><a href="#local-6989586621679737513"><span class="hs-identifier hs-type">v</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><a href="#local-6989586621679737512"><span class="hs-identifier hs-type">k</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Map.Map</span></span><span> </span><span class="annot"><a href="#local-6989586621679737512"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679737513"><span class="hs-identifier hs-type">v</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-97"></span><span>    </span><span id="local-6989586621679737504"><span class="annot"><span class="annottext">toJSON :: Map k v -&gt; Value
+</span><a href="#local-6989586621679737504"><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(k, v)] -&gt; Value
+forall a. ToJSON a =&gt; a -&gt; Value
+</span><span class="hs-identifier hs-var">JSON.toJSON</span></span><span> </span><span class="annot"><span class="annottext">([(k, v)] -&gt; Value) -&gt; (Map k v -&gt; [(k, v)]) -&gt; Map k v -&gt; Value
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Map k v -&gt; [(k, v)]
+forall k v. Map k v -&gt; [(k, v)]
+</span><span class="hs-identifier hs-var">Map.toList</span></span></span></span><span>
+</span><span id="line-98"></span><span>
+</span><span id="line-99"></span><span id="local-6989586621679737501"><span id="local-6989586621679737502"><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679737498"><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="#local-6989586621679737502"><span class="hs-identifier hs-type">v</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="#local-6989586621679737501"><span class="hs-identifier hs-type">k</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Map.Map</span></span><span> </span><span class="annot"><a href="#local-6989586621679737501"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679737502"><span class="hs-identifier hs-type">v</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-100"></span><span>    </span><span id="local-6989586621679737497"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser (Map k v)
+</span><a href="#local-6989586621679737497"><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></a></span></span><span> </span><span id="local-6989586621679737496"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679737496"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(k, v)] -&gt; Map k v
+forall k v. [(k, v)] -&gt; Map k v
+</span><span class="hs-identifier hs-var">Map.fromList</span></span><span> </span><span class="annot"><span class="annottext">([(k, v)] -&gt; Map k v) -&gt; Parser [(k, v)] -&gt; Parser (Map k v)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Value -&gt; Parser [(k, v)]
+forall a. FromJSON a =&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">JSON.parseJSON</span></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679737496"><span class="hs-identifier hs-var">v</span></a></span></span></span><span>
+</span><span id="line-101"></span><span>
+</span><span id="line-102"></span><span id="local-6989586621679737490"><span id="local-6989586621679737492"><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621679737488"><span id="local-6989586621679737489"><span class="annot"><a href="#local-6989586621679737488"><span class="hs-keyword hs-type hs-type">anyclass</span></a></span></span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Hashable</span></span><span> </span><span class="annot"><a href="#local-6989586621679737489"><span class="hs-identifier hs-type">k</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Hashable</span></span><span> </span><span class="annot"><a href="#local-6989586621679737488"><span class="hs-identifier hs-type">v</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Hashable</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Map.Map</span></span><span> </span><span class="annot"><a href="#local-6989586621679737489"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679737488"><span class="hs-identifier hs-type">v</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-103"></span><span id="local-6989586621679737480"><span id="local-6989586621679737482"><span id="local-6989586621679737484"><span id="local-6989586621679737486"><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621679737478"><span id="local-6989586621679737479"><span class="annot"><a href="#local-6989586621679737478"><span class="hs-keyword hs-type hs-type">anyclass</span></a></span></span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Serialise</span></span><span> </span><span class="annot"><a href="#local-6989586621679737479"><span class="hs-identifier hs-type">k</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Serialise</span></span><span> </span><span class="annot"><a href="#local-6989586621679737478"><span class="hs-identifier hs-type">v</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Serialise</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Map.Map</span></span><span> </span><span class="annot"><a href="#local-6989586621679737479"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679737478"><span class="hs-identifier hs-type">v</span></a></span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-104"></span><span>
+</span><span id="line-105"></span><span>
+</span><span id="line-106"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679737475"><span class="annot"><span class="hs-identifier hs-type">Pretty</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.Lovelace</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-107"></span><span>  </span><span id="local-6989586621679737473"><span class="annot"><span class="annottext">pretty :: Lovelace -&gt; Doc ann
+</span><a href="#local-6989586621679737473"><span class="hs-identifier hs-var hs-var hs-var hs-var">pretty</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">C.Lovelace</span></span><span> </span><span id="local-6989586621679737471"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679737471"><span class="hs-identifier hs-var">l</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679737471"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;lovelace&quot;</span></span><span>
+</span><span id="line-108"></span><span id="local-6989586621679737463"><span id="local-6989586621679737465"><span id="local-6989586621679737467"><span id="local-6989586621679737469"><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Serialise</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.Lovelace</span></span></span></span></span></span><span>
+</span><span id="line-109"></span><span>
+</span><span id="line-110"></span><span id="local-6989586621679737455"><span id="local-6989586621679737457"><span id="local-6989586621679737459"><span id="local-6989586621679737461"><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Serialise</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.Quantity</span></span></span></span></span></span><span>
+</span><span id="line-111"></span><span>
+</span><span id="line-112"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679737452"><span class="annot"><span class="hs-identifier hs-type">Pretty</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.Value</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-113"></span><span>  </span><span id="local-6989586621679737451"><span class="annot"><span class="annottext">pretty :: Value -&gt; Doc ann
+</span><a href="#local-6989586621679737451"><span class="hs-identifier hs-var hs-var hs-var hs-var">pretty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Doc ann
+forall ann. Text -&gt; Doc ann
+</span><span class="hs-identifier hs-var">reflow</span></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Doc ann) -&gt; (Value -&gt; Text) -&gt; Value -&gt; Doc ann
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Value -&gt; Text
+</span><span class="hs-identifier hs-var">C.renderValuePretty</span></span><span>
+</span><span id="line-114"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679737444"><span id="local-6989586621679737446"><span class="annot"><span class="hs-identifier hs-type">Serialise</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.Value</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-115"></span><span>  </span><span id="local-6989586621679737443"><span class="annot"><span class="annottext">decode :: Decoder s Value
+</span><a href="#local-6989586621679737443"><span class="hs-identifier hs-var hs-var hs-var hs-var">decode</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(AssetId, Quantity)] -&gt; Value
+</span><span class="hs-identifier hs-var">C.valueFromList</span></span><span> </span><span class="annot"><span class="annottext">([(AssetId, Quantity)] -&gt; Value)
+-&gt; Decoder s [(AssetId, Quantity)] -&gt; Decoder s Value
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Decoder s [(AssetId, Quantity)]
+forall a s. Serialise a =&gt; Decoder s a
+</span><span class="hs-identifier hs-var">decode</span></span><span>
+</span><span id="line-116"></span><span>  </span><span id="local-6989586621679737441"><span class="annot"><span class="annottext">encode :: Value -&gt; Encoding
+</span><a href="#local-6989586621679737441"><span class="hs-identifier hs-var hs-var hs-var hs-var">encode</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(AssetId, Quantity)] -&gt; Encoding
+forall a. Serialise a =&gt; a -&gt; Encoding
+</span><span class="hs-identifier hs-var">encode</span></span><span> </span><span class="annot"><span class="annottext">([(AssetId, Quantity)] -&gt; Encoding)
+-&gt; (Value -&gt; [(AssetId, Quantity)]) -&gt; Value -&gt; Encoding
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Value -&gt; [(AssetId, Quantity)]
+</span><span class="hs-identifier hs-var">C.valueToList</span></span><span>
+</span><span id="line-117"></span><span>
+</span><span id="line-118"></span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Generic</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.AssetId</span></span><span>
+</span><span id="line-119"></span><span id="local-6989586621679737433"><span id="local-6989586621679737435"><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.AssetId</span></span></span></span><span>
+</span><span id="line-120"></span><span id="local-6989586621679737425"><span id="local-6989586621679737427"><span id="local-6989586621679737429"><span id="local-6989586621679737431"><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.AssetId</span></span></span></span></span></span><span>
+</span><span id="line-121"></span><span id="local-6989586621679737417"><span id="local-6989586621679737419"><span id="local-6989586621679737421"><span id="local-6989586621679737423"><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Serialise</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.AssetId</span></span></span></span></span></span><span>
+</span><span id="line-122"></span><span id="local-6989586621679737413"><span id="local-6989586621679737415"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">via</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Prettyprinter.Extras.html#PrettyShow"><span class="hs-identifier hs-type">PrettyShow</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.AssetId</span></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Pretty</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.AssetId</span></span></span></span><span>
+</span><span id="line-123"></span><span>
+</span><span id="line-124"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679737407"><span id="local-6989586621679737409"><span class="annot"><span class="hs-identifier hs-type">Serialise</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.PolicyId</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-125"></span><span>  </span><span id="local-6989586621679737406"><span class="annot"><span class="annottext">encode :: PolicyId -&gt; Encoding
+</span><a href="#local-6989586621679737406"><span class="hs-identifier hs-var hs-var hs-var hs-var">encode</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Encoding
+forall a. Serialise a =&gt; a -&gt; Encoding
+</span><span class="hs-identifier hs-var">encode</span></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Encoding)
+-&gt; (PolicyId -&gt; ByteString) -&gt; PolicyId -&gt; Encoding
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">PolicyId -&gt; ByteString
+forall a. SerialiseAsRawBytes a =&gt; a -&gt; ByteString
+</span><span class="hs-identifier hs-var">C.serialiseToRawBytes</span></span><span>
+</span><span id="line-126"></span><span>  </span><span id="local-6989586621679737404"><span class="annot"><span class="annottext">decode :: Decoder s PolicyId
+</span><a href="#local-6989586621679737404"><span class="hs-identifier hs-var hs-var hs-var hs-var">decode</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-127"></span><span>    </span><span id="local-6989586621679737403"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679737403"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Decoder s ByteString
+forall a s. Serialise a =&gt; Decoder s a
+</span><span class="hs-identifier hs-var">decode</span></span><span>
+</span><span id="line-128"></span><span>    </span><span class="annot"><span class="annottext">Decoder s PolicyId
+-&gt; (PolicyId -&gt; Decoder s PolicyId)
+-&gt; Maybe PolicyId
+-&gt; Decoder s PolicyId
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Decoder s PolicyId
+forall (m :: * -&gt; *) a. MonadFail m =&gt; String -&gt; m a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fail</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Can get back policy ID&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-129"></span><span>      </span><span class="annot"><span class="annottext">PolicyId -&gt; Decoder s PolicyId
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span>
+</span><span id="line-130"></span><span>      </span><span class="annot"><span class="annottext">(Maybe PolicyId -&gt; Decoder s PolicyId)
+-&gt; Maybe PolicyId -&gt; Decoder s PolicyId
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">AsType PolicyId -&gt; ByteString -&gt; Maybe PolicyId
+forall a.
+SerialiseAsRawBytes a =&gt;
+AsType a -&gt; ByteString -&gt; Maybe a
+</span><span class="hs-identifier hs-var">C.deserialiseFromRawBytes</span></span><span> </span><span class="annot"><span class="annottext">AsType PolicyId
+</span><span class="hs-identifier hs-var">C.AsPolicyId</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679737403"><span class="hs-identifier hs-var">bs</span></a></span><span>
+</span><span id="line-131"></span><span>
+</span><span id="line-132"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679737394"><span id="local-6989586621679737396"><span class="annot"><span class="hs-identifier hs-type">Serialise</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.AssetName</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-133"></span><span>  </span><span id="local-6989586621679737393"><span class="annot"><span class="annottext">encode :: AssetName -&gt; Encoding
+</span><a href="#local-6989586621679737393"><span class="hs-identifier hs-var hs-var hs-var hs-var">encode</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Encoding
+forall a. Serialise a =&gt; a -&gt; Encoding
+</span><span class="hs-identifier hs-var">encode</span></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Encoding)
+-&gt; (AssetName -&gt; ByteString) -&gt; AssetName -&gt; Encoding
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">AssetName -&gt; ByteString
+forall a. SerialiseAsRawBytes a =&gt; a -&gt; ByteString
+</span><span class="hs-identifier hs-var">C.serialiseToRawBytes</span></span><span>
+</span><span id="line-134"></span><span>  </span><span id="local-6989586621679737392"><span class="annot"><span class="annottext">decode :: Decoder s AssetName
+</span><a href="#local-6989586621679737392"><span class="hs-identifier hs-var hs-var hs-var hs-var">decode</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-135"></span><span>    </span><span id="local-6989586621679737391"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679737391"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Decoder s ByteString
+forall a s. Serialise a =&gt; Decoder s a
+</span><span class="hs-identifier hs-var">decode</span></span><span>
+</span><span id="line-136"></span><span>    </span><span class="annot"><span class="annottext">Decoder s AssetName
+-&gt; (AssetName -&gt; Decoder s AssetName)
+-&gt; Maybe AssetName
+-&gt; Decoder s AssetName
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Decoder s AssetName
+forall (m :: * -&gt; *) a. MonadFail m =&gt; String -&gt; m a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fail</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Can get back asset name&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-137"></span><span>      </span><span class="annot"><span class="annottext">AssetName -&gt; Decoder s AssetName
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span>
+</span><span id="line-138"></span><span>      </span><span class="annot"><span class="annottext">(Maybe AssetName -&gt; Decoder s AssetName)
+-&gt; Maybe AssetName -&gt; Decoder s AssetName
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">AsType AssetName -&gt; ByteString -&gt; Maybe AssetName
+forall a.
+SerialiseAsRawBytes a =&gt;
+AsType a -&gt; ByteString -&gt; Maybe a
+</span><span class="hs-identifier hs-var">C.deserialiseFromRawBytes</span></span><span> </span><span class="annot"><span class="annottext">AsType AssetName
+</span><span class="hs-identifier hs-var">C.AsAssetName</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679737391"><span class="hs-identifier hs-var">bs</span></a></span><span>
+</span><span id="line-139"></span></pre></body></html>

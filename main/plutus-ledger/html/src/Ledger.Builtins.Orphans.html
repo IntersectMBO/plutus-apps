@@ -1,0 +1,93 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass     #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric      #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DerivingStrategies #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE DerivingVia        #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings  #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# OPTIONS_GHC -fno-warn-orphans #-}</span><span>
+</span><span id="line-7"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Ledger.Builtins.Orphans</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">PlutusTx.Prelude</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">PlutusTx</span></span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Data.Aeson.Extras.html"><span class="hs-identifier">Data.Aeson.Extras</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">JSON</span></span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Codec.Serialise</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Serialise</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">decode</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">encode</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">FromJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">parseJSON</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ToJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">toJSON</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">JSON</span></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">PlutusCore.Data</span></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">PlutusTx</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">PlutusTx</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">PlutusTx.Builtins.Internal</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">BuiltinData</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679735520"><span id="local-6989586621679735522"><span id="local-6989586621679735524"><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">PlutusTx.BuiltinByteString</span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-22"></span><span>    </span><span id="local-6989586621679735518"><span class="annot"><span class="annottext">toJSON :: BuiltinByteString -&gt; Value
+</span><a href="#local-6989586621679735518"><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">JSON.String</span></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Value)
+-&gt; (BuiltinByteString -&gt; Text) -&gt; BuiltinByteString -&gt; Value
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Text
+</span><a href="Data.Aeson.Extras.html#encodeByteString"><span class="hs-identifier hs-var">JSON.encodeByteString</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Text)
+-&gt; (BuiltinByteString -&gt; ByteString) -&gt; BuiltinByteString -&gt; Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">BuiltinByteString -&gt; ByteString
+forall arep a. FromBuiltin arep a =&gt; arep -&gt; a
+</span><span class="hs-identifier hs-var">PlutusTx.fromBuiltin</span></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679735511"><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">PlutusTx.BuiltinByteString</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-25"></span><span>    </span><span id="local-6989586621679735509"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser BuiltinByteString
+</span><a href="#local-6989586621679735509"><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></a></span></span><span> </span><span id="local-6989586621679735508"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679735508"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; BuiltinByteString
+forall a arep. ToBuiltin a arep =&gt; a -&gt; arep
+</span><span class="hs-identifier hs-var">PlutusTx.toBuiltin</span></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; BuiltinByteString)
+-&gt; Parser ByteString -&gt; Parser BuiltinByteString
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Value -&gt; Parser ByteString
+</span><a href="Data.Aeson.Extras.html#decodeByteString"><span class="hs-identifier hs-var">JSON.decodeByteString</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679735508"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679735498"><span id="local-6989586621679735500"><span id="local-6989586621679735502"><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">PlutusTx.BuiltinData</span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-28"></span><span>  </span><span id="local-6989586621679735497"><span class="annot"><span class="annottext">toJSON :: BuiltinData -&gt; Value
+</span><a href="#local-6989586621679735497"><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Data -&gt; Value
+forall a. ToJSON a =&gt; a -&gt; Value
+</span><span class="hs-identifier hs-var">toJSON</span></span><span> </span><span class="annot"><span class="annottext">(Data -&gt; Value) -&gt; (BuiltinData -&gt; Data) -&gt; BuiltinData -&gt; Value
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">BuiltinData -&gt; Data
+</span><span class="hs-identifier hs-var">PlutusTx.builtinDataToData</span></span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679735493"><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">PlutusTx.BuiltinData</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-31"></span><span>  </span><span id="local-6989586621679735492"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser BuiltinData
+</span><a href="#local-6989586621679735492"><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></a></span></span><span> </span><span id="local-6989586621679735491"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679735491"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Value -&gt; Parser Data
+forall a. FromJSON a =&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">parseJSON</span></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679735491"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Parser Data -&gt; (Data -&gt; Parser BuiltinData) -&gt; Parser BuiltinData
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">BuiltinData -&gt; Parser BuiltinData
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(BuiltinData -&gt; Parser BuiltinData)
+-&gt; (Data -&gt; BuiltinData) -&gt; Data -&gt; Parser BuiltinData
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Data -&gt; BuiltinData
+</span><span class="hs-identifier hs-var">PlutusTx.dataToBuiltinData</span></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679735484"><span id="local-6989586621679735486"><span class="annot"><span class="hs-identifier hs-type">Serialise</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">PlutusTx.BuiltinData</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-34"></span><span>  </span><span id="local-6989586621679735482"><span class="annot"><span class="annottext">encode :: BuiltinData -&gt; Encoding
+</span><a href="#local-6989586621679735482"><span class="hs-identifier hs-var hs-var hs-var hs-var">encode</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Data -&gt; Encoding
+forall a. Serialise a =&gt; a -&gt; Encoding
+</span><span class="hs-identifier hs-var">encode</span></span><span> </span><span class="annot"><span class="annottext">(Data -&gt; Encoding)
+-&gt; (BuiltinData -&gt; Data) -&gt; BuiltinData -&gt; Encoding
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">BuiltinData -&gt; Data
+</span><span class="hs-identifier hs-var">PlutusTx.builtinDataToData</span></span><span>
+</span><span id="line-35"></span><span>  </span><span id="local-6989586621679735481"><span class="annot"><span class="annottext">decode :: Decoder s BuiltinData
+</span><a href="#local-6989586621679735481"><span class="hs-identifier hs-var hs-var hs-var hs-var">decode</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Data -&gt; BuiltinData
+</span><span class="hs-identifier hs-var">PlutusTx.dataToBuiltinData</span></span><span> </span><span class="annot"><span class="annottext">(Data -&gt; BuiltinData) -&gt; Decoder s Data -&gt; Decoder s BuiltinData
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Decoder s Data
+forall a s. Serialise a =&gt; Decoder s a
+</span><span class="hs-identifier hs-var">decode</span></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Generic</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">BuiltinData</span></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span id="local-6989586621679735470"><span id="local-6989586621679735472"><span id="local-6989586621679735474"><span id="local-6989586621679735476"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">via</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Aeson.Extras.html#JSONViaSerialise"><span class="hs-identifier hs-type">JSON.JSONViaSerialise</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Data</span></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Data</span></span></span></span></span></span><span>
+</span><span id="line-40"></span><span id="local-6989586621679735465"><span id="local-6989586621679735467"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">via</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Aeson.Extras.html#JSONViaSerialise"><span class="hs-identifier hs-type">JSON.JSONViaSerialise</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Data</span></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Data</span></span></span></span><span>
+</span><span id="line-41"></span></pre></body></html>

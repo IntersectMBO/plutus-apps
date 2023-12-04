@@ -1,0 +1,785 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE AllowAmbiguousTypes  #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DataKinds            #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass       #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE DerivingStrategies   #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts     #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase           #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE MonoLocalBinds       #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings    #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications     #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- | Request handlers for contract instance runners.</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Plutus.PAB.Core.ContractInstance.RequestHandlers</span><span class="hs-special">(</span><span>
+</span><span id="line-13"></span><span>    </span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#ContractInstanceMsg"><span class="hs-identifier">ContractInstanceMsg</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.BM.Data.Tracer</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">ToObject</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">TracingVerbosity</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.BM.Data.Tracer.Extras.html"><span class="hs-identifier">Cardano.BM.Data.Tracer.Extras</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Tagged</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Tagged</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.BM.Data.Tracer.Extras.html#mkObjectStr"><span class="hs-identifier">mkObjectStr</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">FromJSON</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ToJSON</span></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">JSON</span></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson.Encode.Pretty</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">JSON</span></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteString.Lazy.Char8</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BSL8</span></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Ledger.Tx</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">CardanoTx</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">getCardanoTxId</span></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.Contract.Effects</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">PABReq</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">PABResp</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.Contract.Resumable</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">IterationID</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Request</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Response</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.Contract.Trace.RequestHandler</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">RequestHandlerLogMsg</span></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Plutus.PAB.Effects.Contract.html"><span class="hs-identifier">Plutus.PAB.Effects.Contract</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Contract</span></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Plutus.PAB.Events.Contract.html"><span class="hs-identifier">Plutus.PAB.Events.Contract</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">ContractInstanceId</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Plutus.PAB.Events.ContractInstanceState.html"><span class="hs-identifier">Plutus.PAB.Events.ContractInstanceState</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Events.ContractInstanceState.html#PartiallyDecodedResponse"><span class="hs-identifier">PartiallyDecodedResponse</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Prettyprinter</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Pretty</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">colon</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">hang</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">parens</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">pretty</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">viaShow</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">vsep</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-operator">(&lt;+&gt;)</span></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Wallet.Emulator.LogMessages</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">TxBalanceMsg</span></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Wallet.Emulator.Types</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Wallet</span></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Wallet.Types</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">NotificationError</span></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="hs-comment">-- | Log messages about the contract instance</span><span>
+</span><span id="line-36"></span><span id="local-6989586621680272788"><span id="local-6989586621680272789"></span></span><span class="hs-keyword">data</span><span> </span><span id="ContractInstanceMsg"><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#ContractInstanceMsg"><span class="hs-identifier hs-var">ContractInstanceMsg</span></a></span></span><span> </span><span id="local-6989586621680272787"><span class="annot"><a href="#local-6989586621680272787"><span class="hs-identifier hs-type">t</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-37"></span><span>    </span><span id="ProcessFirstInboxMessage"><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#ProcessFirstInboxMessage"><span class="hs-identifier hs-var">ProcessFirstInboxMessage</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ContractInstanceId</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Response</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">PABResp</span></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="SendingContractStateMessages"><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#SendingContractStateMessages"><span class="hs-identifier hs-var">SendingContractStateMessages</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ContractInstanceId</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">IterationID</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Request</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">PABReq</span></span><span class="hs-special">]</span><span>
+</span><span id="line-39"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="LookingUpStateOfContractInstance"><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#LookingUpStateOfContractInstance"><span class="hs-identifier hs-var">LookingUpStateOfContractInstance</span></a></span></span><span>
+</span><span id="line-40"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="CurrentIteration"><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#CurrentIteration"><span class="hs-identifier hs-var">CurrentIteration</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">IterationID</span></span><span>
+</span><span id="line-41"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="InboxMessageDoesntMatchIteration"><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#InboxMessageDoesntMatchIteration"><span class="hs-identifier hs-var">InboxMessageDoesntMatchIteration</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">IterationID</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">IterationID</span></span><span>
+</span><span id="line-42"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="InboxMessageMatchesIteration"><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#InboxMessageMatchesIteration"><span class="hs-identifier hs-var">InboxMessageMatchesIteration</span></a></span></span><span>
+</span><span id="line-43"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="InvokingContractUpdate"><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#InvokingContractUpdate"><span class="hs-identifier hs-var">InvokingContractUpdate</span></a></span></span><span>
+</span><span id="line-44"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="ObtainedNewState"><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#ObtainedNewState"><span class="hs-identifier hs-var">ObtainedNewState</span></a></span></span><span>
+</span><span id="line-45"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="ContractLog"><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#ContractLog"><span class="hs-identifier hs-var">ContractLog</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ContractInstanceId</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">JSON.Value</span></span><span>
+</span><span id="line-46"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="UpdatedContract"><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#UpdatedContract"><span class="hs-identifier hs-var">UpdatedContract</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ContractInstanceId</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">IterationID</span></span><span>
+</span><span id="line-47"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="LookingUpContract"><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#LookingUpContract"><span class="hs-identifier hs-var">LookingUpContract</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Effects.Contract.html#ContractDef"><span class="hs-identifier hs-type">Contract.ContractDef</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680272787"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="InitialisingContract"><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#InitialisingContract"><span class="hs-identifier hs-var">InitialisingContract</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Effects.Contract.html#ContractDef"><span class="hs-identifier hs-type">Contract.ContractDef</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680272787"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ContractInstanceId</span></span><span>
+</span><span id="line-49"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="InitialPABResp"><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#InitialPABResp"><span class="hs-identifier hs-var">InitialPABResp</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Events.ContractInstanceState.html#PartiallyDecodedResponse"><span class="hs-identifier hs-type">PartiallyDecodedResponse</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">PABReq</span></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="ActivatedContractInstance"><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#ActivatedContractInstance"><span class="hs-identifier hs-var">ActivatedContractInstance</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Effects.Contract.html#ContractDef"><span class="hs-identifier hs-type">Contract.ContractDef</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680272787"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Wallet</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ContractInstanceId</span></span><span>
+</span><span id="line-51"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="RunRequestHandler"><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#RunRequestHandler"><span class="hs-identifier hs-var">RunRequestHandler</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ContractInstanceId</span></span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-comment">-- number of requests</span><span>
+</span><span id="line-52"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="RunRequestHandlerDidNotHandleAnyEvents"><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#RunRequestHandlerDidNotHandleAnyEvents"><span class="hs-identifier hs-var">RunRequestHandlerDidNotHandleAnyEvents</span></a></span></span><span>
+</span><span id="line-53"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="StoringSignedTx"><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#StoringSignedTx"><span class="hs-identifier hs-var">StoringSignedTx</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">CardanoTx</span></span><span>
+</span><span id="line-54"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="CallingEndpoint"><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#CallingEndpoint"><span class="hs-identifier hs-var">CallingEndpoint</span></a></span></span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ContractInstanceId</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">JSON.Value</span></span><span>
+</span><span id="line-55"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="ProcessContractInbox"><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#ProcessContractInbox"><span class="hs-identifier hs-var">ProcessContractInbox</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ContractInstanceId</span></span><span>
+</span><span id="line-56"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="HandlingRequest"><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#HandlingRequest"><span class="hs-identifier hs-var">HandlingRequest</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">RequestHandlerLogMsg</span></span><span>
+</span><span id="line-57"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="HandlingRequests"><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#HandlingRequests"><span class="hs-identifier hs-var">HandlingRequests</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ContractInstanceId</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Request</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">PABReq</span></span><span class="hs-special">]</span><span>
+</span><span id="line-58"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="BalancingTx"><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#BalancingTx"><span class="hs-identifier hs-var">BalancingTx</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">TxBalanceMsg</span></span><span>
+</span><span id="line-59"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="NotificationFailed"><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#NotificationFailed"><span class="hs-identifier hs-var">NotificationFailed</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">NotificationError</span></span><span>
+</span><span id="line-60"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(forall x. ContractInstanceMsg t -&gt; Rep (ContractInstanceMsg t) x)
+-&gt; (forall x.
+    Rep (ContractInstanceMsg t) x -&gt; ContractInstanceMsg t)
+-&gt; Generic (ContractInstanceMsg t)
+forall x. Rep (ContractInstanceMsg t) x -&gt; ContractInstanceMsg t
+forall x. ContractInstanceMsg t -&gt; Rep (ContractInstanceMsg t) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall t x. Rep (ContractInstanceMsg t) x -&gt; ContractInstanceMsg t
+forall t x. ContractInstanceMsg t -&gt; Rep (ContractInstanceMsg t) x
+$cto :: forall t x. Rep (ContractInstanceMsg t) x -&gt; ContractInstanceMsg t
+$cfrom :: forall t x. ContractInstanceMsg t -&gt; Rep (ContractInstanceMsg t) x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span>
+</span><span id="line-62"></span><span id="local-6989586621680272757"><span id="local-6989586621680272759"><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621680272755"><span class="annot"><a href="#local-6989586621680272755"><span class="hs-keyword hs-type">stock</span></a></span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">Eq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Effects.Contract.html#ContractDef"><span class="hs-identifier hs-type">Contract.ContractDef</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680272755"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">Eq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#ContractInstanceMsg"><span class="hs-identifier hs-type">ContractInstanceMsg</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680272755"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-63"></span><span id="local-6989586621680272749"><span id="local-6989586621680272751"><span id="local-6989586621680272753"><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621680272747"><span class="annot"><a href="#local-6989586621680272747"><span class="hs-keyword hs-type">stock</span></a></span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Effects.Contract.html#ContractDef"><span class="hs-identifier hs-type">Contract.ContractDef</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680272747"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#ContractInstanceMsg"><span class="hs-identifier hs-type">ContractInstanceMsg</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680272747"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-64"></span><span id="local-6989586621680272739"><span id="local-6989586621680272741"><span id="local-6989586621680272743"><span id="local-6989586621680272745"><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621680272737"><span class="annot"><a href="#local-6989586621680272737"><span class="hs-keyword hs-type">anyclass</span></a></span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Effects.Contract.html#ContractDef"><span class="hs-identifier hs-type">Contract.ContractDef</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680272737"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#ContractInstanceMsg"><span class="hs-identifier hs-type">ContractInstanceMsg</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680272737"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-65"></span><span id="local-6989586621680272733"><span id="local-6989586621680272735"><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621680272731"><span class="annot"><a href="#local-6989586621680272731"><span class="hs-keyword hs-type">anyclass</span></a></span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Effects.Contract.html#ContractDef"><span class="hs-identifier hs-type">Contract.ContractDef</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680272731"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#ContractInstanceMsg"><span class="hs-identifier hs-type">ContractInstanceMsg</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680272731"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span id="local-6989586621680272730"><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621680272727"><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Effects.Contract.html#ContractDef"><span class="hs-identifier hs-type">Contract.ContractDef</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680272730"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ToObject</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#ContractInstanceMsg"><span class="hs-identifier hs-type">ContractInstanceMsg</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680272730"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-68"></span><span>    </span><span id="local-6989586621680272725"><span class="annot"><span class="annottext">toObject :: TracingVerbosity -&gt; ContractInstanceMsg t -&gt; Object
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">toObject</span></span></span><span> </span><span id="local-6989586621680272723"><span class="annot"><span class="annottext">TracingVerbosity
+</span><a href="#local-6989586621680272723"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-69"></span><span>        </span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#ProcessFirstInboxMessage"><span class="hs-identifier hs-type">ProcessFirstInboxMessage</span></a></span><span> </span><span id="local-6989586621680272722"><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680272722"><span class="hs-identifier hs-var">instanceID</span></a></span></span><span> </span><span id="local-6989586621680272721"><span class="annot"><span class="annottext">Response PABResp
+</span><a href="#local-6989586621680272721"><span class="hs-identifier hs-var">response</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-70"></span><span>            </span><span class="annot"><span class="annottext">Text
+-&gt; Either
+     (ContractInstanceId, Tagged &quot;response&quot; (Response PABResp))
+     ContractInstanceId
+-&gt; Object
+forall k. StructuredLog k =&gt; Text -&gt; k -&gt; Object
+</span><a href="Cardano.BM.Data.Tracer.Extras.html#mkObjectStr"><span class="hs-identifier hs-var">mkObjectStr</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Processing first contract inbox message&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Either
+   (ContractInstanceId, Tagged &quot;response&quot; (Response PABResp))
+   ContractInstanceId
+ -&gt; Object)
+-&gt; Either
+     (ContractInstanceId, Tagged &quot;response&quot; (Response PABResp))
+     ContractInstanceId
+-&gt; Object
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-71"></span><span>                </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">TracingVerbosity
+</span><a href="#local-6989586621680272723"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-72"></span><span>                    </span><span class="annot"><span class="annottext">TracingVerbosity
+</span><span class="hs-identifier hs-var">MaximalVerbosity</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(ContractInstanceId, Tagged &quot;response&quot; (Response PABResp))
+-&gt; Either
+     (ContractInstanceId, Tagged &quot;response&quot; (Response PABResp))
+     ContractInstanceId
+forall a b. a -&gt; Either a b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680272722"><span class="hs-identifier hs-var">instanceID</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Response PABResp -&gt; Tagged &quot;response&quot; (Response PABResp)
+forall k (s :: k) b. b -&gt; Tagged s b
+</span><span class="hs-identifier hs-var">Tagged</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-string">&quot;response&quot;</span></span><span> </span><span class="annot"><span class="annottext">Response PABResp
+</span><a href="#local-6989586621680272721"><span class="hs-identifier hs-var">response</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-73"></span><span>                    </span><span class="annot"><span class="annottext">TracingVerbosity
+</span><span class="hs-identifier">_</span></span><span>                </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ContractInstanceId
+-&gt; Either
+     (ContractInstanceId, Tagged &quot;response&quot; (Response PABResp))
+     ContractInstanceId
+forall a b. b -&gt; Either a b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680272722"><span class="hs-identifier hs-var">instanceID</span></a></span><span>
+</span><span id="line-74"></span><span>        </span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#SendingContractStateMessages"><span class="hs-identifier hs-type">SendingContractStateMessages</span></a></span><span> </span><span id="local-6989586621680272719"><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680272719"><span class="hs-identifier hs-var">instanceID</span></a></span></span><span> </span><span id="local-6989586621680272718"><span class="annot"><span class="annottext">IterationID
+</span><a href="#local-6989586621680272718"><span class="hs-identifier hs-var">iterationID</span></a></span></span><span> </span><span id="local-6989586621680272717"><span class="annot"><span class="annottext">[Request PABReq]
+</span><a href="#local-6989586621680272717"><span class="hs-identifier hs-var">requests</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-75"></span><span>            </span><span class="annot"><span class="annottext">Text
+-&gt; Either
+     (ContractInstanceId, IterationID,
+      Tagged &quot;requests&quot; [Request PABReq])
+     ContractInstanceId
+-&gt; Object
+forall k. StructuredLog k =&gt; Text -&gt; k -&gt; Object
+</span><a href="Cardano.BM.Data.Tracer.Extras.html#mkObjectStr"><span class="hs-identifier hs-var">mkObjectStr</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Sending contact state messages&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Either
+   (ContractInstanceId, IterationID,
+    Tagged &quot;requests&quot; [Request PABReq])
+   ContractInstanceId
+ -&gt; Object)
+-&gt; Either
+     (ContractInstanceId, IterationID,
+      Tagged &quot;requests&quot; [Request PABReq])
+     ContractInstanceId
+-&gt; Object
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-76"></span><span>                </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">TracingVerbosity
+</span><a href="#local-6989586621680272723"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-77"></span><span>                    </span><span class="annot"><span class="annottext">TracingVerbosity
+</span><span class="hs-identifier hs-var">MaximalVerbosity</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-78"></span><span>                        </span><span class="annot"><span class="annottext">(ContractInstanceId, IterationID,
+ Tagged &quot;requests&quot; [Request PABReq])
+-&gt; Either
+     (ContractInstanceId, IterationID,
+      Tagged &quot;requests&quot; [Request PABReq])
+     ContractInstanceId
+forall a b. a -&gt; Either a b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680272719"><span class="hs-identifier hs-var">instanceID</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">IterationID
+</span><a href="#local-6989586621680272718"><span class="hs-identifier hs-var">iterationID</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[Request PABReq] -&gt; Tagged &quot;requests&quot; [Request PABReq]
+forall k (s :: k) b. b -&gt; Tagged s b
+</span><span class="hs-identifier hs-var">Tagged</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-string">&quot;requests&quot;</span></span><span> </span><span class="annot"><span class="annottext">[Request PABReq]
+</span><a href="#local-6989586621680272717"><span class="hs-identifier hs-var">requests</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-79"></span><span>                    </span><span class="annot"><span class="annottext">TracingVerbosity
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ContractInstanceId
+-&gt; Either
+     (ContractInstanceId, IterationID,
+      Tagged &quot;requests&quot; [Request PABReq])
+     ContractInstanceId
+forall a b. b -&gt; Either a b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680272719"><span class="hs-identifier hs-var">instanceID</span></a></span><span>
+</span><span id="line-80"></span><span>        </span><span class="annot"><span class="annottext">ContractInstanceMsg t
+</span><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#LookingUpStateOfContractInstance"><span class="hs-identifier hs-var">LookingUpStateOfContractInstance</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text -&gt; () -&gt; Object
+forall k. StructuredLog k =&gt; Text -&gt; k -&gt; Object
+</span><a href="Cardano.BM.Data.Tracer.Extras.html#mkObjectStr"><span class="hs-identifier hs-var">mkObjectStr</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;looking up state of contract instance&quot;</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-81"></span><span>        </span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#CurrentIteration"><span class="hs-identifier hs-type">CurrentIteration</span></a></span><span> </span><span id="local-6989586621680272716"><span class="annot"><span class="annottext">IterationID
+</span><a href="#local-6989586621680272716"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text -&gt; IterationID -&gt; Object
+forall k. StructuredLog k =&gt; Text -&gt; k -&gt; Object
+</span><a href="Cardano.BM.Data.Tracer.Extras.html#mkObjectStr"><span class="hs-identifier hs-var">mkObjectStr</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;current iteration&quot;</span></span><span> </span><span class="annot"><span class="annottext">IterationID
+</span><a href="#local-6989586621680272716"><span class="hs-identifier hs-var">i</span></a></span><span>
+</span><span id="line-82"></span><span>        </span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#InboxMessageDoesntMatchIteration"><span class="hs-identifier hs-type">InboxMessageDoesntMatchIteration</span></a></span><span> </span><span id="local-6989586621680272715"><span class="annot"><span class="annottext">IterationID
+</span><a href="#local-6989586621680272715"><span class="hs-identifier hs-var">i1</span></a></span></span><span> </span><span id="local-6989586621680272714"><span class="annot"><span class="annottext">IterationID
+</span><a href="#local-6989586621680272714"><span class="hs-identifier hs-var">i2</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-83"></span><span>            </span><span class="annot"><span class="annottext">Text
+-&gt; (IterationID, Tagged &quot;inbox_message_iteration&quot; IterationID)
+-&gt; Object
+forall k. StructuredLog k =&gt; Text -&gt; k -&gt; Object
+</span><a href="Cardano.BM.Data.Tracer.Extras.html#mkObjectStr"><span class="hs-identifier hs-var">mkObjectStr</span></a></span><span>
+</span><span id="line-84"></span><span>                </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;inbox message doesn't match iteration&quot;</span></span><span>
+</span><span id="line-85"></span><span>                </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IterationID
+</span><a href="#local-6989586621680272715"><span class="hs-identifier hs-var">i1</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">IterationID -&gt; Tagged &quot;inbox_message_iteration&quot; IterationID
+forall k (s :: k) b. b -&gt; Tagged s b
+</span><span class="hs-identifier hs-var">Tagged</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-string">&quot;inbox_message_iteration&quot;</span></span><span> </span><span class="annot"><span class="annottext">IterationID
+</span><a href="#local-6989586621680272714"><span class="hs-identifier hs-var">i2</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-86"></span><span>        </span><span class="annot"><span class="annottext">ContractInstanceMsg t
+</span><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#InboxMessageMatchesIteration"><span class="hs-identifier hs-var">InboxMessageMatchesIteration</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text -&gt; () -&gt; Object
+forall k. StructuredLog k =&gt; Text -&gt; k -&gt; Object
+</span><a href="Cardano.BM.Data.Tracer.Extras.html#mkObjectStr"><span class="hs-identifier hs-var">mkObjectStr</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;inbox message matches iteration&quot;</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-87"></span><span>        </span><span class="annot"><span class="annottext">ContractInstanceMsg t
+</span><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#InvokingContractUpdate"><span class="hs-identifier hs-var">InvokingContractUpdate</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text -&gt; () -&gt; Object
+forall k. StructuredLog k =&gt; Text -&gt; k -&gt; Object
+</span><a href="Cardano.BM.Data.Tracer.Extras.html#mkObjectStr"><span class="hs-identifier hs-var">mkObjectStr</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;invoking contract update&quot;</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span>        </span><span class="annot"><span class="annottext">ContractInstanceMsg t
+</span><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#ObtainedNewState"><span class="hs-identifier hs-var">ObtainedNewState</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text -&gt; () -&gt; Object
+forall k. StructuredLog k =&gt; Text -&gt; k -&gt; Object
+</span><a href="Cardano.BM.Data.Tracer.Extras.html#mkObjectStr"><span class="hs-identifier hs-var">mkObjectStr</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;obtained new state&quot;</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-89"></span><span>        </span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#UpdatedContract"><span class="hs-identifier hs-type">UpdatedContract</span></a></span><span> </span><span id="local-6989586621680272713"><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680272713"><span class="hs-identifier hs-var">instanceID</span></a></span></span><span> </span><span id="local-6989586621680272712"><span class="annot"><span class="annottext">IterationID
+</span><a href="#local-6989586621680272712"><span class="hs-identifier hs-var">iterationID</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-90"></span><span>            </span><span class="annot"><span class="annottext">Text -&gt; (ContractInstanceId, IterationID) -&gt; Object
+forall k. StructuredLog k =&gt; Text -&gt; k -&gt; Object
+</span><a href="Cardano.BM.Data.Tracer.Extras.html#mkObjectStr"><span class="hs-identifier hs-var">mkObjectStr</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;updated contract&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680272713"><span class="hs-identifier hs-var">instanceID</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">IterationID
+</span><a href="#local-6989586621680272712"><span class="hs-identifier hs-var">iterationID</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-91"></span><span>        </span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#LookingUpContract"><span class="hs-identifier hs-type">LookingUpContract</span></a></span><span> </span><span id="local-6989586621680272711"><span class="annot"><span class="annottext">ContractDef t
+</span><a href="#local-6989586621680272711"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-92"></span><span>            </span><span class="annot"><span class="annottext">Text -&gt; Tagged &quot;contract&quot; (ContractDef t) -&gt; Object
+forall k. StructuredLog k =&gt; Text -&gt; k -&gt; Object
+</span><a href="Cardano.BM.Data.Tracer.Extras.html#mkObjectStr"><span class="hs-identifier hs-var">mkObjectStr</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;looking up contract&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ContractDef t -&gt; Tagged &quot;contract&quot; (ContractDef t)
+forall k (s :: k) b. b -&gt; Tagged s b
+</span><span class="hs-identifier hs-var">Tagged</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-string">&quot;contract&quot;</span></span><span> </span><span class="annot"><span class="annottext">ContractDef t
+</span><a href="#local-6989586621680272711"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-93"></span><span>        </span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#InitialisingContract"><span class="hs-identifier hs-type">InitialisingContract</span></a></span><span> </span><span id="local-6989586621680272710"><span class="annot"><span class="annottext">ContractDef t
+</span><a href="#local-6989586621680272710"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span id="local-6989586621680272709"><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680272709"><span class="hs-identifier hs-var">instanceID</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-94"></span><span>            </span><span class="annot"><span class="annottext">Text
+-&gt; (Tagged &quot;contract&quot; (ContractDef t), ContractInstanceId)
+-&gt; Object
+forall k. StructuredLog k =&gt; Text -&gt; k -&gt; Object
+</span><a href="Cardano.BM.Data.Tracer.Extras.html#mkObjectStr"><span class="hs-identifier hs-var">mkObjectStr</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;initialising contract&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ContractDef t -&gt; Tagged &quot;contract&quot; (ContractDef t)
+forall k (s :: k) b. b -&gt; Tagged s b
+</span><span class="hs-identifier hs-var">Tagged</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-string">&quot;contract&quot;</span></span><span> </span><span class="annot"><span class="annottext">ContractDef t
+</span><a href="#local-6989586621680272710"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680272709"><span class="hs-identifier hs-var">instanceID</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-95"></span><span>        </span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#InitialPABResp"><span class="hs-identifier hs-type">InitialPABResp</span></a></span><span> </span><span id="local-6989586621680272708"><span class="annot"><span class="annottext">PartiallyDecodedResponse PABReq
+</span><a href="#local-6989586621680272708"><span class="hs-identifier hs-var">rsp</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-96"></span><span>            </span><span class="annot"><span class="annottext">Text
+-&gt; Either (Tagged &quot;response&quot; (PartiallyDecodedResponse PABReq)) ()
+-&gt; Object
+forall k. StructuredLog k =&gt; Text -&gt; k -&gt; Object
+</span><a href="Cardano.BM.Data.Tracer.Extras.html#mkObjectStr"><span class="hs-identifier hs-var">mkObjectStr</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;initial contract response&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Either (Tagged &quot;response&quot; (PartiallyDecodedResponse PABReq)) ()
+ -&gt; Object)
+-&gt; Either (Tagged &quot;response&quot; (PartiallyDecodedResponse PABReq)) ()
+-&gt; Object
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-97"></span><span>                </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">TracingVerbosity
+</span><a href="#local-6989586621680272723"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-98"></span><span>                    </span><span class="annot"><span class="annottext">TracingVerbosity
+</span><span class="hs-identifier hs-var">MaximalVerbosity</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Tagged &quot;response&quot; (PartiallyDecodedResponse PABReq)
+-&gt; Either (Tagged &quot;response&quot; (PartiallyDecodedResponse PABReq)) ()
+forall a b. a -&gt; Either a b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PartiallyDecodedResponse PABReq
+-&gt; Tagged &quot;response&quot; (PartiallyDecodedResponse PABReq)
+forall k (s :: k) b. b -&gt; Tagged s b
+</span><span class="hs-identifier hs-var">Tagged</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-string">&quot;response&quot;</span></span><span> </span><span class="annot"><span class="annottext">PartiallyDecodedResponse PABReq
+</span><a href="#local-6989586621680272708"><span class="hs-identifier hs-var">rsp</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-99"></span><span>                    </span><span class="annot"><span class="annottext">TracingVerbosity
+</span><span class="hs-identifier">_</span></span><span>                </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">()
+-&gt; Either (Tagged &quot;response&quot; (PartiallyDecodedResponse PABReq)) ()
+forall a b. b -&gt; Either a b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-100"></span><span>        </span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#ActivatedContractInstance"><span class="hs-identifier hs-type">ActivatedContractInstance</span></a></span><span> </span><span class="annot"><span class="annottext">ContractDef t
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Wallet
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621680272707"><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680272707"><span class="hs-identifier hs-var">instanceID</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-101"></span><span>            </span><span class="annot"><span class="annottext">Text -&gt; ContractInstanceId -&gt; Object
+forall k. StructuredLog k =&gt; Text -&gt; k -&gt; Object
+</span><a href="Cardano.BM.Data.Tracer.Extras.html#mkObjectStr"><span class="hs-identifier hs-var">mkObjectStr</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;activated contract instance&quot;</span></span><span> </span><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680272707"><span class="hs-identifier hs-var">instanceID</span></a></span><span>
+</span><span id="line-102"></span><span>        </span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#RunRequestHandler"><span class="hs-identifier hs-type">RunRequestHandler</span></a></span><span> </span><span id="local-6989586621680272706"><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680272706"><span class="hs-identifier hs-var">instanceID</span></a></span></span><span> </span><span id="local-6989586621680272705"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621680272705"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-103"></span><span>            </span><span class="annot"><span class="annottext">Text -&gt; (ContractInstanceId, Tagged &quot;num_requests&quot; Int) -&gt; Object
+forall k. StructuredLog k =&gt; Text -&gt; k -&gt; Object
+</span><a href="Cardano.BM.Data.Tracer.Extras.html#mkObjectStr"><span class="hs-identifier hs-var">mkObjectStr</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;running request handler&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680272706"><span class="hs-identifier hs-var">instanceID</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tagged &quot;num_requests&quot; Int
+forall k (s :: k) b. b -&gt; Tagged s b
+</span><span class="hs-identifier hs-var">Tagged</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-string">&quot;num_requests&quot;</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621680272705"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-104"></span><span>        </span><span class="annot"><span class="annottext">ContractInstanceMsg t
+</span><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#RunRequestHandlerDidNotHandleAnyEvents"><span class="hs-identifier hs-var">RunRequestHandlerDidNotHandleAnyEvents</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-105"></span><span>            </span><span class="annot"><span class="annottext">Text -&gt; () -&gt; Object
+forall k. StructuredLog k =&gt; Text -&gt; k -&gt; Object
+</span><a href="Cardano.BM.Data.Tracer.Extras.html#mkObjectStr"><span class="hs-identifier hs-var">mkObjectStr</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;request handler did not handle any events&quot;</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-106"></span><span>        </span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#StoringSignedTx"><span class="hs-identifier hs-type">StoringSignedTx</span></a></span><span> </span><span id="local-6989586621680272704"><span class="annot"><span class="annottext">CardanoTx
+</span><a href="#local-6989586621680272704"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-107"></span><span>            </span><span class="annot"><span class="annottext">Text -&gt; Either CardanoTx () -&gt; Object
+forall k. StructuredLog k =&gt; Text -&gt; k -&gt; Object
+</span><a href="Cardano.BM.Data.Tracer.Extras.html#mkObjectStr"><span class="hs-identifier hs-var">mkObjectStr</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;storing signed tx&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Either CardanoTx () -&gt; Object) -&gt; Either CardanoTx () -&gt; Object
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-108"></span><span>                </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">TracingVerbosity
+</span><a href="#local-6989586621680272723"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-109"></span><span>                    </span><span class="annot"><span class="annottext">TracingVerbosity
+</span><span class="hs-identifier hs-var">MaximalVerbosity</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">CardanoTx -&gt; Either CardanoTx ()
+forall a b. a -&gt; Either a b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoTx
+</span><a href="#local-6989586621680272704"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-110"></span><span>                    </span><span class="annot"><span class="annottext">TracingVerbosity
+</span><span class="hs-identifier">_</span></span><span>                </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; Either CardanoTx ()
+forall a b. b -&gt; Either a b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-111"></span><span>        </span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#CallingEndpoint"><span class="hs-identifier hs-type">CallingEndpoint</span></a></span><span> </span><span id="local-6989586621680272703"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621680272703"><span class="hs-identifier hs-var">ep</span></a></span></span><span> </span><span id="local-6989586621680272702"><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680272702"><span class="hs-identifier hs-var">instanceID</span></a></span></span><span> </span><span id="local-6989586621680272701"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680272701"><span class="hs-identifier hs-var">vl</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-112"></span><span>            </span><span class="annot"><span class="annottext">Text
+-&gt; Either
+     (ContractInstanceId, Tagged &quot;endpoint&quot; String)
+     (ContractInstanceId, Tagged &quot;endpoint&quot; String,
+      Tagged &quot;value&quot; Value)
+-&gt; Object
+forall k. StructuredLog k =&gt; Text -&gt; k -&gt; Object
+</span><a href="Cardano.BM.Data.Tracer.Extras.html#mkObjectStr"><span class="hs-identifier hs-var">mkObjectStr</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;calling endpoint&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Either
+   (ContractInstanceId, Tagged &quot;endpoint&quot; String)
+   (ContractInstanceId, Tagged &quot;endpoint&quot; String,
+    Tagged &quot;value&quot; Value)
+ -&gt; Object)
+-&gt; Either
+     (ContractInstanceId, Tagged &quot;endpoint&quot; String)
+     (ContractInstanceId, Tagged &quot;endpoint&quot; String,
+      Tagged &quot;value&quot; Value)
+-&gt; Object
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-113"></span><span>                </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">TracingVerbosity
+</span><a href="#local-6989586621680272723"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-114"></span><span>                    </span><span class="annot"><span class="annottext">TracingVerbosity
+</span><span class="hs-identifier hs-var">MinimalVerbosity</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(ContractInstanceId, Tagged &quot;endpoint&quot; String)
+-&gt; Either
+     (ContractInstanceId, Tagged &quot;endpoint&quot; String)
+     (ContractInstanceId, Tagged &quot;endpoint&quot; String,
+      Tagged &quot;value&quot; Value)
+forall a b. a -&gt; Either a b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680272702"><span class="hs-identifier hs-var">instanceID</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; Tagged &quot;endpoint&quot; String
+forall k (s :: k) b. b -&gt; Tagged s b
+</span><span class="hs-identifier hs-var">Tagged</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-string">&quot;endpoint&quot;</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621680272703"><span class="hs-identifier hs-var">ep</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-115"></span><span>                    </span><span class="annot"><span class="annottext">TracingVerbosity
+</span><span class="hs-identifier">_</span></span><span>                </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(ContractInstanceId, Tagged &quot;endpoint&quot; String,
+ Tagged &quot;value&quot; Value)
+-&gt; Either
+     (ContractInstanceId, Tagged &quot;endpoint&quot; String)
+     (ContractInstanceId, Tagged &quot;endpoint&quot; String,
+      Tagged &quot;value&quot; Value)
+forall a b. b -&gt; Either a b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680272702"><span class="hs-identifier hs-var">instanceID</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; Tagged &quot;endpoint&quot; String
+forall k (s :: k) b. b -&gt; Tagged s b
+</span><span class="hs-identifier hs-var">Tagged</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-string">&quot;endpoint&quot;</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621680272703"><span class="hs-identifier hs-var">ep</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Value -&gt; Tagged &quot;value&quot; Value
+forall k (s :: k) b. b -&gt; Tagged s b
+</span><span class="hs-identifier hs-var">Tagged</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-string">&quot;value&quot;</span></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680272701"><span class="hs-identifier hs-var">vl</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-116"></span><span>        </span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#ProcessContractInbox"><span class="hs-identifier hs-type">ProcessContractInbox</span></a></span><span> </span><span id="local-6989586621680272699"><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680272699"><span class="hs-identifier hs-var">instanceID</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-117"></span><span>            </span><span class="annot"><span class="annottext">Text -&gt; ContractInstanceId -&gt; Object
+forall k. StructuredLog k =&gt; Text -&gt; k -&gt; Object
+</span><a href="Cardano.BM.Data.Tracer.Extras.html#mkObjectStr"><span class="hs-identifier hs-var">mkObjectStr</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;processing contract inbox&quot;</span></span><span> </span><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680272699"><span class="hs-identifier hs-var">instanceID</span></a></span><span>
+</span><span id="line-118"></span><span>        </span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#HandlingRequest"><span class="hs-identifier hs-type">HandlingRequest</span></a></span><span> </span><span id="local-6989586621680272698"><span class="annot"><span class="annottext">RequestHandlerLogMsg
+</span><a href="#local-6989586621680272698"><span class="hs-identifier hs-var">reqLog</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-119"></span><span>            </span><span class="annot"><span class="annottext">Text -&gt; Tagged &quot;request&quot; RequestHandlerLogMsg -&gt; Object
+forall k. StructuredLog k =&gt; Text -&gt; k -&gt; Object
+</span><a href="Cardano.BM.Data.Tracer.Extras.html#mkObjectStr"><span class="hs-identifier hs-var">mkObjectStr</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;handling request&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">RequestHandlerLogMsg -&gt; Tagged &quot;request&quot; RequestHandlerLogMsg
+forall k (s :: k) b. b -&gt; Tagged s b
+</span><span class="hs-identifier hs-var">Tagged</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-string">&quot;request&quot;</span></span><span> </span><span class="annot"><span class="annottext">RequestHandlerLogMsg
+</span><a href="#local-6989586621680272698"><span class="hs-identifier hs-var">reqLog</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-120"></span><span>        </span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#HandlingRequests"><span class="hs-identifier hs-type">HandlingRequests</span></a></span><span> </span><span id="local-6989586621680272697"><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680272697"><span class="hs-identifier hs-var">instanceID</span></a></span></span><span> </span><span id="local-6989586621680272696"><span class="annot"><span class="annottext">[Request PABReq]
+</span><a href="#local-6989586621680272696"><span class="hs-identifier hs-var">requests</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-121"></span><span>            </span><span class="annot"><span class="annottext">Text
+-&gt; Either
+     (ContractInstanceId, Tagged &quot;requests&quot; [Request PABReq],
+      Tagged &quot;num_requests&quot; Int)
+     (ContractInstanceId, Tagged &quot;num_requests&quot; Int)
+-&gt; Object
+forall k. StructuredLog k =&gt; Text -&gt; k -&gt; Object
+</span><a href="Cardano.BM.Data.Tracer.Extras.html#mkObjectStr"><span class="hs-identifier hs-var">mkObjectStr</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;handling requests&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Either
+   (ContractInstanceId, Tagged &quot;requests&quot; [Request PABReq],
+    Tagged &quot;num_requests&quot; Int)
+   (ContractInstanceId, Tagged &quot;num_requests&quot; Int)
+ -&gt; Object)
+-&gt; Either
+     (ContractInstanceId, Tagged &quot;requests&quot; [Request PABReq],
+      Tagged &quot;num_requests&quot; Int)
+     (ContractInstanceId, Tagged &quot;num_requests&quot; Int)
+-&gt; Object
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-122"></span><span>                </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680272695"><span class="annot"><span class="annottext">n :: Int
+</span><a href="#local-6989586621680272695"><span class="hs-identifier hs-var hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Request PABReq] -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">length</span></a></span><span> </span><span class="annot"><span class="annottext">[Request PABReq]
+</span><a href="#local-6989586621680272696"><span class="hs-identifier hs-var">requests</span></a></span><span> </span><span class="hs-keyword">in</span><span>
+</span><span id="line-123"></span><span>                </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">TracingVerbosity
+</span><a href="#local-6989586621680272723"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-124"></span><span>                    </span><span class="annot"><span class="annottext">TracingVerbosity
+</span><span class="hs-identifier hs-var">MaximalVerbosity</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(ContractInstanceId, Tagged &quot;requests&quot; [Request PABReq],
+ Tagged &quot;num_requests&quot; Int)
+-&gt; Either
+     (ContractInstanceId, Tagged &quot;requests&quot; [Request PABReq],
+      Tagged &quot;num_requests&quot; Int)
+     (ContractInstanceId, Tagged &quot;num_requests&quot; Int)
+forall a b. a -&gt; Either a b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680272697"><span class="hs-identifier hs-var">instanceID</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[Request PABReq] -&gt; Tagged &quot;requests&quot; [Request PABReq]
+forall k (s :: k) b. b -&gt; Tagged s b
+</span><span class="hs-identifier hs-var">Tagged</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-string">&quot;requests&quot;</span></span><span> </span><span class="annot"><span class="annottext">[Request PABReq]
+</span><a href="#local-6989586621680272696"><span class="hs-identifier hs-var">requests</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tagged &quot;num_requests&quot; Int
+forall k (s :: k) b. b -&gt; Tagged s b
+</span><span class="hs-identifier hs-var">Tagged</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-string">&quot;num_requests&quot;</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621680272695"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-125"></span><span>                    </span><span class="annot"><span class="annottext">TracingVerbosity
+</span><span class="hs-identifier">_</span></span><span>                </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(ContractInstanceId, Tagged &quot;num_requests&quot; Int)
+-&gt; Either
+     (ContractInstanceId, Tagged &quot;requests&quot; [Request PABReq],
+      Tagged &quot;num_requests&quot; Int)
+     (ContractInstanceId, Tagged &quot;num_requests&quot; Int)
+forall a b. b -&gt; Either a b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680272697"><span class="hs-identifier hs-var">instanceID</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tagged &quot;num_requests&quot; Int
+forall k (s :: k) b. b -&gt; Tagged s b
+</span><span class="hs-identifier hs-var">Tagged</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-string">&quot;num_requests&quot;</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621680272695"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-126"></span><span>        </span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#BalancingTx"><span class="hs-identifier hs-type">BalancingTx</span></a></span><span> </span><span id="local-6989586621680272693"><span class="annot"><span class="annottext">TxBalanceMsg
+</span><a href="#local-6989586621680272693"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-127"></span><span>            </span><span class="annot"><span class="annottext">Text -&gt; Either TxBalanceMsg () -&gt; Object
+forall k. StructuredLog k =&gt; Text -&gt; k -&gt; Object
+</span><a href="Cardano.BM.Data.Tracer.Extras.html#mkObjectStr"><span class="hs-identifier hs-var">mkObjectStr</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;balancing tx&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Either TxBalanceMsg () -&gt; Object)
+-&gt; Either TxBalanceMsg () -&gt; Object
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-128"></span><span>                </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">TracingVerbosity
+</span><a href="#local-6989586621680272723"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-129"></span><span>                    </span><span class="annot"><span class="annottext">TracingVerbosity
+</span><span class="hs-identifier hs-var">MaximalVerbosity</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TxBalanceMsg -&gt; Either TxBalanceMsg ()
+forall a b. a -&gt; Either a b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">TxBalanceMsg
+</span><a href="#local-6989586621680272693"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-130"></span><span>                    </span><span class="annot"><span class="annottext">TracingVerbosity
+</span><span class="hs-identifier">_</span></span><span>                </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; Either TxBalanceMsg ()
+forall a b. b -&gt; Either a b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-131"></span><span>        </span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#NotificationFailed"><span class="hs-identifier hs-type">NotificationFailed</span></a></span><span> </span><span class="annot"><span class="annottext">NotificationError
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-132"></span><span>            </span><span class="annot"><span class="annottext">Text -&gt; () -&gt; Object
+forall k. StructuredLog k =&gt; Text -&gt; k -&gt; Object
+</span><a href="Cardano.BM.Data.Tracer.Extras.html#mkObjectStr"><span class="hs-identifier hs-var">mkObjectStr</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;notification failed&quot;</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-133"></span><span>        </span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#ContractLog"><span class="hs-identifier hs-type">ContractLog</span></a></span><span> </span><span id="local-6989586621680272692"><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680272692"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span id="local-6989586621680272691"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680272691"><span class="hs-identifier hs-var">lg</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-134"></span><span>            </span><span class="annot"><span class="annottext">Text -&gt; (ContractInstanceId, Tagged &quot;message&quot; Value) -&gt; Object
+forall k. StructuredLog k =&gt; Text -&gt; k -&gt; Object
+</span><a href="Cardano.BM.Data.Tracer.Extras.html#mkObjectStr"><span class="hs-identifier hs-var">mkObjectStr</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;contract log&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680272692"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Value -&gt; Tagged &quot;message&quot; Value
+forall k (s :: k) b. b -&gt; Tagged s b
+</span><span class="hs-identifier hs-var">Tagged</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-string">&quot;message&quot;</span></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680272691"><span class="hs-identifier hs-var">lg</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-135"></span><span>
+</span><span id="line-136"></span><span id="local-6989586621680272690"><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621680272687"><span class="annot"><span class="hs-identifier hs-type">Pretty</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Effects.Contract.html#ContractDef"><span class="hs-identifier hs-type">Contract.ContractDef</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680272690"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Pretty</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#ContractInstanceMsg"><span class="hs-identifier hs-type">ContractInstanceMsg</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680272690"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-137"></span><span>    </span><span id="local-6989586621680272685"><span class="annot"><span class="annottext">pretty :: ContractInstanceMsg t -&gt; Doc ann
+</span><a href="#local-6989586621680272685"><span class="hs-identifier hs-var hs-var hs-var hs-var">pretty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-138"></span><span>        </span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#ProcessFirstInboxMessage"><span class="hs-identifier hs-type">ProcessFirstInboxMessage</span></a></span><span> </span><span id="local-6989586621680272684"><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680272684"><span class="hs-identifier hs-var">instanceID</span></a></span></span><span> </span><span id="local-6989586621680272683"><span class="annot"><span class="annottext">Response PABResp
+</span><a href="#local-6989586621680272683"><span class="hs-identifier hs-var">response</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-139"></span><span>            </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;processFirstInboxMessage for&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">ContractInstanceId -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680272684"><span class="hs-identifier hs-var">instanceID</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;. The first message is:&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">Response PABResp -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">Response PABResp
+</span><a href="#local-6989586621680272683"><span class="hs-identifier hs-var">response</span></a></span><span>
+</span><span id="line-140"></span><span>        </span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#SendingContractStateMessages"><span class="hs-identifier hs-type">SendingContractStateMessages</span></a></span><span> </span><span id="local-6989586621680272682"><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680272682"><span class="hs-identifier hs-var">contract</span></a></span></span><span> </span><span id="local-6989586621680272681"><span class="annot"><span class="annottext">IterationID
+</span><a href="#local-6989586621680272681"><span class="hs-identifier hs-var">iterationID</span></a></span></span><span> </span><span id="local-6989586621680272680"><span class="annot"><span class="annottext">[Request PABReq]
+</span><a href="#local-6989586621680272680"><span class="hs-identifier hs-var">requests</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-141"></span><span>            </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Sending messages for contract&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">ContractInstanceId -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680272682"><span class="hs-identifier hs-var">contract</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;at iteration&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">IterationID -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">IterationID
+</span><a href="#local-6989586621680272681"><span class="hs-identifier hs-var">iterationID</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;. The contract has the following requests:&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">[Request PABReq] -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">[Request PABReq]
+</span><a href="#local-6989586621680272680"><span class="hs-identifier hs-var">requests</span></a></span><span>
+</span><span id="line-142"></span><span>        </span><span class="annot"><span class="annottext">ContractInstanceMsg t
+</span><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#LookingUpStateOfContractInstance"><span class="hs-identifier hs-var">LookingUpStateOfContractInstance</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Looking up current state of the contract instance.&quot;</span></span><span>
+</span><span id="line-143"></span><span>        </span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#CurrentIteration"><span class="hs-identifier hs-type">CurrentIteration</span></a></span><span> </span><span id="local-6989586621680272679"><span class="annot"><span class="annottext">IterationID
+</span><a href="#local-6989586621680272679"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;CurrentIteration:&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">IterationID -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">IterationID
+</span><a href="#local-6989586621680272679"><span class="hs-identifier hs-var">i</span></a></span><span>
+</span><span id="line-144"></span><span>        </span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#InboxMessageDoesntMatchIteration"><span class="hs-identifier hs-type">InboxMessageDoesntMatchIteration</span></a></span><span> </span><span id="local-6989586621680272678"><span class="annot"><span class="annottext">IterationID
+</span><a href="#local-6989586621680272678"><span class="hs-identifier hs-var">imsg</span></a></span></span><span> </span><span id="local-6989586621680272677"><span class="annot"><span class="annottext">IterationID
+</span><a href="#local-6989586621680272677"><span class="hs-identifier hs-var">iinstance</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;The iteration of the first inbox message&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann
+</span><span class="hs-identifier hs-var">parens</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IterationID -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">IterationID
+</span><a href="#local-6989586621680272678"><span class="hs-identifier hs-var">imsg</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;does not match the contract instance's iteration&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann
+</span><span class="hs-identifier hs-var">parens</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IterationID -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">IterationID
+</span><a href="#local-6989586621680272677"><span class="hs-identifier hs-var">iinstance</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;.&quot;</span></span><span>
+</span><span id="line-145"></span><span>        </span><span class="annot"><span class="annottext">ContractInstanceMsg t
+</span><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#InboxMessageMatchesIteration"><span class="hs-identifier hs-var">InboxMessageMatchesIteration</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;The iteration of the first inbox message matches the contract instance's iteration.&quot;</span></span><span>
+</span><span id="line-146"></span><span>        </span><span class="annot"><span class="annottext">ContractInstanceMsg t
+</span><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#InvokingContractUpdate"><span class="hs-identifier hs-var">InvokingContractUpdate</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Invoking contract update.&quot;</span></span><span>
+</span><span id="line-147"></span><span>        </span><span class="annot"><span class="annottext">ContractInstanceMsg t
+</span><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#ObtainedNewState"><span class="hs-identifier hs-var">ObtainedNewState</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Obtained new state. Sending contract state messages.&quot;</span></span><span>
+</span><span id="line-148"></span><span>        </span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#UpdatedContract"><span class="hs-identifier hs-type">UpdatedContract</span></a></span><span> </span><span id="local-6989586621680272676"><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680272676"><span class="hs-identifier hs-var">instanceID</span></a></span></span><span> </span><span id="local-6989586621680272675"><span class="annot"><span class="annottext">IterationID
+</span><a href="#local-6989586621680272675"><span class="hs-identifier hs-var">iterationID</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Updated contract&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">ContractInstanceId -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680272676"><span class="hs-identifier hs-var">instanceID</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;to new iteration&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">IterationID -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">IterationID
+</span><a href="#local-6989586621680272675"><span class="hs-identifier hs-var">iterationID</span></a></span><span>
+</span><span id="line-149"></span><span>        </span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#LookingUpContract"><span class="hs-identifier hs-type">LookingUpContract</span></a></span><span> </span><span id="local-6989586621680272674"><span class="annot"><span class="annottext">ContractDef t
+</span><a href="#local-6989586621680272674"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Looking up contract&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">ContractDef t -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">ContractDef t
+</span><a href="#local-6989586621680272674"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-150"></span><span>        </span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#InitialisingContract"><span class="hs-identifier hs-type">InitialisingContract</span></a></span><span> </span><span id="local-6989586621680272673"><span class="annot"><span class="annottext">ContractDef t
+</span><a href="#local-6989586621680272673"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span id="local-6989586621680272672"><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680272672"><span class="hs-identifier hs-var">instanceID</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Initialising contract&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">ContractDef t -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">ContractDef t
+</span><a href="#local-6989586621680272673"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;with ID&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">ContractInstanceId -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680272672"><span class="hs-identifier hs-var">instanceID</span></a></span><span>
+</span><span id="line-151"></span><span>        </span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#InitialPABResp"><span class="hs-identifier hs-type">InitialPABResp</span></a></span><span> </span><span id="local-6989586621680272671"><span class="annot"><span class="annottext">PartiallyDecodedResponse PABReq
+</span><a href="#local-6989586621680272671"><span class="hs-identifier hs-var">rsp</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Initial contract response:&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">PartiallyDecodedResponse PABReq -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">PartiallyDecodedResponse PABReq
+</span><a href="#local-6989586621680272671"><span class="hs-identifier hs-var">rsp</span></a></span><span>
+</span><span id="line-152"></span><span>        </span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#ActivatedContractInstance"><span class="hs-identifier hs-type">ActivatedContractInstance</span></a></span><span> </span><span class="annot"><span class="annottext">ContractDef t
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621680272670"><span class="annot"><span class="annottext">Wallet
+</span><a href="#local-6989586621680272670"><span class="hs-identifier hs-var">wallet</span></a></span></span><span> </span><span id="local-6989586621680272669"><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680272669"><span class="hs-identifier hs-var">instanceID</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Activated instance&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">ContractInstanceId -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680272669"><span class="hs-identifier hs-var">instanceID</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;on&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">Wallet -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">Wallet
+</span><a href="#local-6989586621680272670"><span class="hs-identifier hs-var">wallet</span></a></span><span>
+</span><span id="line-153"></span><span>        </span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#RunRequestHandler"><span class="hs-identifier hs-type">RunRequestHandler</span></a></span><span> </span><span id="local-6989586621680272668"><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680272668"><span class="hs-identifier hs-var">instanceID</span></a></span></span><span> </span><span id="local-6989586621680272667"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621680272667"><span class="hs-identifier hs-var">numRequests</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Running request handler for&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">ContractInstanceId -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680272668"><span class="hs-identifier hs-var">instanceID</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;with&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621680272667"><span class="hs-identifier hs-var">numRequests</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;requests.&quot;</span></span><span>
+</span><span id="line-154"></span><span>        </span><span class="annot"><span class="annottext">ContractInstanceMsg t
+</span><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#RunRequestHandlerDidNotHandleAnyEvents"><span class="hs-identifier hs-var">RunRequestHandlerDidNotHandleAnyEvents</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;runRequestHandler: did not handle any requests&quot;</span></span><span>
+</span><span id="line-155"></span><span>        </span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#StoringSignedTx"><span class="hs-identifier hs-type">StoringSignedTx</span></a></span><span> </span><span id="local-6989586621680272666"><span class="annot"><span class="annottext">CardanoTx
+</span><a href="#local-6989586621680272666"><span class="hs-identifier hs-var">tx</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Storing signed tx&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">TxId -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CardanoTx -&gt; TxId
+</span><span class="hs-identifier hs-var">getCardanoTxId</span></span><span> </span><span class="annot"><span class="annottext">CardanoTx
+</span><a href="#local-6989586621680272666"><span class="hs-identifier hs-var">tx</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-156"></span><span>        </span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#CallingEndpoint"><span class="hs-identifier hs-type">CallingEndpoint</span></a></span><span> </span><span id="local-6989586621680272665"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621680272665"><span class="hs-identifier hs-var">endpoint</span></a></span></span><span> </span><span id="local-6989586621680272664"><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680272664"><span class="hs-identifier hs-var">instanceID</span></a></span></span><span> </span><span id="local-6989586621680272663"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680272663"><span class="hs-identifier hs-var">value</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-157"></span><span>            </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Calling endpoint&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621680272665"><span class="hs-identifier hs-var">endpoint</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;on instance&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">ContractInstanceId -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680272664"><span class="hs-identifier hs-var">instanceID</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;with&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">Value -&gt; Doc ann
+forall a ann. Show a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">viaShow</span></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680272663"><span class="hs-identifier hs-var">value</span></a></span><span>
+</span><span id="line-158"></span><span>        </span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#ProcessContractInbox"><span class="hs-identifier hs-type">ProcessContractInbox</span></a></span><span> </span><span id="local-6989586621680272662"><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680272662"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Processing contract inbox for&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">ContractInstanceId -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680272662"><span class="hs-identifier hs-var">i</span></a></span><span>
+</span><span id="line-159"></span><span>        </span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#HandlingRequest"><span class="hs-identifier hs-type">HandlingRequest</span></a></span><span> </span><span id="local-6989586621680272661"><span class="annot"><span class="annottext">RequestHandlerLogMsg
+</span><a href="#local-6989586621680272661"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">RequestHandlerLogMsg -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">RequestHandlerLogMsg
+</span><a href="#local-6989586621680272661"><span class="hs-identifier hs-var">msg</span></a></span><span>
+</span><span id="line-160"></span><span>        </span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#HandlingRequests"><span class="hs-identifier hs-type">HandlingRequests</span></a></span><span> </span><span id="local-6989586621680272660"><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680272660"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span id="local-6989586621680272659"><span class="annot"><span class="annottext">[Request PABReq]
+</span><a href="#local-6989586621680272659"><span class="hs-identifier hs-var">rqs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-161"></span><span>                </span><span class="annot"><span class="annottext">Int -&gt; Doc ann -&gt; Doc ann
+forall ann. Int -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-identifier hs-var">hang</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span> </span><span class="annot"><span class="annottext">(Doc ann -&gt; Doc ann) -&gt; Doc ann -&gt; Doc ann
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Doc ann] -&gt; Doc ann
+forall ann. [Doc ann] -&gt; Doc ann
+</span><span class="hs-identifier hs-var">vsep</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Handling&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Request PABReq] -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">length</span></a></span><span> </span><span class="annot"><span class="annottext">[Request PABReq]
+</span><a href="#local-6989586621680272659"><span class="hs-identifier hs-var">rqs</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;requests for&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">ContractInstanceId -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680272660"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[Doc ann] -&gt; Doc ann
+forall ann. [Doc ann] -&gt; Doc ann
+</span><span class="hs-identifier hs-var">vsep</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Request PABReq -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">(Request PABReq -&gt; Doc ann) -&gt; [Request PABReq] -&gt; [Doc ann]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[Request PABReq]
+</span><a href="#local-6989586621680272659"><span class="hs-identifier hs-var">rqs</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-162"></span><span>        </span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#BalancingTx"><span class="hs-identifier hs-type">BalancingTx</span></a></span><span> </span><span id="local-6989586621680272657"><span class="annot"><span class="annottext">TxBalanceMsg
+</span><a href="#local-6989586621680272657"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TxBalanceMsg -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">TxBalanceMsg
+</span><a href="#local-6989586621680272657"><span class="hs-identifier hs-var">msg</span></a></span><span>
+</span><span id="line-163"></span><span>        </span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#NotificationFailed"><span class="hs-identifier hs-type">NotificationFailed</span></a></span><span> </span><span id="local-6989586621680272656"><span class="annot"><span class="annottext">NotificationError
+</span><a href="#local-6989586621680272656"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Notification failed:&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">NotificationError -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">NotificationError
+</span><a href="#local-6989586621680272656"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-164"></span><span>        </span><span class="annot"><a href="Plutus.PAB.Core.ContractInstance.RequestHandlers.html#ContractLog"><span class="hs-identifier hs-type">ContractLog</span></a></span><span> </span><span id="local-6989586621680272655"><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680272655"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span id="local-6989586621680272654"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680272654"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ContractInstanceId -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">ContractInstanceId
+</span><a href="#local-6989586621680272655"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann
+forall ann. Doc ann
+</span><span class="hs-identifier hs-var">colon</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; String
+</span><span class="hs-identifier hs-var">BSL8.unpack</span></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; String) -&gt; ByteString -&gt; String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Value -&gt; ByteString
+forall a. ToJSON a =&gt; a -&gt; ByteString
+</span><span class="hs-identifier hs-var">JSON.encodePretty</span></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680272654"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-165"></span></pre></body></html>

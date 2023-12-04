@@ -1,0 +1,502 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE ConstraintKinds  #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DataKinds        #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE GADTs            #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE TemplateHaskell  #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE TypeOperators    #-}</span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- | If you want to run the node emulator without using the `Contract` monad, this module provides a simple MTL-based interface.</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Node.Emulator.Internal.API</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-9"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Types</span></span><span>
+</span><span id="line-10"></span><span>    </span><span class="annot"><a href="Cardano.Node.Emulator.Internal.API.html#EmulatorState"><span class="hs-identifier">EmulatorState</span></a></span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Emulator.Internal.API.html#EmulatorState"><span class="hs-identifier">EmulatorState</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Emulator.Internal.API.html#esChainState"><span class="hs-identifier">esChainState</span></a></span><span>
+</span><span id="line-12"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Emulator.Internal.API.html#esAddressMap"><span class="hs-identifier">esAddressMap</span></a></span><span>
+</span><span id="line-13"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Emulator.Internal.API.html#esDatumMap"><span class="hs-identifier">esDatumMap</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Emulator.Internal.API.html#EmulatorError"><span class="hs-identifier">EmulatorError</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Emulator.Internal.API.html#EmulatorLogs"><span class="hs-identifier">EmulatorLogs</span></a></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Emulator.LogMessages.html#EmulatorMsg"><span class="hs-identifier">EmulatorMsg</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">L.LogMessage</span></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Emulator.Internal.API.html#MonadEmulator"><span class="hs-identifier">MonadEmulator</span></a></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Emulator.Internal.API.html#EmulatorT"><span class="hs-identifier">EmulatorT</span></a></span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Emulator.Internal.API.html#EmulatorM"><span class="hs-identifier">EmulatorM</span></a></span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Running Eff chain effects in MTL</span></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Emulator.Internal.API.html#handleChain"><span class="hs-identifier">handleChain</span></a></span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Emulator.Internal.API.html#processBlock"><span class="hs-identifier">processBlock</span></a></span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Emulator.Internal.API.html#modifySlot"><span class="hs-identifier">modifySlot</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Node.Emulator.Internal.Node.html"><span class="hs-identifier">Cardano.Node.Emulator.Internal.Node</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">E</span></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Node.Emulator.LogMessages.html"><span class="hs-identifier">Cardano.Node.Emulator.LogMessages</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Emulator.LogMessages.html#EmulatorMsg"><span class="hs-identifier">EmulatorMsg</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Emulator.LogMessages.html#ChainEvent"><span class="hs-identifier">ChainEvent</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Emulator.LogMessages.html#GenericMsg"><span class="hs-identifier">GenericMsg</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Control.Exception</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Exception</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Lens</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">makeLenses</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator">(&amp;)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Control.Monad</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">void</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Error.Class</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">MonadError</span></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Except</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">ExceptT</span></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Freer</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Eff</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Member</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">interpret</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">run</span></span><span class="hs-special">,</span><span> </span><span class="hs-keyword">type</span><span> </span><span class="annot"><span class="hs-operator">(~&gt;)</span></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Freer.Extras</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">raiseEnd</span></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Freer.Extras.Log</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Freer.State</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">State</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">modify</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">runState</span></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Freer.Writer</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">F</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Writer</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">runWriter</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">tell</span></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Identity</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Identity</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.RWS.Class</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">MonadRWS</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ask</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">get</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">put</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">tell</span></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.RWS.Strict</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">RWST</span></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Map</span></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Sequence</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Seq</span></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Ledger</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Block</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Datum</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">DatumHash</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Slot</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ToCardanoError</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ValidationErrorInPhase</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">eitherTx</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">getCardanoTxData</span></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Ledger.AddressMap</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">AM</span></span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="hs-keyword">data</span><span> </span><span id="EmulatorState"><span class="annot"><a href="Cardano.Node.Emulator.Internal.API.html#EmulatorState"><span class="hs-identifier hs-var">EmulatorState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="EmulatorState"><span class="annot"><a href="Cardano.Node.Emulator.Internal.API.html#EmulatorState"><span class="hs-identifier hs-var">EmulatorState</span></a></span></span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="_esChainState"><span class="annot"><span class="annottext">EmulatorState -&gt; ChainState
+</span><a href="Cardano.Node.Emulator.Internal.API.html#_esChainState"><span class="hs-identifier hs-var hs-var">_esChainState</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Node.Emulator.Internal.Node.Chain.html#ChainState"><span class="hs-identifier hs-type">E.ChainState</span></a></span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="_esAddressMap"><span class="annot"><span class="annottext">EmulatorState -&gt; AddressMap
+</span><a href="Cardano.Node.Emulator.Internal.API.html#_esAddressMap"><span class="hs-identifier hs-var hs-var">_esAddressMap</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><span class="hs-identifier hs-type">AM.AddressMap</span></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="_esDatumMap"><span class="annot"><span class="annottext">EmulatorState -&gt; Map DatumHash Datum
+</span><a href="Cardano.Node.Emulator.Internal.API.html#_esDatumMap"><span class="hs-identifier hs-var hs-var">_esDatumMap</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">DatumHash</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Datum</span></span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679392914"><span id="local-6989586621679392916"><span id="local-6989586621679392918"><span class="annot"><span class="annottext">Int -&gt; EmulatorState -&gt; ShowS
+[EmulatorState] -&gt; ShowS
+EmulatorState -&gt; String
+(Int -&gt; EmulatorState -&gt; ShowS)
+-&gt; (EmulatorState -&gt; String)
+-&gt; ([EmulatorState] -&gt; ShowS)
+-&gt; Show EmulatorState
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [EmulatorState] -&gt; ShowS
+$cshowList :: [EmulatorState] -&gt; ShowS
+show :: EmulatorState -&gt; String
+$cshow :: EmulatorState -&gt; String
+showsPrec :: Int -&gt; EmulatorState -&gt; ShowS
+$cshowsPrec :: Int -&gt; EmulatorState -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span id="esDatumMap"><span id="esAddressMap"><span id="esChainState"><span class="hs-identifier">makeLenses</span><span> </span><span class="hs-special">'</span><span class="hs-identifier">EmulatorState</span></span></span></span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span class="hs-keyword">data</span><span> </span><span id="EmulatorError"><span class="annot"><a href="Cardano.Node.Emulator.Internal.API.html#EmulatorError"><span class="hs-identifier hs-var">EmulatorError</span></a></span></span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="BalancingError"><span class="annot"><a href="Cardano.Node.Emulator.Internal.API.html#BalancingError"><span class="hs-identifier hs-var">BalancingError</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Node.Emulator.Internal.Node.Fee.html#BalancingError"><span class="hs-identifier hs-type">E.BalancingError</span></a></span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="ValidationError"><span class="annot"><a href="Cardano.Node.Emulator.Internal.API.html#ValidationError"><span class="hs-identifier hs-var">ValidationError</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><span class="hs-identifier hs-type">ValidationErrorInPhase</span></span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="ToCardanoError"><span class="annot"><a href="Cardano.Node.Emulator.Internal.API.html#ToCardanoError"><span class="hs-identifier hs-var">ToCardanoError</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><span class="hs-identifier hs-type">ToCardanoError</span></span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679392903"><span id="local-6989586621679392905"><span id="local-6989586621679392907"><span class="annot"><span class="annottext">Int -&gt; EmulatorError -&gt; ShowS
+[EmulatorError] -&gt; ShowS
+EmulatorError -&gt; String
+(Int -&gt; EmulatorError -&gt; ShowS)
+-&gt; (EmulatorError -&gt; String)
+-&gt; ([EmulatorError] -&gt; ShowS)
+-&gt; Show EmulatorError
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [EmulatorError] -&gt; ShowS
+$cshowList :: [EmulatorError] -&gt; ShowS
+show :: EmulatorError -&gt; String
+$cshow :: EmulatorError -&gt; String
+showsPrec :: Int -&gt; EmulatorError -&gt; ShowS
+$cshowsPrec :: Int -&gt; EmulatorError -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679392895"><span id="local-6989586621679392897"><span id="local-6989586621679392899"><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Exception</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Emulator.Internal.API.html#EmulatorError"><span class="hs-identifier hs-type">EmulatorError</span></a></span></span></span></span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span class="hs-keyword">type</span><span> </span><span id="EmulatorLogs"><span class="annot"><a href="Cardano.Node.Emulator.Internal.API.html#EmulatorLogs"><span class="hs-identifier hs-var">EmulatorLogs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Seq</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">L.LogMessage</span></span><span> </span><span class="annot"><a href="Cardano.Node.Emulator.LogMessages.html#EmulatorMsg"><span class="hs-identifier hs-type">EmulatorMsg</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-66"></span><span class="hs-keyword">type</span><span> </span><span id="MonadEmulator"><span class="annot"><a href="Cardano.Node.Emulator.Internal.API.html#MonadEmulator"><span class="hs-identifier hs-var">MonadEmulator</span></a></span></span><span> </span><span id="local-6989586621679392893"><span class="annot"><a href="#local-6989586621679392893"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">MonadRWS</span></span><span> </span><span class="annot"><a href="Cardano.Node.Emulator.Internal.Node.Params.html#Params"><span class="hs-identifier hs-type">E.Params</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Emulator.Internal.API.html#EmulatorLogs"><span class="hs-identifier hs-type">EmulatorLogs</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Emulator.Internal.API.html#EmulatorState"><span class="hs-identifier hs-type">EmulatorState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679392893"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadError</span></span><span> </span><span class="annot"><a href="Cardano.Node.Emulator.Internal.API.html#EmulatorError"><span class="hs-identifier hs-type">EmulatorError</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679392893"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span class="hs-keyword">type</span><span> </span><span id="EmulatorT"><span class="annot"><a href="Cardano.Node.Emulator.Internal.API.html#EmulatorT"><span class="hs-identifier hs-var">EmulatorT</span></a></span></span><span> </span><span id="local-6989586621679392892"><span class="annot"><a href="#local-6989586621679392892"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ExceptT</span></span><span> </span><span class="annot"><a href="Cardano.Node.Emulator.Internal.API.html#EmulatorError"><span class="hs-identifier hs-type">EmulatorError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">RWST</span></span><span> </span><span class="annot"><a href="Cardano.Node.Emulator.Internal.Node.Params.html#Params"><span class="hs-identifier hs-type">E.Params</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Emulator.Internal.API.html#EmulatorLogs"><span class="hs-identifier hs-type">EmulatorLogs</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Emulator.Internal.API.html#EmulatorState"><span class="hs-identifier hs-type">EmulatorState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679392892"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-68"></span><span class="hs-keyword">type</span><span> </span><span id="EmulatorM"><span class="annot"><a href="Cardano.Node.Emulator.Internal.API.html#EmulatorM"><span class="hs-identifier hs-var">EmulatorM</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Node.Emulator.Internal.API.html#EmulatorT"><span class="hs-identifier hs-type">EmulatorT</span></a></span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Identity</span></a></span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span id="local-6989586621679392962"><span id="local-6989586621679392964"><span class="annot"><a href="Cardano.Node.Emulator.Internal.API.html#handleChain"><span class="hs-identifier hs-type">handleChain</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Node.Emulator.Internal.API.html#MonadEmulator"><span class="hs-identifier hs-type">MonadEmulator</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679392964"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Eff</span></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Node.Emulator.Internal.Node.Chain.html#ChainControlEffect"><span class="hs-identifier hs-type">E.ChainControlEffect</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Emulator.Internal.Node.Chain.html#ChainEffect"><span class="hs-identifier hs-type">E.ChainEffect</span></a></span><span class="hs-special">]</span><span> </span><span class="annot"><a href="#local-6989586621679392962"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679392964"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679392962"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-71"></span><span id="handleChain"><span class="annot"><span class="annottext">handleChain :: Eff '[ChainControlEffect, ChainEffect] a -&gt; m a
+</span><a href="Cardano.Node.Emulator.Internal.API.html#handleChain"><span class="hs-identifier hs-var hs-var">handleChain</span></a></span></span><span> </span><span id="local-6989586621679392891"><span class="annot"><span class="annottext">Eff '[ChainControlEffect, ChainEffect] a
+</span><a href="#local-6989586621679392891"><span class="hs-identifier hs-var">eff</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-72"></span><span>  </span><span id="local-6989586621679392890"><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621679392890"><span class="hs-identifier hs-var">params</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m Params
+forall r (m :: * -&gt; *). MonadReader r m =&gt; m r
+</span><span class="hs-identifier hs-var">ask</span></span><span>
+</span><span id="line-73"></span><span>  </span><span class="annot"><a href="Cardano.Node.Emulator.Internal.API.html#EmulatorState"><span class="hs-identifier hs-type">EmulatorState</span></a></span><span> </span><span id="local-6989586621679392889"><span class="annot"><span class="annottext">ChainState
+</span><a href="#local-6989586621679392889"><span class="hs-identifier hs-var">chainState</span></a></span></span><span> </span><span id="local-6989586621679392888"><span class="annot"><span class="annottext">AddressMap
+</span><a href="#local-6989586621679392888"><span class="hs-identifier hs-var">am</span></a></span></span><span> </span><span id="local-6989586621679392887"><span class="annot"><span class="annottext">Map DatumHash Datum
+</span><a href="#local-6989586621679392887"><span class="hs-identifier hs-var">dm</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m EmulatorState
+forall s (m :: * -&gt; *). MonadState s m =&gt; m s
+</span><span class="hs-identifier hs-var">get</span></span><span>
+</span><span id="line-74"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="hs-special">(</span><span class="hs-special">(</span><span id="local-6989586621679392886"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679392886"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679392885"><span class="annot"><span class="annottext">Map DatumHash Datum
+</span><a href="#local-6989586621679392885"><span class="hs-identifier hs-var">dm'</span></a></span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span id="local-6989586621679392884"><span class="annot"><span class="annottext">AddressMap
+</span><a href="#local-6989586621679392884"><span class="hs-identifier hs-var">am'</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679392883"><span class="annot"><span class="annottext">ChainState
+</span><a href="#local-6989586621679392883"><span class="hs-identifier hs-var">newChainState</span></a></span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span id="local-6989586621679392882"><span class="annot"><span class="annottext">EmulatorLogs
+</span><a href="#local-6989586621679392882"><span class="hs-identifier hs-var">lg</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Eff '[ChainControlEffect, ChainEffect] a
+-&gt; Eff
+     '[ChainControlEffect, ChainEffect, LogMsg ChainEvent,
+       State (Map DatumHash Datum), State AddressMap, State ChainState,
+       Writer EmulatorLogs]
+     a
+forall (effs :: [* -&gt; *]) (as :: [* -&gt; *]).
+CanWeakenEnd as effs =&gt;
+Eff as ~&gt; Eff effs
+</span><span class="hs-identifier hs-var">raiseEnd</span></span><span> </span><span class="annot"><span class="annottext">Eff '[ChainControlEffect, ChainEffect] a
+</span><a href="#local-6989586621679392891"><span class="hs-identifier hs-var">eff</span></a></span><span>
+</span><span id="line-75"></span><span>        </span><span class="annot"><span class="annottext">Eff
+  '[ChainControlEffect, ChainEffect, LogMsg ChainEvent,
+    State (Map DatumHash Datum), State AddressMap, State ChainState,
+    Writer EmulatorLogs]
+  a
+-&gt; (Eff
+      '[ChainControlEffect, ChainEffect, LogMsg ChainEvent,
+        State (Map DatumHash Datum), State AddressMap, State ChainState,
+        Writer EmulatorLogs]
+      a
+    -&gt; Eff
+         '[ChainEffect, LogMsg ChainEvent, State (Map DatumHash Datum),
+           State AddressMap, State ChainState, Writer EmulatorLogs]
+         a)
+-&gt; Eff
+     '[ChainEffect, LogMsg ChainEvent, State (Map DatumHash Datum),
+       State AddressMap, State ChainState, Writer EmulatorLogs]
+     a
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(ChainControlEffect
+ ~&gt; Eff
+      '[ChainEffect, LogMsg ChainEvent, State (Map DatumHash Datum),
+        State AddressMap, State ChainState, Writer EmulatorLogs])
+-&gt; Eff
+     '[ChainControlEffect, ChainEffect, LogMsg ChainEvent,
+       State (Map DatumHash Datum), State AddressMap, State ChainState,
+       Writer EmulatorLogs]
+   ~&gt; Eff
+        '[ChainEffect, LogMsg ChainEvent, State (Map DatumHash Datum),
+          State AddressMap, State ChainState, Writer EmulatorLogs]
+forall (eff :: * -&gt; *) (effs :: [* -&gt; *]).
+(eff ~&gt; Eff effs) -&gt; Eff (eff : effs) ~&gt; Eff effs
+</span><span class="hs-identifier hs-var">interpret</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Params
+-&gt; ChainControlEffect
+   ~&gt; Eff
+        '[ChainEffect, LogMsg ChainEvent, State (Map DatumHash Datum),
+          State AddressMap, State ChainState, Writer EmulatorLogs]
+forall (effs :: [* -&gt; *]).
+Members ChainEffs effs =&gt;
+Params -&gt; ChainControlEffect ~&gt; Eff effs
+</span><a href="Cardano.Node.Emulator.Internal.Node.Chain.html#handleControlChain"><span class="hs-identifier hs-var">E.handleControlChain</span></a></span><span> </span><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621679392890"><span class="hs-identifier hs-var">params</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span>        </span><span class="annot"><span class="annottext">Eff
+  '[ChainEffect, LogMsg ChainEvent, State (Map DatumHash Datum),
+    State AddressMap, State ChainState, Writer EmulatorLogs]
+  a
+-&gt; (Eff
+      '[ChainEffect, LogMsg ChainEvent, State (Map DatumHash Datum),
+        State AddressMap, State ChainState, Writer EmulatorLogs]
+      a
+    -&gt; Eff
+         '[LogMsg ChainEvent, State (Map DatumHash Datum), State AddressMap,
+           State ChainState, Writer EmulatorLogs]
+         a)
+-&gt; Eff
+     '[LogMsg ChainEvent, State (Map DatumHash Datum), State AddressMap,
+       State ChainState, Writer EmulatorLogs]
+     a
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(ChainEffect
+ ~&gt; Eff
+      '[LogMsg ChainEvent, State (Map DatumHash Datum), State AddressMap,
+        State ChainState, Writer EmulatorLogs])
+-&gt; Eff
+     '[ChainEffect, LogMsg ChainEvent, State (Map DatumHash Datum),
+       State AddressMap, State ChainState, Writer EmulatorLogs]
+   ~&gt; Eff
+        '[LogMsg ChainEvent, State (Map DatumHash Datum), State AddressMap,
+          State ChainState, Writer EmulatorLogs]
+forall (eff :: * -&gt; *) (effs :: [* -&gt; *]).
+(eff ~&gt; Eff effs) -&gt; Eff (eff : effs) ~&gt; Eff effs
+</span><span class="hs-identifier hs-var">interpret</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Params
+-&gt; ChainEffect
+   ~&gt; Eff
+        '[LogMsg ChainEvent, State (Map DatumHash Datum), State AddressMap,
+          State ChainState, Writer EmulatorLogs]
+forall (effs :: [* -&gt; *]).
+Members ChainEffs effs =&gt;
+Params -&gt; ChainEffect ~&gt; Eff effs
+</span><a href="Cardano.Node.Emulator.Internal.Node.Chain.html#handleChain"><span class="hs-identifier hs-var">E.handleChain</span></a></span><span> </span><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621679392890"><span class="hs-identifier hs-var">params</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span>        </span><span class="annot"><span class="annottext">Eff
+  '[LogMsg ChainEvent, State (Map DatumHash Datum), State AddressMap,
+    State ChainState, Writer EmulatorLogs]
+  a
+-&gt; (Eff
+      '[LogMsg ChainEvent, State (Map DatumHash Datum), State AddressMap,
+        State ChainState, Writer EmulatorLogs]
+      a
+    -&gt; Eff
+         '[State (Map DatumHash Datum), State AddressMap, State ChainState,
+           Writer EmulatorLogs]
+         a)
+-&gt; Eff
+     '[State (Map DatumHash Datum), State AddressMap, State ChainState,
+       Writer EmulatorLogs]
+     a
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(LogMsg ChainEvent
+ ~&gt; Eff
+      '[State (Map DatumHash Datum), State AddressMap, State ChainState,
+        Writer EmulatorLogs])
+-&gt; Eff
+     '[LogMsg ChainEvent, State (Map DatumHash Datum), State AddressMap,
+       State ChainState, Writer EmulatorLogs]
+   ~&gt; Eff
+        '[State (Map DatumHash Datum), State AddressMap, State ChainState,
+          Writer EmulatorLogs]
+forall (eff :: * -&gt; *) (effs :: [* -&gt; *]).
+(eff ~&gt; Eff effs) -&gt; Eff (eff : effs) ~&gt; Eff effs
+</span><span class="hs-identifier hs-var">interpret</span></span><span> </span><span class="annot"><span class="annottext">forall (effs :: [* -&gt; *]).
+(Member (State AddressMap) effs,
+ Member (State (Map DatumHash Datum)) effs,
+ Member (Writer EmulatorLogs) effs) =&gt;
+LogMsg ChainEvent ~&gt; Eff effs
+LogMsg ChainEvent
+~&gt; Eff
+     '[State (Map DatumHash Datum), State AddressMap, State ChainState,
+       Writer EmulatorLogs]
+</span><a href="#local-6989586621679392879"><span class="hs-identifier hs-var">handleChainLogs</span></a></span><span>
+</span><span id="line-78"></span><span>        </span><span class="annot"><span class="annottext">Eff
+  '[State (Map DatumHash Datum), State AddressMap, State ChainState,
+    Writer EmulatorLogs]
+  a
+-&gt; (Eff
+      '[State (Map DatumHash Datum), State AddressMap, State ChainState,
+        Writer EmulatorLogs]
+      a
+    -&gt; Eff
+         '[State AddressMap, State ChainState, Writer EmulatorLogs]
+         (a, Map DatumHash Datum))
+-&gt; Eff
+     '[State AddressMap, State ChainState, Writer EmulatorLogs]
+     (a, Map DatumHash Datum)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Map DatumHash Datum
+-&gt; Eff
+     '[State (Map DatumHash Datum), State AddressMap, State ChainState,
+       Writer EmulatorLogs]
+     a
+-&gt; Eff
+     '[State AddressMap, State ChainState, Writer EmulatorLogs]
+     (a, Map DatumHash Datum)
+forall s (effs :: [* -&gt; *]) a.
+s -&gt; Eff (State s : effs) a -&gt; Eff effs (a, s)
+</span><span class="hs-identifier hs-var">runState</span></span><span> </span><span class="annot"><span class="annottext">Map DatumHash Datum
+</span><a href="#local-6989586621679392887"><span class="hs-identifier hs-var">dm</span></a></span><span>
+</span><span id="line-79"></span><span>        </span><span class="annot"><span class="annottext">Eff
+  '[State AddressMap, State ChainState, Writer EmulatorLogs]
+  (a, Map DatumHash Datum)
+-&gt; (Eff
+      '[State AddressMap, State ChainState, Writer EmulatorLogs]
+      (a, Map DatumHash Datum)
+    -&gt; Eff
+         '[State ChainState, Writer EmulatorLogs]
+         ((a, Map DatumHash Datum), AddressMap))
+-&gt; Eff
+     '[State ChainState, Writer EmulatorLogs]
+     ((a, Map DatumHash Datum), AddressMap)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">AddressMap
+-&gt; Eff
+     '[State AddressMap, State ChainState, Writer EmulatorLogs]
+     (a, Map DatumHash Datum)
+-&gt; Eff
+     '[State ChainState, Writer EmulatorLogs]
+     ((a, Map DatumHash Datum), AddressMap)
+forall s (effs :: [* -&gt; *]) a.
+s -&gt; Eff (State s : effs) a -&gt; Eff effs (a, s)
+</span><span class="hs-identifier hs-var">runState</span></span><span> </span><span class="annot"><span class="annottext">AddressMap
+</span><a href="#local-6989586621679392888"><span class="hs-identifier hs-var">am</span></a></span><span>
+</span><span id="line-80"></span><span>        </span><span class="annot"><span class="annottext">Eff
+  '[State ChainState, Writer EmulatorLogs]
+  ((a, Map DatumHash Datum), AddressMap)
+-&gt; (Eff
+      '[State ChainState, Writer EmulatorLogs]
+      ((a, Map DatumHash Datum), AddressMap)
+    -&gt; Eff
+         '[Writer EmulatorLogs]
+         (((a, Map DatumHash Datum), AddressMap), ChainState))
+-&gt; Eff
+     '[Writer EmulatorLogs]
+     (((a, Map DatumHash Datum), AddressMap), ChainState)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">ChainState
+-&gt; Eff
+     '[State ChainState, Writer EmulatorLogs]
+     ((a, Map DatumHash Datum), AddressMap)
+-&gt; Eff
+     '[Writer EmulatorLogs]
+     (((a, Map DatumHash Datum), AddressMap), ChainState)
+forall s (effs :: [* -&gt; *]) a.
+s -&gt; Eff (State s : effs) a -&gt; Eff effs (a, s)
+</span><span class="hs-identifier hs-var">runState</span></span><span> </span><span class="annot"><span class="annottext">ChainState
+</span><a href="#local-6989586621679392889"><span class="hs-identifier hs-var">chainState</span></a></span><span>
+</span><span id="line-81"></span><span>        </span><span class="annot"><span class="annottext">Eff
+  '[Writer EmulatorLogs]
+  (((a, Map DatumHash Datum), AddressMap), ChainState)
+-&gt; (Eff
+      '[Writer EmulatorLogs]
+      (((a, Map DatumHash Datum), AddressMap), ChainState)
+    -&gt; Eff
+         '[]
+         ((((a, Map DatumHash Datum), AddressMap), ChainState),
+          EmulatorLogs))
+-&gt; Eff
+     '[]
+     ((((a, Map DatumHash Datum), AddressMap), ChainState),
+      EmulatorLogs)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Eff
+  '[Writer EmulatorLogs]
+  (((a, Map DatumHash Datum), AddressMap), ChainState)
+-&gt; Eff
+     '[]
+     ((((a, Map DatumHash Datum), AddressMap), ChainState),
+      EmulatorLogs)
+forall w (effs :: [* -&gt; *]) a.
+Monoid w =&gt;
+Eff (Writer w : effs) a -&gt; Eff effs (a, w)
+</span><span class="hs-identifier hs-var">F.runWriter</span></span><span>
+</span><span id="line-82"></span><span>        </span><span class="annot"><span class="annottext">Eff
+  '[]
+  ((((a, Map DatumHash Datum), AddressMap), ChainState),
+   EmulatorLogs)
+-&gt; (Eff
+      '[]
+      ((((a, Map DatumHash Datum), AddressMap), ChainState),
+       EmulatorLogs)
+    -&gt; ((((a, Map DatumHash Datum), AddressMap), ChainState),
+        EmulatorLogs))
+-&gt; ((((a, Map DatumHash Datum), AddressMap), ChainState),
+    EmulatorLogs)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Eff
+  '[]
+  ((((a, Map DatumHash Datum), AddressMap), ChainState),
+   EmulatorLogs)
+-&gt; ((((a, Map DatumHash Datum), AddressMap), ChainState),
+    EmulatorLogs)
+forall a. Eff '[] a -&gt; a
+</span><span class="hs-identifier hs-var">run</span></span><span>
+</span><span id="line-83"></span><span>  </span><span class="annot"><span class="annottext">EmulatorLogs -&gt; m ()
+forall w (m :: * -&gt; *). MonadWriter w m =&gt; w -&gt; m ()
+</span><span class="hs-identifier hs-var">tell</span></span><span> </span><span class="annot"><span class="annottext">EmulatorLogs
+</span><a href="#local-6989586621679392882"><span class="hs-identifier hs-var">lg</span></a></span><span>
+</span><span id="line-84"></span><span>  </span><span class="annot"><span class="annottext">EmulatorState -&gt; m ()
+forall s (m :: * -&gt; *). MonadState s m =&gt; s -&gt; m ()
+</span><span class="hs-identifier hs-var">put</span></span><span> </span><span class="annot"><span class="annottext">(EmulatorState -&gt; m ()) -&gt; EmulatorState -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ChainState -&gt; AddressMap -&gt; Map DatumHash Datum -&gt; EmulatorState
+</span><a href="Cardano.Node.Emulator.Internal.API.html#EmulatorState"><span class="hs-identifier hs-var">EmulatorState</span></a></span><span> </span><span class="annot"><span class="annottext">ChainState
+</span><a href="#local-6989586621679392883"><span class="hs-identifier hs-var">newChainState</span></a></span><span> </span><span class="annot"><span class="annottext">AddressMap
+</span><a href="#local-6989586621679392884"><span class="hs-identifier hs-var">am'</span></a></span><span> </span><span class="annot"><span class="annottext">Map DatumHash Datum
+</span><a href="#local-6989586621679392885"><span class="hs-identifier hs-var">dm'</span></a></span><span>
+</span><span id="line-85"></span><span>  </span><span class="annot"><span class="annottext">a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679392886"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-86"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-87"></span><span>    </span><span id="local-6989586621679393006"><span class="annot"><a href="#local-6989586621679392879"><span class="hs-identifier hs-type">handleChainLogs</span></a></span><span>
+</span><span id="line-88"></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Member</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">State</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">AM.AddressMap</span></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679393006"><span class="hs-identifier hs-type">effs</span></a></span><span>
+</span><span id="line-89"></span><span>         </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Member</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">State</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">DatumHash</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Datum</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679393006"><span class="hs-identifier hs-type">effs</span></a></span><span>
+</span><span id="line-90"></span><span>         </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Member</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">F.Writer</span></span><span> </span><span class="annot"><a href="Cardano.Node.Emulator.Internal.API.html#EmulatorLogs"><span class="hs-identifier hs-type">EmulatorLogs</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679393006"><span class="hs-identifier hs-type">effs</span></a></span><span>
+</span><span id="line-91"></span><span>         </span><span class="hs-special">)</span><span>
+</span><span id="line-92"></span><span>      </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">L.LogMsg</span></span><span> </span><span class="annot"><a href="Cardano.Node.Emulator.Internal.Node.Chain.html#ChainEvent"><span class="hs-identifier hs-type">E.ChainEvent</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">~&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Eff</span></span><span> </span><span class="annot"><a href="#local-6989586621679393006"><span class="hs-identifier hs-type">effs</span></a></span></span><span>
+</span><span id="line-93"></span><span>    </span><span id="local-6989586621679392879"><span class="annot"><span class="annottext">handleChainLogs :: LogMsg ChainEvent ~&gt; Eff effs
+</span><a href="#local-6989586621679392879"><span class="hs-identifier hs-var hs-var">handleChainLogs</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">L.LMessage</span></span><span> </span><span id="local-6989586621679392877"><span class="annot"><span class="annottext">msg :: LogMessage ChainEvent
+</span><a href="#local-6989586621679392877"><span class="hs-identifier hs-var">msg</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">L.LogMessage</span></span><span> </span><span class="annot"><span class="annottext">LogLevel
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679392875"><span class="annot"><span class="annottext">ChainEvent
+</span><a href="#local-6989586621679392875"><span class="hs-identifier hs-var">e</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-94"></span><span>      </span><span class="annot"><span class="annottext">EmulatorLogs -&gt; Eff effs ()
+forall w (effs :: [* -&gt; *]).
+Member (Writer w) effs =&gt;
+w -&gt; Eff effs ()
+</span><span class="hs-identifier hs-var">F.tell</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="Cardano.Node.Emulator.Internal.API.html#EmulatorLogs"><span class="hs-identifier hs-type">EmulatorLogs</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LogMessage EmulatorMsg -&gt; EmulatorLogs
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(LogMessage EmulatorMsg -&gt; EmulatorLogs)
+-&gt; LogMessage EmulatorMsg -&gt; EmulatorLogs
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ChainEvent -&gt; EmulatorMsg
+</span><a href="Cardano.Node.Emulator.LogMessages.html#ChainEvent"><span class="hs-identifier hs-var">ChainEvent</span></a></span><span> </span><span class="annot"><span class="annottext">(ChainEvent -&gt; EmulatorMsg)
+-&gt; LogMessage ChainEvent -&gt; LogMessage EmulatorMsg
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">LogMessage ChainEvent
+</span><a href="#local-6989586621679392877"><span class="hs-identifier hs-var">msg</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-95"></span><span>      </span><span class="annot"><span class="annottext">ChainEvent -&gt; Maybe OnChainTx
+</span><a href="Cardano.Node.Emulator.Internal.Node.Chain.html#chainEventOnChainTx"><span class="hs-identifier hs-var">E.chainEventOnChainTx</span></a></span><span> </span><span class="annot"><span class="annottext">ChainEvent
+</span><a href="#local-6989586621679392875"><span class="hs-identifier hs-var">e</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe OnChainTx -&gt; (Maybe OnChainTx -&gt; Eff effs ()) -&gt; Eff effs ()
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Eff effs ()
+-&gt; (OnChainTx -&gt; Eff effs ()) -&gt; Maybe OnChainTx -&gt; Eff effs ()
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">() -&gt; Eff effs ()
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679392871"><span class="annot"><span class="annottext">OnChainTx
+</span><a href="#local-6989586621679392871"><span class="hs-identifier hs-var">tx</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-96"></span><span>        </span><span class="annot"><span class="annottext">Eff effs () -&gt; Eff effs ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(Eff effs () -&gt; Eff effs ()) -&gt; Eff effs () -&gt; Eff effs ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(AddressMap -&gt; AddressMap) -&gt; Eff effs ()
+forall s (effs :: [* -&gt; *]).
+Member (State s) effs =&gt;
+(s -&gt; s) -&gt; Eff effs ()
+</span><span class="hs-identifier hs-var">modify</span></span><span> </span><span class="annot"><span class="annottext">((AddressMap -&gt; AddressMap) -&gt; Eff effs ())
+-&gt; (AddressMap -&gt; AddressMap) -&gt; Eff effs ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">OnChainTx -&gt; AddressMap -&gt; AddressMap
+</span><span class="hs-identifier hs-var">AM.updateAllAddresses</span></span><span> </span><span class="annot"><span class="annottext">OnChainTx
+</span><a href="#local-6989586621679392871"><span class="hs-identifier hs-var">tx</span></a></span><span>
+</span><span id="line-97"></span><span>        </span><span class="annot"><span class="annottext">Eff effs () -&gt; Eff effs ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(Eff effs () -&gt; Eff effs ()) -&gt; Eff effs () -&gt; Eff effs ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(Map DatumHash Datum -&gt; Map DatumHash Datum) -&gt; Eff effs ()
+forall s (effs :: [* -&gt; *]).
+Member (State s) effs =&gt;
+(s -&gt; s) -&gt; Eff effs ()
+</span><span class="hs-identifier hs-var">modify</span></span><span> </span><span class="annot"><span class="annottext">((Map DatumHash Datum -&gt; Map DatumHash Datum) -&gt; Eff effs ())
+-&gt; (Map DatumHash Datum -&gt; Map DatumHash Datum) -&gt; Eff effs ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map DatumHash Datum -&gt; Map DatumHash Datum -&gt; Map DatumHash Datum
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">(&lt;&gt;)</span></a></span><span> </span><span class="annot"><span class="annottext">(Map DatumHash Datum -&gt; Map DatumHash Datum -&gt; Map DatumHash Datum)
+-&gt; (OnChainTx -&gt; Map DatumHash Datum)
+-&gt; OnChainTx
+-&gt; Map DatumHash Datum
+-&gt; Map DatumHash Datum
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(CardanoTx -&gt; Map DatumHash Datum)
+-&gt; (CardanoTx -&gt; Map DatumHash Datum)
+-&gt; OnChainTx
+-&gt; Map DatumHash Datum
+forall r. (CardanoTx -&gt; r) -&gt; (CardanoTx -&gt; r) -&gt; OnChainTx -&gt; r
+</span><span class="hs-identifier hs-var">eitherTx</span></span><span> </span><span class="annot"><span class="annottext">CardanoTx -&gt; Map DatumHash Datum
+</span><span class="hs-identifier hs-var">getCardanoTxData</span></span><span> </span><span class="annot"><span class="annottext">CardanoTx -&gt; Map DatumHash Datum
+</span><span class="hs-identifier hs-var">getCardanoTxData</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">OnChainTx
+</span><a href="#local-6989586621679392871"><span class="hs-identifier hs-var">tx</span></a></span><span>
+</span><span id="line-98"></span><span>        </span><span class="hs-special">)</span><span>
+</span><span id="line-99"></span><span>
+</span><span id="line-100"></span><span id="local-6989586621679392868"><span class="annot"><a href="Cardano.Node.Emulator.Internal.API.html#processBlock"><span class="hs-identifier hs-type">processBlock</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Node.Emulator.Internal.API.html#MonadEmulator"><span class="hs-identifier hs-type">MonadEmulator</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679392868"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679392868"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Block</span></span></span><span>
+</span><span id="line-101"></span><span id="processBlock"><span class="annot"><span class="annottext">processBlock :: m Block
+</span><a href="Cardano.Node.Emulator.Internal.API.html#processBlock"><span class="hs-identifier hs-var hs-var">processBlock</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Eff '[ChainControlEffect, ChainEffect] Block -&gt; m Block
+forall (m :: * -&gt; *) a.
+MonadEmulator m =&gt;
+Eff '[ChainControlEffect, ChainEffect] a -&gt; m a
+</span><a href="Cardano.Node.Emulator.Internal.API.html#handleChain"><span class="hs-identifier hs-var">handleChain</span></a></span><span> </span><span class="annot"><span class="annottext">Eff '[ChainControlEffect, ChainEffect] Block
+forall (effs :: [* -&gt; *]).
+Member ChainControlEffect effs =&gt;
+Eff effs Block
+</span><a href="Cardano.Node.Emulator.Internal.Node.Chain.html#processBlock"><span class="hs-identifier hs-var">E.processBlock</span></a></span><span>
+</span><span id="line-102"></span><span>
+</span><span id="line-103"></span><span id="local-6989586621679392866"><span class="annot"><a href="Cardano.Node.Emulator.Internal.API.html#modifySlot"><span class="hs-identifier hs-type">modifySlot</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Node.Emulator.Internal.API.html#MonadEmulator"><span class="hs-identifier hs-type">MonadEmulator</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679392866"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Slot</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Slot</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679392866"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Slot</span></span></span><span>
+</span><span id="line-104"></span><span id="modifySlot"><span class="annot"><span class="annottext">modifySlot :: (Slot -&gt; Slot) -&gt; m Slot
+</span><a href="Cardano.Node.Emulator.Internal.API.html#modifySlot"><span class="hs-identifier hs-var hs-var">modifySlot</span></a></span></span><span> </span><span id="local-6989586621679392865"><span class="annot"><span class="annottext">Slot -&gt; Slot
+</span><a href="#local-6989586621679392865"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Eff '[ChainControlEffect, ChainEffect] Slot -&gt; m Slot
+forall (m :: * -&gt; *) a.
+MonadEmulator m =&gt;
+Eff '[ChainControlEffect, ChainEffect] a -&gt; m a
+</span><a href="Cardano.Node.Emulator.Internal.API.html#handleChain"><span class="hs-identifier hs-var">handleChain</span></a></span><span> </span><span class="annot"><span class="annottext">(Eff '[ChainControlEffect, ChainEffect] Slot -&gt; m Slot)
+-&gt; Eff '[ChainControlEffect, ChainEffect] Slot -&gt; m Slot
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(Slot -&gt; Slot) -&gt; Eff '[ChainControlEffect, ChainEffect] Slot
+forall (effs :: [* -&gt; *]).
+Member ChainControlEffect effs =&gt;
+(Slot -&gt; Slot) -&gt; Eff effs Slot
+</span><a href="Cardano.Node.Emulator.Internal.Node.Chain.html#modifySlot"><span class="hs-identifier hs-var">E.modifySlot</span></a></span><span> </span><span class="annot"><span class="annottext">Slot -&gt; Slot
+</span><a href="#local-6989586621679392865"><span class="hs-identifier hs-var">f</span></a></span><span>
+</span><span id="line-105"></span></pre></body></html>

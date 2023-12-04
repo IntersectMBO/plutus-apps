@@ -1,0 +1,893 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds             #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass        #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DerivingStrategies    #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE DuplicateRecordFields #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE GADTs                 #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications      #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE TypeOperators         #-}</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Plutus.ChainIndex.Api</span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Api.html#API"><span class="hs-identifier">API</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Api.html#FromHashAPI"><span class="hs-identifier">FromHashAPI</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Api.html#FullAPI"><span class="hs-identifier">FullAPI</span></a></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Api.html#IsUtxoResponse"><span class="hs-identifier">IsUtxoResponse</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Api.html#SwaggerAPI"><span class="hs-identifier">SwaggerAPI</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Api.html#UtxoByAddressRequest"><span class="hs-identifier">UtxoByAddressRequest</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Api.html#UtxosResponse"><span class="hs-identifier">UtxosResponse</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Api.html#UtxoWithCurrencyRequest"><span class="hs-identifier">UtxoWithCurrencyRequest</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Api.html#swagger"><span class="hs-identifier">swagger</span></a></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Api.html#TxoAtAddressRequest"><span class="hs-identifier">TxoAtAddressRequest</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Api.html#TxosResponse"><span class="hs-identifier">TxosResponse</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Api.html#QueryAtAddressRequest"><span class="hs-identifier">QueryAtAddressRequest</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Api.html#QueryResponse"><span class="hs-identifier">QueryResponse</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Api.html#collectQueryResponse"><span class="hs-identifier">collectQueryResponse</span></a></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Freer.Extras.Pagination</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Page</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">PageQuery</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">PageSize</span></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">FromJSON</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ToJSON</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Value</span></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Default</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">def</span></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.OpenApi</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">OpenApi</span></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Data.Proxy</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Proxy</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Ledger.Address</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">CardanoAddress</span></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Ledger.Credential</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Credential</span></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Ledger.Tx</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">DatumFromQuery</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">DecoratedTxOut</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">TxOutRef</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Versioned</span></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Tx.html"><span class="hs-identifier">Plutus.ChainIndex.Tx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.ChainIndex.Types.html#ChainIndexTx"><span class="hs-identifier">ChainIndexTx</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Types.html"><span class="hs-identifier">Plutus.ChainIndex.Types</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.ChainIndex.Types.html#Diagnostics"><span class="hs-identifier">Diagnostics</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Types.html#Tip"><span class="hs-identifier">Tip</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.V1.Ledger.Api</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Datum</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">DatumHash</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">MintingPolicy</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">MintingPolicy</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">MintingPolicyHash</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">MintingPolicyHash</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-40"></span><span>                             </span><span class="annot"><span class="hs-identifier">PubKeyHash</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Redeemer</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">RedeemerHash</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">RedeemerHash</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">StakeValidator</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">StakeValidator</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-41"></span><span>                             </span><span class="annot"><span class="hs-identifier">StakeValidatorHash</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">StakeValidatorHash</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">StakingCredential</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">TxId</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Validator</span></span><span class="hs-special">,</span><span>
+</span><span id="line-42"></span><span>                             </span><span class="annot"><span class="hs-identifier">ValidatorHash</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">ValidatorHash</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.V1.Ledger.Value</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">AssetClass</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">AssetClass</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Servant</span></span><span> </span><span class="hs-keyword">qualified</span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Servant.API</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Description</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Get</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">JSON</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">NoContent</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Post</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Put</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ReqBody</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-operator">(:&lt;|&gt;)</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-operator">(:&gt;)</span></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Servant.OpenApi</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">toOpenApi</span></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Servant.Swagger.UI</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">SwaggerSchemaUI</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">SwaggerSchemaUI'</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">swaggerSchemaUIServer</span></span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span id="local-6989586621679683677"><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">OpenApi.ToSchema</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ValidatorHash</span></span></span><span>
+</span><span id="line-50"></span><span id="local-6989586621679683673"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">OpenApi.ToSchema</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">DatumFromQuery</span></span></span><span>
+</span><span id="line-51"></span><span id="local-6989586621679683670"><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">OpenApi.ToSchema</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">PubKeyHash</span></span></span><span>
+</span><span id="line-52"></span><span id="local-6989586621679683667"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">OpenApi.ToSchema</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">DecoratedTxOut</span></span></span><span>
+</span><span id="line-53"></span><span id="local-6989586621679683664"><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">OpenApi.ToSchema</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">RedeemerHash</span></span></span><span>
+</span><span id="line-54"></span><span id="local-6989586621679683661"><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">OpenApi.ToSchema</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">StakeValidator</span></span></span><span>
+</span><span id="line-55"></span><span id="local-6989586621679683658"><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">OpenApi.ToSchema</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">MintingPolicy</span></span></span><span>
+</span><span id="line-56"></span><span id="local-6989586621679683655"><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">OpenApi.ToSchema</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">MintingPolicyHash</span></span></span><span>
+</span><span id="line-57"></span><span id="local-6989586621679683652"><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">OpenApi.ToSchema</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">AssetClass</span></span></span><span>
+</span><span id="line-58"></span><span id="local-6989586621679683649"><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">OpenApi.ToSchema</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Credential</span></span></span><span>
+</span><span id="line-59"></span><span id="local-6989586621679683646"><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">OpenApi.ToSchema</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">StakingCredential</span></span></span><span>
+</span><span id="line-60"></span><span id="local-6989586621679683643"><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">OpenApi.ToSchema</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">StakeValidatorHash</span></span></span><span>
+</span><span id="line-61"></span><span>
+</span><span id="line-62"></span><span id="local-6989586621679683639"><span id="local-6989586621679683642"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">OpenApi.ToSchema</span></span><span> </span><span class="annot"><a href="#local-6989586621679683642"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">OpenApi.ToSchema</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">PageQuery</span></span><span> </span><span class="annot"><a href="#local-6989586621679683642"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-63"></span><span id="local-6989586621679683636"><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">OpenApi.ToSchema</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">PageSize</span></span></span><span>
+</span><span id="line-64"></span><span id="local-6989586621679683632"><span id="local-6989586621679683635"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">OpenApi.ToSchema</span></span><span> </span><span class="annot"><a href="#local-6989586621679683635"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">OpenApi.ToSchema</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Page</span></span><span> </span><span class="annot"><a href="#local-6989586621679683635"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span class="hs-comment">-- | When requesting UTxOs of a given address, you need to provide the address,</span><span>
+</span><span id="line-67"></span><span class="hs-comment">-- and optionnally the number of elements per page and the last item of the last</span><span>
+</span><span id="line-68"></span><span class="hs-comment">-- requested page.</span><span>
+</span><span id="line-69"></span><span class="hs-comment">--</span><span>
+</span><span id="line-70"></span><span class="hs-comment">-- Here's an example for requesting the first page:</span><span>
+</span><span id="line-71"></span><span class="hs-comment">--</span><span>
+</span><span id="line-72"></span><span class="hs-comment">-- {</span><span>
+</span><span id="line-73"></span><span class="hs-comment">--   &quot;credential&quot;: {</span><span>
+</span><span id="line-74"></span><span class="hs-comment">--     &quot;tag&quot;: &quot;PubKeyCredential&quot;,</span><span>
+</span><span id="line-75"></span><span class="hs-comment">--     &quot;contents&quot;: {</span><span>
+</span><span id="line-76"></span><span class="hs-comment">--       &quot;getPubKeyHash&quot;: &quot;88ff402b0522f27649ac742238c697c579beeb344eb723099d1f16ce&quot;</span><span>
+</span><span id="line-77"></span><span class="hs-comment">--     }</span><span>
+</span><span id="line-78"></span><span class="hs-comment">--   }</span><span>
+</span><span id="line-79"></span><span class="hs-comment">-- }</span><span>
+</span><span id="line-80"></span><span class="hs-comment">--</span><span>
+</span><span id="line-81"></span><span class="hs-comment">-- or</span><span>
+</span><span id="line-82"></span><span class="hs-comment">--</span><span>
+</span><span id="line-83"></span><span class="hs-comment">-- {</span><span>
+</span><span id="line-84"></span><span class="hs-comment">--   &quot;pageQuery&quot;: {</span><span>
+</span><span id="line-85"></span><span class="hs-comment">--     &quot;pageQuerySize&quot;: {</span><span>
+</span><span id="line-86"></span><span class="hs-comment">--       &quot;getPageSize&quot;: 10</span><span>
+</span><span id="line-87"></span><span class="hs-comment">--     }</span><span>
+</span><span id="line-88"></span><span class="hs-comment">--   },</span><span>
+</span><span id="line-89"></span><span class="hs-comment">--   &quot;credential&quot;: {</span><span>
+</span><span id="line-90"></span><span class="hs-comment">--     &quot;tag&quot;: &quot;PubKeyCredential&quot;,</span><span>
+</span><span id="line-91"></span><span class="hs-comment">--     &quot;contents&quot;: {</span><span>
+</span><span id="line-92"></span><span class="hs-comment">--       &quot;getPubKeyHash&quot;: &quot;88ff402b0522f27649ac742238c697c579beeb344eb723099d1f16ce&quot;</span><span>
+</span><span id="line-93"></span><span class="hs-comment">--     }</span><span>
+</span><span id="line-94"></span><span class="hs-comment">--   }</span><span>
+</span><span id="line-95"></span><span class="hs-comment">-- }</span><span>
+</span><span id="line-96"></span><span class="hs-comment">--</span><span>
+</span><span id="line-97"></span><span class="hs-comment">-- Here's an example for requesting the next page:</span><span>
+</span><span id="line-98"></span><span class="hs-comment">--</span><span>
+</span><span id="line-99"></span><span class="hs-comment">-- {</span><span>
+</span><span id="line-100"></span><span class="hs-comment">--   &quot;pageQuery&quot;: {</span><span>
+</span><span id="line-101"></span><span class="hs-comment">--     &quot;pageQuerySize&quot;: {</span><span>
+</span><span id="line-102"></span><span class="hs-comment">--       &quot;getPageSize&quot;: 10</span><span>
+</span><span id="line-103"></span><span class="hs-comment">--     },</span><span>
+</span><span id="line-104"></span><span class="hs-comment">--     &quot;pageQueryLastItem&quot;: {</span><span>
+</span><span id="line-105"></span><span class="hs-comment">--       &quot;txOutRefId&quot;: {</span><span>
+</span><span id="line-106"></span><span class="hs-comment">--         &quot;getTxId&quot;: &quot;009b8c674b878cc68bd1d40562c5f14cdbb21be9266f605cfb68ed978e1a965b&quot;</span><span>
+</span><span id="line-107"></span><span class="hs-comment">--       },</span><span>
+</span><span id="line-108"></span><span class="hs-comment">--       &quot;txOutRefIdx&quot;: 0</span><span>
+</span><span id="line-109"></span><span class="hs-comment">--     }</span><span>
+</span><span id="line-110"></span><span class="hs-comment">--   },</span><span>
+</span><span id="line-111"></span><span class="hs-comment">--   &quot;credential&quot;: {</span><span>
+</span><span id="line-112"></span><span class="hs-comment">--     &quot;tag&quot;: &quot;PubKeyCredential&quot;,</span><span>
+</span><span id="line-113"></span><span class="hs-comment">--     &quot;contents&quot;: {</span><span>
+</span><span id="line-114"></span><span class="hs-comment">--       &quot;getPubKeyHash&quot;: &quot;88ff402b0522f27649ac742238c697c579beeb344eb723099d1f16ce&quot;</span><span>
+</span><span id="line-115"></span><span class="hs-comment">--     }</span><span>
+</span><span id="line-116"></span><span class="hs-comment">--   }</span><span>
+</span><span id="line-117"></span><span class="hs-comment">-- }</span><span>
+</span><span id="line-118"></span><span id="local-6989586621679683630"><span id="local-6989586621679683631"></span></span><span class="hs-keyword">data</span><span> </span><span id="UtxoByAddressRequest"><span class="annot"><a href="Plutus.ChainIndex.Api.html#UtxoByAddressRequest"><span class="hs-identifier hs-var">UtxoByAddressRequest</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="UtxoByAddressRequest"><span class="annot"><a href="Plutus.ChainIndex.Api.html#UtxoByAddressRequest"><span class="hs-identifier hs-var">UtxoByAddressRequest</span></a></span></span><span>
+</span><span id="line-119"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="%24sel%3ApageQuery%3AUtxoByAddressRequest"><span class="annot"><span class="annottext">UtxoByAddressRequest -&gt; Maybe (PageQuery TxOutRef)
+</span><a href="Plutus.ChainIndex.Api.html#%24sel%3ApageQuery%3AUtxoByAddressRequest"><span class="hs-identifier hs-var hs-var">pageQuery</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">PageQuery</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">TxOutRef</span></span><span class="hs-special">)</span><span>
+</span><span id="line-120"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="%24sel%3Aaddress%3AUtxoByAddressRequest"><span class="annot"><span class="annottext">UtxoByAddressRequest -&gt; CardanoAddress
+</span><a href="Plutus.ChainIndex.Api.html#%24sel%3Aaddress%3AUtxoByAddressRequest"><span class="hs-identifier hs-var hs-var">address</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">CardanoAddress</span></span><span>
+</span><span id="line-121"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-122"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679683621"><span id="local-6989586621679683623"><span id="local-6989586621679683625"><span class="annot"><span class="annottext">Int -&gt; UtxoByAddressRequest -&gt; ShowS
+[UtxoByAddressRequest] -&gt; ShowS
+UtxoByAddressRequest -&gt; String
+(Int -&gt; UtxoByAddressRequest -&gt; ShowS)
+-&gt; (UtxoByAddressRequest -&gt; String)
+-&gt; ([UtxoByAddressRequest] -&gt; ShowS)
+-&gt; Show UtxoByAddressRequest
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [UtxoByAddressRequest] -&gt; ShowS
+$cshowList :: [UtxoByAddressRequest] -&gt; ShowS
+show :: UtxoByAddressRequest -&gt; String
+$cshow :: UtxoByAddressRequest -&gt; String
+showsPrec :: Int -&gt; UtxoByAddressRequest -&gt; ShowS
+$cshowsPrec :: Int -&gt; UtxoByAddressRequest -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679683616"><span id="local-6989586621679683618"><span class="annot"><span class="annottext">UtxoByAddressRequest -&gt; UtxoByAddressRequest -&gt; Bool
+(UtxoByAddressRequest -&gt; UtxoByAddressRequest -&gt; Bool)
+-&gt; (UtxoByAddressRequest -&gt; UtxoByAddressRequest -&gt; Bool)
+-&gt; Eq UtxoByAddressRequest
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: UtxoByAddressRequest -&gt; UtxoByAddressRequest -&gt; Bool
+$c/= :: UtxoByAddressRequest -&gt; UtxoByAddressRequest -&gt; Bool
+== :: UtxoByAddressRequest -&gt; UtxoByAddressRequest -&gt; Bool
+$c== :: UtxoByAddressRequest -&gt; UtxoByAddressRequest -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. UtxoByAddressRequest -&gt; Rep UtxoByAddressRequest x)
+-&gt; (forall x. Rep UtxoByAddressRequest x -&gt; UtxoByAddressRequest)
+-&gt; Generic UtxoByAddressRequest
+forall x. Rep UtxoByAddressRequest x -&gt; UtxoByAddressRequest
+forall x. UtxoByAddressRequest -&gt; Rep UtxoByAddressRequest x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep UtxoByAddressRequest x -&gt; UtxoByAddressRequest
+$cfrom :: forall x. UtxoByAddressRequest -&gt; Rep UtxoByAddressRequest x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679683608"><span id="local-6989586621679683610"><span class="annot"><span class="annottext">Value -&gt; Parser [UtxoByAddressRequest]
+Value -&gt; Parser UtxoByAddressRequest
+(Value -&gt; Parser UtxoByAddressRequest)
+-&gt; (Value -&gt; Parser [UtxoByAddressRequest])
+-&gt; FromJSON UtxoByAddressRequest
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+parseJSONList :: Value -&gt; Parser [UtxoByAddressRequest]
+$cparseJSONList :: Value -&gt; Parser [UtxoByAddressRequest]
+parseJSON :: Value -&gt; Parser UtxoByAddressRequest
+$cparseJSON :: Value -&gt; Parser UtxoByAddressRequest
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679683599"><span id="local-6989586621679683601"><span id="local-6989586621679683603"><span id="local-6989586621679683605"><span class="annot"><span class="annottext">[UtxoByAddressRequest] -&gt; Encoding
+[UtxoByAddressRequest] -&gt; Value
+UtxoByAddressRequest -&gt; Encoding
+UtxoByAddressRequest -&gt; Value
+(UtxoByAddressRequest -&gt; Value)
+-&gt; (UtxoByAddressRequest -&gt; Encoding)
+-&gt; ([UtxoByAddressRequest] -&gt; Value)
+-&gt; ([UtxoByAddressRequest] -&gt; Encoding)
+-&gt; ToJSON UtxoByAddressRequest
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; ToJSON a
+toEncodingList :: [UtxoByAddressRequest] -&gt; Encoding
+$ctoEncodingList :: [UtxoByAddressRequest] -&gt; Encoding
+toJSONList :: [UtxoByAddressRequest] -&gt; Value
+$ctoJSONList :: [UtxoByAddressRequest] -&gt; Value
+toEncoding :: UtxoByAddressRequest -&gt; Encoding
+$ctoEncoding :: UtxoByAddressRequest -&gt; Encoding
+toJSON :: UtxoByAddressRequest -&gt; Value
+$ctoJSON :: UtxoByAddressRequest -&gt; Value
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679683595"><span class="annot"><span class="annottext">Typeable UtxoByAddressRequest
+Typeable UtxoByAddressRequest
+-&gt; (Proxy UtxoByAddressRequest
+    -&gt; Declare (Definitions Schema) NamedSchema)
+-&gt; ToSchema UtxoByAddressRequest
+Proxy UtxoByAddressRequest
+-&gt; Declare (Definitions Schema) NamedSchema
+forall a.
+Typeable a
+-&gt; (Proxy a -&gt; Declare (Definitions Schema) NamedSchema)
+-&gt; ToSchema a
+declareNamedSchema :: Proxy UtxoByAddressRequest
+-&gt; Declare (Definitions Schema) NamedSchema
+$cdeclareNamedSchema :: Proxy UtxoByAddressRequest
+-&gt; Declare (Definitions Schema) NamedSchema
+$cp1ToSchema :: Typeable UtxoByAddressRequest
+</span><a href="#local-6989586621679683595"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var">OpenApi.ToSchema</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-123"></span><span>
+</span><span id="line-124"></span><span class="hs-comment">-- | See the comment on 'UtxoByAddressRequest'.</span><span>
+</span><span id="line-125"></span><span class="hs-comment">--</span><span>
+</span><span id="line-126"></span><span class="hs-comment">-- The difference is using @currency@ field instead of @credential@.</span><span>
+</span><span id="line-127"></span><span class="hs-comment">-- {</span><span>
+</span><span id="line-128"></span><span class="hs-comment">--   &quot;pageQuery&quot;: {</span><span>
+</span><span id="line-129"></span><span class="hs-comment">--     ...</span><span>
+</span><span id="line-130"></span><span class="hs-comment">--   },</span><span>
+</span><span id="line-131"></span><span class="hs-comment">--   &quot;currency&quot;: {</span><span>
+</span><span id="line-132"></span><span class="hs-comment">--     &quot;unAssetClass&quot;: [</span><span>
+</span><span id="line-133"></span><span class="hs-comment">--       {</span><span>
+</span><span id="line-134"></span><span class="hs-comment">--         &quot;unCurrencySymbol&quot;: &quot;&quot;</span><span>
+</span><span id="line-135"></span><span class="hs-comment">--       },</span><span>
+</span><span id="line-136"></span><span class="hs-comment">--       {</span><span>
+</span><span id="line-137"></span><span class="hs-comment">--         &quot;unTokenName&quot;: &quot;&quot;</span><span>
+</span><span id="line-138"></span><span class="hs-comment">--       }</span><span>
+</span><span id="line-139"></span><span class="hs-comment">--     ]</span><span>
+</span><span id="line-140"></span><span class="hs-comment">--   }</span><span>
+</span><span id="line-141"></span><span class="hs-comment">-- }</span><span>
+</span><span id="line-142"></span><span id="local-6989586621679683593"><span id="local-6989586621679683594"></span></span><span class="hs-keyword">data</span><span> </span><span id="UtxoWithCurrencyRequest"><span class="annot"><a href="Plutus.ChainIndex.Api.html#UtxoWithCurrencyRequest"><span class="hs-identifier hs-var">UtxoWithCurrencyRequest</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="UtxoWithCurrencyRequest"><span class="annot"><a href="Plutus.ChainIndex.Api.html#UtxoWithCurrencyRequest"><span class="hs-identifier hs-var">UtxoWithCurrencyRequest</span></a></span></span><span>
+</span><span id="line-143"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="%24sel%3ApageQuery%3AUtxoWithCurrencyRequest"><span class="annot"><span class="annottext">UtxoWithCurrencyRequest -&gt; Maybe (PageQuery TxOutRef)
+</span><a href="Plutus.ChainIndex.Api.html#%24sel%3ApageQuery%3AUtxoWithCurrencyRequest"><span class="hs-identifier hs-var hs-var">pageQuery</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">PageQuery</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">TxOutRef</span></span><span class="hs-special">)</span><span>
+</span><span id="line-144"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="%24sel%3Acurrency%3AUtxoWithCurrencyRequest"><span class="annot"><span class="annottext">UtxoWithCurrencyRequest -&gt; AssetClass
+</span><a href="Plutus.ChainIndex.Api.html#%24sel%3Acurrency%3AUtxoWithCurrencyRequest"><span class="hs-identifier hs-var hs-var">currency</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">AssetClass</span></span><span>
+</span><span id="line-145"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-146"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679683584"><span id="local-6989586621679683586"><span id="local-6989586621679683588"><span class="annot"><span class="annottext">Int -&gt; UtxoWithCurrencyRequest -&gt; ShowS
+[UtxoWithCurrencyRequest] -&gt; ShowS
+UtxoWithCurrencyRequest -&gt; String
+(Int -&gt; UtxoWithCurrencyRequest -&gt; ShowS)
+-&gt; (UtxoWithCurrencyRequest -&gt; String)
+-&gt; ([UtxoWithCurrencyRequest] -&gt; ShowS)
+-&gt; Show UtxoWithCurrencyRequest
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [UtxoWithCurrencyRequest] -&gt; ShowS
+$cshowList :: [UtxoWithCurrencyRequest] -&gt; ShowS
+show :: UtxoWithCurrencyRequest -&gt; String
+$cshow :: UtxoWithCurrencyRequest -&gt; String
+showsPrec :: Int -&gt; UtxoWithCurrencyRequest -&gt; ShowS
+$cshowsPrec :: Int -&gt; UtxoWithCurrencyRequest -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679683580"><span id="local-6989586621679683582"><span class="annot"><span class="annottext">UtxoWithCurrencyRequest -&gt; UtxoWithCurrencyRequest -&gt; Bool
+(UtxoWithCurrencyRequest -&gt; UtxoWithCurrencyRequest -&gt; Bool)
+-&gt; (UtxoWithCurrencyRequest -&gt; UtxoWithCurrencyRequest -&gt; Bool)
+-&gt; Eq UtxoWithCurrencyRequest
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: UtxoWithCurrencyRequest -&gt; UtxoWithCurrencyRequest -&gt; Bool
+$c/= :: UtxoWithCurrencyRequest -&gt; UtxoWithCurrencyRequest -&gt; Bool
+== :: UtxoWithCurrencyRequest -&gt; UtxoWithCurrencyRequest -&gt; Bool
+$c== :: UtxoWithCurrencyRequest -&gt; UtxoWithCurrencyRequest -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x.
+ UtxoWithCurrencyRequest -&gt; Rep UtxoWithCurrencyRequest x)
+-&gt; (forall x.
+    Rep UtxoWithCurrencyRequest x -&gt; UtxoWithCurrencyRequest)
+-&gt; Generic UtxoWithCurrencyRequest
+forall x. Rep UtxoWithCurrencyRequest x -&gt; UtxoWithCurrencyRequest
+forall x. UtxoWithCurrencyRequest -&gt; Rep UtxoWithCurrencyRequest x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep UtxoWithCurrencyRequest x -&gt; UtxoWithCurrencyRequest
+$cfrom :: forall x. UtxoWithCurrencyRequest -&gt; Rep UtxoWithCurrencyRequest x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679683574"><span id="local-6989586621679683576"><span class="annot"><span class="annottext">Value -&gt; Parser [UtxoWithCurrencyRequest]
+Value -&gt; Parser UtxoWithCurrencyRequest
+(Value -&gt; Parser UtxoWithCurrencyRequest)
+-&gt; (Value -&gt; Parser [UtxoWithCurrencyRequest])
+-&gt; FromJSON UtxoWithCurrencyRequest
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+parseJSONList :: Value -&gt; Parser [UtxoWithCurrencyRequest]
+$cparseJSONList :: Value -&gt; Parser [UtxoWithCurrencyRequest]
+parseJSON :: Value -&gt; Parser UtxoWithCurrencyRequest
+$cparseJSON :: Value -&gt; Parser UtxoWithCurrencyRequest
+</span><a href="#local-6989586621679683574"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679683566"><span id="local-6989586621679683568"><span id="local-6989586621679683570"><span id="local-6989586621679683572"><span class="annot"><span class="annottext">[UtxoWithCurrencyRequest] -&gt; Encoding
+[UtxoWithCurrencyRequest] -&gt; Value
+UtxoWithCurrencyRequest -&gt; Encoding
+UtxoWithCurrencyRequest -&gt; Value
+(UtxoWithCurrencyRequest -&gt; Value)
+-&gt; (UtxoWithCurrencyRequest -&gt; Encoding)
+-&gt; ([UtxoWithCurrencyRequest] -&gt; Value)
+-&gt; ([UtxoWithCurrencyRequest] -&gt; Encoding)
+-&gt; ToJSON UtxoWithCurrencyRequest
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; ToJSON a
+toEncodingList :: [UtxoWithCurrencyRequest] -&gt; Encoding
+$ctoEncodingList :: [UtxoWithCurrencyRequest] -&gt; Encoding
+toJSONList :: [UtxoWithCurrencyRequest] -&gt; Value
+$ctoJSONList :: [UtxoWithCurrencyRequest] -&gt; Value
+toEncoding :: UtxoWithCurrencyRequest -&gt; Encoding
+$ctoEncoding :: UtxoWithCurrencyRequest -&gt; Encoding
+toJSON :: UtxoWithCurrencyRequest -&gt; Value
+$ctoJSON :: UtxoWithCurrencyRequest -&gt; Value
+</span><a href="#local-6989586621679683566"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679683563"><span class="annot"><span class="annottext">Typeable UtxoWithCurrencyRequest
+Typeable UtxoWithCurrencyRequest
+-&gt; (Proxy UtxoWithCurrencyRequest
+    -&gt; Declare (Definitions Schema) NamedSchema)
+-&gt; ToSchema UtxoWithCurrencyRequest
+Proxy UtxoWithCurrencyRequest
+-&gt; Declare (Definitions Schema) NamedSchema
+forall a.
+Typeable a
+-&gt; (Proxy a -&gt; Declare (Definitions Schema) NamedSchema)
+-&gt; ToSchema a
+declareNamedSchema :: Proxy UtxoWithCurrencyRequest
+-&gt; Declare (Definitions Schema) NamedSchema
+$cdeclareNamedSchema :: Proxy UtxoWithCurrencyRequest
+-&gt; Declare (Definitions Schema) NamedSchema
+$cp1ToSchema :: Typeable UtxoWithCurrencyRequest
+</span><a href="#local-6989586621679683563"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var">OpenApi.ToSchema</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-147"></span><span>
+</span><span id="line-148"></span><span class="hs-comment">-- | Response type for the utxo-{at-address|with-currency} endpoints.</span><span>
+</span><span id="line-149"></span><span id="local-6989586621679683561"><span id="local-6989586621679683562"></span></span><span class="hs-keyword">data</span><span> </span><span id="UtxosResponse"><span class="annot"><a href="Plutus.ChainIndex.Api.html#UtxosResponse"><span class="hs-identifier hs-var">UtxosResponse</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="UtxosResponse"><span class="annot"><a href="Plutus.ChainIndex.Api.html#UtxosResponse"><span class="hs-identifier hs-var">UtxosResponse</span></a></span></span><span>
+</span><span id="line-150"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="%24sel%3AcurrentTip%3AUtxosResponse"><span class="annot"><span class="annottext">UtxosResponse -&gt; Tip
+</span><a href="Plutus.ChainIndex.Api.html#%24sel%3AcurrentTip%3AUtxosResponse"><span class="hs-identifier hs-var hs-var">currentTip</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Types.html#Tip"><span class="hs-identifier hs-type">Tip</span></a></span><span>
+</span><span id="line-151"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="%24sel%3Apage%3AUtxosResponse"><span class="annot"><span class="annottext">UtxosResponse -&gt; Page TxOutRef
+</span><a href="Plutus.ChainIndex.Api.html#%24sel%3Apage%3AUtxosResponse"><span class="hs-identifier hs-var hs-var">page</span></a></span></span><span>       </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Page</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">TxOutRef</span></span><span>
+</span><span id="line-152"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-153"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679683552"><span id="local-6989586621679683554"><span id="local-6989586621679683556"><span class="annot"><span class="annottext">Int -&gt; UtxosResponse -&gt; ShowS
+[UtxosResponse] -&gt; ShowS
+UtxosResponse -&gt; String
+(Int -&gt; UtxosResponse -&gt; ShowS)
+-&gt; (UtxosResponse -&gt; String)
+-&gt; ([UtxosResponse] -&gt; ShowS)
+-&gt; Show UtxosResponse
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [UtxosResponse] -&gt; ShowS
+$cshowList :: [UtxosResponse] -&gt; ShowS
+show :: UtxosResponse -&gt; String
+$cshow :: UtxosResponse -&gt; String
+showsPrec :: Int -&gt; UtxosResponse -&gt; ShowS
+$cshowsPrec :: Int -&gt; UtxosResponse -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679683548"><span id="local-6989586621679683550"><span class="annot"><span class="annottext">UtxosResponse -&gt; UtxosResponse -&gt; Bool
+(UtxosResponse -&gt; UtxosResponse -&gt; Bool)
+-&gt; (UtxosResponse -&gt; UtxosResponse -&gt; Bool) -&gt; Eq UtxosResponse
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: UtxosResponse -&gt; UtxosResponse -&gt; Bool
+$c/= :: UtxosResponse -&gt; UtxosResponse -&gt; Bool
+== :: UtxosResponse -&gt; UtxosResponse -&gt; Bool
+$c== :: UtxosResponse -&gt; UtxosResponse -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. UtxosResponse -&gt; Rep UtxosResponse x)
+-&gt; (forall x. Rep UtxosResponse x -&gt; UtxosResponse)
+-&gt; Generic UtxosResponse
+forall x. Rep UtxosResponse x -&gt; UtxosResponse
+forall x. UtxosResponse -&gt; Rep UtxosResponse x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep UtxosResponse x -&gt; UtxosResponse
+$cfrom :: forall x. UtxosResponse -&gt; Rep UtxosResponse x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679683542"><span id="local-6989586621679683544"><span class="annot"><span class="annottext">Value -&gt; Parser [UtxosResponse]
+Value -&gt; Parser UtxosResponse
+(Value -&gt; Parser UtxosResponse)
+-&gt; (Value -&gt; Parser [UtxosResponse]) -&gt; FromJSON UtxosResponse
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+parseJSONList :: Value -&gt; Parser [UtxosResponse]
+$cparseJSONList :: Value -&gt; Parser [UtxosResponse]
+parseJSON :: Value -&gt; Parser UtxosResponse
+$cparseJSON :: Value -&gt; Parser UtxosResponse
+</span><a href="#local-6989586621679683542"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679683534"><span id="local-6989586621679683536"><span id="local-6989586621679683538"><span id="local-6989586621679683540"><span class="annot"><span class="annottext">[UtxosResponse] -&gt; Encoding
+[UtxosResponse] -&gt; Value
+UtxosResponse -&gt; Encoding
+UtxosResponse -&gt; Value
+(UtxosResponse -&gt; Value)
+-&gt; (UtxosResponse -&gt; Encoding)
+-&gt; ([UtxosResponse] -&gt; Value)
+-&gt; ([UtxosResponse] -&gt; Encoding)
+-&gt; ToJSON UtxosResponse
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; ToJSON a
+toEncodingList :: [UtxosResponse] -&gt; Encoding
+$ctoEncodingList :: [UtxosResponse] -&gt; Encoding
+toJSONList :: [UtxosResponse] -&gt; Value
+$ctoJSONList :: [UtxosResponse] -&gt; Value
+toEncoding :: UtxosResponse -&gt; Encoding
+$ctoEncoding :: UtxosResponse -&gt; Encoding
+toJSON :: UtxosResponse -&gt; Value
+$ctoJSON :: UtxosResponse -&gt; Value
+</span><a href="#local-6989586621679683534"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679683531"><span class="annot"><span class="annottext">Typeable UtxosResponse
+Typeable UtxosResponse
+-&gt; (Proxy UtxosResponse
+    -&gt; Declare (Definitions Schema) NamedSchema)
+-&gt; ToSchema UtxosResponse
+Proxy UtxosResponse -&gt; Declare (Definitions Schema) NamedSchema
+forall a.
+Typeable a
+-&gt; (Proxy a -&gt; Declare (Definitions Schema) NamedSchema)
+-&gt; ToSchema a
+declareNamedSchema :: Proxy UtxosResponse -&gt; Declare (Definitions Schema) NamedSchema
+$cdeclareNamedSchema :: Proxy UtxosResponse -&gt; Declare (Definitions Schema) NamedSchema
+$cp1ToSchema :: Typeable UtxosResponse
+</span><a href="#local-6989586621679683531"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var">OpenApi.ToSchema</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-154"></span><span>
+</span><span id="line-155"></span><span class="hs-comment">-- | Response type for the is-utxo endpoint.</span><span>
+</span><span id="line-156"></span><span id="local-6989586621679683529"><span id="local-6989586621679683530"></span></span><span class="hs-keyword">data</span><span> </span><span id="IsUtxoResponse"><span class="annot"><a href="Plutus.ChainIndex.Api.html#IsUtxoResponse"><span class="hs-identifier hs-var">IsUtxoResponse</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="IsUtxoResponse"><span class="annot"><a href="Plutus.ChainIndex.Api.html#IsUtxoResponse"><span class="hs-identifier hs-var">IsUtxoResponse</span></a></span></span><span>
+</span><span id="line-157"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="%24sel%3AcurrentTip%3AIsUtxoResponse"><span class="annot"><span class="annottext">IsUtxoResponse -&gt; Tip
+</span><a href="Plutus.ChainIndex.Api.html#%24sel%3AcurrentTip%3AIsUtxoResponse"><span class="hs-identifier hs-var hs-var">currentTip</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Types.html#Tip"><span class="hs-identifier hs-type">Tip</span></a></span><span>
+</span><span id="line-158"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="%24sel%3AisUtxo%3AIsUtxoResponse"><span class="annot"><span class="annottext">IsUtxoResponse -&gt; Bool
+</span><a href="Plutus.ChainIndex.Api.html#%24sel%3AisUtxo%3AIsUtxoResponse"><span class="hs-identifier hs-var hs-var">isUtxo</span></a></span></span><span>     </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-159"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-160"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679683520"><span id="local-6989586621679683522"><span id="local-6989586621679683524"><span class="annot"><span class="annottext">Int -&gt; IsUtxoResponse -&gt; ShowS
+[IsUtxoResponse] -&gt; ShowS
+IsUtxoResponse -&gt; String
+(Int -&gt; IsUtxoResponse -&gt; ShowS)
+-&gt; (IsUtxoResponse -&gt; String)
+-&gt; ([IsUtxoResponse] -&gt; ShowS)
+-&gt; Show IsUtxoResponse
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [IsUtxoResponse] -&gt; ShowS
+$cshowList :: [IsUtxoResponse] -&gt; ShowS
+show :: IsUtxoResponse -&gt; String
+$cshow :: IsUtxoResponse -&gt; String
+showsPrec :: Int -&gt; IsUtxoResponse -&gt; ShowS
+$cshowsPrec :: Int -&gt; IsUtxoResponse -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679683516"><span id="local-6989586621679683518"><span class="annot"><span class="annottext">IsUtxoResponse -&gt; IsUtxoResponse -&gt; Bool
+(IsUtxoResponse -&gt; IsUtxoResponse -&gt; Bool)
+-&gt; (IsUtxoResponse -&gt; IsUtxoResponse -&gt; Bool) -&gt; Eq IsUtxoResponse
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: IsUtxoResponse -&gt; IsUtxoResponse -&gt; Bool
+$c/= :: IsUtxoResponse -&gt; IsUtxoResponse -&gt; Bool
+== :: IsUtxoResponse -&gt; IsUtxoResponse -&gt; Bool
+$c== :: IsUtxoResponse -&gt; IsUtxoResponse -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. IsUtxoResponse -&gt; Rep IsUtxoResponse x)
+-&gt; (forall x. Rep IsUtxoResponse x -&gt; IsUtxoResponse)
+-&gt; Generic IsUtxoResponse
+forall x. Rep IsUtxoResponse x -&gt; IsUtxoResponse
+forall x. IsUtxoResponse -&gt; Rep IsUtxoResponse x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep IsUtxoResponse x -&gt; IsUtxoResponse
+$cfrom :: forall x. IsUtxoResponse -&gt; Rep IsUtxoResponse x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679683510"><span id="local-6989586621679683512"><span class="annot"><span class="annottext">Value -&gt; Parser [IsUtxoResponse]
+Value -&gt; Parser IsUtxoResponse
+(Value -&gt; Parser IsUtxoResponse)
+-&gt; (Value -&gt; Parser [IsUtxoResponse]) -&gt; FromJSON IsUtxoResponse
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+parseJSONList :: Value -&gt; Parser [IsUtxoResponse]
+$cparseJSONList :: Value -&gt; Parser [IsUtxoResponse]
+parseJSON :: Value -&gt; Parser IsUtxoResponse
+$cparseJSON :: Value -&gt; Parser IsUtxoResponse
+</span><a href="#local-6989586621679683510"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679683502"><span id="local-6989586621679683504"><span id="local-6989586621679683506"><span id="local-6989586621679683508"><span class="annot"><span class="annottext">[IsUtxoResponse] -&gt; Encoding
+[IsUtxoResponse] -&gt; Value
+IsUtxoResponse -&gt; Encoding
+IsUtxoResponse -&gt; Value
+(IsUtxoResponse -&gt; Value)
+-&gt; (IsUtxoResponse -&gt; Encoding)
+-&gt; ([IsUtxoResponse] -&gt; Value)
+-&gt; ([IsUtxoResponse] -&gt; Encoding)
+-&gt; ToJSON IsUtxoResponse
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; ToJSON a
+toEncodingList :: [IsUtxoResponse] -&gt; Encoding
+$ctoEncodingList :: [IsUtxoResponse] -&gt; Encoding
+toJSONList :: [IsUtxoResponse] -&gt; Value
+$ctoJSONList :: [IsUtxoResponse] -&gt; Value
+toEncoding :: IsUtxoResponse -&gt; Encoding
+$ctoEncoding :: IsUtxoResponse -&gt; Encoding
+toJSON :: IsUtxoResponse -&gt; Value
+$ctoJSON :: IsUtxoResponse -&gt; Value
+</span><a href="#local-6989586621679683502"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679683499"><span class="annot"><span class="annottext">Typeable IsUtxoResponse
+Typeable IsUtxoResponse
+-&gt; (Proxy IsUtxoResponse
+    -&gt; Declare (Definitions Schema) NamedSchema)
+-&gt; ToSchema IsUtxoResponse
+Proxy IsUtxoResponse -&gt; Declare (Definitions Schema) NamedSchema
+forall a.
+Typeable a
+-&gt; (Proxy a -&gt; Declare (Definitions Schema) NamedSchema)
+-&gt; ToSchema a
+declareNamedSchema :: Proxy IsUtxoResponse -&gt; Declare (Definitions Schema) NamedSchema
+$cdeclareNamedSchema :: Proxy IsUtxoResponse -&gt; Declare (Definitions Schema) NamedSchema
+$cp1ToSchema :: Typeable IsUtxoResponse
+</span><a href="#local-6989586621679683499"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var">OpenApi.ToSchema</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-161"></span><span>
+</span><span id="line-162"></span><span id="local-6989586621679683497"><span id="local-6989586621679683498"></span></span><span class="hs-keyword">data</span><span> </span><span id="TxoAtAddressRequest"><span class="annot"><a href="Plutus.ChainIndex.Api.html#TxoAtAddressRequest"><span class="hs-identifier hs-var">TxoAtAddressRequest</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="TxoAtAddressRequest"><span class="annot"><a href="Plutus.ChainIndex.Api.html#TxoAtAddressRequest"><span class="hs-identifier hs-var">TxoAtAddressRequest</span></a></span></span><span>
+</span><span id="line-163"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="%24sel%3ApageQuery%3ATxoAtAddressRequest"><span class="annot"><span class="annottext">TxoAtAddressRequest -&gt; Maybe (PageQuery TxOutRef)
+</span><a href="Plutus.ChainIndex.Api.html#%24sel%3ApageQuery%3ATxoAtAddressRequest"><span class="hs-identifier hs-var hs-var">pageQuery</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">PageQuery</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">TxOutRef</span></span><span class="hs-special">)</span><span>
+</span><span id="line-164"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="%24sel%3Aaddress%3ATxoAtAddressRequest"><span class="annot"><span class="annottext">TxoAtAddressRequest -&gt; CardanoAddress
+</span><a href="Plutus.ChainIndex.Api.html#%24sel%3Aaddress%3ATxoAtAddressRequest"><span class="hs-identifier hs-var hs-var">address</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">CardanoAddress</span></span><span>
+</span><span id="line-165"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-166"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679683488"><span id="local-6989586621679683490"><span id="local-6989586621679683492"><span class="annot"><span class="annottext">Int -&gt; TxoAtAddressRequest -&gt; ShowS
+[TxoAtAddressRequest] -&gt; ShowS
+TxoAtAddressRequest -&gt; String
+(Int -&gt; TxoAtAddressRequest -&gt; ShowS)
+-&gt; (TxoAtAddressRequest -&gt; String)
+-&gt; ([TxoAtAddressRequest] -&gt; ShowS)
+-&gt; Show TxoAtAddressRequest
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [TxoAtAddressRequest] -&gt; ShowS
+$cshowList :: [TxoAtAddressRequest] -&gt; ShowS
+show :: TxoAtAddressRequest -&gt; String
+$cshow :: TxoAtAddressRequest -&gt; String
+showsPrec :: Int -&gt; TxoAtAddressRequest -&gt; ShowS
+$cshowsPrec :: Int -&gt; TxoAtAddressRequest -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679683484"><span id="local-6989586621679683486"><span class="annot"><span class="annottext">TxoAtAddressRequest -&gt; TxoAtAddressRequest -&gt; Bool
+(TxoAtAddressRequest -&gt; TxoAtAddressRequest -&gt; Bool)
+-&gt; (TxoAtAddressRequest -&gt; TxoAtAddressRequest -&gt; Bool)
+-&gt; Eq TxoAtAddressRequest
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: TxoAtAddressRequest -&gt; TxoAtAddressRequest -&gt; Bool
+$c/= :: TxoAtAddressRequest -&gt; TxoAtAddressRequest -&gt; Bool
+== :: TxoAtAddressRequest -&gt; TxoAtAddressRequest -&gt; Bool
+$c== :: TxoAtAddressRequest -&gt; TxoAtAddressRequest -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. TxoAtAddressRequest -&gt; Rep TxoAtAddressRequest x)
+-&gt; (forall x. Rep TxoAtAddressRequest x -&gt; TxoAtAddressRequest)
+-&gt; Generic TxoAtAddressRequest
+forall x. Rep TxoAtAddressRequest x -&gt; TxoAtAddressRequest
+forall x. TxoAtAddressRequest -&gt; Rep TxoAtAddressRequest x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep TxoAtAddressRequest x -&gt; TxoAtAddressRequest
+$cfrom :: forall x. TxoAtAddressRequest -&gt; Rep TxoAtAddressRequest x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679683478"><span id="local-6989586621679683480"><span class="annot"><span class="annottext">Value -&gt; Parser [TxoAtAddressRequest]
+Value -&gt; Parser TxoAtAddressRequest
+(Value -&gt; Parser TxoAtAddressRequest)
+-&gt; (Value -&gt; Parser [TxoAtAddressRequest])
+-&gt; FromJSON TxoAtAddressRequest
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+parseJSONList :: Value -&gt; Parser [TxoAtAddressRequest]
+$cparseJSONList :: Value -&gt; Parser [TxoAtAddressRequest]
+parseJSON :: Value -&gt; Parser TxoAtAddressRequest
+$cparseJSON :: Value -&gt; Parser TxoAtAddressRequest
+</span><a href="#local-6989586621679683478"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679683470"><span id="local-6989586621679683472"><span id="local-6989586621679683474"><span id="local-6989586621679683476"><span class="annot"><span class="annottext">[TxoAtAddressRequest] -&gt; Encoding
+[TxoAtAddressRequest] -&gt; Value
+TxoAtAddressRequest -&gt; Encoding
+TxoAtAddressRequest -&gt; Value
+(TxoAtAddressRequest -&gt; Value)
+-&gt; (TxoAtAddressRequest -&gt; Encoding)
+-&gt; ([TxoAtAddressRequest] -&gt; Value)
+-&gt; ([TxoAtAddressRequest] -&gt; Encoding)
+-&gt; ToJSON TxoAtAddressRequest
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; ToJSON a
+toEncodingList :: [TxoAtAddressRequest] -&gt; Encoding
+$ctoEncodingList :: [TxoAtAddressRequest] -&gt; Encoding
+toJSONList :: [TxoAtAddressRequest] -&gt; Value
+$ctoJSONList :: [TxoAtAddressRequest] -&gt; Value
+toEncoding :: TxoAtAddressRequest -&gt; Encoding
+$ctoEncoding :: TxoAtAddressRequest -&gt; Encoding
+toJSON :: TxoAtAddressRequest -&gt; Value
+$ctoJSON :: TxoAtAddressRequest -&gt; Value
+</span><a href="#local-6989586621679683470"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679683467"><span class="annot"><span class="annottext">Typeable TxoAtAddressRequest
+Typeable TxoAtAddressRequest
+-&gt; (Proxy TxoAtAddressRequest
+    -&gt; Declare (Definitions Schema) NamedSchema)
+-&gt; ToSchema TxoAtAddressRequest
+Proxy TxoAtAddressRequest
+-&gt; Declare (Definitions Schema) NamedSchema
+forall a.
+Typeable a
+-&gt; (Proxy a -&gt; Declare (Definitions Schema) NamedSchema)
+-&gt; ToSchema a
+declareNamedSchema :: Proxy TxoAtAddressRequest
+-&gt; Declare (Definitions Schema) NamedSchema
+$cdeclareNamedSchema :: Proxy TxoAtAddressRequest
+-&gt; Declare (Definitions Schema) NamedSchema
+$cp1ToSchema :: Typeable TxoAtAddressRequest
+</span><a href="#local-6989586621679683467"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var">OpenApi.ToSchema</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-167"></span><span>
+</span><span id="line-168"></span><span class="hs-comment">-- | Response type for the txo-at-address endpoint.</span><span>
+</span><span id="line-169"></span><span id="local-6989586621679683465"><span id="local-6989586621679683466"></span></span><span class="hs-keyword">data</span><span> </span><span id="TxosResponse"><span class="annot"><a href="Plutus.ChainIndex.Api.html#TxosResponse"><span class="hs-identifier hs-var">TxosResponse</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="TxosResponse"><span class="annot"><a href="Plutus.ChainIndex.Api.html#TxosResponse"><span class="hs-identifier hs-var">TxosResponse</span></a></span></span><span>
+</span><span id="line-170"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="%24sel%3Apaget%3ATxosResponse"><span class="annot"><span class="annottext">TxosResponse -&gt; Page TxOutRef
+</span><a href="Plutus.ChainIndex.Api.html#%24sel%3Apaget%3ATxosResponse"><span class="hs-identifier hs-var hs-var">paget</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Page</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">TxOutRef</span></span><span>
+</span><span id="line-171"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-172"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679683457"><span id="local-6989586621679683459"><span id="local-6989586621679683461"><span class="annot"><span class="annottext">Int -&gt; TxosResponse -&gt; ShowS
+[TxosResponse] -&gt; ShowS
+TxosResponse -&gt; String
+(Int -&gt; TxosResponse -&gt; ShowS)
+-&gt; (TxosResponse -&gt; String)
+-&gt; ([TxosResponse] -&gt; ShowS)
+-&gt; Show TxosResponse
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [TxosResponse] -&gt; ShowS
+$cshowList :: [TxosResponse] -&gt; ShowS
+show :: TxosResponse -&gt; String
+$cshow :: TxosResponse -&gt; String
+showsPrec :: Int -&gt; TxosResponse -&gt; ShowS
+$cshowsPrec :: Int -&gt; TxosResponse -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679683453"><span id="local-6989586621679683455"><span class="annot"><span class="annottext">TxosResponse -&gt; TxosResponse -&gt; Bool
+(TxosResponse -&gt; TxosResponse -&gt; Bool)
+-&gt; (TxosResponse -&gt; TxosResponse -&gt; Bool) -&gt; Eq TxosResponse
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: TxosResponse -&gt; TxosResponse -&gt; Bool
+$c/= :: TxosResponse -&gt; TxosResponse -&gt; Bool
+== :: TxosResponse -&gt; TxosResponse -&gt; Bool
+$c== :: TxosResponse -&gt; TxosResponse -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. TxosResponse -&gt; Rep TxosResponse x)
+-&gt; (forall x. Rep TxosResponse x -&gt; TxosResponse)
+-&gt; Generic TxosResponse
+forall x. Rep TxosResponse x -&gt; TxosResponse
+forall x. TxosResponse -&gt; Rep TxosResponse x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep TxosResponse x -&gt; TxosResponse
+$cfrom :: forall x. TxosResponse -&gt; Rep TxosResponse x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679683447"><span id="local-6989586621679683449"><span class="annot"><span class="annottext">Value -&gt; Parser [TxosResponse]
+Value -&gt; Parser TxosResponse
+(Value -&gt; Parser TxosResponse)
+-&gt; (Value -&gt; Parser [TxosResponse]) -&gt; FromJSON TxosResponse
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+parseJSONList :: Value -&gt; Parser [TxosResponse]
+$cparseJSONList :: Value -&gt; Parser [TxosResponse]
+parseJSON :: Value -&gt; Parser TxosResponse
+$cparseJSON :: Value -&gt; Parser TxosResponse
+</span><a href="#local-6989586621679683447"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679683439"><span id="local-6989586621679683441"><span id="local-6989586621679683443"><span id="local-6989586621679683445"><span class="annot"><span class="annottext">[TxosResponse] -&gt; Encoding
+[TxosResponse] -&gt; Value
+TxosResponse -&gt; Encoding
+TxosResponse -&gt; Value
+(TxosResponse -&gt; Value)
+-&gt; (TxosResponse -&gt; Encoding)
+-&gt; ([TxosResponse] -&gt; Value)
+-&gt; ([TxosResponse] -&gt; Encoding)
+-&gt; ToJSON TxosResponse
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; ToJSON a
+toEncodingList :: [TxosResponse] -&gt; Encoding
+$ctoEncodingList :: [TxosResponse] -&gt; Encoding
+toJSONList :: [TxosResponse] -&gt; Value
+$ctoJSONList :: [TxosResponse] -&gt; Value
+toEncoding :: TxosResponse -&gt; Encoding
+$ctoEncoding :: TxosResponse -&gt; Encoding
+toJSON :: TxosResponse -&gt; Value
+$ctoJSON :: TxosResponse -&gt; Value
+</span><a href="#local-6989586621679683439"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679683436"><span class="annot"><span class="annottext">Typeable TxosResponse
+Typeable TxosResponse
+-&gt; (Proxy TxosResponse -&gt; Declare (Definitions Schema) NamedSchema)
+-&gt; ToSchema TxosResponse
+Proxy TxosResponse -&gt; Declare (Definitions Schema) NamedSchema
+forall a.
+Typeable a
+-&gt; (Proxy a -&gt; Declare (Definitions Schema) NamedSchema)
+-&gt; ToSchema a
+declareNamedSchema :: Proxy TxosResponse -&gt; Declare (Definitions Schema) NamedSchema
+$cdeclareNamedSchema :: Proxy TxosResponse -&gt; Declare (Definitions Schema) NamedSchema
+$cp1ToSchema :: Typeable TxosResponse
+</span><a href="#local-6989586621679683436"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var">OpenApi.ToSchema</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-173"></span><span>
+</span><span id="line-174"></span><span>
+</span><span id="line-175"></span><span id="local-6989586621679683434"><span id="local-6989586621679683435"></span></span><span class="hs-keyword">data</span><span> </span><span id="QueryAtAddressRequest"><span class="annot"><a href="Plutus.ChainIndex.Api.html#QueryAtAddressRequest"><span class="hs-identifier hs-var">QueryAtAddressRequest</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="QueryAtAddressRequest"><span class="annot"><a href="Plutus.ChainIndex.Api.html#QueryAtAddressRequest"><span class="hs-identifier hs-var">QueryAtAddressRequest</span></a></span></span><span>
+</span><span id="line-176"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="%24sel%3ApageQuery%3AQueryAtAddressRequest"><span class="annot"><span class="annottext">QueryAtAddressRequest -&gt; Maybe (PageQuery TxOutRef)
+</span><a href="Plutus.ChainIndex.Api.html#%24sel%3ApageQuery%3AQueryAtAddressRequest"><span class="hs-identifier hs-var hs-var">pageQuery</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">PageQuery</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">TxOutRef</span></span><span class="hs-special">)</span><span>
+</span><span id="line-177"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="%24sel%3Aaddress%3AQueryAtAddressRequest"><span class="annot"><span class="annottext">QueryAtAddressRequest -&gt; CardanoAddress
+</span><a href="Plutus.ChainIndex.Api.html#%24sel%3Aaddress%3AQueryAtAddressRequest"><span class="hs-identifier hs-var hs-var">address</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">CardanoAddress</span></span><span>
+</span><span id="line-178"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-179"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679683425"><span id="local-6989586621679683427"><span id="local-6989586621679683429"><span class="annot"><span class="annottext">Int -&gt; QueryAtAddressRequest -&gt; ShowS
+[QueryAtAddressRequest] -&gt; ShowS
+QueryAtAddressRequest -&gt; String
+(Int -&gt; QueryAtAddressRequest -&gt; ShowS)
+-&gt; (QueryAtAddressRequest -&gt; String)
+-&gt; ([QueryAtAddressRequest] -&gt; ShowS)
+-&gt; Show QueryAtAddressRequest
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [QueryAtAddressRequest] -&gt; ShowS
+$cshowList :: [QueryAtAddressRequest] -&gt; ShowS
+show :: QueryAtAddressRequest -&gt; String
+$cshow :: QueryAtAddressRequest -&gt; String
+showsPrec :: Int -&gt; QueryAtAddressRequest -&gt; ShowS
+$cshowsPrec :: Int -&gt; QueryAtAddressRequest -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679683421"><span id="local-6989586621679683423"><span class="annot"><span class="annottext">QueryAtAddressRequest -&gt; QueryAtAddressRequest -&gt; Bool
+(QueryAtAddressRequest -&gt; QueryAtAddressRequest -&gt; Bool)
+-&gt; (QueryAtAddressRequest -&gt; QueryAtAddressRequest -&gt; Bool)
+-&gt; Eq QueryAtAddressRequest
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: QueryAtAddressRequest -&gt; QueryAtAddressRequest -&gt; Bool
+$c/= :: QueryAtAddressRequest -&gt; QueryAtAddressRequest -&gt; Bool
+== :: QueryAtAddressRequest -&gt; QueryAtAddressRequest -&gt; Bool
+$c== :: QueryAtAddressRequest -&gt; QueryAtAddressRequest -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. QueryAtAddressRequest -&gt; Rep QueryAtAddressRequest x)
+-&gt; (forall x. Rep QueryAtAddressRequest x -&gt; QueryAtAddressRequest)
+-&gt; Generic QueryAtAddressRequest
+forall x. Rep QueryAtAddressRequest x -&gt; QueryAtAddressRequest
+forall x. QueryAtAddressRequest -&gt; Rep QueryAtAddressRequest x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep QueryAtAddressRequest x -&gt; QueryAtAddressRequest
+$cfrom :: forall x. QueryAtAddressRequest -&gt; Rep QueryAtAddressRequest x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679683415"><span id="local-6989586621679683417"><span class="annot"><span class="annottext">Value -&gt; Parser [QueryAtAddressRequest]
+Value -&gt; Parser QueryAtAddressRequest
+(Value -&gt; Parser QueryAtAddressRequest)
+-&gt; (Value -&gt; Parser [QueryAtAddressRequest])
+-&gt; FromJSON QueryAtAddressRequest
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+parseJSONList :: Value -&gt; Parser [QueryAtAddressRequest]
+$cparseJSONList :: Value -&gt; Parser [QueryAtAddressRequest]
+parseJSON :: Value -&gt; Parser QueryAtAddressRequest
+$cparseJSON :: Value -&gt; Parser QueryAtAddressRequest
+</span><a href="#local-6989586621679683415"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679683407"><span id="local-6989586621679683409"><span id="local-6989586621679683411"><span id="local-6989586621679683413"><span class="annot"><span class="annottext">[QueryAtAddressRequest] -&gt; Encoding
+[QueryAtAddressRequest] -&gt; Value
+QueryAtAddressRequest -&gt; Encoding
+QueryAtAddressRequest -&gt; Value
+(QueryAtAddressRequest -&gt; Value)
+-&gt; (QueryAtAddressRequest -&gt; Encoding)
+-&gt; ([QueryAtAddressRequest] -&gt; Value)
+-&gt; ([QueryAtAddressRequest] -&gt; Encoding)
+-&gt; ToJSON QueryAtAddressRequest
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; ToJSON a
+toEncodingList :: [QueryAtAddressRequest] -&gt; Encoding
+$ctoEncodingList :: [QueryAtAddressRequest] -&gt; Encoding
+toJSONList :: [QueryAtAddressRequest] -&gt; Value
+$ctoJSONList :: [QueryAtAddressRequest] -&gt; Value
+toEncoding :: QueryAtAddressRequest -&gt; Encoding
+$ctoEncoding :: QueryAtAddressRequest -&gt; Encoding
+toJSON :: QueryAtAddressRequest -&gt; Value
+$ctoJSON :: QueryAtAddressRequest -&gt; Value
+</span><a href="#local-6989586621679683407"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679683404"><span class="annot"><span class="annottext">Typeable QueryAtAddressRequest
+Typeable QueryAtAddressRequest
+-&gt; (Proxy QueryAtAddressRequest
+    -&gt; Declare (Definitions Schema) NamedSchema)
+-&gt; ToSchema QueryAtAddressRequest
+Proxy QueryAtAddressRequest
+-&gt; Declare (Definitions Schema) NamedSchema
+forall a.
+Typeable a
+-&gt; (Proxy a -&gt; Declare (Definitions Schema) NamedSchema)
+-&gt; ToSchema a
+declareNamedSchema :: Proxy QueryAtAddressRequest
+-&gt; Declare (Definitions Schema) NamedSchema
+$cdeclareNamedSchema :: Proxy QueryAtAddressRequest
+-&gt; Declare (Definitions Schema) NamedSchema
+$cp1ToSchema :: Typeable QueryAtAddressRequest
+</span><a href="#local-6989586621679683404"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var">OpenApi.ToSchema</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-180"></span><span>
+</span><span id="line-181"></span><span class="hs-comment">-- | generic response type endpoint</span><span>
+</span><span id="line-182"></span><span class="hs-comment">-- This type is introduced to avoid querying the chain index twice to obtain the expected info.</span><span>
+</span><span id="line-183"></span><span class="hs-comment">-- Indeed, it returns the next page query if more items are available</span><span>
+</span><span id="line-184"></span><span id="local-6989586621679683402"><span id="local-6989586621679683403"></span></span><span class="hs-keyword">data</span><span> </span><span id="QueryResponse"><span class="annot"><a href="Plutus.ChainIndex.Api.html#QueryResponse"><span class="hs-identifier hs-var">QueryResponse</span></a></span></span><span> </span><span id="local-6989586621679683716"><span class="annot"><a href="#local-6989586621679683716"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="QueryResponse"><span class="annot"><a href="Plutus.ChainIndex.Api.html#QueryResponse"><span class="hs-identifier hs-var">QueryResponse</span></a></span></span><span>
+</span><span id="line-185"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="%24sel%3AqueryResult%3AQueryResponse"><span class="annot"><span class="annottext">QueryResponse a -&gt; a
+</span><a href="Plutus.ChainIndex.Api.html#%24sel%3AqueryResult%3AQueryResponse"><span class="hs-identifier hs-var hs-var">queryResult</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679683716"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-186"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="%24sel%3AnextQuery%3AQueryResponse"><span class="annot"><span class="annottext">QueryResponse a -&gt; Maybe (PageQuery TxOutRef)
+</span><a href="Plutus.ChainIndex.Api.html#%24sel%3AnextQuery%3AQueryResponse"><span class="hs-identifier hs-var hs-var">nextQuery</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">PageQuery</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">TxOutRef</span></span><span class="hs-special">)</span><span>
+</span><span id="line-187"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-188"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679683393"><span id="local-6989586621679683395"><span id="local-6989586621679683397"><span class="annot"><span class="annottext">Int -&gt; QueryResponse a -&gt; ShowS
+[QueryResponse a] -&gt; ShowS
+QueryResponse a -&gt; String
+(Int -&gt; QueryResponse a -&gt; ShowS)
+-&gt; (QueryResponse a -&gt; String)
+-&gt; ([QueryResponse a] -&gt; ShowS)
+-&gt; Show (QueryResponse a)
+forall a. Show a =&gt; Int -&gt; QueryResponse a -&gt; ShowS
+forall a. Show a =&gt; [QueryResponse a] -&gt; ShowS
+forall a. Show a =&gt; QueryResponse a -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [QueryResponse a] -&gt; ShowS
+$cshowList :: forall a. Show a =&gt; [QueryResponse a] -&gt; ShowS
+show :: QueryResponse a -&gt; String
+$cshow :: forall a. Show a =&gt; QueryResponse a -&gt; String
+showsPrec :: Int -&gt; QueryResponse a -&gt; ShowS
+$cshowsPrec :: forall a. Show a =&gt; Int -&gt; QueryResponse a -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. QueryResponse a -&gt; Rep (QueryResponse a) x)
+-&gt; (forall x. Rep (QueryResponse a) x -&gt; QueryResponse a)
+-&gt; Generic (QueryResponse a)
+forall x. Rep (QueryResponse a) x -&gt; QueryResponse a
+forall x. QueryResponse a -&gt; Rep (QueryResponse a) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall a x. Rep (QueryResponse a) x -&gt; QueryResponse a
+forall a x. QueryResponse a -&gt; Rep (QueryResponse a) x
+$cto :: forall a x. Rep (QueryResponse a) x -&gt; QueryResponse a
+$cfrom :: forall a x. QueryResponse a -&gt; Rep (QueryResponse a) x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679683387"><span id="local-6989586621679683389"><span class="annot"><span class="annottext">QueryResponse a -&gt; QueryResponse a -&gt; Bool
+(QueryResponse a -&gt; QueryResponse a -&gt; Bool)
+-&gt; (QueryResponse a -&gt; QueryResponse a -&gt; Bool)
+-&gt; Eq (QueryResponse a)
+forall a. Eq a =&gt; QueryResponse a -&gt; QueryResponse a -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: QueryResponse a -&gt; QueryResponse a -&gt; Bool
+$c/= :: forall a. Eq a =&gt; QueryResponse a -&gt; QueryResponse a -&gt; Bool
+== :: QueryResponse a -&gt; QueryResponse a -&gt; Bool
+$c== :: forall a. Eq a =&gt; QueryResponse a -&gt; QueryResponse a -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-189"></span><span>
+</span><span id="line-190"></span><span id="local-6989586621679683382"><span id="local-6989586621679683384"><span id="local-6989586621679683386"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="#local-6989586621679683386"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Generic</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679683386"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.ChainIndex.Api.html#QueryResponse"><span class="hs-identifier hs-type">QueryResponse</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679683386"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-191"></span><span id="local-6989586621679683373"><span id="local-6989586621679683375"><span id="local-6989586621679683377"><span id="local-6989586621679683379"><span id="local-6989586621679683381"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><a href="#local-6989586621679683381"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Generic</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679683381"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.ChainIndex.Api.html#QueryResponse"><span class="hs-identifier hs-type">QueryResponse</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679683381"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span></span></span><span>
+</span><span id="line-192"></span><span id="local-6989586621679683369"><span id="local-6989586621679683372"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">OpenApi.ToSchema</span></span><span> </span><span class="annot"><a href="#local-6989586621679683372"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Generic</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679683372"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">OpenApi.ToSchema</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.ChainIndex.Api.html#QueryResponse"><span class="hs-identifier hs-type">QueryResponse</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679683372"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-193"></span><span>
+</span><span id="line-194"></span><span class="hs-keyword">type</span><span> </span><span id="API"><span class="annot"><a href="Plutus.ChainIndex.Api.html#API"><span class="hs-identifier hs-var">API</span></a></span></span><span>
+</span><span id="line-195"></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-string">&quot;healthcheck&quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Description</span></span><span> </span><span class="annot"><span class="hs-string">&quot;Is the server alive?&quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Get</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">JSON</span></span><span class="hs-special">]</span><span> </span><span class="annot"><span class="hs-identifier hs-type">NoContent</span></span><span>
+</span><span id="line-196"></span><span>    </span><span class="annot"><span class="hs-operator hs-type">:&lt;|&gt;</span></span><span> </span><span class="annot"><span class="hs-string">&quot;from-hash&quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Api.html#FromHashAPI"><span class="hs-identifier hs-type">FromHashAPI</span></a></span><span>
+</span><span id="line-197"></span><span>    </span><span class="annot"><span class="hs-operator hs-type">:&lt;|&gt;</span></span><span> </span><span class="annot"><span class="hs-string">&quot;tx-out&quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Description</span></span><span> </span><span class="annot"><span class="hs-string">&quot;Get a transaction output from its reference.&quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ReqBody</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">JSON</span></span><span class="hs-special">]</span><span> </span><span class="annot"><span class="hs-identifier hs-type">TxOutRef</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Post</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">JSON</span></span><span class="hs-special">]</span><span> </span><span class="annot"><span class="hs-identifier hs-type">DecoratedTxOut</span></span><span>
+</span><span id="line-198"></span><span>    </span><span class="annot"><span class="hs-operator hs-type">:&lt;|&gt;</span></span><span> </span><span class="annot"><span class="hs-string">&quot;unspent-tx-out&quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Description</span></span><span> </span><span class="annot"><span class="hs-string">&quot;Get a unspent transaction output from its reference.&quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ReqBody</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">JSON</span></span><span class="hs-special">]</span><span> </span><span class="annot"><span class="hs-identifier hs-type">TxOutRef</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Post</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">JSON</span></span><span class="hs-special">]</span><span> </span><span class="annot"><span class="hs-identifier hs-type">DecoratedTxOut</span></span><span>
+</span><span id="line-199"></span><span>    </span><span class="annot"><span class="hs-operator hs-type">:&lt;|&gt;</span></span><span> </span><span class="annot"><span class="hs-string">&quot;tx&quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Description</span></span><span> </span><span class="annot"><span class="hs-string">&quot;Get a transaction from its id.&quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ReqBody</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">JSON</span></span><span class="hs-special">]</span><span> </span><span class="annot"><span class="hs-identifier hs-type">TxId</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Post</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">JSON</span></span><span class="hs-special">]</span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Types.html#ChainIndexTx"><span class="hs-identifier hs-type">ChainIndexTx</span></a></span><span>
+</span><span id="line-200"></span><span>    </span><span class="annot"><span class="hs-operator hs-type">:&lt;|&gt;</span></span><span> </span><span class="annot"><span class="hs-string">&quot;is-utxo&quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Description</span></span><span> </span><span class="annot"><span class="hs-string">&quot;Check if the reference is an UTxO.&quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ReqBody</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">JSON</span></span><span class="hs-special">]</span><span> </span><span class="annot"><span class="hs-identifier hs-type">TxOutRef</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Post</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">JSON</span></span><span class="hs-special">]</span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Api.html#IsUtxoResponse"><span class="hs-identifier hs-type">IsUtxoResponse</span></a></span><span>
+</span><span id="line-201"></span><span>    </span><span class="annot"><span class="hs-operator hs-type">:&lt;|&gt;</span></span><span> </span><span class="annot"><span class="hs-string">&quot;utxo-at-address&quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Description</span></span><span> </span><span class="annot"><span class="hs-string">&quot;Get all UTxOs at an address.&quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ReqBody</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">JSON</span></span><span class="hs-special">]</span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Api.html#UtxoByAddressRequest"><span class="hs-identifier hs-type">UtxoByAddressRequest</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Post</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">JSON</span></span><span class="hs-special">]</span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Api.html#UtxosResponse"><span class="hs-identifier hs-type">UtxosResponse</span></a></span><span>
+</span><span id="line-202"></span><span>    </span><span class="annot"><span class="hs-operator hs-type">:&lt;|&gt;</span></span><span> </span><span class="annot"><span class="hs-string">&quot;unspent-txouts-at-address&quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Description</span></span><span> </span><span class="annot"><span class="hs-string">&quot;Get all unspent transaction output at an address.&quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ReqBody</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">JSON</span></span><span class="hs-special">]</span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Api.html#QueryAtAddressRequest"><span class="hs-identifier hs-type">QueryAtAddressRequest</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Post</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">JSON</span></span><span class="hs-special">]</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.ChainIndex.Api.html#QueryResponse"><span class="hs-identifier hs-type">QueryResponse</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">TxOutRef</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">DecoratedTxOut</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-203"></span><span>    </span><span class="annot"><span class="hs-operator hs-type">:&lt;|&gt;</span></span><span> </span><span class="annot"><span class="hs-string">&quot;datums-at-address&quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Description</span></span><span> </span><span class="annot"><span class="hs-string">&quot;Get all Datums at an address.&quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ReqBody</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">JSON</span></span><span class="hs-special">]</span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Api.html#QueryAtAddressRequest"><span class="hs-identifier hs-type">QueryAtAddressRequest</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Post</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">JSON</span></span><span class="hs-special">]</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.ChainIndex.Api.html#QueryResponse"><span class="hs-identifier hs-type">QueryResponse</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Datum</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-204"></span><span>    </span><span class="annot"><span class="hs-operator hs-type">:&lt;|&gt;</span></span><span> </span><span class="annot"><span class="hs-string">&quot;utxo-with-currency&quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Description</span></span><span> </span><span class="annot"><span class="hs-string">&quot;Get all UTxOs with a currency.&quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ReqBody</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">JSON</span></span><span class="hs-special">]</span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Api.html#UtxoWithCurrencyRequest"><span class="hs-identifier hs-type">UtxoWithCurrencyRequest</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Post</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">JSON</span></span><span class="hs-special">]</span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Api.html#UtxosResponse"><span class="hs-identifier hs-type">UtxosResponse</span></a></span><span>
+</span><span id="line-205"></span><span>    </span><span class="annot"><span class="hs-operator hs-type">:&lt;|&gt;</span></span><span> </span><span class="annot"><span class="hs-string">&quot;txs&quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Description</span></span><span> </span><span class="annot"><span class="hs-string">&quot;Get transactions from a list of their ids.&quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ReqBody</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">JSON</span></span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">TxId</span></span><span class="hs-special">]</span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Post</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">JSON</span></span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Plutus.ChainIndex.Types.html#ChainIndexTx"><span class="hs-identifier hs-type">ChainIndexTx</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-206"></span><span>    </span><span class="annot"><span class="hs-operator hs-type">:&lt;|&gt;</span></span><span> </span><span class="annot"><span class="hs-string">&quot;txo-at-address&quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Description</span></span><span> </span><span class="annot"><span class="hs-string">&quot;Get TxOs at an address.&quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ReqBody</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">JSON</span></span><span class="hs-special">]</span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Api.html#TxoAtAddressRequest"><span class="hs-identifier hs-type">TxoAtAddressRequest</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Post</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">JSON</span></span><span class="hs-special">]</span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Api.html#TxosResponse"><span class="hs-identifier hs-type">TxosResponse</span></a></span><span>
+</span><span id="line-207"></span><span>    </span><span class="annot"><span class="hs-operator hs-type">:&lt;|&gt;</span></span><span> </span><span class="annot"><span class="hs-string">&quot;tip&quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Description</span></span><span> </span><span class="annot"><span class="hs-string">&quot;Get the current synced tip.&quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Get</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">JSON</span></span><span class="hs-special">]</span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Types.html#Tip"><span class="hs-identifier hs-type">Tip</span></a></span><span>
+</span><span id="line-208"></span><span>    </span><span class="annot"><span class="hs-operator hs-type">:&lt;|&gt;</span></span><span> </span><span class="annot"><span class="hs-string">&quot;collect-garbage&quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Description</span></span><span> </span><span class="annot"><span class="hs-string">&quot;Collect chain index garbage to free up space.&quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Put</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">JSON</span></span><span class="hs-special">]</span><span> </span><span class="annot"><span class="hs-identifier hs-type">NoContent</span></span><span>
+</span><span id="line-209"></span><span>    </span><span class="annot"><span class="hs-operator hs-type">:&lt;|&gt;</span></span><span> </span><span class="annot"><span class="hs-string">&quot;diagnostics&quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Description</span></span><span> </span><span class="annot"><span class="hs-string">&quot;Get the current stats of the chain index.&quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Get</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">JSON</span></span><span class="hs-special">]</span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Types.html#Diagnostics"><span class="hs-identifier hs-type">Diagnostics</span></a></span><span>
+</span><span id="line-210"></span><span>
+</span><span id="line-211"></span><span class="hs-keyword">type</span><span> </span><span id="FromHashAPI"><span class="annot"><a href="Plutus.ChainIndex.Api.html#FromHashAPI"><span class="hs-identifier hs-var">FromHashAPI</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-212"></span><span>    </span><span class="annot"><span class="hs-string">&quot;datum&quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Description</span></span><span> </span><span class="annot"><span class="hs-string">&quot;Get a datum from its hash.&quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ReqBody</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">JSON</span></span><span class="hs-special">]</span><span> </span><span class="annot"><span class="hs-identifier hs-type">DatumHash</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Post</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">JSON</span></span><span class="hs-special">]</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Datum</span></span><span>
+</span><span id="line-213"></span><span>    </span><span class="annot"><span class="hs-operator hs-type">:&lt;|&gt;</span></span><span> </span><span class="annot"><span class="hs-string">&quot;validator&quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Description</span></span><span> </span><span class="annot"><span class="hs-string">&quot;Get a validator script from its hash.&quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ReqBody</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">JSON</span></span><span class="hs-special">]</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ValidatorHash</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Post</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">JSON</span></span><span class="hs-special">]</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Versioned</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Validator</span></span><span class="hs-special">)</span><span>
+</span><span id="line-214"></span><span>    </span><span class="annot"><span class="hs-operator hs-type">:&lt;|&gt;</span></span><span> </span><span class="annot"><span class="hs-string">&quot;minting-policy&quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Description</span></span><span> </span><span class="annot"><span class="hs-string">&quot;Get a minting policy from its hash.&quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ReqBody</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">JSON</span></span><span class="hs-special">]</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MintingPolicyHash</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Post</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">JSON</span></span><span class="hs-special">]</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Versioned</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">MintingPolicy</span></span><span class="hs-special">)</span><span>
+</span><span id="line-215"></span><span>    </span><span class="annot"><span class="hs-operator hs-type">:&lt;|&gt;</span></span><span> </span><span class="annot"><span class="hs-string">&quot;stake-validator&quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Description</span></span><span> </span><span class="annot"><span class="hs-string">&quot;Get a stake validator from its hash.&quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ReqBody</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">JSON</span></span><span class="hs-special">]</span><span> </span><span class="annot"><span class="hs-identifier hs-type">StakeValidatorHash</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Post</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">JSON</span></span><span class="hs-special">]</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Versioned</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">StakeValidator</span></span><span class="hs-special">)</span><span>
+</span><span id="line-216"></span><span>    </span><span class="annot"><span class="hs-operator hs-type">:&lt;|&gt;</span></span><span> </span><span class="annot"><span class="hs-string">&quot;redeemer&quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Description</span></span><span> </span><span class="annot"><span class="hs-string">&quot;Get a redeemer from its hash.&quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ReqBody</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">JSON</span></span><span class="hs-special">]</span><span> </span><span class="annot"><span class="hs-identifier hs-type">RedeemerHash</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Post</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">JSON</span></span><span class="hs-special">]</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Redeemer</span></span><span>
+</span><span id="line-217"></span><span>
+</span><span id="line-218"></span><span class="hs-keyword">type</span><span> </span><span id="SwaggerAPI"><span class="annot"><a href="Plutus.ChainIndex.Api.html#SwaggerAPI"><span class="hs-identifier hs-var">SwaggerAPI</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-string">&quot;swagger&quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">SwaggerSchemaUI</span></span><span> </span><span class="annot"><span class="hs-string">&quot;swagger-ui&quot;</span></span><span> </span><span class="annot"><span class="hs-string">&quot;swagger.json&quot;</span></span><span>
+</span><span id="line-219"></span><span>
+</span><span id="line-220"></span><span class="annot"><a href="Plutus.ChainIndex.Api.html#swagger"><span class="hs-identifier hs-type">swagger</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679683368"><span class="annot"><a href="#local-6989586621679683368"><span class="hs-identifier hs-type">dir</span></a></span></span><span> </span><span id="local-6989586621679683367"><span class="annot"><a href="#local-6989586621679683367"><span class="hs-identifier hs-type">api</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Servant.Server</span></span><span> </span><span class="annot"><a href="#local-6989586621679683367"><span class="hs-identifier hs-type">api</span></a></span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-glyph hs-type">~</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Servant.Handler</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Servant.Server</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">SwaggerSchemaUI'</span></span><span> </span><span class="annot"><a href="#local-6989586621679683368"><span class="hs-identifier hs-type">dir</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679683367"><span class="hs-identifier hs-type">api</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-221"></span><span id="swagger"><span class="annot"><span class="annottext">swagger :: Server (SwaggerSchemaUI' dir api)
+</span><a href="Plutus.ChainIndex.Api.html#swagger"><span class="hs-identifier hs-var hs-var">swagger</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OpenApi -&gt; Server (SwaggerSchemaUI' dir api)
+forall api a (dir :: Symbol).
+(Server api ~ Handler Value, ToJSON a) =&gt;
+a -&gt; Server (SwaggerSchemaUI' dir api)
+</span><span class="hs-identifier hs-var">swaggerSchemaUIServer</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy API -&gt; OpenApi
+forall k (api :: k). HasOpenApi api =&gt; Proxy api -&gt; OpenApi
+</span><span class="hs-identifier hs-var">toOpenApi</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy API
+forall k (t :: k). Proxy t
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Proxy</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="Plutus.ChainIndex.Api.html#API"><span class="hs-identifier hs-type">API</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-222"></span><span>
+</span><span id="line-223"></span><span class="hs-comment">-- We don't include `SwaggerAPI` into `API` to exclude it from the effects code.</span><span>
+</span><span id="line-224"></span><span class="hs-keyword">type</span><span> </span><span id="FullAPI"><span class="annot"><a href="Plutus.ChainIndex.Api.html#FullAPI"><span class="hs-identifier hs-var">FullAPI</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Api.html#API"><span class="hs-identifier hs-type">API</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">:&lt;|&gt;</span></span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Api.html#SwaggerAPI"><span class="hs-identifier hs-type">SwaggerAPI</span></a></span><span>
+</span><span id="line-225"></span><span>
+</span><span id="line-226"></span><span class="hs-comment">-- | Go through each 'Page's of 'QueryResponse', and collect the results.</span><span>
+</span><span id="line-227"></span><span id="local-6989586621679683364"><span id="local-6989586621679683365"><span class="annot"><a href="Plutus.ChainIndex.Api.html#collectQueryResponse"><span class="hs-identifier hs-type">collectQueryResponse</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-228"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679683365"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-229"></span><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">PageQuery</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">TxOutRef</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679683365"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.ChainIndex.Api.html#QueryResponse"><span class="hs-identifier hs-type">QueryResponse</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679683364"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-comment">-- ^ query response function</span><span>
+</span><span id="line-230"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679683365"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679683364"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span></span></span><span>
+</span><span id="line-231"></span><span id="collectQueryResponse"><span class="annot"><span class="annottext">collectQueryResponse :: (PageQuery TxOutRef -&gt; m (QueryResponse a)) -&gt; m [a]
+</span><a href="Plutus.ChainIndex.Api.html#collectQueryResponse"><span class="hs-identifier hs-var hs-var">collectQueryResponse</span></a></span></span><span> </span><span id="local-6989586621679683363"><span class="annot"><span class="annottext">PageQuery TxOutRef -&gt; m (QueryResponse a)
+</span><a href="#local-6989586621679683363"><span class="hs-identifier hs-var">q</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe (PageQuery TxOutRef) -&gt; m [a]
+</span><a href="#local-6989586621679683362"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PageQuery TxOutRef -&gt; Maybe (PageQuery TxOutRef)
+forall a. a -&gt; Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">PageQuery TxOutRef
+forall a. Default a =&gt; a
+</span><span class="hs-identifier hs-var">def</span></span><span class="hs-special">)</span><span>
+</span><span id="line-232"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-233"></span><span>    </span><span id="local-6989586621679683362"><span class="annot"><span class="annottext">go :: Maybe (PageQuery TxOutRef) -&gt; m [a]
+</span><a href="#local-6989586621679683362"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span class="annot"><span class="annottext">Maybe (PageQuery TxOutRef)
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[a] -&gt; m [a]
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-234"></span><span>    </span><span class="annot"><a href="#local-6989586621679683362"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679683361"><span class="annot"><span class="annottext">PageQuery TxOutRef
+</span><a href="#local-6989586621679683361"><span class="hs-identifier hs-var">pq</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-235"></span><span>      </span><span id="local-6989586621679683360"><span class="annot"><span class="annottext">QueryResponse a
+</span><a href="#local-6989586621679683360"><span class="hs-identifier hs-var">res</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">PageQuery TxOutRef -&gt; m (QueryResponse a)
+</span><a href="#local-6989586621679683363"><span class="hs-identifier hs-var">q</span></a></span><span> </span><span class="annot"><span class="annottext">PageQuery TxOutRef
+</span><a href="#local-6989586621679683361"><span class="hs-identifier hs-var">pq</span></a></span><span>
+</span><span id="line-236"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">QueryResponse a -&gt; a
+forall a. QueryResponse a -&gt; a
+</span><a href="Plutus.ChainIndex.Api.html#%24sel%3AqueryResult%3AQueryResponse"><span class="hs-identifier hs-var hs-var">queryResult</span></a></span><span> </span><span class="annot"><span class="annottext">QueryResponse a
+</span><a href="#local-6989586621679683360"><span class="hs-identifier hs-var">res</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; [a] -&gt; [a]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-glyph hs-var">:</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([a] -&gt; [a]) -&gt; m [a] -&gt; m [a]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (PageQuery TxOutRef) -&gt; m [a]
+</span><a href="#local-6989586621679683362"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">QueryResponse a -&gt; Maybe (PageQuery TxOutRef)
+forall a. QueryResponse a -&gt; Maybe (PageQuery TxOutRef)
+</span><a href="Plutus.ChainIndex.Api.html#%24sel%3AnextQuery%3AQueryResponse"><span class="hs-identifier hs-var hs-var">nextQuery</span></a></span><span> </span><span class="annot"><span class="annottext">QueryResponse a
+</span><a href="#local-6989586621679683360"><span class="hs-identifier hs-var">res</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-237"></span></pre></body></html>

@@ -1,0 +1,753 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds           #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts    #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE GADTs               #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE InstanceSigs        #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE KindSignatures      #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns      #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings   #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE TupleSections       #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications    #-}</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Control.Concurrent.STM.Extras.Stream</span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier">STMStream</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#readOne"><span class="hs-identifier">readOne</span></a></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#readN"><span class="hs-identifier">readN</span></a></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#foldM"><span class="hs-identifier">foldM</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#unfold"><span class="hs-identifier">unfold</span></a></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#unfoldOn"><span class="hs-identifier">unfoldOn</span></a></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#singleton"><span class="hs-identifier">singleton</span></a></span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#dedupe"><span class="hs-identifier">dedupe</span></a></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Control.Applicative</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Alternative</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Applicative</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Concurrent.STM</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">STM</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Concurrent.STM</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">STM</span></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Control.Monad</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">guard</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Data.Bifunctor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Bifunctor</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Data.Foldable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">traverse_</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Numeric.Natural</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Natural</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="hs-comment">-- | An STM stream of 'a's (poor man's pull-based FRP)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">newtype</span><span> </span><span id="STMStream"><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-var">STMStream</span></a></span></span><span> </span><span id="local-6989586621680267699"><span class="annot"><a href="#local-6989586621680267699"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="STMStream"><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-var">STMStream</span></a></span></span><span class="hs-special">{</span><span> </span><span id="unSTMStream"><span class="annot"><span class="annottext">STMStream a -&gt; STM (a, Maybe (STMStream a))
+</span><a href="Control.Concurrent.STM.Extras.Stream.html#unSTMStream"><span class="hs-identifier hs-var hs-var">unSTMStream</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">STM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621680267699"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-type">STMStream</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680267699"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-33"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621680267591"><span id="local-6989586621680267593"><span class="annot"><span class="annottext">a -&gt; STMStream b -&gt; STMStream a
+(a -&gt; b) -&gt; STMStream a -&gt; STMStream b
+(forall a b. (a -&gt; b) -&gt; STMStream a -&gt; STMStream b)
+-&gt; (forall a b. a -&gt; STMStream b -&gt; STMStream a)
+-&gt; Functor STMStream
+forall a b. a -&gt; STMStream b -&gt; STMStream a
+forall a b. (a -&gt; b) -&gt; STMStream a -&gt; STMStream b
+forall (f :: * -&gt; *).
+(forall a b. (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b. a -&gt; f b -&gt; f a) -&gt; Functor f
+&lt;$ :: a -&gt; STMStream b -&gt; STMStream a
+$c&lt;$ :: forall a b. a -&gt; STMStream b -&gt; STMStream a
+fmap :: (a -&gt; b) -&gt; STMStream a -&gt; STMStream b
+$cfmap :: forall a b. (a -&gt; b) -&gt; STMStream a -&gt; STMStream b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Functor</span></a></span></span></span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="hs-comment">-- | Join a stream of streams by producing values from the latest stream only.</span><span>
+</span><span id="line-36"></span><span id="local-6989586621680267682"><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#joinStream"><span class="hs-identifier hs-type">joinStream</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-type">STMStream</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-type">STMStream</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680267682"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-type">STMStream</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680267682"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-37"></span><span id="joinStream"><span class="annot"><span class="annottext">joinStream :: STMStream (STMStream a) -&gt; STMStream a
+</span><a href="Control.Concurrent.STM.Extras.Stream.html#joinStream"><span class="hs-identifier hs-var hs-var">joinStream</span></a></span></span><span> </span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-type">STMStream</span></a></span><span class="hs-special">{</span><span id="local-6989586621680267588"><span class="annot"><span class="annottext">STM (STMStream a, Maybe (STMStream (STMStream a)))
+unSTMStream :: STM (STMStream a, Maybe (STMStream (STMStream a)))
+unSTMStream :: forall a. STMStream a -&gt; STM (a, Maybe (STMStream a))
+</span><a href="#local-6989586621680267588"><span class="hs-identifier hs-var hs-var">unSTMStream</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">STM (a, Maybe (STMStream a)) -&gt; STMStream a
+forall a. STM (a, Maybe (STMStream a)) -&gt; STMStream a
+</span><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-var">STMStream</span></a></span><span> </span><span class="annot"><span class="annottext">(STM (a, Maybe (STMStream a)) -&gt; STMStream a)
+-&gt; STM (a, Maybe (STMStream a)) -&gt; STMStream a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">STM (STMStream a, Maybe (STMStream (STMStream a)))
+</span><a href="#local-6989586621680267588"><span class="hs-identifier hs-var">unSTMStream</span></a></span><span> </span><span class="annot"><span class="annottext">STM (STMStream a, Maybe (STMStream (STMStream a)))
+-&gt; ((STMStream a, Maybe (STMStream (STMStream a)))
+    -&gt; STM (a, Maybe (STMStream a)))
+-&gt; STM (a, Maybe (STMStream a))
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">(STMStream a, Maybe (STMStream (STMStream a)))
+-&gt; STM (a, Maybe (STMStream a))
+forall a.
+(STMStream a, Maybe (STMStream (STMStream a)))
+-&gt; STM (a, Maybe (STMStream a))
+</span><a href="#local-6989586621680267587"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span>    </span><span id="local-6989586621680267692"><span class="annot"><a href="#local-6989586621680267587"><span class="hs-identifier hs-type">go</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-type">STMStream</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680267692"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-type">STMStream</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-type">STMStream</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680267692"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">STM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621680267692"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-type">STMStream</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680267692"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span></span><span>
+</span><span id="line-40"></span><span>    </span><span id="local-6989586621680267587"><span class="annot"><span class="annottext">go :: (STMStream a, Maybe (STMStream (STMStream a)))
+-&gt; STM (a, Maybe (STMStream a))
+</span><a href="#local-6989586621680267587"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-type">STMStream</span></a></span><span> </span><span id="local-6989586621680267586"><span class="annot"><span class="annottext">STM (a, Maybe (STMStream a))
+</span><a href="#local-6989586621680267586"><span class="hs-identifier hs-var">currentStream</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe (STMStream (STMStream a))
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">STM (a, Maybe (STMStream a))
+</span><a href="#local-6989586621680267586"><span class="hs-identifier hs-var">currentStream</span></a></span><span>
+</span><span id="line-41"></span><span>    </span><span class="annot"><a href="#local-6989586621680267587"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-type">STMStream</span></a></span><span> </span><span id="local-6989586621680267585"><span class="annot"><span class="annottext">STM (a, Maybe (STMStream a))
+</span><a href="#local-6989586621680267585"><span class="hs-identifier hs-var">currentStream</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621680267584"><span class="annot"><span class="annottext">ns :: STMStream (STMStream a)
+</span><a href="#local-6989586621680267584"><span class="hs-identifier hs-var">ns</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-type">STMStream</span></a></span><span> </span><span id="local-6989586621680267583"><span class="annot"><span class="annottext">STM (STMStream a, Maybe (STMStream (STMStream a)))
+</span><a href="#local-6989586621680267583"><span class="hs-identifier hs-var">nextStream</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-42"></span><span>        </span><span id="local-6989586621680267582"><span class="annot"><span class="annottext">Either
+  (a, Maybe (STMStream a))
+  (STMStream a, Maybe (STMStream (STMStream a)))
+</span><a href="#local-6989586621680267582"><span class="hs-identifier hs-var">vl</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">((a, Maybe (STMStream a))
+ -&gt; Either
+      (a, Maybe (STMStream a))
+      (STMStream a, Maybe (STMStream (STMStream a))))
+-&gt; STM (a, Maybe (STMStream a))
+-&gt; STM
+     (Either
+        (a, Maybe (STMStream a))
+        (STMStream a, Maybe (STMStream (STMStream a))))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">(a, Maybe (STMStream a))
+-&gt; Either
+     (a, Maybe (STMStream a))
+     (STMStream a, Maybe (STMStream (STMStream a)))
+forall a b. a -&gt; Either a b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">STM (a, Maybe (STMStream a))
+</span><a href="#local-6989586621680267585"><span class="hs-identifier hs-var">currentStream</span></a></span><span> </span><span class="annot"><span class="annottext">STM
+  (Either
+     (a, Maybe (STMStream a))
+     (STMStream a, Maybe (STMStream (STMStream a))))
+-&gt; STM
+     (Either
+        (a, Maybe (STMStream a))
+        (STMStream a, Maybe (STMStream (STMStream a))))
+-&gt; STM
+     (Either
+        (a, Maybe (STMStream a))
+        (STMStream a, Maybe (STMStream (STMStream a))))
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">((STMStream a, Maybe (STMStream (STMStream a)))
+ -&gt; Either
+      (a, Maybe (STMStream a))
+      (STMStream a, Maybe (STMStream (STMStream a))))
+-&gt; STM (STMStream a, Maybe (STMStream (STMStream a)))
+-&gt; STM
+     (Either
+        (a, Maybe (STMStream a))
+        (STMStream a, Maybe (STMStream (STMStream a))))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">(STMStream a, Maybe (STMStream (STMStream a)))
+-&gt; Either
+     (a, Maybe (STMStream a))
+     (STMStream a, Maybe (STMStream (STMStream a)))
+forall a b. b -&gt; Either a b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">STM (STMStream a, Maybe (STMStream (STMStream a)))
+</span><a href="#local-6989586621680267583"><span class="hs-identifier hs-var">nextStream</span></a></span><span>
+</span><span id="line-43"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Either
+  (a, Maybe (STMStream a))
+  (STMStream a, Maybe (STMStream (STMStream a)))
+</span><a href="#local-6989586621680267582"><span class="hs-identifier hs-var">vl</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-44"></span><span>            </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680267580"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680267580"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621680267579"><span class="annot"><span class="annottext">STMStream a
+</span><a href="#local-6989586621680267579"><span class="hs-identifier hs-var">currentStream'</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(a, Maybe (STMStream a)) -&gt; STM (a, Maybe (STMStream a))
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680267580"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">STMStream a -&gt; Maybe (STMStream a)
+forall a. a -&gt; Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(STMStream a -&gt; Maybe (STMStream a))
+-&gt; STMStream a -&gt; Maybe (STMStream a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">STM (a, Maybe (STMStream a)) -&gt; STMStream a
+forall a. STM (a, Maybe (STMStream a)) -&gt; STMStream a
+</span><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-var">STMStream</span></a></span><span> </span><span class="annot"><span class="annottext">(STM (a, Maybe (STMStream a)) -&gt; STMStream a)
+-&gt; STM (a, Maybe (STMStream a)) -&gt; STMStream a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(STMStream a, Maybe (STMStream (STMStream a)))
+-&gt; STM (a, Maybe (STMStream a))
+forall a.
+(STMStream a, Maybe (STMStream (STMStream a)))
+-&gt; STM (a, Maybe (STMStream a))
+</span><a href="#local-6989586621680267587"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">STMStream a
+</span><a href="#local-6989586621680267579"><span class="hs-identifier hs-var">currentStream'</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">STMStream (STMStream a) -&gt; Maybe (STMStream (STMStream a))
+forall a. a -&gt; Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">STMStream (STMStream a)
+</span><a href="#local-6989586621680267584"><span class="hs-identifier hs-var">ns</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span>            </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680267578"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680267578"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe (STMStream a)
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span>             </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(a, Maybe (STMStream a)) -&gt; STM (a, Maybe (STMStream a))
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680267578"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">STMStream a -&gt; Maybe (STMStream a)
+forall a. a -&gt; Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(STMStream a -&gt; Maybe (STMStream a))
+-&gt; STMStream a -&gt; Maybe (STMStream a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">STMStream (STMStream a) -&gt; STMStream a
+forall a. STMStream (STMStream a) -&gt; STMStream a
+</span><a href="Control.Concurrent.STM.Extras.Stream.html#joinStream"><span class="hs-identifier hs-var">joinStream</span></a></span><span> </span><span class="annot"><span class="annottext">STMStream (STMStream a)
+</span><a href="#local-6989586621680267584"><span class="hs-identifier hs-var">ns</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span>            </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621680267577"><span class="annot"><span class="annottext">(STMStream a, Maybe (STMStream (STMStream a)))
+</span><a href="#local-6989586621680267577"><span class="hs-identifier hs-var">ns'</span></a></span></span><span>                     </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(STMStream a, Maybe (STMStream (STMStream a)))
+-&gt; STM (a, Maybe (STMStream a))
+forall a.
+(STMStream a, Maybe (STMStream (STMStream a)))
+-&gt; STM (a, Maybe (STMStream a))
+</span><a href="#local-6989586621680267587"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">(STMStream a, Maybe (STMStream (STMStream a)))
+</span><a href="#local-6989586621680267577"><span class="hs-identifier hs-var">ns'</span></a></span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="hs-comment">-- | Build a stream containing only one element.</span><span>
+</span><span id="line-49"></span><span id="local-6989586621680267661"><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#singleton"><span class="hs-identifier hs-type">singleton</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">STM</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680267661"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-type">STMStream</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680267661"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-50"></span><span id="singleton"><span class="annot"><span class="annottext">singleton :: STM a -&gt; STMStream a
+</span><a href="Control.Concurrent.STM.Extras.Stream.html#singleton"><span class="hs-identifier hs-var hs-var">singleton</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">STM (a, Maybe (STMStream a)) -&gt; STMStream a
+forall a. STM (a, Maybe (STMStream a)) -&gt; STMStream a
+</span><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-var">STMStream</span></a></span><span> </span><span class="annot"><span class="annottext">(STM (a, Maybe (STMStream a)) -&gt; STMStream a)
+-&gt; (STM a -&gt; STM (a, Maybe (STMStream a))) -&gt; STM a -&gt; STMStream a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; (a, Maybe (STMStream a)))
+-&gt; STM a -&gt; STM (a, Maybe (STMStream a))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-special">,</span></span><span> </span><span class="annot"><span class="annottext">Maybe (STMStream a)
+forall a. Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621680267567"><span id="local-6989586621680267569"><span id="local-6989586621680267572"><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Applicative</span></a></span><span> </span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-type">STMStream</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-53"></span><span>    </span><span id="local-6989586621680267565"><span class="annot"><span class="annottext">pure :: a -&gt; STMStream a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">pure</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">STM a -&gt; STMStream a
+forall a. STM a -&gt; STMStream a
+</span><a href="Control.Concurrent.STM.Extras.Stream.html#singleton"><span class="hs-identifier hs-var">singleton</span></a></span><span> </span><span class="annot"><span class="annottext">(STM a -&gt; STMStream a) -&gt; (a -&gt; STM a) -&gt; a -&gt; STMStream a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; STM a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span>
+</span><span id="line-54"></span><span>    </span><span class="hs-comment">-- | Updates when one of the two sides updates</span><span>
+</span><span id="line-55"></span><span>    </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">liftA2</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621680267563"><span class="annot"><a href="#local-6989586621680267563"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span id="local-6989586621680267562"><span class="annot"><a href="#local-6989586621680267562"><span class="hs-identifier hs-type">b</span></a></span></span><span> </span><span id="local-6989586621680267561"><span class="annot"><a href="#local-6989586621680267561"><span class="hs-identifier hs-type">c</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621680267563"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621680267562"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621680267561"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-type">STMStream</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680267563"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-type">STMStream</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680267562"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-type">STMStream</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680267561"><span class="hs-identifier hs-type">c</span></a></span><span>
+</span><span id="line-56"></span><span>    </span><span id="local-6989586621680267560"><span class="annot"><span class="annottext">liftA2 :: (a -&gt; b -&gt; c) -&gt; STMStream a -&gt; STMStream b -&gt; STMStream c
+</span><a href="#local-6989586621680267560"><span class="hs-identifier hs-var hs-var hs-var hs-var">liftA2</span></a></span></span><span> </span><span id="local-6989586621680267559"><span class="annot"><span class="annottext">a -&gt; b -&gt; c
+</span><a href="#local-6989586621680267559"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-type">STMStream</span></a></span><span> </span><span id="local-6989586621680267558"><span class="annot"><span class="annottext">STM (a, Maybe (STMStream a))
+</span><a href="#local-6989586621680267558"><span class="hs-identifier hs-var">l</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-type">STMStream</span></a></span><span> </span><span id="local-6989586621680267557"><span class="annot"><span class="annottext">STM (b, Maybe (STMStream b))
+</span><a href="#local-6989586621680267557"><span class="hs-identifier hs-var">r</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">STM (c, Maybe (STMStream c)) -&gt; STMStream c
+forall a. STM (a, Maybe (STMStream a)) -&gt; STMStream a
+</span><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-var">STMStream</span></a></span><span> </span><span class="annot"><span class="annottext">(STM (c, Maybe (STMStream c)) -&gt; STMStream c)
+-&gt; STM (c, Maybe (STMStream c)) -&gt; STMStream c
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-57"></span><span>        </span><span id="local-6989586621680267556"><span class="annot"><span class="annottext">((a, Maybe (STMStream a)), (b, Maybe (STMStream b)))
+</span><a href="#local-6989586621680267556"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-special">(</span><span class="hs-special">,</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((a, Maybe (STMStream a))
+ -&gt; (b, Maybe (STMStream b))
+ -&gt; ((a, Maybe (STMStream a)), (b, Maybe (STMStream b))))
+-&gt; STM (a, Maybe (STMStream a))
+-&gt; STM
+     ((b, Maybe (STMStream b))
+      -&gt; ((a, Maybe (STMStream a)), (b, Maybe (STMStream b))))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">STM (a, Maybe (STMStream a))
+</span><a href="#local-6989586621680267558"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">STM
+  ((b, Maybe (STMStream b))
+   -&gt; ((a, Maybe (STMStream a)), (b, Maybe (STMStream b))))
+-&gt; STM (b, Maybe (STMStream b))
+-&gt; STM ((a, Maybe (STMStream a)), (b, Maybe (STMStream b)))
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">STM (b, Maybe (STMStream b))
+</span><a href="#local-6989586621680267557"><span class="hs-identifier hs-var">r</span></a></span><span>
+</span><span id="line-58"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span class="annot"><a href="#local-6989586621680267554"><span class="hs-identifier hs-type">go</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621680267563"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-type">STMStream</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680267563"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621680267562"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-type">STMStream</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680267562"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">STM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621680267561"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-type">STMStream</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680267561"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span>            </span><span id="local-6989586621680267554"><span class="annot"><span class="annottext">go :: ((a, Maybe (STMStream a)), (b, Maybe (STMStream b)))
+-&gt; STM (c, Maybe (STMStream c))
+</span><a href="#local-6989586621680267554"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span id="local-6989586621680267553"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680267553"><span class="hs-identifier hs-var">currentL</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-type">STMStream</span></a></span><span> </span><span id="local-6989586621680267552"><span class="annot"><span class="annottext">STM (a, Maybe (STMStream a))
+</span><a href="#local-6989586621680267552"><span class="hs-identifier hs-var">restL</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span id="local-6989586621680267551"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621680267551"><span class="hs-identifier hs-var">currentR</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-type">STMStream</span></a></span><span> </span><span id="local-6989586621680267550"><span class="annot"><span class="annottext">STM (b, Maybe (STMStream b))
+</span><a href="#local-6989586621680267550"><span class="hs-identifier hs-var">restR</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-61"></span><span>                </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680267549"><span class="annot"><span class="annottext">next :: STM (c, Maybe (STMStream c))
+</span><a href="#local-6989586621680267549"><span class="hs-identifier hs-var hs-var">next</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-62"></span><span>                        </span><span id="local-6989586621680267548"><span class="annot"><span class="annottext">Either (a, Maybe (STMStream a)) (b, Maybe (STMStream b))
+</span><a href="#local-6989586621680267548"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">((a, Maybe (STMStream a))
+ -&gt; Either (a, Maybe (STMStream a)) (b, Maybe (STMStream b)))
+-&gt; STM (a, Maybe (STMStream a))
+-&gt; STM (Either (a, Maybe (STMStream a)) (b, Maybe (STMStream b)))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">(a, Maybe (STMStream a))
+-&gt; Either (a, Maybe (STMStream a)) (b, Maybe (STMStream b))
+forall a b. a -&gt; Either a b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">STM (a, Maybe (STMStream a))
+</span><a href="#local-6989586621680267552"><span class="hs-identifier hs-var">restL</span></a></span><span> </span><span class="annot"><span class="annottext">STM (Either (a, Maybe (STMStream a)) (b, Maybe (STMStream b)))
+-&gt; STM (Either (a, Maybe (STMStream a)) (b, Maybe (STMStream b)))
+-&gt; STM (Either (a, Maybe (STMStream a)) (b, Maybe (STMStream b)))
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">((b, Maybe (STMStream b))
+ -&gt; Either (a, Maybe (STMStream a)) (b, Maybe (STMStream b)))
+-&gt; STM (b, Maybe (STMStream b))
+-&gt; STM (Either (a, Maybe (STMStream a)) (b, Maybe (STMStream b)))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">(b, Maybe (STMStream b))
+-&gt; Either (a, Maybe (STMStream a)) (b, Maybe (STMStream b))
+forall a b. b -&gt; Either a b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">STM (b, Maybe (STMStream b))
+</span><a href="#local-6989586621680267550"><span class="hs-identifier hs-var">restR</span></a></span><span>
+</span><span id="line-63"></span><span>                        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Either (a, Maybe (STMStream a)) (b, Maybe (STMStream b))
+</span><a href="#local-6989586621680267548"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-64"></span><span>                            </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680267547"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680267547"><span class="hs-identifier hs-var">newL</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680267546"><span class="annot"><span class="annottext">Maybe (STMStream a)
+</span><a href="#local-6989586621680267546"><span class="hs-identifier hs-var">restL'</span></a></span></span><span class="hs-special">)</span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">((a, Maybe (STMStream a)), (b, Maybe (STMStream b)))
+-&gt; STM (c, Maybe (STMStream c))
+</span><a href="#local-6989586621680267554"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680267547"><span class="hs-identifier hs-var">newL</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe (STMStream a)
+</span><a href="#local-6989586621680267546"><span class="hs-identifier hs-var">restL'</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621680267551"><span class="hs-identifier hs-var">currentR</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">STMStream b -&gt; Maybe (STMStream b)
+forall a. a -&gt; Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(STMStream b -&gt; Maybe (STMStream b))
+-&gt; STMStream b -&gt; Maybe (STMStream b)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">STM (b, Maybe (STMStream b)) -&gt; STMStream b
+forall a. STM (a, Maybe (STMStream a)) -&gt; STMStream a
+</span><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-var">STMStream</span></a></span><span> </span><span class="annot"><span class="annottext">STM (b, Maybe (STMStream b))
+</span><a href="#local-6989586621680267550"><span class="hs-identifier hs-var">restR</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span>                            </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680267545"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621680267545"><span class="hs-identifier hs-var">newR</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680267544"><span class="annot"><span class="annottext">Maybe (STMStream b)
+</span><a href="#local-6989586621680267544"><span class="hs-identifier hs-var">restR'</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">((a, Maybe (STMStream a)), (b, Maybe (STMStream b)))
+-&gt; STM (c, Maybe (STMStream c))
+</span><a href="#local-6989586621680267554"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680267553"><span class="hs-identifier hs-var">currentL</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">STMStream a -&gt; Maybe (STMStream a)
+forall a. a -&gt; Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(STMStream a -&gt; Maybe (STMStream a))
+-&gt; STMStream a -&gt; Maybe (STMStream a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">STM (a, Maybe (STMStream a)) -&gt; STMStream a
+forall a. STM (a, Maybe (STMStream a)) -&gt; STMStream a
+</span><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-var">STMStream</span></a></span><span> </span><span class="annot"><span class="annottext">STM (a, Maybe (STMStream a))
+</span><a href="#local-6989586621680267552"><span class="hs-identifier hs-var">restL</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621680267545"><span class="hs-identifier hs-var">newR</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe (STMStream b)
+</span><a href="#local-6989586621680267544"><span class="hs-identifier hs-var">restR'</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-66"></span><span>                </span><span class="annot"><span class="annottext">(c, Maybe (STMStream c)) -&gt; STM (c, Maybe (STMStream c))
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; b -&gt; c
+</span><a href="#local-6989586621680267559"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680267553"><span class="hs-identifier hs-var">currentL</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621680267551"><span class="hs-identifier hs-var">currentR</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">STMStream c -&gt; Maybe (STMStream c)
+forall a. a -&gt; Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(STMStream c -&gt; Maybe (STMStream c))
+-&gt; STMStream c -&gt; Maybe (STMStream c)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">STM (c, Maybe (STMStream c)) -&gt; STMStream c
+forall a. STM (a, Maybe (STMStream a)) -&gt; STMStream a
+</span><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-var">STMStream</span></a></span><span> </span><span class="annot"><span class="annottext">STM (c, Maybe (STMStream c))
+</span><a href="#local-6989586621680267549"><span class="hs-identifier hs-var">next</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span>            </span><span class="annot"><a href="#local-6989586621680267554"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span id="local-6989586621680267543"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680267543"><span class="hs-identifier hs-var">currentL</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-type">STMStream</span></a></span><span> </span><span id="local-6989586621680267542"><span class="annot"><span class="annottext">STM (a, Maybe (STMStream a))
+</span><a href="#local-6989586621680267542"><span class="hs-identifier hs-var">restL</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span id="local-6989586621680267541"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621680267541"><span class="hs-identifier hs-var">currentR</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe (STMStream b)
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-68"></span><span>                </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680267540"><span class="annot"><span class="annottext">apply :: a -&gt; c
+</span><a href="#local-6989586621680267540"><span class="hs-identifier hs-var hs-var">apply</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; b -&gt; c
+</span><a href="#local-6989586621680267559"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621680267541"><span class="hs-identifier hs-var">currentR</span></a></span><span> </span><span class="hs-keyword">in</span><span>
+</span><span id="line-69"></span><span>                </span><span class="annot"><span class="annottext">(c, Maybe (STMStream c)) -&gt; STM (c, Maybe (STMStream c))
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; b -&gt; c
+</span><a href="#local-6989586621680267559"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680267543"><span class="hs-identifier hs-var">currentL</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621680267541"><span class="hs-identifier hs-var">currentR</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">STMStream c -&gt; Maybe (STMStream c)
+forall a. a -&gt; Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(STMStream c -&gt; Maybe (STMStream c))
+-&gt; STMStream c -&gt; Maybe (STMStream c)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">STM (c, Maybe (STMStream c)) -&gt; STMStream c
+forall a. STM (a, Maybe (STMStream a)) -&gt; STMStream a
+</span><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-var">STMStream</span></a></span><span> </span><span class="annot"><span class="annottext">(STM (c, Maybe (STMStream c)) -&gt; STMStream c)
+-&gt; STM (c, Maybe (STMStream c)) -&gt; STMStream c
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">((a, Maybe (STMStream a)) -&gt; (c, Maybe (STMStream c)))
+-&gt; STM (a, Maybe (STMStream a)) -&gt; STM (c, Maybe (STMStream c))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; c) -&gt; (a, Maybe (STMStream c)) -&gt; (c, Maybe (STMStream c))
+forall (p :: * -&gt; * -&gt; *) a b c.
+Bifunctor p =&gt;
+(a -&gt; b) -&gt; p a c -&gt; p b c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">first</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; c
+</span><a href="#local-6989586621680267540"><span class="hs-identifier hs-var">apply</span></a></span><span> </span><span class="annot"><span class="annottext">((a, Maybe (STMStream c)) -&gt; (c, Maybe (STMStream c)))
+-&gt; ((a, Maybe (STMStream a)) -&gt; (a, Maybe (STMStream c)))
+-&gt; (a, Maybe (STMStream a))
+-&gt; (c, Maybe (STMStream c))
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe (STMStream a) -&gt; Maybe (STMStream c))
+-&gt; (a, Maybe (STMStream a)) -&gt; (a, Maybe (STMStream c))
+forall (p :: * -&gt; * -&gt; *) b c a.
+Bifunctor p =&gt;
+(b -&gt; c) -&gt; p a b -&gt; p a c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">second</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(STMStream a -&gt; STMStream c)
+-&gt; Maybe (STMStream a) -&gt; Maybe (STMStream c)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; c) -&gt; STMStream a -&gt; STMStream c
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; c
+</span><a href="#local-6989586621680267540"><span class="hs-identifier hs-var">apply</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">STM (a, Maybe (STMStream a))
+</span><a href="#local-6989586621680267542"><span class="hs-identifier hs-var">restL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span>            </span><span class="annot"><a href="#local-6989586621680267554"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span id="local-6989586621680267536"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680267536"><span class="hs-identifier hs-var">currentL</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe (STMStream a)
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span id="local-6989586621680267535"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621680267535"><span class="hs-identifier hs-var">currentR</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-type">STMStream</span></a></span><span> </span><span id="local-6989586621680267534"><span class="annot"><span class="annottext">STM (b, Maybe (STMStream b))
+</span><a href="#local-6989586621680267534"><span class="hs-identifier hs-var">restR</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-71"></span><span>                </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680267533"><span class="annot"><span class="annottext">apply :: b -&gt; c
+</span><a href="#local-6989586621680267533"><span class="hs-identifier hs-var hs-var">apply</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; b -&gt; c
+</span><a href="#local-6989586621680267559"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680267536"><span class="hs-identifier hs-var">currentL</span></a></span><span> </span><span class="hs-keyword">in</span><span>
+</span><span id="line-72"></span><span>                </span><span class="annot"><span class="annottext">(c, Maybe (STMStream c)) -&gt; STM (c, Maybe (STMStream c))
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; b -&gt; c
+</span><a href="#local-6989586621680267559"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680267536"><span class="hs-identifier hs-var">currentL</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621680267535"><span class="hs-identifier hs-var">currentR</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">STMStream c -&gt; Maybe (STMStream c)
+forall a. a -&gt; Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(STMStream c -&gt; Maybe (STMStream c))
+-&gt; STMStream c -&gt; Maybe (STMStream c)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">STM (c, Maybe (STMStream c)) -&gt; STMStream c
+forall a. STM (a, Maybe (STMStream a)) -&gt; STMStream a
+</span><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-var">STMStream</span></a></span><span> </span><span class="annot"><span class="annottext">(STM (c, Maybe (STMStream c)) -&gt; STMStream c)
+-&gt; STM (c, Maybe (STMStream c)) -&gt; STMStream c
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">((b, Maybe (STMStream b)) -&gt; (c, Maybe (STMStream c)))
+-&gt; STM (b, Maybe (STMStream b)) -&gt; STM (c, Maybe (STMStream c))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(b -&gt; c) -&gt; (b, Maybe (STMStream c)) -&gt; (c, Maybe (STMStream c))
+forall (p :: * -&gt; * -&gt; *) a b c.
+Bifunctor p =&gt;
+(a -&gt; b) -&gt; p a c -&gt; p b c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">first</span></a></span><span> </span><span class="annot"><span class="annottext">b -&gt; c
+</span><a href="#local-6989586621680267533"><span class="hs-identifier hs-var">apply</span></a></span><span> </span><span class="annot"><span class="annottext">((b, Maybe (STMStream c)) -&gt; (c, Maybe (STMStream c)))
+-&gt; ((b, Maybe (STMStream b)) -&gt; (b, Maybe (STMStream c)))
+-&gt; (b, Maybe (STMStream b))
+-&gt; (c, Maybe (STMStream c))
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe (STMStream b) -&gt; Maybe (STMStream c))
+-&gt; (b, Maybe (STMStream b)) -&gt; (b, Maybe (STMStream c))
+forall (p :: * -&gt; * -&gt; *) b c a.
+Bifunctor p =&gt;
+(b -&gt; c) -&gt; p a b -&gt; p a c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">second</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(STMStream b -&gt; STMStream c)
+-&gt; Maybe (STMStream b) -&gt; Maybe (STMStream c)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(b -&gt; c) -&gt; STMStream b -&gt; STMStream c
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">b -&gt; c
+</span><a href="#local-6989586621680267533"><span class="hs-identifier hs-var">apply</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">STM (b, Maybe (STMStream b))
+</span><a href="#local-6989586621680267534"><span class="hs-identifier hs-var">restR</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-73"></span><span>            </span><span class="annot"><a href="#local-6989586621680267554"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span id="local-6989586621680267532"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680267532"><span class="hs-identifier hs-var">currentL</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe (STMStream a)
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span id="local-6989586621680267531"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621680267531"><span class="hs-identifier hs-var">currentR</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe (STMStream b)
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-74"></span><span>                </span><span class="annot"><span class="annottext">(c, Maybe (STMStream c)) -&gt; STM (c, Maybe (STMStream c))
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; b -&gt; c
+</span><a href="#local-6989586621680267559"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680267532"><span class="hs-identifier hs-var">currentL</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621680267531"><span class="hs-identifier hs-var">currentR</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe (STMStream c)
+forall a. Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span><span>        </span><span class="annot"><span class="annottext">((a, Maybe (STMStream a)), (b, Maybe (STMStream b)))
+-&gt; STM (c, Maybe (STMStream c))
+</span><a href="#local-6989586621680267554"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">((a, Maybe (STMStream a)), (b, Maybe (STMStream b)))
+</span><a href="#local-6989586621680267556"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621680267525"><span id="local-6989586621680267527"><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-type">STMStream</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-78"></span><span>    </span><span id="local-6989586621680267523"><span class="annot"><span class="annottext">STMStream a
+</span><a href="#local-6989586621680267523"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621680267522"><span class="annot"><span class="annottext">&gt;&gt;= :: STMStream a -&gt; (a -&gt; STMStream b) -&gt; STMStream b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var hs-var hs-var hs-var">&gt;&gt;=</span></a></span></span><span> </span><span id="local-6989586621680267521"><span class="annot"><span class="annottext">a -&gt; STMStream b
+</span><a href="#local-6989586621680267521"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">STMStream (STMStream b) -&gt; STMStream b
+forall a. STMStream (STMStream a) -&gt; STMStream a
+</span><a href="Control.Concurrent.STM.Extras.Stream.html#joinStream"><span class="hs-identifier hs-var">joinStream</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; STMStream b
+</span><a href="#local-6989586621680267521"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; STMStream b) -&gt; STMStream a -&gt; STMStream (STMStream b)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">STMStream a
+</span><a href="#local-6989586621680267523"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-79"></span><span>
+</span><span id="line-80"></span><span id="local-6989586621680267520"><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621680267515"><span id="local-6989586621680267517"><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">Eq</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680267520"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Semigroup</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-type">STMStream</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680267520"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-81"></span><span>  </span><span class="hs-comment">-- Note: We remove consecutive duplicates from the stream, so it is now</span><span>
+</span><span id="line-82"></span><span>  </span><span class="hs-comment">-- never possible to construct a stream like: 1,1,1,1...</span><span>
+</span><span id="line-83"></span><span>  </span><span id="local-6989586621680267513"><span class="annot"><span class="annottext">ls :: STMStream a
+</span><a href="#local-6989586621680267513"><span class="hs-identifier hs-var">ls</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-type">STMStream</span></a></span><span> </span><span id="local-6989586621680267512"><span class="annot"><span class="annottext">STM (a, Maybe (STMStream a))
+</span><a href="#local-6989586621680267512"><span class="hs-identifier hs-var">l</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621680267511"><span class="annot"><span class="annottext">&lt;&gt; :: STMStream a -&gt; STMStream a -&gt; STMStream a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var hs-var hs-var hs-var">&lt;&gt;</span></a></span></span><span> </span><span id="local-6989586621680267510"><span class="annot"><span class="annottext">rs :: STMStream a
+</span><a href="#local-6989586621680267510"><span class="hs-identifier hs-var">rs</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-type">STMStream</span></a></span><span> </span><span id="local-6989586621680267509"><span class="annot"><span class="annottext">STM (a, Maybe (STMStream a))
+</span><a href="#local-6989586621680267509"><span class="hs-identifier hs-var">r</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">STMStream a -&gt; STMStream a
+forall a. Eq a =&gt; STMStream a -&gt; STMStream a
+</span><a href="Control.Concurrent.STM.Extras.Stream.html#dedupe"><span class="hs-identifier hs-var">dedupe</span></a></span><span> </span><span class="annot"><span class="annottext">(STMStream a -&gt; STMStream a) -&gt; STMStream a -&gt; STMStream a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-84"></span><span>     </span><span class="annot"><span class="annottext">STM (a, Maybe (STMStream a)) -&gt; STMStream a
+forall a. STM (a, Maybe (STMStream a)) -&gt; STMStream a
+</span><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-var">STMStream</span></a></span><span> </span><span class="annot"><span class="annottext">(STM (a, Maybe (STMStream a)) -&gt; STMStream a)
+-&gt; STM (a, Maybe (STMStream a)) -&gt; STMStream a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-85"></span><span>          </span><span id="local-6989586621680267508"><span class="annot"><span class="annottext">Either (a, Maybe (STMStream a)) (a, Maybe (STMStream a))
+</span><a href="#local-6989586621680267508"><span class="hs-identifier hs-var">next</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">((a, Maybe (STMStream a))
+ -&gt; Either (a, Maybe (STMStream a)) (a, Maybe (STMStream a)))
+-&gt; STM (a, Maybe (STMStream a))
+-&gt; STM (Either (a, Maybe (STMStream a)) (a, Maybe (STMStream a)))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">(a, Maybe (STMStream a))
+-&gt; Either (a, Maybe (STMStream a)) (a, Maybe (STMStream a))
+forall a b. a -&gt; Either a b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">STM (a, Maybe (STMStream a))
+</span><a href="#local-6989586621680267512"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">STM (Either (a, Maybe (STMStream a)) (a, Maybe (STMStream a)))
+-&gt; STM (Either (a, Maybe (STMStream a)) (a, Maybe (STMStream a)))
+-&gt; STM (Either (a, Maybe (STMStream a)) (a, Maybe (STMStream a)))
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">((a, Maybe (STMStream a))
+ -&gt; Either (a, Maybe (STMStream a)) (a, Maybe (STMStream a)))
+-&gt; STM (a, Maybe (STMStream a))
+-&gt; STM (Either (a, Maybe (STMStream a)) (a, Maybe (STMStream a)))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">(a, Maybe (STMStream a))
+-&gt; Either (a, Maybe (STMStream a)) (a, Maybe (STMStream a))
+forall a b. b -&gt; Either a b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">STM (a, Maybe (STMStream a))
+</span><a href="#local-6989586621680267509"><span class="hs-identifier hs-var">r</span></a></span><span>
+</span><span id="line-86"></span><span>          </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Either (a, Maybe (STMStream a)) (a, Maybe (STMStream a))
+</span><a href="#local-6989586621680267508"><span class="hs-identifier hs-var">next</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-87"></span><span>            </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Left</span></a></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621680267507"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680267507"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680267506"><span class="annot"><span class="annottext">Maybe (STMStream a)
+</span><a href="#local-6989586621680267506"><span class="hs-identifier hs-var">k</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(a, Maybe (STMStream a)) -&gt; STM (a, Maybe (STMStream a))
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680267507"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe (STMStream a)
+</span><a href="#local-6989586621680267506"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (STMStream a) -&gt; Maybe (STMStream a) -&gt; Maybe (STMStream a)
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">STMStream a -&gt; Maybe (STMStream a)
+forall a. a -&gt; Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">STMStream a
+</span><a href="#local-6989586621680267510"><span class="hs-identifier hs-var">rs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span>            </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680267505"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680267505"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680267504"><span class="annot"><span class="annottext">Maybe (STMStream a)
+</span><a href="#local-6989586621680267504"><span class="hs-identifier hs-var">k</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(a, Maybe (STMStream a)) -&gt; STM (a, Maybe (STMStream a))
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680267505"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">STMStream a -&gt; Maybe (STMStream a)
+forall a. a -&gt; Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">STMStream a
+</span><a href="#local-6989586621680267513"><span class="hs-identifier hs-var">ls</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (STMStream a) -&gt; Maybe (STMStream a) -&gt; Maybe (STMStream a)
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (STMStream a)
+</span><a href="#local-6989586621680267504"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-89"></span><span>
+</span><span id="line-90"></span><span id="local-6989586621680267503"><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621680267498"><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">Eq</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680267503"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-type">STMStream</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680267503"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-91"></span><span>    </span><span id="local-6989586621680267496"><span class="annot"><span class="annottext">mappend :: STMStream a -&gt; STMStream a -&gt; STMStream a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">mappend</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">STMStream a -&gt; STMStream a -&gt; STMStream a
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">(&lt;&gt;)</span></a></span><span>
+</span><span id="line-92"></span><span>    </span><span id="local-6989586621680267495"><span class="annot"><span class="annottext">mempty :: STMStream a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">mempty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">STM (a, Maybe (STMStream a)) -&gt; STMStream a
+forall a. STM (a, Maybe (STMStream a)) -&gt; STMStream a
+</span><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-var">STMStream</span></a></span><span> </span><span class="annot"><span class="annottext">STM (a, Maybe (STMStream a))
+forall a. STM a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">STM.retry</span></a></span></span><span>
+</span><span id="line-93"></span><span>
+</span><span id="line-94"></span><span class="hs-comment">-- | Remove consecutive duplicates from a stream.</span><span>
+</span><span id="line-95"></span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#dedupe"><span class="hs-identifier hs-type">dedupe</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621680267629"><span class="annot"><a href="#local-6989586621680267629"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">Eq</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680267629"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-type">STMStream</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680267629"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-type">STMStream</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680267629"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-96"></span><span id="dedupe"><span class="annot"><span class="annottext">dedupe :: STMStream a -&gt; STMStream a
+</span><a href="Control.Concurrent.STM.Extras.Stream.html#dedupe"><span class="hs-identifier hs-var hs-var">dedupe</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">STM (a, Maybe (STMStream a)) -&gt; STMStream a
+forall a. STM (a, Maybe (STMStream a)) -&gt; STMStream a
+</span><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-var">STMStream</span></a></span><span> </span><span class="annot"><span class="annottext">(STM (a, Maybe (STMStream a)) -&gt; STMStream a)
+-&gt; (STMStream a -&gt; STM (a, Maybe (STMStream a)))
+-&gt; STMStream a
+-&gt; STMStream a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe a -&gt; STMStream a -&gt; STM (a, Maybe (STMStream a))
+</span><a href="#local-6989586621680267493"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe a
+forall a. Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-97"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-98"></span><span>    </span><span class="annot"><a href="#local-6989586621680267493"><span class="hs-identifier hs-type">go</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680267629"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-type">STMStream</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680267629"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">STM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621680267629"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-type">STMStream</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680267629"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-99"></span><span>    </span><span id="local-6989586621680267493"><span class="annot"><span class="annottext">go :: Maybe a -&gt; STMStream a -&gt; STM (a, Maybe (STMStream a))
+</span><a href="#local-6989586621680267493"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span id="local-6989586621680267492"><span class="annot"><span class="annottext">Maybe a
+</span><a href="#local-6989586621680267492"><span class="hs-identifier hs-var">lastVl</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-type">STMStream</span></a></span><span> </span><span id="local-6989586621680267491"><span class="annot"><span class="annottext">STM (a, Maybe (STMStream a))
+</span><a href="#local-6989586621680267491"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-100"></span><span>      </span><span class="hs-special">(</span><span id="local-6989586621680267490"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680267490"><span class="hs-identifier hs-var">next</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680267489"><span class="annot"><span class="annottext">Maybe (STMStream a)
+</span><a href="#local-6989586621680267489"><span class="hs-identifier hs-var">ms</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">STM (a, Maybe (STMStream a))
+</span><a href="#local-6989586621680267491"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-101"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe (STMStream a)
+</span><a href="#local-6989586621680267489"><span class="hs-identifier hs-var">ms</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-102"></span><span>        </span><span class="annot"><span class="annottext">Maybe (STMStream a)
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(a, Maybe (STMStream a)) -&gt; STM (a, Maybe (STMStream a))
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680267490"><span class="hs-identifier hs-var">next</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe (STMStream a)
+forall a. Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-103"></span><span>        </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621680267488"><span class="annot"><span class="annottext">STMStream a
+</span><a href="#local-6989586621680267488"><span class="hs-identifier hs-var">s'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-104"></span><span>          </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">a -&gt; Maybe a
+forall a. a -&gt; Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680267490"><span class="hs-identifier hs-var">next</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe a -&gt; Maybe a -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-operator hs-var">/=</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe a
+</span><a href="#local-6989586621680267492"><span class="hs-identifier hs-var">lastVl</span></a></span><span>
+</span><span id="line-105"></span><span>             </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">(a, Maybe (STMStream a)) -&gt; STM (a, Maybe (STMStream a))
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680267490"><span class="hs-identifier hs-var">next</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">STMStream a -&gt; Maybe (STMStream a)
+forall a. a -&gt; Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(STMStream a -&gt; Maybe (STMStream a))
+-&gt; STMStream a -&gt; Maybe (STMStream a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">STM (a, Maybe (STMStream a)) -&gt; STMStream a
+forall a. STM (a, Maybe (STMStream a)) -&gt; STMStream a
+</span><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-var">STMStream</span></a></span><span> </span><span class="annot"><span class="annottext">(STM (a, Maybe (STMStream a)) -&gt; STMStream a)
+-&gt; STM (a, Maybe (STMStream a)) -&gt; STMStream a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe a -&gt; STMStream a -&gt; STM (a, Maybe (STMStream a))
+</span><a href="#local-6989586621680267493"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; Maybe a
+forall a. a -&gt; Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680267490"><span class="hs-identifier hs-var">next</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">STMStream a
+</span><a href="#local-6989586621680267488"><span class="hs-identifier hs-var">s'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-106"></span><span>             </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Maybe a -&gt; STMStream a -&gt; STM (a, Maybe (STMStream a))
+</span><a href="#local-6989586621680267493"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe a
+</span><a href="#local-6989586621680267492"><span class="hs-identifier hs-var">lastVl</span></a></span><span> </span><span class="annot"><span class="annottext">STMStream a
+</span><a href="#local-6989586621680267488"><span class="hs-identifier hs-var">s'</span></a></span><span>
+</span><span id="line-107"></span><span>
+</span><span id="line-108"></span><span class="hs-comment">-- | Produce an infinite stream of values from an STM (i.e. watch it for</span><span>
+</span><span id="line-109"></span><span class="hs-comment">-- updates). Uses the Eq instance to not output the same value twice in a</span><span>
+</span><span id="line-110"></span><span class="hs-comment">-- row.</span><span>
+</span><span id="line-111"></span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#unfold"><span class="hs-identifier hs-type">unfold</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621680267486"><span class="annot"><a href="#local-6989586621680267486"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">Eq</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680267486"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">STM</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680267486"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-type">STMStream</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680267486"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-112"></span><span id="unfold"><span class="annot"><span class="annottext">unfold :: STM a -&gt; STMStream a
+</span><a href="Control.Concurrent.STM.Extras.Stream.html#unfold"><span class="hs-identifier hs-var hs-var">unfold</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a -&gt; a) -&gt; STM a -&gt; STMStream a
+forall a b. Eq b =&gt; (a -&gt; b) -&gt; STM a -&gt; STMStream a
+</span><a href="Control.Concurrent.STM.Extras.Stream.html#unfoldOn"><span class="hs-identifier hs-var">unfoldOn</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a
+forall a. a -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">id</span></a></span><span>
+</span><span id="line-113"></span><span>
+</span><span id="line-114"></span><span class="hs-comment">-- | Produce an infinite stream of values from an STM (i.e. watch it for</span><span>
+</span><span id="line-115"></span><span class="hs-comment">-- updates). Uses the Eq instance of 'b' to not output the same value twice in a</span><span>
+</span><span id="line-116"></span><span class="hs-comment">-- row.</span><span>
+</span><span id="line-117"></span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#unfoldOn"><span class="hs-identifier hs-type">unfoldOn</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621680267621"><span class="annot"><a href="#local-6989586621680267621"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span id="local-6989586621680267622"><span class="annot"><a href="#local-6989586621680267622"><span class="hs-identifier hs-type">b</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">Eq</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680267622"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621680267621"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621680267622"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">STM</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680267621"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-type">STMStream</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680267621"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-118"></span><span id="unfoldOn"><span class="annot"><span class="annottext">unfoldOn :: (a -&gt; b) -&gt; STM a -&gt; STMStream a
+</span><a href="Control.Concurrent.STM.Extras.Stream.html#unfoldOn"><span class="hs-identifier hs-var hs-var">unfoldOn</span></a></span></span><span> </span><span id="local-6989586621680267484"><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621680267484"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621680267483"><span class="annot"><span class="annottext">STM a
+</span><a href="#local-6989586621680267483"><span class="hs-identifier hs-var">tx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">STM (a, Maybe (STMStream a)) -&gt; STMStream a
+forall a. STM (a, Maybe (STMStream a)) -&gt; STMStream a
+</span><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-var">STMStream</span></a></span><span> </span><span class="annot"><span class="annottext">(STM (a, Maybe (STMStream a)) -&gt; STMStream a)
+-&gt; STM (a, Maybe (STMStream a)) -&gt; STMStream a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe b -&gt; STM (a, Maybe (STMStream a))
+</span><a href="#local-6989586621680267482"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe b
+forall a. Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-119"></span><span>    </span><span class="annot"><a href="#local-6989586621680267482"><span class="hs-identifier hs-type">go</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680267622"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">STM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621680267621"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-type">STMStream</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680267621"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-120"></span><span>    </span><span id="local-6989586621680267482"><span class="annot"><span class="annottext">go :: Maybe b -&gt; STM (a, Maybe (STMStream a))
+</span><a href="#local-6989586621680267482"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span id="local-6989586621680267481"><span class="annot"><span class="annottext">Maybe b
+</span><a href="#local-6989586621680267481"><span class="hs-identifier hs-var">lastVl</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-121"></span><span>        </span><span id="local-6989586621680267480"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680267480"><span class="hs-identifier hs-var">next</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">STM a
+</span><a href="#local-6989586621680267483"><span class="hs-identifier hs-var">tx</span></a></span><span>
+</span><span id="line-122"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680267479"><span class="annot"><span class="annottext">next' :: b
+</span><a href="#local-6989586621680267479"><span class="hs-identifier hs-var hs-var">next'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621680267484"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680267480"><span class="hs-identifier hs-var">next</span></a></span><span>
+</span><span id="line-123"></span><span>        </span><span class="annot"><span class="annottext">(b -&gt; STM ()) -&gt; Maybe b -&gt; STM ()
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Foldable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f ()
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">traverse_</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621680267478"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621680267478"><span class="hs-identifier hs-var">previous</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; STM ()
+forall (f :: * -&gt; *). Alternative f =&gt; Bool -&gt; f ()
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">guard</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621680267478"><span class="hs-identifier hs-var">previous</span></a></span><span> </span><span class="annot"><span class="annottext">b -&gt; b -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-operator hs-var">/=</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621680267479"><span class="hs-identifier hs-var">next'</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe b
+</span><a href="#local-6989586621680267481"><span class="hs-identifier hs-var">lastVl</span></a></span><span>
+</span><span id="line-124"></span><span>        </span><span class="annot"><span class="annottext">(a, Maybe (STMStream a)) -&gt; STM (a, Maybe (STMStream a))
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680267480"><span class="hs-identifier hs-var">next</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">STMStream a -&gt; Maybe (STMStream a)
+forall a. a -&gt; Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(STMStream a -&gt; Maybe (STMStream a))
+-&gt; STMStream a -&gt; Maybe (STMStream a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">STM (a, Maybe (STMStream a)) -&gt; STMStream a
+forall a. STM (a, Maybe (STMStream a)) -&gt; STMStream a
+</span><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-var">STMStream</span></a></span><span> </span><span class="annot"><span class="annottext">(STM (a, Maybe (STMStream a)) -&gt; STMStream a)
+-&gt; STM (a, Maybe (STMStream a)) -&gt; STMStream a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe b -&gt; STM (a, Maybe (STMStream a))
+</span><a href="#local-6989586621680267482"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">b -&gt; Maybe b
+forall a. a -&gt; Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621680267479"><span class="hs-identifier hs-var">next'</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-125"></span><span>
+</span><span id="line-126"></span><span class="hs-comment">-- | Read the first event from the stream.</span><span>
+</span><span id="line-127"></span><span id="local-6989586621680267609"><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#readOne"><span class="hs-identifier hs-type">readOne</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-type">STMStream</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680267609"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621680267609"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-type">STMStream</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680267609"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span></span><span>
+</span><span id="line-128"></span><span id="readOne"><span class="annot"><span class="annottext">readOne :: STMStream a -&gt; IO (a, Maybe (STMStream a))
+</span><a href="Control.Concurrent.STM.Extras.Stream.html#readOne"><span class="hs-identifier hs-var hs-var">readOne</span></a></span></span><span> </span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-type">STMStream</span></a></span><span class="hs-special">{</span><span id="local-6989586621680267477"><span class="annot"><span class="annottext">STM (a, Maybe (STMStream a))
+unSTMStream :: STM (a, Maybe (STMStream a))
+unSTMStream :: forall a. STMStream a -&gt; STM (a, Maybe (STMStream a))
+</span><a href="#local-6989586621680267477"><span class="hs-identifier hs-var hs-var">unSTMStream</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">STM (a, Maybe (STMStream a)) -&gt; IO (a, Maybe (STMStream a))
+forall a. STM a -&gt; IO a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">STM.atomically</span></a></span><span> </span><span class="annot"><span class="annottext">STM (a, Maybe (STMStream a))
+</span><a href="#local-6989586621680267477"><span class="hs-identifier hs-var">unSTMStream</span></a></span><span>
+</span><span id="line-129"></span><span>
+</span><span id="line-130"></span><span class="hs-comment">-- | Read a number of events from the stream. Blocks until all events</span><span>
+</span><span id="line-131"></span><span class="hs-comment">--   have been received.</span><span>
+</span><span id="line-132"></span><span id="local-6989586621680267608"><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#readN"><span class="hs-identifier hs-type">readN</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Natural</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-type">STMStream</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680267608"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621680267608"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-133"></span><span id="readN"><span class="annot"><span class="annottext">readN :: Natural -&gt; STMStream a -&gt; IO [a]
+</span><a href="Control.Concurrent.STM.Extras.Stream.html#readN"><span class="hs-identifier hs-var hs-var">readN</span></a></span></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">STMStream a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[a] -&gt; IO [a]
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-134"></span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#readN"><span class="hs-identifier hs-var">readN</span></a></span><span> </span><span id="local-6989586621680267475"><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621680267475"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621680267474"><span class="annot"><span class="annottext">STMStream a
+</span><a href="#local-6989586621680267474"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-135"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621680267473"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680267473"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680267472"><span class="annot"><span class="annottext">Maybe (STMStream a)
+</span><a href="#local-6989586621680267472"><span class="hs-identifier hs-var">s'</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">STMStream a -&gt; IO (a, Maybe (STMStream a))
+forall a. STMStream a -&gt; IO (a, Maybe (STMStream a))
+</span><a href="Control.Concurrent.STM.Extras.Stream.html#readOne"><span class="hs-identifier hs-var">readOne</span></a></span><span> </span><span class="annot"><span class="annottext">STMStream a
+</span><a href="#local-6989586621680267474"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-136"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe (STMStream a)
+</span><a href="#local-6989586621680267472"><span class="hs-identifier hs-var">s'</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-137"></span><span>        </span><span class="annot"><span class="annottext">Maybe (STMStream a)
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[a] -&gt; IO [a]
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680267473"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-138"></span><span>        </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621680267471"><span class="annot"><span class="annottext">STMStream a
+</span><a href="#local-6989586621680267471"><span class="hs-identifier hs-var">rest</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-glyph">:</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680267473"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">([a] -&gt; [a]) -&gt; IO [a] -&gt; IO [a]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Natural -&gt; STMStream a -&gt; IO [a]
+forall a. Natural -&gt; STMStream a -&gt; IO [a]
+</span><a href="Control.Concurrent.STM.Extras.Stream.html#readN"><span class="hs-identifier hs-var">readN</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; Natural
+forall a. Enum a =&gt; a -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pred</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621680267475"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">STMStream a
+</span><a href="#local-6989586621680267471"><span class="hs-identifier hs-var">rest</span></a></span><span>
+</span><span id="line-139"></span><span>
+</span><span id="line-140"></span><span class="hs-comment">-- | Consume a stream. Blocks until the stream has terminated.</span><span>
+</span><span id="line-141"></span><span id="local-6989586621680267605"><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#foldM"><span class="hs-identifier hs-type">foldM</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-142"></span><span>    </span><span class="annot"><a href="Control.Concurrent.STM.Extras.Stream.html#STMStream"><span class="hs-identifier hs-type">STMStream</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680267605"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-comment">-- ^ The stream</span><span>
+</span><span id="line-143"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621680267605"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-comment">-- ^ Event handler</span><span>
+</span><span id="line-144"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-comment">-- ^ Handler for the end of the stream</span><span>
+</span><span id="line-145"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-146"></span><span id="foldM"><span class="annot"><span class="annottext">foldM :: STMStream a -&gt; (a -&gt; IO ()) -&gt; IO () -&gt; IO ()
+</span><a href="Control.Concurrent.STM.Extras.Stream.html#foldM"><span class="hs-identifier hs-var hs-var">foldM</span></a></span></span><span> </span><span id="local-6989586621680267469"><span class="annot"><span class="annottext">STMStream a
+</span><a href="#local-6989586621680267469"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span id="local-6989586621680267468"><span class="annot"><span class="annottext">a -&gt; IO ()
+</span><a href="#local-6989586621680267468"><span class="hs-identifier hs-var">handleEvent</span></a></span></span><span> </span><span id="local-6989586621680267467"><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621680267467"><span class="hs-identifier hs-var">handleStop</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-147"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621680267466"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680267466"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680267465"><span class="annot"><span class="annottext">Maybe (STMStream a)
+</span><a href="#local-6989586621680267465"><span class="hs-identifier hs-var">next</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">STMStream a -&gt; IO (a, Maybe (STMStream a))
+forall a. STMStream a -&gt; IO (a, Maybe (STMStream a))
+</span><a href="Control.Concurrent.STM.Extras.Stream.html#readOne"><span class="hs-identifier hs-var">readOne</span></a></span><span> </span><span class="annot"><span class="annottext">STMStream a
+</span><a href="#local-6989586621680267469"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-148"></span><span>    </span><span class="annot"><span class="annottext">a -&gt; IO ()
+</span><a href="#local-6989586621680267468"><span class="hs-identifier hs-var">handleEvent</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680267466"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-149"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe (STMStream a)
+</span><a href="#local-6989586621680267465"><span class="hs-identifier hs-var">next</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-150"></span><span>        </span><span class="annot"><span class="annottext">Maybe (STMStream a)
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621680267467"><span class="hs-identifier hs-var">handleStop</span></a></span><span>
+</span><span id="line-151"></span><span>        </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621680267464"><span class="annot"><span class="annottext">STMStream a
+</span><a href="#local-6989586621680267464"><span class="hs-identifier hs-var">s'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">STMStream a -&gt; (a -&gt; IO ()) -&gt; IO () -&gt; IO ()
+forall a. STMStream a -&gt; (a -&gt; IO ()) -&gt; IO () -&gt; IO ()
+</span><a href="Control.Concurrent.STM.Extras.Stream.html#foldM"><span class="hs-identifier hs-var">foldM</span></a></span><span> </span><span class="annot"><span class="annottext">STMStream a
+</span><a href="#local-6989586621680267464"><span class="hs-identifier hs-var">s'</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; IO ()
+</span><a href="#local-6989586621680267468"><span class="hs-identifier hs-var">handleEvent</span></a></span><span> </span><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621680267467"><span class="hs-identifier hs-var">handleStop</span></a></span><span>
+</span><span id="line-152"></span></pre></body></html>

@@ -1,0 +1,296 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass     #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric      #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DerivingStrategies #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase         #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings  #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE TemplateHaskell    #-}</span><span>
+</span><span id="line-7"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Node.Emulator.LogMessages</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.Api</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">C</span></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Node.Emulator.Internal.Node.Chain.html"><span class="hs-identifier">Cardano.Node.Emulator.Internal.Node.Chain</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Emulator.Internal.Node.Chain.html#ChainEvent"><span class="hs-identifier">ChainEvent</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Lens.TH</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">makePrisms</span></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">FromJSON</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ToJSON</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Value</span></span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Ledger</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">CardanoTx</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">getCardanoTxId</span></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Ledger.Index</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">UtxoIndex</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ValidationError</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ValidationPhase</span></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Ledger.Tx.CardanoAPI</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">CardanoBuildTx</span></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Prettyprinter</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Pretty</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">pretty</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">colon</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">hang</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">viaShow</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">vsep</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-operator">(&lt;+&gt;)</span></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span id="local-6989586621679392783"><span id="local-6989586621679392784"></span></span><span class="hs-keyword">data</span><span> </span><span id="EmulatorMsg"><span class="annot"><a href="Cardano.Node.Emulator.LogMessages.html#EmulatorMsg"><span class="hs-identifier hs-var">EmulatorMsg</span></a></span></span><span>
+</span><span id="line-21"></span><span>    </span><span class="hs-glyph">=</span><span> </span><span id="GenericMsg"><span class="annot"><a href="Cardano.Node.Emulator.LogMessages.html#GenericMsg"><span class="hs-identifier hs-var">GenericMsg</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span>
+</span><span id="line-22"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="TxBalanceMsg"><span class="annot"><a href="Cardano.Node.Emulator.LogMessages.html#TxBalanceMsg"><span class="hs-identifier hs-var">TxBalanceMsg</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Node.Emulator.LogMessages.html#TxBalanceMsg"><span class="hs-identifier hs-type">TxBalanceMsg</span></a></span><span>
+</span><span id="line-23"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="ChainEvent"><span class="annot"><a href="Cardano.Node.Emulator.LogMessages.html#ChainEvent"><span class="hs-identifier hs-var">ChainEvent</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Node.Emulator.Internal.Node.Chain.html#ChainEvent"><span class="hs-identifier hs-type">ChainEvent</span></a></span><span>
+</span><span id="line-24"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679392776"><span id="local-6989586621679392778"><span class="annot"><span class="annottext">EmulatorMsg -&gt; EmulatorMsg -&gt; Bool
+(EmulatorMsg -&gt; EmulatorMsg -&gt; Bool)
+-&gt; (EmulatorMsg -&gt; EmulatorMsg -&gt; Bool) -&gt; Eq EmulatorMsg
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: EmulatorMsg -&gt; EmulatorMsg -&gt; Bool
+$c/= :: EmulatorMsg -&gt; EmulatorMsg -&gt; Bool
+== :: EmulatorMsg -&gt; EmulatorMsg -&gt; Bool
+$c== :: EmulatorMsg -&gt; EmulatorMsg -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679392769"><span id="local-6989586621679392771"><span id="local-6989586621679392773"><span class="annot"><span class="annottext">Int -&gt; EmulatorMsg -&gt; ShowS
+[EmulatorMsg] -&gt; ShowS
+EmulatorMsg -&gt; String
+(Int -&gt; EmulatorMsg -&gt; ShowS)
+-&gt; (EmulatorMsg -&gt; String)
+-&gt; ([EmulatorMsg] -&gt; ShowS)
+-&gt; Show EmulatorMsg
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [EmulatorMsg] -&gt; ShowS
+$cshowList :: [EmulatorMsg] -&gt; ShowS
+show :: EmulatorMsg -&gt; String
+$cshow :: EmulatorMsg -&gt; String
+showsPrec :: Int -&gt; EmulatorMsg -&gt; ShowS
+$cshowsPrec :: Int -&gt; EmulatorMsg -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. EmulatorMsg -&gt; Rep EmulatorMsg x)
+-&gt; (forall x. Rep EmulatorMsg x -&gt; EmulatorMsg)
+-&gt; Generic EmulatorMsg
+forall x. Rep EmulatorMsg x -&gt; EmulatorMsg
+forall x. EmulatorMsg -&gt; Rep EmulatorMsg x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep EmulatorMsg x -&gt; EmulatorMsg
+$cfrom :: forall x. EmulatorMsg -&gt; Rep EmulatorMsg x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679392757"><span id="local-6989586621679392759"><span id="local-6989586621679392761"><span id="local-6989586621679392763"><span class="annot"><span class="annottext">[EmulatorMsg] -&gt; Encoding
+[EmulatorMsg] -&gt; Value
+EmulatorMsg -&gt; Encoding
+EmulatorMsg -&gt; Value
+(EmulatorMsg -&gt; Value)
+-&gt; (EmulatorMsg -&gt; Encoding)
+-&gt; ([EmulatorMsg] -&gt; Value)
+-&gt; ([EmulatorMsg] -&gt; Encoding)
+-&gt; ToJSON EmulatorMsg
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; ToJSON a
+toEncodingList :: [EmulatorMsg] -&gt; Encoding
+$ctoEncodingList :: [EmulatorMsg] -&gt; Encoding
+toJSONList :: [EmulatorMsg] -&gt; Value
+$ctoJSONList :: [EmulatorMsg] -&gt; Value
+toEncoding :: EmulatorMsg -&gt; Encoding
+$ctoEncoding :: EmulatorMsg -&gt; Encoding
+toJSON :: EmulatorMsg -&gt; Value
+$ctoJSON :: EmulatorMsg -&gt; Value
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679392752"><span id="local-6989586621679392754"><span class="annot"><span class="annottext">Value -&gt; Parser [EmulatorMsg]
+Value -&gt; Parser EmulatorMsg
+(Value -&gt; Parser EmulatorMsg)
+-&gt; (Value -&gt; Parser [EmulatorMsg]) -&gt; FromJSON EmulatorMsg
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+parseJSONList :: Value -&gt; Parser [EmulatorMsg]
+$cparseJSONList :: Value -&gt; Parser [EmulatorMsg]
+parseJSON :: Value -&gt; Parser EmulatorMsg
+$cparseJSON :: Value -&gt; Parser EmulatorMsg
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679392748"><span class="annot"><span class="hs-identifier hs-type">Pretty</span></span><span> </span><span class="annot"><a href="Cardano.Node.Emulator.LogMessages.html#EmulatorMsg"><span class="hs-identifier hs-type">EmulatorMsg</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-28"></span><span>    </span><span id="local-6989586621679392746"><span class="annot"><span class="annottext">pretty :: EmulatorMsg -&gt; Doc ann
+</span><a href="#local-6989586621679392746"><span class="hs-identifier hs-var hs-var hs-var hs-var">pretty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-29"></span><span>        </span><span class="annot"><a href="Cardano.Node.Emulator.LogMessages.html#GenericMsg"><span class="hs-identifier hs-type">GenericMsg</span></a></span><span> </span><span id="local-6989586621679392745"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679392745"><span class="hs-identifier hs-var">json</span></a></span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Value -&gt; Doc ann
+forall a ann. Show a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">viaShow</span></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679392745"><span class="hs-identifier hs-var">json</span></a></span><span>
+</span><span id="line-30"></span><span>        </span><span class="annot"><a href="Cardano.Node.Emulator.LogMessages.html#TxBalanceMsg"><span class="hs-identifier hs-type">TxBalanceMsg</span></a></span><span> </span><span id="local-6989586621679392744"><span class="annot"><span class="annottext">TxBalanceMsg
+</span><a href="#local-6989586621679392744"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TxBalanceMsg -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">TxBalanceMsg
+</span><a href="#local-6989586621679392744"><span class="hs-identifier hs-var">msg</span></a></span><span>
+</span><span id="line-31"></span><span>        </span><span class="annot"><a href="Cardano.Node.Emulator.LogMessages.html#ChainEvent"><span class="hs-identifier hs-type">ChainEvent</span></a></span><span> </span><span id="local-6989586621679392743"><span class="annot"><span class="annottext">ChainEvent
+</span><a href="#local-6989586621679392743"><span class="hs-identifier hs-var">msg</span></a></span></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ChainEvent -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">ChainEvent
+</span><a href="#local-6989586621679392743"><span class="hs-identifier hs-var">msg</span></a></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span id="local-6989586621679392741"><span id="local-6989586621679392742"></span></span><span class="hs-keyword">data</span><span> </span><span id="TxBalanceMsg"><span class="annot"><a href="Cardano.Node.Emulator.LogMessages.html#TxBalanceMsg"><span class="hs-identifier hs-var">TxBalanceMsg</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-34"></span><span>    </span><span id="BalancingUnbalancedTx"><span class="annot"><a href="Cardano.Node.Emulator.LogMessages.html#BalancingUnbalancedTx"><span class="hs-identifier hs-var">BalancingUnbalancedTx</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">CardanoBuildTx</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">UtxoIndex</span></span><span>
+</span><span id="line-35"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="FinishedBalancing"><span class="annot"><a href="Cardano.Node.Emulator.LogMessages.html#FinishedBalancing"><span class="hs-identifier hs-var">FinishedBalancing</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">CardanoTx</span></span><span>
+</span><span id="line-36"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="SigningTx"><span class="annot"><a href="Cardano.Node.Emulator.LogMessages.html#SigningTx"><span class="hs-identifier hs-var">SigningTx</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">CardanoTx</span></span><span>
+</span><span id="line-37"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="SubmittingTx"><span class="annot"><a href="Cardano.Node.Emulator.LogMessages.html#SubmittingTx"><span class="hs-identifier hs-var">SubmittingTx</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">CardanoTx</span></span><span>
+</span><span id="line-38"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="ValidationFailed"><span class="annot"><a href="Cardano.Node.Emulator.LogMessages.html#ValidationFailed"><span class="hs-identifier hs-var">ValidationFailed</span></a></span></span><span>
+</span><span id="line-39"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">ValidationPhase</span></span><span>
+</span><span id="line-40"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">CardanoTx</span></span><span>
+</span><span id="line-41"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">ValidationError</span></span><span>
+</span><span id="line-42"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">C.Value</span></span><span> </span><span class="hs-comment">-- ^ The amount of collateral stored in the transaction.</span><span>
+</span><span id="line-43"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679392732"><span id="local-6989586621679392734"><span class="annot"><span class="annottext">TxBalanceMsg -&gt; TxBalanceMsg -&gt; Bool
+(TxBalanceMsg -&gt; TxBalanceMsg -&gt; Bool)
+-&gt; (TxBalanceMsg -&gt; TxBalanceMsg -&gt; Bool) -&gt; Eq TxBalanceMsg
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: TxBalanceMsg -&gt; TxBalanceMsg -&gt; Bool
+$c/= :: TxBalanceMsg -&gt; TxBalanceMsg -&gt; Bool
+== :: TxBalanceMsg -&gt; TxBalanceMsg -&gt; Bool
+$c== :: TxBalanceMsg -&gt; TxBalanceMsg -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679392726"><span id="local-6989586621679392728"><span id="local-6989586621679392730"><span class="annot"><span class="annottext">Int -&gt; TxBalanceMsg -&gt; ShowS
+[TxBalanceMsg] -&gt; ShowS
+TxBalanceMsg -&gt; String
+(Int -&gt; TxBalanceMsg -&gt; ShowS)
+-&gt; (TxBalanceMsg -&gt; String)
+-&gt; ([TxBalanceMsg] -&gt; ShowS)
+-&gt; Show TxBalanceMsg
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [TxBalanceMsg] -&gt; ShowS
+$cshowList :: [TxBalanceMsg] -&gt; ShowS
+show :: TxBalanceMsg -&gt; String
+$cshow :: TxBalanceMsg -&gt; String
+showsPrec :: Int -&gt; TxBalanceMsg -&gt; ShowS
+$cshowsPrec :: Int -&gt; TxBalanceMsg -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. TxBalanceMsg -&gt; Rep TxBalanceMsg x)
+-&gt; (forall x. Rep TxBalanceMsg x -&gt; TxBalanceMsg)
+-&gt; Generic TxBalanceMsg
+forall x. Rep TxBalanceMsg x -&gt; TxBalanceMsg
+forall x. TxBalanceMsg -&gt; Rep TxBalanceMsg x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep TxBalanceMsg x -&gt; TxBalanceMsg
+$cfrom :: forall x. TxBalanceMsg -&gt; Rep TxBalanceMsg x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679392716"><span id="local-6989586621679392718"><span id="local-6989586621679392720"><span id="local-6989586621679392722"><span class="annot"><span class="annottext">[TxBalanceMsg] -&gt; Encoding
+[TxBalanceMsg] -&gt; Value
+TxBalanceMsg -&gt; Encoding
+TxBalanceMsg -&gt; Value
+(TxBalanceMsg -&gt; Value)
+-&gt; (TxBalanceMsg -&gt; Encoding)
+-&gt; ([TxBalanceMsg] -&gt; Value)
+-&gt; ([TxBalanceMsg] -&gt; Encoding)
+-&gt; ToJSON TxBalanceMsg
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; ToJSON a
+toEncodingList :: [TxBalanceMsg] -&gt; Encoding
+$ctoEncodingList :: [TxBalanceMsg] -&gt; Encoding
+toJSONList :: [TxBalanceMsg] -&gt; Value
+$ctoJSONList :: [TxBalanceMsg] -&gt; Value
+toEncoding :: TxBalanceMsg -&gt; Encoding
+$ctoEncoding :: TxBalanceMsg -&gt; Encoding
+toJSON :: TxBalanceMsg -&gt; Value
+$ctoJSON :: TxBalanceMsg -&gt; Value
+</span><a href="#local-6989586621679392716"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679392712"><span id="local-6989586621679392714"><span class="annot"><span class="annottext">Value -&gt; Parser [TxBalanceMsg]
+Value -&gt; Parser TxBalanceMsg
+(Value -&gt; Parser TxBalanceMsg)
+-&gt; (Value -&gt; Parser [TxBalanceMsg]) -&gt; FromJSON TxBalanceMsg
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+parseJSONList :: Value -&gt; Parser [TxBalanceMsg]
+$cparseJSONList :: Value -&gt; Parser [TxBalanceMsg]
+parseJSON :: Value -&gt; Parser TxBalanceMsg
+$cparseJSON :: Value -&gt; Parser TxBalanceMsg
+</span><a href="#local-6989586621679392712"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679392709"><span class="annot"><span class="hs-identifier hs-type">Pretty</span></span><span> </span><span class="annot"><a href="Cardano.Node.Emulator.LogMessages.html#TxBalanceMsg"><span class="hs-identifier hs-type">TxBalanceMsg</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-47"></span><span>    </span><span id="local-6989586621679392708"><span class="annot"><span class="annottext">pretty :: TxBalanceMsg -&gt; Doc ann
+</span><a href="#local-6989586621679392708"><span class="hs-identifier hs-var hs-var hs-var hs-var">pretty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-48"></span><span>        </span><span class="annot"><a href="Cardano.Node.Emulator.LogMessages.html#BalancingUnbalancedTx"><span class="hs-identifier hs-type">BalancingUnbalancedTx</span></a></span><span> </span><span id="local-6989586621679392707"><span class="annot"><span class="annottext">CardanoBuildTx
+</span><a href="#local-6989586621679392707"><span class="hs-identifier hs-var">tx</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">C.UTxO</span></span><span> </span><span id="local-6989586621679392705"><span class="annot"><span class="annottext">Map TxIn (TxOut CtxUTxO BabbageEra)
+</span><a href="#local-6989586621679392705"><span class="hs-identifier hs-var">utxo</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Doc ann -&gt; Doc ann
+forall ann. Int -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-identifier hs-var">hang</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span> </span><span class="annot"><span class="annottext">(Doc ann -&gt; Doc ann) -&gt; Doc ann -&gt; Doc ann
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Doc ann] -&gt; Doc ann
+forall ann. [Doc ann] -&gt; Doc ann
+</span><span class="hs-identifier hs-var">vsep</span></span><span>
+</span><span id="line-49"></span><span>            </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Doc ann -&gt; Doc ann
+forall ann. Int -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-identifier hs-var">hang</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span> </span><span class="annot"><span class="annottext">(Doc ann -&gt; Doc ann) -&gt; Doc ann -&gt; Doc ann
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Doc ann] -&gt; Doc ann
+forall ann. [Doc ann] -&gt; Doc ann
+</span><span class="hs-identifier hs-var">vsep</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Balancing an unbalanced transaction:&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">CardanoBuildTx -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">CardanoBuildTx
+</span><a href="#local-6989586621679392707"><span class="hs-identifier hs-var">tx</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-50"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Doc ann -&gt; Doc ann
+forall ann. Int -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-identifier hs-var">hang</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span> </span><span class="annot"><span class="annottext">(Doc ann -&gt; Doc ann) -&gt; Doc ann -&gt; Doc ann
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Doc ann] -&gt; Doc ann
+forall ann. [Doc ann] -&gt; Doc ann
+</span><span class="hs-identifier hs-var">vsep</span></span><span> </span><span class="annot"><span class="annottext">([Doc ann] -&gt; Doc ann) -&gt; [Doc ann] -&gt; Doc ann
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Utxo index:&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; [Doc ann] -&gt; [Doc ann]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(TxIn, TxOut CtxUTxO BabbageEra) -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">((TxIn, TxOut CtxUTxO BabbageEra) -&gt; Doc ann)
+-&gt; [(TxIn, TxOut CtxUTxO BabbageEra)] -&gt; [Doc ann]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Map TxIn (TxOut CtxUTxO BabbageEra)
+-&gt; [(TxIn, TxOut CtxUTxO BabbageEra)]
+forall k a. Map k a -&gt; [(k, a)]
+</span><span class="hs-identifier hs-var">Map.toList</span></span><span> </span><span class="annot"><span class="annottext">Map TxIn (TxOut CtxUTxO BabbageEra)
+</span><a href="#local-6989586621679392705"><span class="hs-identifier hs-var">utxo</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span>            </span><span class="hs-special">]</span><span>
+</span><span id="line-52"></span><span>        </span><span class="annot"><a href="Cardano.Node.Emulator.LogMessages.html#FinishedBalancing"><span class="hs-identifier hs-type">FinishedBalancing</span></a></span><span> </span><span id="local-6989586621679392702"><span class="annot"><span class="annottext">CardanoTx
+</span><a href="#local-6989586621679392702"><span class="hs-identifier hs-var">tx</span></a></span></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Doc ann -&gt; Doc ann
+forall ann. Int -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-identifier hs-var">hang</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span> </span><span class="annot"><span class="annottext">(Doc ann -&gt; Doc ann) -&gt; Doc ann -&gt; Doc ann
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Doc ann] -&gt; Doc ann
+forall ann. [Doc ann] -&gt; Doc ann
+</span><span class="hs-identifier hs-var">vsep</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Finished balancing:&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">CardanoTx -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">CardanoTx
+</span><a href="#local-6989586621679392702"><span class="hs-identifier hs-var">tx</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-53"></span><span>        </span><span class="annot"><a href="Cardano.Node.Emulator.LogMessages.html#SigningTx"><span class="hs-identifier hs-type">SigningTx</span></a></span><span> </span><span id="local-6989586621679392701"><span class="annot"><span class="annottext">CardanoTx
+</span><a href="#local-6989586621679392701"><span class="hs-identifier hs-var">tx</span></a></span></span><span>              </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Signing tx:&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">TxId -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CardanoTx -&gt; TxId
+</span><span class="hs-identifier hs-var">getCardanoTxId</span></span><span> </span><span class="annot"><span class="annottext">CardanoTx
+</span><a href="#local-6989586621679392701"><span class="hs-identifier hs-var">tx</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>        </span><span class="annot"><a href="Cardano.Node.Emulator.LogMessages.html#SubmittingTx"><span class="hs-identifier hs-type">SubmittingTx</span></a></span><span> </span><span id="local-6989586621679392700"><span class="annot"><span class="annottext">CardanoTx
+</span><a href="#local-6989586621679392700"><span class="hs-identifier hs-var">tx</span></a></span></span><span>           </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Submitting tx:&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">TxId -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CardanoTx -&gt; TxId
+</span><span class="hs-identifier hs-var">getCardanoTxId</span></span><span> </span><span class="annot"><span class="annottext">CardanoTx
+</span><a href="#local-6989586621679392700"><span class="hs-identifier hs-var">tx</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span>        </span><span class="annot"><a href="Cardano.Node.Emulator.LogMessages.html#ValidationFailed"><span class="hs-identifier hs-type">ValidationFailed</span></a></span><span> </span><span id="local-6989586621679392699"><span class="annot"><span class="annottext">ValidationPhase
+</span><a href="#local-6989586621679392699"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span id="local-6989586621679392698"><span class="annot"><span class="annottext">CardanoTx
+</span><a href="#local-6989586621679392698"><span class="hs-identifier hs-var">tx</span></a></span></span><span> </span><span id="local-6989586621679392697"><span class="annot"><span class="annottext">ValidationError
+</span><a href="#local-6989586621679392697"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span class="annot"><span class="annottext">Value
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Validation error:&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">ValidationPhase -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">ValidationPhase
+</span><a href="#local-6989586621679392699"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">TxId -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CardanoTx -&gt; TxId
+</span><span class="hs-identifier hs-var">getCardanoTxId</span></span><span> </span><span class="annot"><span class="annottext">CardanoTx
+</span><a href="#local-6989586621679392698"><span class="hs-identifier hs-var">tx</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann
+forall ann. Doc ann
+</span><span class="hs-identifier hs-var">colon</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">ValidationError -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">ValidationError
+</span><a href="#local-6989586621679392697"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span id="_ValidationFailed"><span id="_SubmittingTx"><span id="_SigningTx"><span id="_FinishedBalancing"><span id="_BalancingUnbalancedTx"><span class="hs-identifier">makePrisms</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">TxBalanceMsg</span></span></span></span></span></span><span>
+</span><span id="line-58"></span></pre></body></html>

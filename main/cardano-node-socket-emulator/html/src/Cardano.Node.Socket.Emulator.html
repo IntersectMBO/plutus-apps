@@ -1,0 +1,383 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE FlexibleContexts   #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns     #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE NumericUnderscores #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings  #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications   #-}</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Node.Socket.Emulator</span><span>
+</span><span id="line-8"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Node.Socket.Emulator.html#main"><span class="hs-identifier">main</span></a></span><span>
+</span><span id="line-9"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.BM.Data.Trace</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Trace</span></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.Node.Emulator.Internal.Node</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Params</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">SlotConfig</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">SlotConfig</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">scSlotLength</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">scSlotZeroTime</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Node.Socket.Emulator.API.html"><span class="hs-identifier">Cardano.Node.Socket.Emulator.API</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Socket.Emulator.API.html#API"><span class="hs-identifier">API</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Node.Socket.Emulator.Mock.html"><span class="hs-identifier">Cardano.Node.Socket.Emulator.Mock</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Socket.Emulator.Mock.html#consumeEventHistory"><span class="hs-identifier">consumeEventHistory</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Socket.Emulator.Mock.html#healthcheck"><span class="hs-identifier">healthcheck</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Socket.Emulator.Mock.html#slotCoordinator"><span class="hs-identifier">slotCoordinator</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Node.Socket.Emulator.Params.html"><span class="hs-identifier">Cardano.Node.Socket.Emulator.Params</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Params</span></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Node.Socket.Emulator.Server.html"><span class="hs-identifier">Cardano.Node.Socket.Emulator.Server</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Server</span></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Node.Socket.Emulator.Types.html"><span class="hs-identifier">Cardano.Node.Socket.Emulator.Types</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Socket.Emulator.Types.html#AppState"><span class="hs-identifier">AppState</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Socket.Emulator.Types.html#CNSEServerLogMsg"><span class="hs-identifier">CNSEServerLogMsg</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Socket.Emulator.Types.html#NodeServerConfig"><span class="hs-identifier">NodeServerConfig</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>                                           </span><span class="annot"><a href="Cardano.Node.Socket.Emulator.Types.html#initialChainState"><span class="hs-identifier">initialChainState</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Control.Concurrent</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">MVar</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">forkIO</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">newMVar</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Control.Monad</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">void</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Freer.Extras.Delay</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">delayThread</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">handleDelayEffect</span></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Freer.Extras.Log</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">logInfo</span></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Control.Monad.IO.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">liftIO</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Data.Function</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator">(&amp;)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Strict</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Data.Proxy</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Proxy</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Proxy</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Time.Clock.POSIX</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">posixSecondsToUTCTime</span></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Time.Units</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Millisecond</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Second</span></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Ledger.CardanoWallet</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">knownAddresses</span></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Ledger.Value.CardanoAPI</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">CardanoAPI</span></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Network.Wai.Handler.Warp</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Warp</span></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Plutus.Monitoring.Util.html"><span class="hs-identifier">Plutus.Monitoring.Util</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">LM</span></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Servant</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Application</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">hoistServer</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">serve</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-operator">(:&lt;|&gt;)</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-operator">(:&lt;|&gt;)</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Servant.Client</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">BaseUrl</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">baseUrlPort</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="annot"><a href="Cardano.Node.Socket.Emulator.html#app"><span class="hs-identifier hs-type">app</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-37"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Trace</span></span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Socket.Emulator.Types.html#CNSEServerLogMsg"><span class="hs-identifier hs-type">CNSEServerLogMsg</span></a></span><span>
+</span><span id="line-38"></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Params</span></span><span>
+</span><span id="line-39"></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Socket.Emulator.Types.html#AppState"><span class="hs-identifier hs-type">AppState</span></a></span><span>
+</span><span id="line-40"></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Application</span></span><span>
+</span><span id="line-41"></span><span id="app"><span class="annot"><span class="annottext">app :: Trace IO CNSEServerLogMsg -&gt; Params -&gt; MVar AppState -&gt; Application
+</span><a href="Cardano.Node.Socket.Emulator.html#app"><span class="hs-identifier hs-var hs-var">app</span></a></span></span><span> </span><span id="local-6989586621679331180"><span class="annot"><span class="annottext">Trace IO CNSEServerLogMsg
+</span><a href="#local-6989586621679331180"><span class="hs-identifier hs-var">trace</span></a></span></span><span> </span><span id="local-6989586621679331179"><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621679331179"><span class="hs-identifier hs-var">params</span></a></span></span><span> </span><span id="local-6989586621679331178"><span class="annot"><span class="annottext">MVar AppState
+</span><a href="#local-6989586621679331178"><span class="hs-identifier hs-var">stateVar</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-42"></span><span>    </span><span class="annot"><span class="annottext">Proxy API -&gt; Server API -&gt; Application
+forall api.
+HasServer api '[] =&gt;
+Proxy api -&gt; Server api -&gt; Application
+</span><span class="hs-identifier hs-var">serve</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy API
+forall k (t :: k). Proxy t
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Proxy</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="Cardano.Node.Socket.Emulator.API.html#API"><span class="hs-identifier hs-type">API</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Server API -&gt; Application) -&gt; Server API -&gt; Application
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-43"></span><span>    </span><span class="annot"><span class="annottext">Proxy API
+-&gt; (forall x.
+    ExceptT EmulatorError (RWST Params EmulatorLogs EmulatorState IO) x
+    -&gt; Handler x)
+-&gt; ServerT
+     API
+     (ExceptT EmulatorError (RWST Params EmulatorLogs EmulatorState IO))
+-&gt; Server API
+forall api (m :: * -&gt; *) (n :: * -&gt; *).
+HasServer api '[] =&gt;
+Proxy api
+-&gt; (forall x. m x -&gt; n x) -&gt; ServerT api m -&gt; ServerT api n
+</span><span class="hs-identifier hs-var">hoistServer</span></span><span>
+</span><span id="line-44"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy API
+forall k (t :: k). Proxy t
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Proxy</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="Cardano.Node.Socket.Emulator.API.html#API"><span class="hs-identifier hs-type">API</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IO x -&gt; Handler x
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO x -&gt; Handler x)
+-&gt; (EmulatorT IO x -&gt; IO x) -&gt; EmulatorT IO x -&gt; Handler x
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Trace IO EmulatorMsg
+-&gt; Params -&gt; MVar AppState -&gt; EmulatorT IO x -&gt; IO x
+forall a.
+Trace IO EmulatorMsg
+-&gt; Params -&gt; MVar AppState -&gt; EmulatorT IO a -&gt; IO a
+</span><a href="Cardano.Node.Socket.Emulator.Server.html#processChainEffects"><span class="hs-identifier hs-var">Server.processChainEffects</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(EmulatorMsg -&gt; CNSEServerLogMsg)
+-&gt; Trace IO CNSEServerLogMsg -&gt; Trace IO EmulatorMsg
+forall a b (m :: * -&gt; *). (a -&gt; b) -&gt; Trace m b -&gt; Trace m a
+</span><a href="Plutus.Monitoring.Util.html#convertLog"><span class="hs-identifier hs-var">LM.convertLog</span></a></span><span> </span><span class="annot"><span class="annottext">EmulatorMsg -&gt; CNSEServerLogMsg
+</span><a href="Cardano.Node.Socket.Emulator.Types.html#ProcessingEmulatorMsg"><span class="hs-identifier hs-var">ProcessingEmulatorMsg</span></a></span><span> </span><span class="annot"><span class="annottext">Trace IO CNSEServerLogMsg
+</span><a href="#local-6989586621679331180"><span class="hs-identifier hs-var">trace</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621679331179"><span class="hs-identifier hs-var">params</span></a></span><span> </span><span class="annot"><span class="annottext">MVar AppState
+</span><a href="#local-6989586621679331178"><span class="hs-identifier hs-var">stateVar</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ExceptT
+  EmulatorError (RWST Params EmulatorLogs EmulatorState IO) NoContent
+forall (m :: * -&gt; *). Monad m =&gt; m NoContent
+</span><a href="Cardano.Node.Socket.Emulator.Mock.html#healthcheck"><span class="hs-identifier hs-var">healthcheck</span></a></span><span> </span><span class="annot"><span class="annottext">ExceptT
+  EmulatorError (RWST Params EmulatorLogs EmulatorState IO) NoContent
+-&gt; ExceptT
+     EmulatorError
+     (RWST Params EmulatorLogs EmulatorState IO)
+     EmulatorLogs
+-&gt; ExceptT
+     EmulatorError (RWST Params EmulatorLogs EmulatorState IO) NoContent
+   :&lt;|&gt; ExceptT
+          EmulatorError
+          (RWST Params EmulatorLogs EmulatorState IO)
+          EmulatorLogs
+forall a b. a -&gt; b -&gt; a :&lt;|&gt; b
+</span><span class="hs-operator hs-var">:&lt;|&gt;</span></span><span> </span><span class="annot"><span class="annottext">MVar AppState
+-&gt; ExceptT
+     EmulatorError
+     (RWST Params EmulatorLogs EmulatorState IO)
+     EmulatorLogs
+forall (m :: * -&gt; *). MonadIO m =&gt; MVar AppState -&gt; m EmulatorLogs
+</span><a href="Cardano.Node.Socket.Emulator.Mock.html#consumeEventHistory"><span class="hs-identifier hs-var">consumeEventHistory</span></a></span><span> </span><span class="annot"><span class="annottext">MVar AppState
+</span><a href="#local-6989586621679331178"><span class="hs-identifier hs-var">stateVar</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="hs-keyword">data</span><span> </span><span id="Ctx"><span class="annot"><a href="Cardano.Node.Socket.Emulator.html#Ctx"><span class="hs-identifier hs-var">Ctx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Ctx"><span class="annot"><a href="Cardano.Node.Socket.Emulator.html#Ctx"><span class="hs-identifier hs-var">Ctx</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="serverHandler"><span class="annot"><span class="annottext">Ctx -&gt; ServerHandler
+</span><a href="Cardano.Node.Socket.Emulator.html#serverHandler"><span class="hs-identifier hs-var hs-var">serverHandler</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Node.Socket.Emulator.Server.html#ServerHandler"><span class="hs-identifier hs-type">Server.ServerHandler</span></a></span><span>
+</span><span id="line-49"></span><span>               </span><span class="hs-special">,</span><span> </span><span id="serverState"><span class="annot"><span class="annottext">Ctx -&gt; MVar AppState
+</span><a href="Cardano.Node.Socket.Emulator.html#serverState"><span class="hs-identifier hs-var hs-var">serverState</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Socket.Emulator.Types.html#AppState"><span class="hs-identifier hs-type">AppState</span></a></span><span>
+</span><span id="line-50"></span><span>               </span><span class="hs-special">,</span><span> </span><span id="mockTrace"><span class="annot"><span class="annottext">Ctx -&gt; Trace IO CNSEServerLogMsg
+</span><a href="Cardano.Node.Socket.Emulator.html#mockTrace"><span class="hs-identifier hs-var hs-var">mockTrace</span></a></span></span><span>     </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Trace</span></span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Socket.Emulator.Types.html#CNSEServerLogMsg"><span class="hs-identifier hs-type">CNSEServerLogMsg</span></a></span><span>
+</span><span id="line-51"></span><span>               </span><span class="hs-special">}</span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span class="annot"><a href="Cardano.Node.Socket.Emulator.html#main"><span class="hs-identifier hs-type">main</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Trace</span></span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Socket.Emulator.Types.html#CNSEServerLogMsg"><span class="hs-identifier hs-type">CNSEServerLogMsg</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Node.Socket.Emulator.Types.html#NodeServerConfig"><span class="hs-identifier hs-type">NodeServerConfig</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span id="main"><span class="annot"><span class="annottext">main :: Trace IO CNSEServerLogMsg -&gt; NodeServerConfig -&gt; IO () -&gt; IO ()
+</span><a href="Cardano.Node.Socket.Emulator.html#main"><span class="hs-identifier hs-var hs-var">main</span></a></span></span><span> </span><span id="local-6989586621679331169"><span class="annot"><span class="annottext">Trace IO CNSEServerLogMsg
+</span><a href="#local-6989586621679331169"><span class="hs-identifier hs-var">trace</span></a></span></span><span> </span><span id="local-6989586621679331168"><span class="annot"><span class="annottext">nodeServerConfig :: NodeServerConfig
+</span><a href="#local-6989586621679331168"><span class="hs-identifier hs-var">nodeServerConfig</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Cardano.Node.Socket.Emulator.Types.html#NodeServerConfig"><span class="hs-identifier hs-type">NodeServerConfig</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span id="local-6989586621679331166"><span class="annot"><span class="annottext">BaseUrl
+nscBaseUrl :: NodeServerConfig -&gt; BaseUrl
+nscBaseUrl :: BaseUrl
+</span><a href="Cardano.Node.Socket.Emulator.Types.html#nscBaseUrl"><span class="hs-identifier hs-var hs-var">nscBaseUrl</span></a></span></span><span>
+</span><span id="line-55"></span><span>                            </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679331164"><span class="annot"><span class="annottext">SlotConfig
+nscSlotConfig :: NodeServerConfig -&gt; SlotConfig
+nscSlotConfig :: SlotConfig
+</span><a href="Cardano.Node.Socket.Emulator.Types.html#nscSlotConfig"><span class="hs-identifier hs-var hs-var">nscSlotConfig</span></a></span></span><span>
+</span><span id="line-56"></span><span>                            </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679331162"><span class="annot"><span class="annottext">Integer
+nscKeptBlocks :: NodeServerConfig -&gt; Integer
+nscKeptBlocks :: Integer
+</span><a href="Cardano.Node.Socket.Emulator.Types.html#nscKeptBlocks"><span class="hs-identifier hs-var hs-var">nscKeptBlocks</span></a></span></span><span>
+</span><span id="line-57"></span><span>                            </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679331160"><span class="annot"><span class="annottext">[WalletNumber]
+nscInitialTxWallets :: NodeServerConfig -&gt; [WalletNumber]
+nscInitialTxWallets :: [WalletNumber]
+</span><a href="Cardano.Node.Socket.Emulator.Types.html#nscInitialTxWallets"><span class="hs-identifier hs-var hs-var">nscInitialTxWallets</span></a></span></span><span>
+</span><span id="line-58"></span><span>                            </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679331158"><span class="annot"><span class="annottext">FilePath
+nscSocketPath :: NodeServerConfig -&gt; FilePath
+nscSocketPath :: FilePath
+</span><a href="Cardano.Node.Socket.Emulator.Types.html#nscSocketPath"><span class="hs-identifier hs-var hs-var">nscSocketPath</span></a></span></span><span> </span><span class="hs-special">}</span><span> </span><span id="local-6989586621679331156"><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679331156"><span class="hs-identifier hs-var">whenStarted</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Trace IO CNSEServerLogMsg
+-&gt; Eff '[LogMsg CNSEServerLogMsg, IO] ~&gt; IO
+forall (m :: * -&gt; *) l.
+MonadIO m =&gt;
+Trace m l -&gt; Eff '[LogMsg l, m] ~&gt; m
+</span><a href="Plutus.Monitoring.Util.html#runLogEffects"><span class="hs-identifier hs-var">LM.runLogEffects</span></a></span><span> </span><span class="annot"><span class="annottext">Trace IO CNSEServerLogMsg
+</span><a href="#local-6989586621679331169"><span class="hs-identifier hs-var">trace</span></a></span><span> </span><span class="annot"><span class="annottext">(Eff '[LogMsg CNSEServerLogMsg, IO] () -&gt; IO ())
+-&gt; Eff '[LogMsg CNSEServerLogMsg, IO] () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span>    </span><span class="hs-comment">-- make initial distribution of 1 billion Ada to all configured wallets</span><span>
+</span><span id="line-61"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679331154"><span class="annot"><span class="annottext">getAddress :: a -&gt; CardanoAddress
+</span><a href="#local-6989586621679331154"><span class="hs-identifier hs-var hs-var">getAddress</span></a></span></span><span> </span><span id="local-6989586621679331153"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679331153"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[CardanoAddress]
+</span><span class="hs-identifier hs-var">knownAddresses</span></span><span> </span><span class="annot"><span class="annottext">[CardanoAddress] -&gt; Int -&gt; CardanoAddress
+forall a. [a] -&gt; Int -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">!!</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; Int
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679331153"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span>        </span><span id="local-6989586621679331151"><span class="annot"><span class="annottext">dist :: Map CardanoAddress Value
+</span><a href="#local-6989586621679331151"><span class="hs-identifier hs-var hs-var">dist</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(CardanoAddress, Value)] -&gt; Map CardanoAddress Value
+forall k a. Ord k =&gt; [(k, a)] -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.fromList</span></span><span> </span><span class="annot"><span class="annottext">([(CardanoAddress, Value)] -&gt; Map CardanoAddress Value)
+-&gt; [(CardanoAddress, Value)] -&gt; Map CardanoAddress Value
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[CardanoAddress] -&gt; [Value] -&gt; [(CardanoAddress, Value)]
+forall a b. [a] -&gt; [b] -&gt; [(a, b)]
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">zip</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">WalletNumber -&gt; CardanoAddress
+forall a. Integral a =&gt; a -&gt; CardanoAddress
+</span><a href="#local-6989586621679331154"><span class="hs-identifier hs-var">getAddress</span></a></span><span> </span><span class="annot"><span class="annottext">(WalletNumber -&gt; CardanoAddress)
+-&gt; [WalletNumber] -&gt; [CardanoAddress]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[WalletNumber]
+</span><a href="#local-6989586621679331160"><span class="hs-identifier hs-var">nscInitialTxWallets</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Value -&gt; [Value]
+forall a. a -&gt; [a]
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">repeat</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Rational -&gt; Value
+</span><span class="hs-identifier hs-var">CardanoAPI.adaValueOf</span></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><span class="hs-number">1_000_000_000</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span>    </span><span id="local-6989586621679331146"><span class="annot"><span class="annottext">SocketEmulatorState
+</span><a href="#local-6989586621679331146"><span class="hs-identifier hs-var">initialState</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Map CardanoAddress Value
+-&gt; Eff '[LogMsg CNSEServerLogMsg, IO] SocketEmulatorState
+forall (m :: * -&gt; *).
+MonadIO m =&gt;
+Map CardanoAddress Value -&gt; m SocketEmulatorState
+</span><a href="Cardano.Node.Socket.Emulator.Types.html#initialChainState"><span class="hs-identifier hs-var">initialChainState</span></a></span><span> </span><span class="annot"><span class="annottext">Map CardanoAddress Value
+</span><a href="#local-6989586621679331151"><span class="hs-identifier hs-var">dist</span></a></span><span>
+</span><span id="line-64"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679331145"><span class="annot"><span class="annottext">appState :: AppState
+</span><a href="#local-6989586621679331145"><span class="hs-identifier hs-var hs-var">appState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SocketEmulatorState -&gt; EmulatorLogs -&gt; AppState
+</span><a href="Cardano.Node.Socket.Emulator.Types.html#AppState"><span class="hs-identifier hs-var">AppState</span></a></span><span> </span><span class="annot"><span class="annottext">SocketEmulatorState
+</span><a href="#local-6989586621679331146"><span class="hs-identifier hs-var">initialState</span></a></span><span> </span><span class="annot"><span class="annottext">EmulatorLogs
+forall a. Monoid a =&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-65"></span><span>    </span><span id="local-6989586621679331143"><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621679331143"><span class="hs-identifier hs-var">params</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO Params -&gt; Eff '[LogMsg CNSEServerLogMsg, IO] Params
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO Params -&gt; Eff '[LogMsg CNSEServerLogMsg, IO] Params)
+-&gt; IO Params -&gt; Eff '[LogMsg CNSEServerLogMsg, IO] Params
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">NodeServerConfig -&gt; IO Params
+</span><a href="Cardano.Node.Socket.Emulator.Params.html#fromNodeServerConfig"><span class="hs-identifier hs-var">Params.fromNodeServerConfig</span></a></span><span> </span><span class="annot"><span class="annottext">NodeServerConfig
+</span><a href="#local-6989586621679331168"><span class="hs-identifier hs-var">nodeServerConfig</span></a></span><span>
+</span><span id="line-66"></span><span>    </span><span id="local-6989586621679331141"><span class="annot"><span class="annottext">ServerHandler
+</span><a href="#local-6989586621679331141"><span class="hs-identifier hs-var">serverHandler</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO ServerHandler
+-&gt; Eff '[LogMsg CNSEServerLogMsg, IO] ServerHandler
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO ServerHandler
+ -&gt; Eff '[LogMsg CNSEServerLogMsg, IO] ServerHandler)
+-&gt; IO ServerHandler
+-&gt; Eff '[LogMsg CNSEServerLogMsg, IO] ServerHandler
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Trace IO EmulatorMsg
+-&gt; FilePath -&gt; Integer -&gt; AppState -&gt; Params -&gt; IO ServerHandler
+forall (m :: * -&gt; *).
+MonadIO m =&gt;
+Trace IO EmulatorMsg
+-&gt; FilePath -&gt; Integer -&gt; AppState -&gt; Params -&gt; m ServerHandler
+</span><a href="Cardano.Node.Socket.Emulator.Server.html#runServerNode"><span class="hs-identifier hs-var">Server.runServerNode</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(EmulatorMsg -&gt; CNSEServerLogMsg)
+-&gt; Trace IO CNSEServerLogMsg -&gt; Trace IO EmulatorMsg
+forall a b (m :: * -&gt; *). (a -&gt; b) -&gt; Trace m b -&gt; Trace m a
+</span><a href="Plutus.Monitoring.Util.html#convertLog"><span class="hs-identifier hs-var">LM.convertLog</span></a></span><span> </span><span class="annot"><span class="annottext">EmulatorMsg -&gt; CNSEServerLogMsg
+</span><a href="Cardano.Node.Socket.Emulator.Types.html#ProcessingEmulatorMsg"><span class="hs-identifier hs-var">ProcessingEmulatorMsg</span></a></span><span> </span><span class="annot"><span class="annottext">Trace IO CNSEServerLogMsg
+</span><a href="#local-6989586621679331169"><span class="hs-identifier hs-var">trace</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679331158"><span class="hs-identifier hs-var">nscSocketPath</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679331162"><span class="hs-identifier hs-var">nscKeptBlocks</span></a></span><span> </span><span class="annot"><span class="annottext">AppState
+</span><a href="#local-6989586621679331145"><span class="hs-identifier hs-var">appState</span></a></span><span> </span><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621679331143"><span class="hs-identifier hs-var">params</span></a></span><span>
+</span><span id="line-67"></span><span>    </span><span id="local-6989586621679331139"><span class="annot"><span class="annottext">MVar AppState
+</span><a href="#local-6989586621679331139"><span class="hs-identifier hs-var">serverState</span></a></span></span><span>   </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO (MVar AppState)
+-&gt; Eff '[LogMsg CNSEServerLogMsg, IO] (MVar AppState)
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (MVar AppState)
+ -&gt; Eff '[LogMsg CNSEServerLogMsg, IO] (MVar AppState))
+-&gt; IO (MVar AppState)
+-&gt; Eff '[LogMsg CNSEServerLogMsg, IO] (MVar AppState)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">AppState -&gt; IO (MVar AppState)
+forall a. a -&gt; IO (MVar a)
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">newMVar</span></a></span><span> </span><span class="annot"><span class="annottext">AppState
+</span><a href="#local-6989586621679331145"><span class="hs-identifier hs-var">appState</span></a></span><span>
+</span><span id="line-68"></span><span>    </span><span class="annot"><span class="annottext">Eff '[DelayEffect, LogMsg CNSEServerLogMsg, IO] ()
+-&gt; Eff '[LogMsg CNSEServerLogMsg, IO] ()
+forall (effs :: [* -&gt; *]) (m :: * -&gt; *).
+(LastMember m effs, MonadIO m) =&gt;
+Eff (DelayEffect : effs) ~&gt; Eff effs
+</span><span class="hs-identifier hs-var">handleDelayEffect</span></span><span> </span><span class="annot"><span class="annottext">(Eff '[DelayEffect, LogMsg CNSEServerLogMsg, IO] ()
+ -&gt; Eff '[LogMsg CNSEServerLogMsg, IO] ())
+-&gt; Eff '[DelayEffect, LogMsg CNSEServerLogMsg, IO] ()
+-&gt; Eff '[LogMsg CNSEServerLogMsg, IO] ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Second -&gt; Eff '[DelayEffect, LogMsg CNSEServerLogMsg, IO] ()
+forall a (effs :: [* -&gt; *]).
+(TimeUnit a, Member DelayEffect effs) =&gt;
+a -&gt; Eff effs ()
+</span><span class="hs-identifier hs-var">delayThread</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Second
+</span><span class="hs-number">2</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Second</span></span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679331138"><span class="annot"><span class="annottext">ctx :: Ctx
+</span><a href="#local-6989586621679331138"><span class="hs-identifier hs-var hs-var">ctx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Ctx :: ServerHandler -&gt; MVar AppState -&gt; Trace IO CNSEServerLogMsg -&gt; Ctx
+</span><a href="Cardano.Node.Socket.Emulator.html#Ctx"><span class="hs-identifier hs-type">Ctx</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">serverHandler :: ServerHandler
+</span><a href="Cardano.Node.Socket.Emulator.html#serverHandler"><span class="hs-identifier hs-var">serverHandler</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ServerHandler
+</span><a href="#local-6989586621679331141"><span class="hs-identifier hs-var">serverHandler</span></a></span><span>
+</span><span id="line-71"></span><span>                  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">serverState :: MVar AppState
+</span><a href="Cardano.Node.Socket.Emulator.html#serverState"><span class="hs-identifier hs-var">serverState</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MVar AppState
+</span><a href="#local-6989586621679331139"><span class="hs-identifier hs-var">serverState</span></a></span><span>
+</span><span id="line-72"></span><span>                  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">mockTrace :: Trace IO CNSEServerLogMsg
+</span><a href="Cardano.Node.Socket.Emulator.html#mockTrace"><span class="hs-identifier hs-var">mockTrace</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Trace IO CNSEServerLogMsg
+</span><a href="#local-6989586621679331169"><span class="hs-identifier hs-var">trace</span></a></span><span>
+</span><span id="line-73"></span><span>                  </span><span class="hs-special">}</span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span>    </span><span class="annot"><span class="annottext">Ctx -&gt; Eff '[LogMsg CNSEServerLogMsg, IO] ()
+forall (m :: * -&gt; *) (effs :: [* -&gt; *]).
+(MonadIO m, LastMember m effs,
+ FindElem (LogMsg CNSEServerLogMsg) effs) =&gt;
+Ctx -&gt; Eff effs ()
+</span><a href="#local-6989586621679331137"><span class="hs-identifier hs-var">runSlotCoordinator</span></a></span><span> </span><span class="annot"><span class="annottext">Ctx
+</span><a href="#local-6989586621679331138"><span class="hs-identifier hs-var">ctx</span></a></span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span>    </span><span class="annot"><span class="annottext">CNSEServerLogMsg -&gt; Eff '[LogMsg CNSEServerLogMsg, IO] ()
+forall a (effs :: [* -&gt; *]).
+Member (LogMsg a) effs =&gt;
+a -&gt; Eff effs ()
+</span><span class="hs-identifier hs-var">logInfo</span></span><span> </span><span class="annot"><span class="annottext">(CNSEServerLogMsg -&gt; Eff '[LogMsg CNSEServerLogMsg, IO] ())
+-&gt; CNSEServerLogMsg -&gt; Eff '[LogMsg CNSEServerLogMsg, IO] ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; CNSEServerLogMsg
+</span><a href="Cardano.Node.Socket.Emulator.Types.html#StartingCNSEServer"><span class="hs-identifier hs-var">StartingCNSEServer</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; CNSEServerLogMsg) -&gt; Int -&gt; CNSEServerLogMsg
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">BaseUrl -&gt; Int
+</span><span class="hs-identifier hs-var hs-var">baseUrlPort</span></span><span> </span><span class="annot"><span class="annottext">BaseUrl
+</span><a href="#local-6989586621679331166"><span class="hs-identifier hs-var">nscBaseUrl</span></a></span><span>
+</span><span id="line-78"></span><span>    </span><span class="annot"><span class="annottext">IO () -&gt; Eff '[LogMsg CNSEServerLogMsg, IO] ()
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; Eff '[LogMsg CNSEServerLogMsg, IO] ())
+-&gt; IO () -&gt; Eff '[LogMsg CNSEServerLogMsg, IO] ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Settings -&gt; Application -&gt; IO ()
+</span><span class="hs-identifier hs-var">Warp.runSettings</span></span><span> </span><span class="annot"><span class="annottext">Settings
+</span><a href="#local-6989586621679331134"><span class="hs-identifier hs-var">warpSettings</span></a></span><span> </span><span class="annot"><span class="annottext">(Application -&gt; IO ()) -&gt; Application -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Trace IO CNSEServerLogMsg -&gt; Params -&gt; MVar AppState -&gt; Application
+</span><a href="Cardano.Node.Socket.Emulator.html#app"><span class="hs-identifier hs-var">app</span></a></span><span> </span><span class="annot"><span class="annottext">Trace IO CNSEServerLogMsg
+</span><a href="#local-6989586621679331169"><span class="hs-identifier hs-var">trace</span></a></span><span> </span><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621679331143"><span class="hs-identifier hs-var">params</span></a></span><span> </span><span class="annot"><span class="annottext">MVar AppState
+</span><a href="#local-6989586621679331139"><span class="hs-identifier hs-var">serverState</span></a></span><span>
+</span><span id="line-79"></span><span>
+</span><span id="line-80"></span><span>        </span><span class="hs-keyword">where</span><span>
+</span><span id="line-81"></span><span>            </span><span id="local-6989586621679331134"><span class="annot"><span class="annottext">warpSettings :: Settings
+</span><a href="#local-6989586621679331134"><span class="hs-identifier hs-var hs-var">warpSettings</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Settings
+</span><span class="hs-identifier hs-var">Warp.defaultSettings</span></span><span> </span><span class="annot"><span class="annottext">Settings -&gt; (Settings -&gt; Settings) -&gt; Settings
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Settings -&gt; Settings
+</span><span class="hs-identifier hs-var">Warp.setPort</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">BaseUrl -&gt; Int
+</span><span class="hs-identifier hs-var hs-var">baseUrlPort</span></span><span> </span><span class="annot"><span class="annottext">BaseUrl
+</span><a href="#local-6989586621679331166"><span class="hs-identifier hs-var">nscBaseUrl</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Settings -&gt; (Settings -&gt; Settings) -&gt; Settings
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">IO () -&gt; Settings -&gt; Settings
+</span><span class="hs-identifier hs-var">Warp.setBeforeMainLoop</span></span><span> </span><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679331156"><span class="hs-identifier hs-var">whenStarted</span></a></span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span>            </span><span id="local-6989586621679331137"><span class="annot"><span class="annottext">runSlotCoordinator :: Ctx -&gt; Eff effs ()
+</span><a href="#local-6989586621679331137"><span class="hs-identifier hs-var hs-var">runSlotCoordinator</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Socket.Emulator.html#Ctx"><span class="hs-identifier hs-type">Ctx</span></a></span><span> </span><span id="local-6989586621679331130"><span class="annot"><span class="annottext">ServerHandler
+</span><a href="#local-6989586621679331130"><span class="hs-identifier hs-var">serverHandler</span></a></span></span><span> </span><span class="annot"><span class="annottext">MVar AppState
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Trace IO CNSEServerLogMsg
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-84"></span><span>                </span><span class="hs-keyword">let</span><span> </span><span class="annot"><span class="hs-identifier hs-type">SlotConfig</span></span><span class="hs-special">{</span><span id="local-6989586621679331129"><span class="annot"><span class="annottext">POSIXTime
+scSlotZeroTime :: POSIXTime
+scSlotZeroTime :: SlotConfig -&gt; POSIXTime
+</span><a href="#local-6989586621679331129"><span class="hs-identifier hs-var hs-var">scSlotZeroTime</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679331128"><span class="annot"><span class="annottext">Integer
+scSlotLength :: Integer
+scSlotLength :: SlotConfig -&gt; Integer
+</span><a href="#local-6989586621679331128"><span class="hs-identifier hs-var hs-var">scSlotLength</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SlotConfig
+</span><a href="#local-6989586621679331164"><span class="hs-identifier hs-var">nscSlotConfig</span></a></span><span>
+</span><span id="line-85"></span><span>                </span><span class="annot"><span class="annottext">CNSEServerLogMsg -&gt; Eff effs ()
+forall a (effs :: [* -&gt; *]).
+Member (LogMsg a) effs =&gt;
+a -&gt; Eff effs ()
+</span><span class="hs-identifier hs-var">logInfo</span></span><span> </span><span class="annot"><span class="annottext">(CNSEServerLogMsg -&gt; Eff effs ())
+-&gt; CNSEServerLogMsg -&gt; Eff effs ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">UTCTime -&gt; Millisecond -&gt; CNSEServerLogMsg
+</span><a href="Cardano.Node.Socket.Emulator.Types.html#StartingSlotCoordination"><span class="hs-identifier hs-var">StartingSlotCoordination</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">POSIXTime -&gt; UTCTime
+</span><span class="hs-identifier hs-var">posixSecondsToUTCTime</span></span><span> </span><span class="annot"><span class="annottext">(POSIXTime -&gt; UTCTime) -&gt; POSIXTime -&gt; UTCTime
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">POSIXTime -&gt; POSIXTime
+forall a b. (Real a, Fractional b) =&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">realToFrac</span></a></span><span> </span><span class="annot"><span class="annottext">POSIXTime
+</span><a href="#local-6989586621679331129"><span class="hs-identifier hs-var">scSlotZeroTime</span></a></span><span> </span><span class="annot"><span class="annottext">POSIXTime -&gt; POSIXTime -&gt; POSIXTime
+forall a. Fractional a =&gt; a -&gt; a -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">/</span></a></span><span> </span><span class="annot"><span class="annottext">POSIXTime
+</span><span class="hs-number">1000</span></span><span class="hs-special">)</span><span>
+</span><span id="line-86"></span><span>                                                   </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer -&gt; Millisecond
+forall a. Num a =&gt; Integer -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fromInteger</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679331128"><span class="hs-identifier hs-var">scSlotLength</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Millisecond</span></span><span class="hs-special">)</span><span>
+</span><span id="line-87"></span><span>                </span><span class="annot"><span class="annottext">Eff effs ThreadId -&gt; Eff effs ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(Eff effs ThreadId -&gt; Eff effs ())
+-&gt; Eff effs ThreadId -&gt; Eff effs ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">IO ThreadId -&gt; Eff effs ThreadId
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO ThreadId -&gt; Eff effs ThreadId)
+-&gt; IO ThreadId -&gt; Eff effs ThreadId
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">IO () -&gt; IO ThreadId
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">forkIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO ThreadId) -&gt; IO () -&gt; IO ThreadId
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">SlotConfig -&gt; ServerHandler -&gt; IO ()
+forall a. SlotConfig -&gt; ServerHandler -&gt; IO a
+</span><a href="Cardano.Node.Socket.Emulator.Mock.html#slotCoordinator"><span class="hs-identifier hs-var">slotCoordinator</span></a></span><span> </span><span class="annot"><span class="annottext">SlotConfig
+</span><a href="#local-6989586621679331164"><span class="hs-identifier hs-var">nscSlotConfig</span></a></span><span> </span><span class="annot"><span class="annottext">ServerHandler
+</span><a href="#local-6989586621679331130"><span class="hs-identifier hs-var">serverHandler</span></a></span><span>
+</span><span id="line-88"></span></pre></body></html>

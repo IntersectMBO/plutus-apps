@@ -1,0 +1,674 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds           #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass      #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DerivingStrategies  #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts    #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE GADTs               #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies        #-}</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Protocol.Socket.Client</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Control.Concurrent</span></a></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Catch</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Handler</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">SomeException</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">FromJSON</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ToJSON</span></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Text</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Text</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">pack</span></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.Api</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">BlockInMode</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">CardanoMode</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ChainPoint</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ChainTip</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ConsensusModeParams</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>                    </span><span class="annot"><span class="hs-identifier">LocalChainSyncClient</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">LocalNodeClientProtocols</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">LocalNodeClientProtocolsInMode</span></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>                    </span><span class="annot"><span class="hs-identifier">LocalNodeConnectInfo</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">NetworkId</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">connectToLocalNode</span></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.BM.Data.Trace</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Trace</span></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.BM.Data.Tracer</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">ToObject</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.BM.Trace</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">logDebug</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">logWarning</span></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.Node.Emulator.Internal.Node.TimeSlot</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">SlotConfig</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">currentSlot</span></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Retry</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">fibonacciBackoff</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">recovering</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">skipAsyncExceptions</span></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Tracer</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">nullTracer</span></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Ouroboros.Network.IOManager</span></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Ouroboros.Network.Protocol.ChainSync.Client</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">ChainSync</span></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.Node.Socket.Emulator.Types</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">epochSlots</span></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Ledger</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Slot</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Compatibility.html"><span class="hs-identifier">Plutus.ChainIndex.Compatibility</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.ChainIndex.Compatibility.html#fromCardanoPoint"><span class="hs-identifier">fromCardanoPoint</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Compatibility.html#fromCardanoTip"><span class="hs-identifier">fromCardanoTip</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Types.html"><span class="hs-identifier">Plutus.ChainIndex.Types</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.ChainIndex.Types.html#Point"><span class="hs-identifier">Point</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Types.html#Tip"><span class="hs-identifier">Tip</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">data</span><span> </span><span id="ChainSyncHandle"><span class="annot"><a href="Cardano.Protocol.Socket.Client.html#ChainSyncHandle"><span class="hs-identifier hs-var">ChainSyncHandle</span></a></span></span><span> </span><span id="local-6989586621679684412"><span class="annot"><a href="#local-6989586621679684412"><span class="hs-identifier hs-type">event</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ChainSyncHandle"><span class="annot"><a href="Cardano.Protocol.Socket.Client.html#ChainSyncHandle"><span class="hs-identifier hs-var">ChainSyncHandle</span></a></span></span><span>
+</span><span id="line-35"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="cshCurrentSlot"><span class="annot"><span class="annottext">ChainSyncHandle event -&gt; IO Slot
+</span><a href="Cardano.Protocol.Socket.Client.html#cshCurrentSlot"><span class="hs-identifier hs-var hs-var">cshCurrentSlot</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Slot</span></span><span>
+</span><span id="line-36"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="cshHandler"><span class="annot"><span class="annottext">ChainSyncHandle event -&gt; event -&gt; Slot -&gt; IO ()
+</span><a href="Cardano.Protocol.Socket.Client.html#cshHandler"><span class="hs-identifier hs-var hs-var">cshHandler</span></a></span></span><span>     </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679684412"><span class="hs-identifier hs-type">event</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Slot</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">data</span><span> </span><span id="ChainSyncEvent"><span class="annot"><a href="Cardano.Protocol.Socket.Client.html#ChainSyncEvent"><span class="hs-identifier hs-var">ChainSyncEvent</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-40"></span><span>    </span><span id="Resume"><span class="annot"><a href="Cardano.Protocol.Socket.Client.html#Resume"><span class="hs-identifier hs-var">Resume</span></a></span></span><span>       </span><span class="hs-glyph">!</span><span class="annot"><span class="hs-identifier hs-type">ChainPoint</span></span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="RollForward"><span class="annot"><a href="Cardano.Protocol.Socket.Client.html#RollForward"><span class="hs-identifier hs-var">RollForward</span></a></span></span><span>  </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">BlockInMode</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">CardanoMode</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">!</span><span class="annot"><span class="hs-identifier hs-type">ChainTip</span></span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="RollBackward"><span class="annot"><a href="Cardano.Protocol.Socket.Client.html#RollBackward"><span class="hs-identifier hs-var">RollBackward</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><span class="hs-identifier hs-type">ChainPoint</span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><span class="hs-identifier hs-type">ChainTip</span></span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span class="hs-comment">{- | The `Slot` parameter here represents the `current` slot as computed from the
+     current time. There is also the slot where the block was published, which is
+     available from the `ChainSyncEvent`.
+
+     Currently we are using this current slot everywhere, which is why I leave it
+     here, as a parameter.
+-}</span><span>
+</span><span id="line-51"></span><span class="hs-keyword">type</span><span> </span><span id="ChainSyncCallback"><span class="annot"><a href="Cardano.Protocol.Socket.Client.html#ChainSyncCallback"><span class="hs-identifier hs-var">ChainSyncCallback</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Protocol.Socket.Client.html#ChainSyncEvent"><span class="hs-identifier hs-type">ChainSyncEvent</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Slot</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span id="local-6989586621679684297"><span id="local-6989586621679684298"></span></span><span class="hs-keyword">data</span><span> </span><span id="ClientMsg"><span class="annot"><a href="Cardano.Protocol.Socket.Client.html#ClientMsg"><span class="hs-identifier hs-var">ClientMsg</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-54"></span><span>    </span><span id="Disconnected"><span class="annot"><a href="Cardano.Protocol.Socket.Client.html#Disconnected"><span class="hs-identifier hs-var">Disconnected</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span>
+</span><span id="line-55"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="Resumed"><span class="annot"><a href="Cardano.Protocol.Socket.Client.html#Resumed"><span class="hs-identifier hs-var">Resumed</span></a></span></span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Types.html#Point"><span class="hs-identifier hs-type">Point</span></a></span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="RolledForward"><span class="annot"><a href="Cardano.Protocol.Socket.Client.html#RolledForward"><span class="hs-identifier hs-var">RolledForward</span></a></span></span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Types.html#Tip"><span class="hs-identifier hs-type">Tip</span></a></span><span>
+</span><span id="line-57"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="RolledBackward"><span class="annot"><a href="Cardano.Protocol.Socket.Client.html#RolledBackward"><span class="hs-identifier hs-var">RolledBackward</span></a></span></span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Types.html#Point"><span class="hs-identifier hs-type">Point</span></a></span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679684289"><span id="local-6989586621679684291"><span class="annot"><span class="annottext">ClientMsg -&gt; ClientMsg -&gt; Bool
+(ClientMsg -&gt; ClientMsg -&gt; Bool)
+-&gt; (ClientMsg -&gt; ClientMsg -&gt; Bool) -&gt; Eq ClientMsg
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: ClientMsg -&gt; ClientMsg -&gt; Bool
+$c/= :: ClientMsg -&gt; ClientMsg -&gt; Bool
+== :: ClientMsg -&gt; ClientMsg -&gt; Bool
+$c== :: ClientMsg -&gt; ClientMsg -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679684282"><span id="local-6989586621679684284"><span id="local-6989586621679684286"><span class="annot"><span class="annottext">Int -&gt; ClientMsg -&gt; ShowS
+[ClientMsg] -&gt; ShowS
+ClientMsg -&gt; String
+(Int -&gt; ClientMsg -&gt; ShowS)
+-&gt; (ClientMsg -&gt; String)
+-&gt; ([ClientMsg] -&gt; ShowS)
+-&gt; Show ClientMsg
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [ClientMsg] -&gt; ShowS
+$cshowList :: [ClientMsg] -&gt; ShowS
+show :: ClientMsg -&gt; String
+$cshow :: ClientMsg -&gt; String
+showsPrec :: Int -&gt; ClientMsg -&gt; ShowS
+$cshowsPrec :: Int -&gt; ClientMsg -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. ClientMsg -&gt; Rep ClientMsg x)
+-&gt; (forall x. Rep ClientMsg x -&gt; ClientMsg) -&gt; Generic ClientMsg
+forall x. Rep ClientMsg x -&gt; ClientMsg
+forall x. ClientMsg -&gt; Rep ClientMsg x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep ClientMsg x -&gt; ClientMsg
+$cfrom :: forall x. ClientMsg -&gt; Rep ClientMsg x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679684274"><span id="local-6989586621679684276"><span class="annot"><span class="annottext">Value -&gt; Parser [ClientMsg]
+Value -&gt; Parser ClientMsg
+(Value -&gt; Parser ClientMsg)
+-&gt; (Value -&gt; Parser [ClientMsg]) -&gt; FromJSON ClientMsg
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+parseJSONList :: Value -&gt; Parser [ClientMsg]
+$cparseJSONList :: Value -&gt; Parser [ClientMsg]
+parseJSON :: Value -&gt; Parser ClientMsg
+$cparseJSON :: Value -&gt; Parser ClientMsg
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679684265"><span id="local-6989586621679684267"><span id="local-6989586621679684269"><span id="local-6989586621679684271"><span class="annot"><span class="annottext">[ClientMsg] -&gt; Encoding
+[ClientMsg] -&gt; Value
+ClientMsg -&gt; Encoding
+ClientMsg -&gt; Value
+(ClientMsg -&gt; Value)
+-&gt; (ClientMsg -&gt; Encoding)
+-&gt; ([ClientMsg] -&gt; Value)
+-&gt; ([ClientMsg] -&gt; Encoding)
+-&gt; ToJSON ClientMsg
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; ToJSON a
+toEncodingList :: [ClientMsg] -&gt; Encoding
+$ctoEncodingList :: [ClientMsg] -&gt; Encoding
+toJSONList :: [ClientMsg] -&gt; Value
+$ctoJSONList :: [ClientMsg] -&gt; Value
+toEncoding :: ClientMsg -&gt; Encoding
+$ctoEncoding :: ClientMsg -&gt; Encoding
+toJSON :: ClientMsg -&gt; Value
+$ctoJSON :: ClientMsg -&gt; Value
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679684260"><span id="local-6989586621679684262"><span class="annot"><span class="annottext">TracingVerbosity -&gt; ClientMsg -&gt; Object
+ClientMsg -&gt; Object -&gt; Text
+(TracingVerbosity -&gt; ClientMsg -&gt; Object)
+-&gt; (ClientMsg -&gt; Object -&gt; Text) -&gt; ToObject ClientMsg
+forall a.
+(TracingVerbosity -&gt; a -&gt; Object)
+-&gt; (a -&gt; Object -&gt; Text) -&gt; ToObject a
+textTransformer :: ClientMsg -&gt; Object -&gt; Text
+$ctextTransformer :: ClientMsg -&gt; Object -&gt; Text
+toObject :: TracingVerbosity -&gt; ClientMsg -&gt; Object
+$ctoObject :: TracingVerbosity -&gt; ClientMsg -&gt; Object
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">ToObject</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="annot"><a href="Cardano.Protocol.Socket.Client.html#getCurrentSlot"><span class="hs-identifier hs-type">getCurrentSlot</span></a></span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679684257"><span class="annot"><a href="#local-6989586621679684257"><span class="hs-identifier hs-type">block</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-63"></span><span>     </span><span class="annot"><a href="Cardano.Protocol.Socket.Client.html#ChainSyncHandle"><span class="hs-identifier hs-type">ChainSyncHandle</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679684257"><span class="hs-identifier hs-type">block</span></a></span><span>
+</span><span id="line-64"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Slot</span></span><span>
+</span><span id="line-65"></span><span id="getCurrentSlot"><span class="annot"><span class="annottext">getCurrentSlot :: ChainSyncHandle block -&gt; IO Slot
+</span><a href="Cardano.Protocol.Socket.Client.html#getCurrentSlot"><span class="hs-identifier hs-var hs-var">getCurrentSlot</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ChainSyncHandle block -&gt; IO Slot
+forall event. ChainSyncHandle event -&gt; IO Slot
+</span><a href="Cardano.Protocol.Socket.Client.html#cshCurrentSlot"><span class="hs-identifier hs-var hs-var">cshCurrentSlot</span></a></span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span class="hs-comment">-- | Run the chain sync protocol to get access to the current slot number.</span><span>
+</span><span id="line-68"></span><span class="annot"><a href="Cardano.Protocol.Socket.Client.html#runChainSync%27"><span class="hs-identifier hs-type">runChainSync'</span></a></span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">FilePath</span></a></span><span>
+</span><span id="line-70"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">SlotConfig</span></span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">NetworkId</span></span><span>
+</span><span id="line-72"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">ChainPoint</span></span><span class="hs-special">]</span><span>
+</span><span id="line-73"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Protocol.Socket.Client.html#ChainSyncHandle"><span class="hs-identifier hs-type">ChainSyncHandle</span></a></span><span> </span><span class="annot"><a href="Cardano.Protocol.Socket.Client.html#ChainSyncEvent"><span class="hs-identifier hs-type">ChainSyncEvent</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-74"></span><span id="runChainSync%27"><span class="annot"><span class="annottext">runChainSync' :: String
+-&gt; SlotConfig
+-&gt; NetworkId
+-&gt; [ChainPoint]
+-&gt; IO (ChainSyncHandle ChainSyncEvent)
+</span><a href="Cardano.Protocol.Socket.Client.html#runChainSync%27"><span class="hs-identifier hs-var hs-var">runChainSync'</span></a></span></span><span> </span><span id="local-6989586621679684254"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679684254"><span class="hs-identifier hs-var">socketPath</span></a></span></span><span> </span><span id="local-6989586621679684253"><span class="annot"><span class="annottext">SlotConfig
+</span><a href="#local-6989586621679684253"><span class="hs-identifier hs-var">slotConfig</span></a></span></span><span> </span><span id="local-6989586621679684252"><span class="annot"><span class="annottext">NetworkId
+</span><a href="#local-6989586621679684252"><span class="hs-identifier hs-var">networkId</span></a></span></span><span> </span><span id="local-6989586621679684251"><span class="annot"><span class="annottext">[ChainPoint]
+</span><a href="#local-6989586621679684251"><span class="hs-identifier hs-var">resumePoints</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-75"></span><span>  </span><span class="annot"><span class="annottext">String
+-&gt; Trace IO ClientMsg
+-&gt; SlotConfig
+-&gt; NetworkId
+-&gt; [ChainPoint]
+-&gt; (ChainSyncEvent -&gt; IO ())
+-&gt; IO (ChainSyncHandle ChainSyncEvent)
+</span><a href="Cardano.Protocol.Socket.Client.html#runChainSync"><span class="hs-identifier hs-var">runChainSync</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679684254"><span class="hs-identifier hs-var">socketPath</span></a></span><span> </span><span class="annot"><span class="annottext">Trace IO ClientMsg
+forall (m :: * -&gt; *) a. Applicative m =&gt; Tracer m a
+</span><span class="hs-identifier hs-var">nullTracer</span></span><span> </span><span class="annot"><span class="annottext">SlotConfig
+</span><a href="#local-6989586621679684253"><span class="hs-identifier hs-var">slotConfig</span></a></span><span> </span><span class="annot"><span class="annottext">NetworkId
+</span><a href="#local-6989586621679684252"><span class="hs-identifier hs-var">networkId</span></a></span><span> </span><span class="annot"><span class="annottext">[ChainPoint]
+</span><a href="#local-6989586621679684251"><span class="hs-identifier hs-var">resumePoints</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">ChainSyncEvent
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span class="annot"><a href="Cardano.Protocol.Socket.Client.html#runChainSync"><span class="hs-identifier hs-type">runChainSync</span></a></span><span>
+</span><span id="line-78"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">FilePath</span></a></span><span>
+</span><span id="line-79"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Trace</span></span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Cardano.Protocol.Socket.Client.html#ClientMsg"><span class="hs-identifier hs-type">ClientMsg</span></a></span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">SlotConfig</span></span><span>
+</span><span id="line-81"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">NetworkId</span></span><span>
+</span><span id="line-82"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">ChainPoint</span></span><span class="hs-special">]</span><span>
+</span><span id="line-83"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Protocol.Socket.Client.html#ChainSyncEvent"><span class="hs-identifier hs-type">ChainSyncEvent</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-84"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Protocol.Socket.Client.html#ChainSyncHandle"><span class="hs-identifier hs-type">ChainSyncHandle</span></a></span><span> </span><span class="annot"><a href="Cardano.Protocol.Socket.Client.html#ChainSyncEvent"><span class="hs-identifier hs-type">ChainSyncEvent</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-85"></span><span id="runChainSync"><span class="annot"><span class="annottext">runChainSync :: String
+-&gt; Trace IO ClientMsg
+-&gt; SlotConfig
+-&gt; NetworkId
+-&gt; [ChainPoint]
+-&gt; (ChainSyncEvent -&gt; IO ())
+-&gt; IO (ChainSyncHandle ChainSyncEvent)
+</span><a href="Cardano.Protocol.Socket.Client.html#runChainSync"><span class="hs-identifier hs-var hs-var">runChainSync</span></a></span></span><span> </span><span id="local-6989586621679684249"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679684249"><span class="hs-identifier hs-var">socketPath</span></a></span></span><span> </span><span id="local-6989586621679684248"><span class="annot"><span class="annottext">Trace IO ClientMsg
+</span><a href="#local-6989586621679684248"><span class="hs-identifier hs-var">trace</span></a></span></span><span> </span><span id="local-6989586621679684247"><span class="annot"><span class="annottext">SlotConfig
+</span><a href="#local-6989586621679684247"><span class="hs-identifier hs-var">slotConfig</span></a></span></span><span> </span><span id="local-6989586621679684246"><span class="annot"><span class="annottext">NetworkId
+</span><a href="#local-6989586621679684246"><span class="hs-identifier hs-var">networkId</span></a></span></span><span> </span><span id="local-6989586621679684245"><span class="annot"><span class="annottext">[ChainPoint]
+</span><a href="#local-6989586621679684245"><span class="hs-identifier hs-var">resumePoints</span></a></span></span><span> </span><span id="local-6989586621679684244"><span class="annot"><span class="annottext">ChainSyncEvent -&gt; IO ()
+</span><a href="#local-6989586621679684244"><span class="hs-identifier hs-var">onChainSyncEvent</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-86"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679684243"><span class="annot"><span class="annottext">handle :: ChainSyncHandle ChainSyncEvent
+</span><a href="#local-6989586621679684243"><span class="hs-identifier hs-var hs-var">handle</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ChainSyncHandle :: forall event.
+IO Slot -&gt; (event -&gt; Slot -&gt; IO ()) -&gt; ChainSyncHandle event
+</span><a href="Cardano.Protocol.Socket.Client.html#ChainSyncHandle"><span class="hs-identifier hs-type">ChainSyncHandle</span></a></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-87"></span><span>          </span><span class="annot"><span class="annottext">cshCurrentSlot :: IO Slot
+</span><a href="Cardano.Protocol.Socket.Client.html#cshCurrentSlot"><span class="hs-identifier hs-var">cshCurrentSlot</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SlotConfig -&gt; IO Slot
+</span><span class="hs-identifier hs-var">currentSlot</span></span><span> </span><span class="annot"><span class="annottext">SlotConfig
+</span><a href="#local-6989586621679684247"><span class="hs-identifier hs-var">slotConfig</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-88"></span><span>          </span><span class="annot"><span class="annottext">cshHandler :: ChainSyncEvent -&gt; Slot -&gt; IO ()
+</span><a href="Cardano.Protocol.Socket.Client.html#cshHandler"><span class="hs-identifier hs-var">cshHandler</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ChainSyncEvent -&gt; Slot -&gt; IO ()
+</span><a href="#local-6989586621679684242"><span class="hs-identifier hs-var">chainSyncEventHandler</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-89"></span><span>
+</span><span id="line-90"></span><span>    </span><span class="annot"><span class="annottext">ThreadId
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; IO ThreadId
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">forkIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO ThreadId) -&gt; IO () -&gt; IO ThreadId
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(IOManager -&gt; IO ()) -&gt; IO ()
+WithIOManager
+</span><span class="hs-identifier hs-var">withIOManager</span></span><span> </span><span class="annot"><span class="annottext">((IOManager -&gt; IO ()) -&gt; IO ()) -&gt; (IOManager -&gt; IO ()) -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">IOManager
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-91"></span><span>           </span><span class="annot"><span class="annottext">RetryPolicyM IO
+-&gt; [RetryStatus -&gt; Handler IO Bool]
+-&gt; (RetryStatus -&gt; IO ())
+-&gt; IO ()
+forall (m :: * -&gt; *) a.
+(MonadIO m, MonadMask m) =&gt;
+RetryPolicyM m
+-&gt; [RetryStatus -&gt; Handler m Bool] -&gt; (RetryStatus -&gt; m a) -&gt; m a
+</span><span class="hs-identifier hs-var">recovering</span></span><span>
+</span><span id="line-92"></span><span>             </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; RetryPolicyM IO
+forall (m :: * -&gt; *). Monad m =&gt; Int -&gt; RetryPolicyM m
+</span><span class="hs-identifier hs-var">fibonacciBackoff</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">500</span></span><span class="hs-special">)</span><span>
+</span><span id="line-93"></span><span>             </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[RetryStatus -&gt; Handler IO Bool]
+forall (m :: * -&gt; *). MonadIO m =&gt; [RetryStatus -&gt; Handler m Bool]
+</span><span class="hs-identifier hs-var">skipAsyncExceptions</span></span><span> </span><span class="annot"><span class="annottext">[RetryStatus -&gt; Handler IO Bool]
+-&gt; [RetryStatus -&gt; Handler IO Bool]
+-&gt; [RetryStatus -&gt; Handler IO Bool]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">++</span></a></span><span>
+</span><span id="line-94"></span><span>               </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">RetryStatus
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(SomeException -&gt; IO Bool) -&gt; Handler IO Bool
+forall (m :: * -&gt; *) a e. Exception e =&gt; (e -&gt; m a) -&gt; Handler m a
+</span><span class="hs-identifier hs-var">Handler</span></span><span> </span><span class="annot"><span class="annottext">((SomeException -&gt; IO Bool) -&gt; Handler IO Bool)
+-&gt; (SomeException -&gt; IO Bool) -&gt; Handler IO Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679684238"><span class="annot"><span class="annottext">SomeException
+</span><a href="#local-6989586621679684238"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">SomeException</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-95"></span><span>                   </span><span class="annot"><span class="annottext">Trace IO ClientMsg -&gt; ClientMsg -&gt; IO ()
+forall (m :: * -&gt; *) a. MonadIO m =&gt; Trace m a -&gt; a -&gt; m ()
+</span><span class="hs-identifier hs-var">logWarning</span></span><span> </span><span class="annot"><span class="annottext">Trace IO ClientMsg
+</span><a href="#local-6989586621679684248"><span class="hs-identifier hs-var">trace</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; ClientMsg
+</span><a href="Cardano.Protocol.Socket.Client.html#Disconnected"><span class="hs-identifier hs-var">Disconnected</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; ClientMsg) -&gt; Text -&gt; ClientMsg
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Text
+</span><span class="hs-identifier hs-var">pack</span></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Text) -&gt; String -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">SomeException -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">SomeException
+</span><a href="#local-6989586621679684238"><span class="hs-identifier hs-var">err</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-96"></span><span>                   </span><span class="annot"><span class="annottext">Bool -&gt; IO Bool
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var">True</span></a></span><span> </span><span class="hs-special">)</span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-97"></span><span>             </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">RetryStatus
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">LocalNodeConnectInfo CardanoMode
+-&gt; LocalNodeClientProtocolsInMode CardanoMode -&gt; IO ()
+forall mode.
+LocalNodeConnectInfo mode
+-&gt; LocalNodeClientProtocolsInMode mode -&gt; IO ()
+</span><span class="hs-identifier hs-var">connectToLocalNode</span></span><span>
+</span><span id="line-98"></span><span>                      </span><span class="annot"><span class="annottext">LocalNodeConnectInfo CardanoMode
+</span><a href="#local-6989586621679684236"><span class="hs-identifier hs-var">localNodeConnectInfo</span></a></span><span>
+</span><span id="line-99"></span><span>                      </span><span class="annot"><span class="annottext">LocalNodeClientProtocolsInMode CardanoMode
+</span><a href="#local-6989586621679684235"><span class="hs-identifier hs-var">localNodeClientProtocols</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-100"></span><span>
+</span><span id="line-101"></span><span>    </span><span class="annot"><span class="annottext">ChainSyncHandle ChainSyncEvent
+-&gt; IO (ChainSyncHandle ChainSyncEvent)
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">ChainSyncHandle ChainSyncEvent
+</span><a href="#local-6989586621679684243"><span class="hs-identifier hs-var">handle</span></a></span><span>
+</span><span id="line-102"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-103"></span><span>      </span><span id="local-6989586621679684242"><span class="annot"><span class="annottext">chainSyncEventHandler :: ChainSyncEvent -&gt; Slot -&gt; IO ()
+</span><a href="#local-6989586621679684242"><span class="hs-identifier hs-var hs-var">chainSyncEventHandler</span></a></span></span><span> </span><span id="local-6989586621679684234"><span class="annot"><span class="annottext">ChainSyncEvent
+</span><a href="#local-6989586621679684234"><span class="hs-identifier hs-var">evt</span></a></span></span><span> </span><span class="annot"><span class="annottext">Slot
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ChainSyncEvent -&gt; IO ()
+</span><a href="#local-6989586621679684244"><span class="hs-identifier hs-var">onChainSyncEvent</span></a></span><span> </span><span class="annot"><span class="annottext">ChainSyncEvent
+</span><a href="#local-6989586621679684234"><span class="hs-identifier hs-var">evt</span></a></span><span>
+</span><span id="line-104"></span><span>      </span><span id="local-6989586621679684236"><span class="annot"><span class="annottext">localNodeConnectInfo :: LocalNodeConnectInfo CardanoMode
+</span><a href="#local-6989586621679684236"><span class="hs-identifier hs-var hs-var">localNodeConnectInfo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">LocalNodeConnectInfo :: forall mode.
+ConsensusModeParams mode
+-&gt; NetworkId -&gt; String -&gt; LocalNodeConnectInfo mode
+</span><span class="hs-identifier hs-type">LocalNodeConnectInfo</span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-105"></span><span>        </span><span class="annot"><span class="annottext">localConsensusModeParams :: ConsensusModeParams CardanoMode
+</span><span class="hs-identifier hs-var">localConsensusModeParams</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">EpochSlots -&gt; ConsensusModeParams CardanoMode
+</span><span class="hs-identifier hs-var">CardanoModeParams</span></span><span> </span><span class="annot"><span class="annottext">EpochSlots
+</span><span class="hs-identifier hs-var">epochSlots</span></span><span class="hs-special">,</span><span>
+</span><span id="line-106"></span><span>        </span><span class="annot"><span class="annottext">localNodeNetworkId :: NetworkId
+</span><span class="hs-identifier hs-var">localNodeNetworkId</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NetworkId
+</span><a href="#local-6989586621679684246"><span class="hs-identifier hs-var">networkId</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-107"></span><span>        </span><span class="annot"><span class="annottext">localNodeSocketPath :: String
+</span><span class="hs-identifier hs-var">localNodeSocketPath</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679684249"><span class="hs-identifier hs-var">socketPath</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-108"></span><span>      </span><span class="annot"><a href="#local-6989586621679684235"><span class="hs-identifier hs-type">localNodeClientProtocols</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">LocalNodeClientProtocolsInMode</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">CardanoMode</span></span><span>
+</span><span id="line-109"></span><span>      </span><span id="local-6989586621679684235"><span class="annot"><span class="annottext">localNodeClientProtocols :: LocalNodeClientProtocolsInMode CardanoMode
+</span><a href="#local-6989586621679684235"><span class="hs-identifier hs-var hs-var">localNodeClientProtocols</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">LocalNodeClientProtocols :: forall block point tip slot tx txid txerr (query :: * -&gt; *)
+       (m :: * -&gt; *).
+LocalChainSyncClient block point tip m
+-&gt; Maybe (LocalTxSubmissionClient tx txerr m ())
+-&gt; Maybe (LocalStateQueryClient block point query m ())
+-&gt; Maybe (LocalTxMonitorClient txid tx slot m ())
+-&gt; LocalNodeClientProtocols
+     block point tip slot tx txid txerr query m
+</span><span class="hs-identifier hs-type">LocalNodeClientProtocols</span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-110"></span><span>        </span><span class="annot"><span class="annottext">localChainSyncClient :: LocalChainSyncClient
+  (BlockInMode CardanoMode) ChainPoint ChainTip IO
+</span><span class="hs-identifier hs-var">localChainSyncClient</span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-111"></span><span>          </span><span class="annot"><span class="annottext">ChainSyncClient (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+-&gt; LocalChainSyncClient
+     (BlockInMode CardanoMode) ChainPoint ChainTip IO
+forall block point tip (m :: * -&gt; *).
+ChainSyncClient block point tip m ()
+-&gt; LocalChainSyncClient block point tip m
+</span><span class="hs-identifier hs-var">LocalChainSyncClient</span></span><span> </span><span class="annot"><span class="annottext">(ChainSyncClient
+   (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+ -&gt; LocalChainSyncClient
+      (BlockInMode CardanoMode) ChainPoint ChainTip IO)
+-&gt; ChainSyncClient
+     (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+-&gt; LocalChainSyncClient
+     (BlockInMode CardanoMode) ChainPoint ChainTip IO
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-112"></span><span>            </span><span class="annot"><span class="annottext">Trace IO ClientMsg
+-&gt; SlotConfig
+-&gt; [ChainPoint]
+-&gt; (ChainSyncEvent -&gt; Slot -&gt; IO ())
+-&gt; ChainSyncClient
+     (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+</span><a href="Cardano.Protocol.Socket.Client.html#chainSyncClient"><span class="hs-identifier hs-var">chainSyncClient</span></a></span><span> </span><span class="annot"><span class="annottext">Trace IO ClientMsg
+</span><a href="#local-6989586621679684248"><span class="hs-identifier hs-var">trace</span></a></span><span> </span><span class="annot"><span class="annottext">SlotConfig
+</span><a href="#local-6989586621679684247"><span class="hs-identifier hs-var">slotConfig</span></a></span><span> </span><span class="annot"><span class="annottext">[ChainPoint]
+</span><a href="#local-6989586621679684245"><span class="hs-identifier hs-var">resumePoints</span></a></span><span> </span><span class="annot"><span class="annottext">ChainSyncEvent -&gt; Slot -&gt; IO ()
+</span><a href="#local-6989586621679684242"><span class="hs-identifier hs-var">chainSyncEventHandler</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-113"></span><span>        </span><span class="annot"><span class="annottext">localTxSubmissionClient :: Maybe
+  (LocalTxSubmissionClient
+     (TxInMode CardanoMode) (TxValidationErrorInMode CardanoMode) IO ())
+</span><span class="hs-identifier hs-var">localTxSubmissionClient</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe
+  (LocalTxSubmissionClient
+     (TxInMode CardanoMode) (TxValidationErrorInMode CardanoMode) IO ())
+forall a. Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-114"></span><span>        </span><span class="annot"><span class="annottext">localStateQueryClient :: Maybe
+  (LocalStateQueryClient
+     (BlockInMode CardanoMode)
+     ChainPoint
+     (QueryInMode CardanoMode)
+     IO
+     ())
+</span><span class="hs-identifier hs-var">localStateQueryClient</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe
+  (LocalStateQueryClient
+     (BlockInMode CardanoMode)
+     ChainPoint
+     (QueryInMode CardanoMode)
+     IO
+     ())
+forall a. Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-115"></span><span>        </span><span class="annot"><span class="annottext">localTxMonitoringClient :: Maybe
+  (LocalTxMonitorClient
+     (TxIdInMode CardanoMode) (TxInMode CardanoMode) SlotNo IO ())
+</span><span class="hs-identifier hs-var">localTxMonitoringClient</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe
+  (LocalTxMonitorClient
+     (TxIdInMode CardanoMode) (TxInMode CardanoMode) SlotNo IO ())
+forall a. Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-116"></span><span>
+</span><span id="line-117"></span><span class="hs-comment">-- | The client updates the application state when the protocol state changes.</span><span>
+</span><span id="line-118"></span><span class="annot"><a href="Cardano.Protocol.Socket.Client.html#chainSyncClient"><span class="hs-identifier hs-type">chainSyncClient</span></a></span><span>
+</span><span id="line-119"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Trace</span></span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Cardano.Protocol.Socket.Client.html#ClientMsg"><span class="hs-identifier hs-type">ClientMsg</span></a></span><span>
+</span><span id="line-120"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">SlotConfig</span></span><span>
+</span><span id="line-121"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">ChainPoint</span></span><span class="hs-special">]</span><span>
+</span><span id="line-122"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Protocol.Socket.Client.html#ChainSyncCallback"><span class="hs-identifier hs-type">ChainSyncCallback</span></a></span><span>
+</span><span id="line-123"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ChainSync.ChainSyncClient</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">BlockInMode</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">CardanoMode</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ChainPoint</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ChainTip</span></span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-124"></span><span id="chainSyncClient"><span class="annot"><span class="annottext">chainSyncClient :: Trace IO ClientMsg
+-&gt; SlotConfig
+-&gt; [ChainPoint]
+-&gt; (ChainSyncEvent -&gt; Slot -&gt; IO ())
+-&gt; ChainSyncClient
+     (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+</span><a href="Cardano.Protocol.Socket.Client.html#chainSyncClient"><span class="hs-identifier hs-var hs-var">chainSyncClient</span></a></span></span><span> </span><span id="local-6989586621679684221"><span class="annot"><span class="annottext">Trace IO ClientMsg
+</span><a href="#local-6989586621679684221"><span class="hs-identifier hs-var">trace</span></a></span></span><span> </span><span id="local-6989586621679684220"><span class="annot"><span class="annottext">SlotConfig
+</span><a href="#local-6989586621679684220"><span class="hs-identifier hs-var">slotConfig</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span id="local-6989586621679684219"><span class="annot"><span class="annottext">ChainSyncEvent -&gt; Slot -&gt; IO ()
+</span><a href="#local-6989586621679684219"><span class="hs-identifier hs-var">chainSyncEventHandler</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-125"></span><span>  </span><span class="annot"><span class="annottext">Trace IO ClientMsg
+-&gt; SlotConfig
+-&gt; [ChainPoint]
+-&gt; (ChainSyncEvent -&gt; Slot -&gt; IO ())
+-&gt; ChainSyncClient
+     (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+</span><a href="Cardano.Protocol.Socket.Client.html#chainSyncClient"><span class="hs-identifier hs-var">chainSyncClient</span></a></span><span> </span><span class="annot"><span class="annottext">Trace IO ClientMsg
+</span><a href="#local-6989586621679684221"><span class="hs-identifier hs-var">trace</span></a></span><span> </span><span class="annot"><span class="annottext">SlotConfig
+</span><a href="#local-6989586621679684220"><span class="hs-identifier hs-var">slotConfig</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">ChainPoint
+</span><span class="hs-identifier hs-var">ChainPointAtGenesis</span></span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">ChainSyncEvent -&gt; Slot -&gt; IO ()
+</span><a href="#local-6989586621679684219"><span class="hs-identifier hs-var">chainSyncEventHandler</span></a></span><span>
+</span><span id="line-126"></span><span class="annot"><a href="Cardano.Protocol.Socket.Client.html#chainSyncClient"><span class="hs-identifier hs-var">chainSyncClient</span></a></span><span> </span><span id="local-6989586621679684217"><span class="annot"><span class="annottext">Trace IO ClientMsg
+</span><a href="#local-6989586621679684217"><span class="hs-identifier hs-var">trace</span></a></span></span><span> </span><span id="local-6989586621679684216"><span class="annot"><span class="annottext">SlotConfig
+</span><a href="#local-6989586621679684216"><span class="hs-identifier hs-var">slotConfig</span></a></span></span><span> </span><span id="local-6989586621679684215"><span class="annot"><span class="annottext">[ChainPoint]
+</span><a href="#local-6989586621679684215"><span class="hs-identifier hs-var">resumePoints</span></a></span></span><span> </span><span id="local-6989586621679684214"><span class="annot"><span class="annottext">ChainSyncEvent -&gt; Slot -&gt; IO ()
+</span><a href="#local-6989586621679684214"><span class="hs-identifier hs-var">chainSyncEventHandler</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-127"></span><span>    </span><span class="annot"><span class="annottext">IO
+  (ClientStIdle (BlockInMode CardanoMode) ChainPoint ChainTip IO ())
+-&gt; ChainSyncClient
+     (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+forall header point tip (m :: * -&gt; *) a.
+m (ClientStIdle header point tip m a)
+-&gt; ChainSyncClient header point tip m a
+</span><span class="hs-identifier hs-var">ChainSync.ChainSyncClient</span></span><span> </span><span class="annot"><span class="annottext">(IO
+   (ClientStIdle (BlockInMode CardanoMode) ChainPoint ChainTip IO ())
+ -&gt; ChainSyncClient
+      (BlockInMode CardanoMode) ChainPoint ChainTip IO ())
+-&gt; IO
+     (ClientStIdle (BlockInMode CardanoMode) ChainPoint ChainTip IO ())
+-&gt; ChainSyncClient
+     (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ClientStIdle (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+-&gt; IO
+     (ClientStIdle (BlockInMode CardanoMode) ChainPoint ChainTip IO ())
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">ClientStIdle (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+</span><a href="#local-6989586621679684212"><span class="hs-identifier hs-var">initialise</span></a></span><span>
+</span><span id="line-128"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-129"></span><span>      </span><span class="annot"><a href="#local-6989586621679684212"><span class="hs-identifier hs-type">initialise</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ChainSync.ClientStIdle</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">BlockInMode</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">CardanoMode</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ChainPoint</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ChainTip</span></span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-130"></span><span>      </span><span id="local-6989586621679684212"><span class="annot"><span class="annottext">initialise :: ClientStIdle (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+</span><a href="#local-6989586621679684212"><span class="hs-identifier hs-var hs-var">initialise</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-131"></span><span>        </span><span class="annot"><span class="annottext">[ChainPoint]
+-&gt; ClientStIntersect
+     (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+-&gt; ClientStIdle (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+forall point header tip (m :: * -&gt; *) a.
+[point]
+-&gt; ClientStIntersect header point tip m a
+-&gt; ClientStIdle header point tip m a
+</span><span class="hs-identifier hs-var">ChainSync.SendMsgFindIntersect</span></span><span> </span><span class="annot"><span class="annottext">[ChainPoint]
+</span><a href="#local-6989586621679684215"><span class="hs-identifier hs-var">resumePoints</span></a></span><span> </span><span class="annot"><span class="annottext">(ClientStIntersect
+   (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+ -&gt; ClientStIdle
+      (BlockInMode CardanoMode) ChainPoint ChainTip IO ())
+-&gt; ClientStIntersect
+     (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+-&gt; ClientStIdle (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-132"></span><span>          </span><span class="annot"><span class="annottext">ClientStIntersect :: forall header point tip (m :: * -&gt; *) a.
+(point -&gt; tip -&gt; ChainSyncClient header point tip m a)
+-&gt; (tip -&gt; ChainSyncClient header point tip m a)
+-&gt; ClientStIntersect header point tip m a
+</span><span class="hs-identifier hs-type">ChainSync.ClientStIntersect</span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-133"></span><span>            </span><span class="annot"><span class="annottext">recvMsgIntersectFound :: ChainPoint
+-&gt; ChainTip
+-&gt; ChainSyncClient
+     (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+</span><span class="hs-identifier hs-var">ChainSync.recvMsgIntersectFound</span></span><span>    </span><span class="hs-glyph">=</span><span>
+</span><span id="line-134"></span><span>              </span><span class="hs-glyph">\</span><span id="local-6989586621679684208"><span class="annot"><span class="annottext">ChainPoint
+</span><a href="#local-6989586621679684208"><span class="hs-identifier hs-var">chainPoint</span></a></span></span><span> </span><span class="annot"><span class="annottext">ChainTip
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-135"></span><span>                 </span><span class="annot"><span class="annottext">IO
+  (ClientStIdle (BlockInMode CardanoMode) ChainPoint ChainTip IO ())
+-&gt; ChainSyncClient
+     (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+forall header point tip (m :: * -&gt; *) a.
+m (ClientStIdle header point tip m a)
+-&gt; ChainSyncClient header point tip m a
+</span><span class="hs-identifier hs-var">ChainSync.ChainSyncClient</span></span><span> </span><span class="annot"><span class="annottext">(IO
+   (ClientStIdle (BlockInMode CardanoMode) ChainPoint ChainTip IO ())
+ -&gt; ChainSyncClient
+      (BlockInMode CardanoMode) ChainPoint ChainTip IO ())
+-&gt; IO
+     (ClientStIdle (BlockInMode CardanoMode) ChainPoint ChainTip IO ())
+-&gt; ChainSyncClient
+     (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-136"></span><span>                   </span><span id="local-6989586621679684207"><span class="annot"><span class="annottext">Slot
+</span><a href="#local-6989586621679684207"><span class="hs-identifier hs-var">slot</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">SlotConfig -&gt; IO Slot
+</span><span class="hs-identifier hs-var">currentSlot</span></span><span> </span><span class="annot"><span class="annottext">SlotConfig
+</span><a href="#local-6989586621679684216"><span class="hs-identifier hs-var">slotConfig</span></a></span><span>
+</span><span id="line-137"></span><span>                   </span><span class="annot"><span class="annottext">Trace IO ClientMsg -&gt; ClientMsg -&gt; IO ()
+forall (m :: * -&gt; *) a. MonadIO m =&gt; Trace m a -&gt; a -&gt; m ()
+</span><span class="hs-identifier hs-var">logDebug</span></span><span> </span><span class="annot"><span class="annottext">Trace IO ClientMsg
+</span><a href="#local-6989586621679684217"><span class="hs-identifier hs-var">trace</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Point -&gt; ClientMsg
+</span><a href="Cardano.Protocol.Socket.Client.html#Resumed"><span class="hs-identifier hs-var">Resumed</span></a></span><span> </span><span class="annot"><span class="annottext">(Point -&gt; ClientMsg) -&gt; Point -&gt; ClientMsg
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ChainPoint -&gt; Point
+</span><a href="Plutus.ChainIndex.Compatibility.html#fromCardanoPoint"><span class="hs-identifier hs-var">fromCardanoPoint</span></a></span><span> </span><span class="annot"><span class="annottext">ChainPoint
+</span><a href="#local-6989586621679684208"><span class="hs-identifier hs-var">chainPoint</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-138"></span><span>                   </span><span class="annot"><span class="annottext">ChainSyncEvent -&gt; Slot -&gt; IO ()
+</span><a href="#local-6989586621679684214"><span class="hs-identifier hs-var">chainSyncEventHandler</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ChainPoint -&gt; ChainSyncEvent
+</span><a href="Cardano.Protocol.Socket.Client.html#Resume"><span class="hs-identifier hs-var">Resume</span></a></span><span> </span><span class="annot"><span class="annottext">ChainPoint
+</span><a href="#local-6989586621679684208"><span class="hs-identifier hs-var">chainPoint</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Slot
+</span><a href="#local-6989586621679684207"><span class="hs-identifier hs-var">slot</span></a></span><span>
+</span><span id="line-139"></span><span>                   </span><span class="annot"><span class="annottext">ClientStIdle (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+-&gt; IO
+     (ClientStIdle (BlockInMode CardanoMode) ChainPoint ChainTip IO ())
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">ClientStIdle (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+</span><a href="#local-6989586621679684206"><span class="hs-identifier hs-var">requestNext</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-140"></span><span>            </span><span class="annot"><span class="annottext">recvMsgIntersectNotFound :: ChainTip
+-&gt; ChainSyncClient
+     (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+</span><span class="hs-identifier hs-var">ChainSync.recvMsgIntersectNotFound</span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-141"></span><span>              </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">ChainTip
+</span><span class="hs-identifier">_</span></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">IO
+  (ClientStIdle (BlockInMode CardanoMode) ChainPoint ChainTip IO ())
+-&gt; ChainSyncClient
+     (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+forall header point tip (m :: * -&gt; *) a.
+m (ClientStIdle header point tip m a)
+-&gt; ChainSyncClient header point tip m a
+</span><span class="hs-identifier hs-var">ChainSync.ChainSyncClient</span></span><span> </span><span class="annot"><span class="annottext">(IO
+   (ClientStIdle (BlockInMode CardanoMode) ChainPoint ChainTip IO ())
+ -&gt; ChainSyncClient
+      (BlockInMode CardanoMode) ChainPoint ChainTip IO ())
+-&gt; IO
+     (ClientStIdle (BlockInMode CardanoMode) ChainPoint ChainTip IO ())
+-&gt; ChainSyncClient
+     (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ClientStIdle (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+-&gt; IO
+     (ClientStIdle (BlockInMode CardanoMode) ChainPoint ChainTip IO ())
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">ClientStIdle (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+</span><a href="#local-6989586621679684206"><span class="hs-identifier hs-var">requestNext</span></a></span><span>
+</span><span id="line-142"></span><span>          </span><span class="hs-special">}</span><span>
+</span><span id="line-143"></span><span>
+</span><span id="line-144"></span><span>      </span><span class="annot"><a href="#local-6989586621679684206"><span class="hs-identifier hs-type">requestNext</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ChainSync.ClientStIdle</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">BlockInMode</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">CardanoMode</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ChainPoint</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ChainTip</span></span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-145"></span><span>      </span><span id="local-6989586621679684206"><span class="annot"><span class="annottext">requestNext :: ClientStIdle (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+</span><a href="#local-6989586621679684206"><span class="hs-identifier hs-var hs-var">requestNext</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-146"></span><span>        </span><span class="annot"><span class="annottext">ClientStNext (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+-&gt; IO
+     (ClientStNext (BlockInMode CardanoMode) ChainPoint ChainTip IO ())
+-&gt; ClientStIdle (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+forall header point tip (m :: * -&gt; *) a.
+ClientStNext header point tip m a
+-&gt; m (ClientStNext header point tip m a)
+-&gt; ClientStIdle header point tip m a
+</span><span class="hs-identifier hs-var">ChainSync.SendMsgRequestNext</span></span><span>
+</span><span id="line-147"></span><span>          </span><span class="annot"><span class="annottext">ClientStNext (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+</span><a href="#local-6989586621679684203"><span class="hs-identifier hs-var">handleNext</span></a></span><span>
+</span><span id="line-148"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ClientStNext (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+-&gt; IO
+     (ClientStNext (BlockInMode CardanoMode) ChainPoint ChainTip IO ())
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">ClientStNext (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+</span><a href="#local-6989586621679684203"><span class="hs-identifier hs-var">handleNext</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-149"></span><span>
+</span><span id="line-150"></span><span>      </span><span class="annot"><a href="#local-6989586621679684203"><span class="hs-identifier hs-type">handleNext</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ChainSync.ClientStNext</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">BlockInMode</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">CardanoMode</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ChainPoint</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ChainTip</span></span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-151"></span><span>      </span><span id="local-6989586621679684203"><span class="annot"><span class="annottext">handleNext :: ClientStNext (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+</span><a href="#local-6989586621679684203"><span class="hs-identifier hs-var hs-var">handleNext</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-152"></span><span>        </span><span class="annot"><span class="annottext">ClientStNext :: forall header point tip (m :: * -&gt; *) a.
+(header -&gt; tip -&gt; ChainSyncClient header point tip m a)
+-&gt; (point -&gt; tip -&gt; ChainSyncClient header point tip m a)
+-&gt; ClientStNext header point tip m a
+</span><span class="hs-identifier hs-type">ChainSync.ClientStNext</span></span><span>
+</span><span id="line-153"></span><span>        </span><span class="hs-special">{</span><span>
+</span><span id="line-154"></span><span>          </span><span class="annot"><span class="annottext">recvMsgRollForward :: BlockInMode CardanoMode
+-&gt; ChainTip
+-&gt; ChainSyncClient
+     (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+</span><span class="hs-identifier hs-var">ChainSync.recvMsgRollForward</span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679684200"><span class="annot"><span class="annottext">BlockInMode CardanoMode
+</span><a href="#local-6989586621679684200"><span class="hs-identifier hs-var">block</span></a></span></span><span> </span><span id="local-6989586621679684199"><span class="annot"><span class="annottext">ChainTip
+</span><a href="#local-6989586621679684199"><span class="hs-identifier hs-var">tip</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-155"></span><span>            </span><span class="annot"><span class="annottext">IO
+  (ClientStIdle (BlockInMode CardanoMode) ChainPoint ChainTip IO ())
+-&gt; ChainSyncClient
+     (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+forall header point tip (m :: * -&gt; *) a.
+m (ClientStIdle header point tip m a)
+-&gt; ChainSyncClient header point tip m a
+</span><span class="hs-identifier hs-var">ChainSync.ChainSyncClient</span></span><span> </span><span class="annot"><span class="annottext">(IO
+   (ClientStIdle (BlockInMode CardanoMode) ChainPoint ChainTip IO ())
+ -&gt; ChainSyncClient
+      (BlockInMode CardanoMode) ChainPoint ChainTip IO ())
+-&gt; IO
+     (ClientStIdle (BlockInMode CardanoMode) ChainPoint ChainTip IO ())
+-&gt; ChainSyncClient
+     (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-156"></span><span>              </span><span id="local-6989586621679684198"><span class="annot"><span class="annottext">Slot
+</span><a href="#local-6989586621679684198"><span class="hs-identifier hs-var">slot</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">SlotConfig -&gt; IO Slot
+</span><span class="hs-identifier hs-var">currentSlot</span></span><span> </span><span class="annot"><span class="annottext">SlotConfig
+</span><a href="#local-6989586621679684216"><span class="hs-identifier hs-var">slotConfig</span></a></span><span>
+</span><span id="line-157"></span><span>              </span><span class="annot"><span class="annottext">Trace IO ClientMsg -&gt; ClientMsg -&gt; IO ()
+forall (m :: * -&gt; *) a. MonadIO m =&gt; Trace m a -&gt; a -&gt; m ()
+</span><span class="hs-identifier hs-var">logDebug</span></span><span> </span><span class="annot"><span class="annottext">Trace IO ClientMsg
+</span><a href="#local-6989586621679684217"><span class="hs-identifier hs-var">trace</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Tip -&gt; ClientMsg
+</span><a href="Cardano.Protocol.Socket.Client.html#RolledForward"><span class="hs-identifier hs-var">RolledForward</span></a></span><span> </span><span class="annot"><span class="annottext">(Tip -&gt; ClientMsg) -&gt; Tip -&gt; ClientMsg
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ChainTip -&gt; Tip
+</span><a href="Plutus.ChainIndex.Compatibility.html#fromCardanoTip"><span class="hs-identifier hs-var">fromCardanoTip</span></a></span><span> </span><span class="annot"><span class="annottext">ChainTip
+</span><a href="#local-6989586621679684199"><span class="hs-identifier hs-var">tip</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-158"></span><span>              </span><span class="annot"><span class="annottext">ChainSyncEvent -&gt; Slot -&gt; IO ()
+</span><a href="#local-6989586621679684214"><span class="hs-identifier hs-var">chainSyncEventHandler</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">BlockInMode CardanoMode -&gt; ChainTip -&gt; ChainSyncEvent
+</span><a href="Cardano.Protocol.Socket.Client.html#RollForward"><span class="hs-identifier hs-var">RollForward</span></a></span><span> </span><span class="annot"><span class="annottext">BlockInMode CardanoMode
+</span><a href="#local-6989586621679684200"><span class="hs-identifier hs-var">block</span></a></span><span> </span><span class="annot"><span class="annottext">ChainTip
+</span><a href="#local-6989586621679684199"><span class="hs-identifier hs-var">tip</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Slot
+</span><a href="#local-6989586621679684198"><span class="hs-identifier hs-var">slot</span></a></span><span>
+</span><span id="line-159"></span><span>              </span><span class="annot"><span class="annottext">ClientStIdle (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+-&gt; IO
+     (ClientStIdle (BlockInMode CardanoMode) ChainPoint ChainTip IO ())
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">ClientStIdle (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+</span><a href="#local-6989586621679684206"><span class="hs-identifier hs-var">requestNext</span></a></span><span>
+</span><span id="line-160"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">recvMsgRollBackward :: ChainPoint
+-&gt; ChainTip
+-&gt; ChainSyncClient
+     (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+</span><span class="hs-identifier hs-var">ChainSync.recvMsgRollBackward</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679684196"><span class="annot"><span class="annottext">ChainPoint
+</span><a href="#local-6989586621679684196"><span class="hs-identifier hs-var">point</span></a></span></span><span> </span><span id="local-6989586621679684195"><span class="annot"><span class="annottext">ChainTip
+</span><a href="#local-6989586621679684195"><span class="hs-identifier hs-var">tip</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-161"></span><span>            </span><span class="annot"><span class="annottext">IO
+  (ClientStIdle (BlockInMode CardanoMode) ChainPoint ChainTip IO ())
+-&gt; ChainSyncClient
+     (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+forall header point tip (m :: * -&gt; *) a.
+m (ClientStIdle header point tip m a)
+-&gt; ChainSyncClient header point tip m a
+</span><span class="hs-identifier hs-var">ChainSync.ChainSyncClient</span></span><span> </span><span class="annot"><span class="annottext">(IO
+   (ClientStIdle (BlockInMode CardanoMode) ChainPoint ChainTip IO ())
+ -&gt; ChainSyncClient
+      (BlockInMode CardanoMode) ChainPoint ChainTip IO ())
+-&gt; IO
+     (ClientStIdle (BlockInMode CardanoMode) ChainPoint ChainTip IO ())
+-&gt; ChainSyncClient
+     (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-162"></span><span>              </span><span id="local-6989586621679684194"><span class="annot"><span class="annottext">Slot
+</span><a href="#local-6989586621679684194"><span class="hs-identifier hs-var">slot</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">SlotConfig -&gt; IO Slot
+</span><span class="hs-identifier hs-var">currentSlot</span></span><span> </span><span class="annot"><span class="annottext">SlotConfig
+</span><a href="#local-6989586621679684216"><span class="hs-identifier hs-var">slotConfig</span></a></span><span>
+</span><span id="line-163"></span><span>              </span><span class="annot"><span class="annottext">Trace IO ClientMsg -&gt; ClientMsg -&gt; IO ()
+forall (m :: * -&gt; *) a. MonadIO m =&gt; Trace m a -&gt; a -&gt; m ()
+</span><span class="hs-identifier hs-var">logDebug</span></span><span> </span><span class="annot"><span class="annottext">Trace IO ClientMsg
+</span><a href="#local-6989586621679684217"><span class="hs-identifier hs-var">trace</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Point -&gt; ClientMsg
+</span><a href="Cardano.Protocol.Socket.Client.html#RolledBackward"><span class="hs-identifier hs-var">RolledBackward</span></a></span><span> </span><span class="annot"><span class="annottext">(Point -&gt; ClientMsg) -&gt; Point -&gt; ClientMsg
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ChainPoint -&gt; Point
+</span><a href="Plutus.ChainIndex.Compatibility.html#fromCardanoPoint"><span class="hs-identifier hs-var">fromCardanoPoint</span></a></span><span> </span><span class="annot"><span class="annottext">ChainPoint
+</span><a href="#local-6989586621679684196"><span class="hs-identifier hs-var">point</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-164"></span><span>              </span><span class="annot"><span class="annottext">ChainSyncEvent -&gt; Slot -&gt; IO ()
+</span><a href="#local-6989586621679684214"><span class="hs-identifier hs-var">chainSyncEventHandler</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ChainPoint -&gt; ChainTip -&gt; ChainSyncEvent
+</span><a href="Cardano.Protocol.Socket.Client.html#RollBackward"><span class="hs-identifier hs-var">RollBackward</span></a></span><span> </span><span class="annot"><span class="annottext">ChainPoint
+</span><a href="#local-6989586621679684196"><span class="hs-identifier hs-var">point</span></a></span><span> </span><span class="annot"><span class="annottext">ChainTip
+</span><a href="#local-6989586621679684195"><span class="hs-identifier hs-var">tip</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Slot
+</span><a href="#local-6989586621679684194"><span class="hs-identifier hs-var">slot</span></a></span><span>
+</span><span id="line-165"></span><span>              </span><span class="annot"><span class="annottext">ClientStIdle (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+-&gt; IO
+     (ClientStIdle (BlockInMode CardanoMode) ChainPoint ChainTip IO ())
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">ClientStIdle (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+</span><a href="#local-6989586621679684206"><span class="hs-identifier hs-var">requestNext</span></a></span><span>
+</span><span id="line-166"></span><span>        </span><span class="hs-special">}</span><span>
+</span><span id="line-167"></span><span>
+</span><span id="line-168"></span></pre></body></html>

@@ -1,0 +1,548 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE ConstraintKinds      #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass       #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric        #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE DerivingVia          #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts     #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances    #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase           #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings    #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE PatternSynonyms      #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables  #-}</span><span>
+</span><span id="line-11"></span><span class="hs-pragma">{-# LANGUAGE TemplateHaskell      #-}</span><span>
+</span><span id="line-12"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-13"></span><span class="hs-pragma">{-# LANGUAGE ViewPatterns         #-}</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-pragma">{-# OPTIONS_GHC -fno-warn-orphans #-}</span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Ledger.Index.Internal</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">lookup</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.Api</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">C</span></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.Api.Shelley</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">C</span></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.Binary</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">CBOR</span></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.Ledger.Alonzo.Scripts</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">ExUnits</span></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.Ledger.Alonzo.Tx</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">IsValid</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">IsValid</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ValidatedTx</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">ValidatedTx</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.Ledger.Alonzo.TxWitness</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">RdmrPtr</span></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.Ledger.Babbage</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">BabbageEra</span></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.Ledger.Core</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Tx</span></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.Ledger.Crypto</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">StandardCrypto</span></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.Ledger.Shelley.API</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Validated</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">extractTx</span></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Codec.Serialise</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Serialise</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Lens</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">makePrisms</span></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">FromJSON</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ToJSON</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Text</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Text</span></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Ledger.Orphans.html"><span class="hs-identifier">Ledger.Orphans</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Ledger.Tx.CardanoAPI.Internal.html"><span class="hs-identifier">Ledger.Tx.CardanoAPI.Internal</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Tx.CardanoAPI.Internal.html#CardanoTx"><span class="hs-identifier">CardanoTx</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="Ledger.Tx.CardanoAPI.Internal.html#CardanoEmulatorEraTx"><span class="hs-identifier">CardanoEmulatorEraTx</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.V1.Ledger.Scripts</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Scripts</span></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Prettyprinter</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Pretty</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">hang</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">vsep</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-operator">(&lt;+&gt;)</span></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Prettyprinter.Extras.html"><span class="hs-identifier">Prettyprinter.Extras</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Prettyprinter.Extras.html#PrettyShow"><span class="hs-identifier">PrettyShow</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Prettyprinter.Util</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">reflow</span></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- | A transaction on the blockchain.</span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- Invalid transactions are still put on the chain to be able to collect fees.</span><span>
+</span><span id="line-46"></span><span id="local-6989586621679742581"><span id="local-6989586621679742582"></span></span><span class="hs-keyword">newtype</span><span> </span><span id="OnChainTx"><span class="annot"><a href="Ledger.Index.Internal.html#OnChainTx"><span class="hs-identifier hs-var">OnChainTx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="OnChainTx"><span class="annot"><a href="Ledger.Index.Internal.html#OnChainTx"><span class="hs-identifier hs-var">OnChainTx</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="getOnChainTx"><span class="annot"><span class="annottext">OnChainTx -&gt; Validated (Tx EmulatorEra)
+</span><a href="Ledger.Index.Internal.html#getOnChainTx"><span class="hs-identifier hs-var hs-var">getOnChainTx</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Validated</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Tx</span></span><span> </span><span class="annot"><a href="Ledger.Index.Internal.html#EmulatorEra"><span class="hs-identifier hs-type">EmulatorEra</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-47"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679742575"><span id="local-6989586621679742577"><span class="annot"><span class="annottext">OnChainTx -&gt; OnChainTx -&gt; Bool
+(OnChainTx -&gt; OnChainTx -&gt; Bool)
+-&gt; (OnChainTx -&gt; OnChainTx -&gt; Bool) -&gt; Eq OnChainTx
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: OnChainTx -&gt; OnChainTx -&gt; Bool
+$c/= :: OnChainTx -&gt; OnChainTx -&gt; Bool
+== :: OnChainTx -&gt; OnChainTx -&gt; Bool
+$c== :: OnChainTx -&gt; OnChainTx -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679742568"><span id="local-6989586621679742570"><span id="local-6989586621679742572"><span class="annot"><span class="annottext">Int -&gt; OnChainTx -&gt; ShowS
+[OnChainTx] -&gt; ShowS
+OnChainTx -&gt; String
+(Int -&gt; OnChainTx -&gt; ShowS)
+-&gt; (OnChainTx -&gt; String)
+-&gt; ([OnChainTx] -&gt; ShowS)
+-&gt; Show OnChainTx
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [OnChainTx] -&gt; ShowS
+$cshowList :: [OnChainTx] -&gt; ShowS
+show :: OnChainTx -&gt; String
+$cshow :: OnChainTx -&gt; String
+showsPrec :: Int -&gt; OnChainTx -&gt; ShowS
+$cshowsPrec :: Int -&gt; OnChainTx -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. OnChainTx -&gt; Rep OnChainTx x)
+-&gt; (forall x. Rep OnChainTx x -&gt; OnChainTx) -&gt; Generic OnChainTx
+forall x. Rep OnChainTx x -&gt; OnChainTx
+forall x. OnChainTx -&gt; Rep OnChainTx x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep OnChainTx x -&gt; OnChainTx
+$cfrom :: forall x. OnChainTx -&gt; Rep OnChainTx x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679742558"><span id="local-6989586621679742560"><span class="annot"><span class="hs-identifier hs-type">Serialise</span></span><span> </span><span class="annot"><a href="Ledger.Index.Internal.html#OnChainTx"><span class="hs-identifier hs-type">OnChainTx</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-50"></span><span>  </span><span id="local-6989586621679742556"><span class="annot"><span class="annottext">encode :: OnChainTx -&gt; Encoding
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">encode</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ValidatedTx EmulatorEra -&gt; Encoding
+forall a. ToCBOR a =&gt; a -&gt; Encoding
+</span><span class="hs-identifier hs-var">CBOR.toCBOR</span></span><span> </span><span class="annot"><span class="annottext">(ValidatedTx EmulatorEra -&gt; Encoding)
+-&gt; (OnChainTx -&gt; ValidatedTx EmulatorEra) -&gt; OnChainTx -&gt; Encoding
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Validated (ValidatedTx EmulatorEra) -&gt; ValidatedTx EmulatorEra
+forall tx. Validated tx -&gt; tx
+</span><span class="hs-identifier hs-var">extractTx</span></span><span> </span><span class="annot"><span class="annottext">(Validated (ValidatedTx EmulatorEra) -&gt; ValidatedTx EmulatorEra)
+-&gt; (OnChainTx -&gt; Validated (ValidatedTx EmulatorEra))
+-&gt; OnChainTx
+-&gt; ValidatedTx EmulatorEra
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">OnChainTx -&gt; Validated (Tx EmulatorEra)
+OnChainTx -&gt; Validated (ValidatedTx EmulatorEra)
+</span><a href="Ledger.Index.Internal.html#getOnChainTx"><span class="hs-identifier hs-var hs-var">getOnChainTx</span></a></span><span> </span><span class="hs-comment">-- For blockID</span><span>
+</span><span id="line-51"></span><span>  </span><span id="local-6989586621679742552"><span class="annot"><span class="annottext">decode :: Decoder s OnChainTx
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">decode</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Decoder s OnChainTx
+forall (m :: * -&gt; *) a. MonadFail m =&gt; String -&gt; m a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fail</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Not allowed to use `decode` on `OnChainTx`&quot;</span></span><span> </span><span class="hs-comment">-- Unused</span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span id="local-6989586621679742677"><span class="annot"><a href="Ledger.Index.Internal.html#eitherTx"><span class="hs-identifier hs-type">eitherTx</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Tx.CardanoAPI.Internal.html#CardanoTx"><span class="hs-identifier hs-type">CardanoTx</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679742677"><span class="hs-identifier hs-type">r</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Tx.CardanoAPI.Internal.html#CardanoTx"><span class="hs-identifier hs-type">CardanoTx</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679742677"><span class="hs-identifier hs-type">r</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Ledger.Index.Internal.html#OnChainTx"><span class="hs-identifier hs-type">OnChainTx</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679742677"><span class="hs-identifier hs-type">r</span></a></span></span><span>
+</span><span id="line-54"></span><span id="eitherTx"><span class="annot"><span class="annottext">eitherTx :: (CardanoTx -&gt; r) -&gt; (CardanoTx -&gt; r) -&gt; OnChainTx -&gt; r
+</span><a href="Ledger.Index.Internal.html#eitherTx"><span class="hs-identifier hs-var hs-var">eitherTx</span></a></span></span><span> </span><span id="local-6989586621679742549"><span class="annot"><span class="annottext">CardanoTx -&gt; r
+</span><a href="#local-6989586621679742549"><span class="hs-identifier hs-var">ifInvalid</span></a></span></span><span> </span><span id="local-6989586621679742548"><span class="annot"><span class="annottext">CardanoTx -&gt; r
+</span><a href="#local-6989586621679742548"><span class="hs-identifier hs-var">ifValid</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Validated (ValidatedTx EmulatorEra) -&gt; ValidatedTx EmulatorEra
+forall tx. Validated tx -&gt; tx
+</span><span class="hs-identifier hs-var">extractTx</span></span><span> </span><span class="annot"><span class="annottext">(Validated (ValidatedTx EmulatorEra) -&gt; ValidatedTx EmulatorEra)
+-&gt; (OnChainTx -&gt; Validated (ValidatedTx EmulatorEra))
+-&gt; OnChainTx
+-&gt; ValidatedTx EmulatorEra
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">OnChainTx -&gt; Validated (Tx EmulatorEra)
+OnChainTx -&gt; Validated (ValidatedTx EmulatorEra)
+</span><a href="Ledger.Index.Internal.html#getOnChainTx"><span class="hs-identifier hs-var hs-var">getOnChainTx</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span id="local-6989586621679742547"><span class="annot"><span class="annottext">tx :: ValidatedTx EmulatorEra
+</span><a href="#local-6989586621679742547"><span class="hs-identifier hs-var">tx</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">ValidatedTx</span></span><span> </span><span class="annot"><span class="annottext">TxBody EmulatorEra
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">TxWitness EmulatorEra
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">IsValid</span></span><span> </span><span id="local-6989586621679742546"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679742546"><span class="hs-identifier hs-var">isValid</span></a></span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">StrictMaybe (AuxiliaryData EmulatorEra)
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-55"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679742545"><span class="annot"><span class="annottext">ctx :: CardanoTx
+</span><a href="#local-6989586621679742545"><span class="hs-identifier hs-var hs-var">ctx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Tx BabbageEra -&gt; CardanoTx
+</span><a href="Ledger.Tx.CardanoAPI.Internal.html#CardanoEmulatorEraTx"><span class="hs-identifier hs-var">CardanoEmulatorEraTx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ShelleyBasedEra BabbageEra
+-&gt; Tx (ShelleyLedgerEra BabbageEra) -&gt; Tx BabbageEra
+forall era.
+ShelleyBasedEra era -&gt; Tx (ShelleyLedgerEra era) -&gt; Tx era
+</span><span class="hs-identifier hs-var">C.ShelleyTx</span></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra BabbageEra
+</span><span class="hs-identifier hs-var">C.ShelleyBasedEraBabbage</span></span><span> </span><span class="annot"><span class="annottext">Tx (ShelleyLedgerEra BabbageEra)
+ValidatedTx EmulatorEra
+</span><a href="#local-6989586621679742547"><span class="hs-identifier hs-var">tx</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span>    </span><span class="hs-keyword">in</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679742546"><span class="hs-identifier hs-var">isValid</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">CardanoTx -&gt; r
+</span><a href="#local-6989586621679742548"><span class="hs-identifier hs-var">ifValid</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoTx
+</span><a href="#local-6989586621679742545"><span class="hs-identifier hs-var">ctx</span></a></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">CardanoTx -&gt; r
+</span><a href="#local-6989586621679742549"><span class="hs-identifier hs-var">ifInvalid</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoTx
+</span><a href="#local-6989586621679742545"><span class="hs-identifier hs-var">ctx</span></a></span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span class="annot"><a href="Ledger.Index.Internal.html#unOnChain"><span class="hs-identifier hs-type">unOnChain</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Ledger.Index.Internal.html#OnChainTx"><span class="hs-identifier hs-type">OnChainTx</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Ledger.Tx.CardanoAPI.Internal.html#CardanoTx"><span class="hs-identifier hs-type">CardanoTx</span></a></span><span>
+</span><span id="line-59"></span><span id="unOnChain"><span class="annot"><span class="annottext">unOnChain :: OnChainTx -&gt; CardanoTx
+</span><a href="Ledger.Index.Internal.html#unOnChain"><span class="hs-identifier hs-var hs-var">unOnChain</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(CardanoTx -&gt; CardanoTx)
+-&gt; (CardanoTx -&gt; CardanoTx) -&gt; OnChainTx -&gt; CardanoTx
+forall r. (CardanoTx -&gt; r) -&gt; (CardanoTx -&gt; r) -&gt; OnChainTx -&gt; r
+</span><a href="Ledger.Index.Internal.html#eitherTx"><span class="hs-identifier hs-var">eitherTx</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoTx -&gt; CardanoTx
+forall a. a -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">id</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoTx -&gt; CardanoTx
+forall a. a -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">id</span></a></span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="hs-keyword">type</span><span> </span><span id="EmulatorEra"><span class="annot"><a href="Ledger.Index.Internal.html#EmulatorEra"><span class="hs-identifier hs-var">EmulatorEra</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">BabbageEra</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">StandardCrypto</span></span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span class="hs-comment">-- | The UTxOs of a blockchain indexed by their references.</span><span>
+</span><span id="line-64"></span><span class="hs-keyword">type</span><span> </span><span id="UtxoIndex"><span class="annot"><a href="Ledger.Index.Internal.html#UtxoIndex"><span class="hs-identifier hs-var">UtxoIndex</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.UTxO</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.BabbageEra</span></span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span id="local-6989586621679742534"><span id="local-6989586621679742536"><span id="local-6989586621679742538"><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621679742532"><span class="annot"><a href="#local-6989586621679742532"><span class="hs-keyword hs-type">newtype</span></a></span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Semigroup</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">C.UTxO</span></span><span> </span><span class="annot"><a href="#local-6989586621679742532"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-67"></span><span id="local-6989586621679742525"><span id="local-6989586621679742527"><span id="local-6989586621679742529"><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621679742523"><span class="annot"><a href="#local-6989586621679742523"><span class="hs-keyword hs-type">newtype</span></a></span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">C.UTxO</span></span><span> </span><span class="annot"><a href="#local-6989586621679742523"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span class="hs-comment">-- | A reason why a transaction is invalid.</span><span>
+</span><span id="line-70"></span><span id="local-6989586621679742521"><span id="local-6989586621679742522"></span></span><span class="hs-keyword">data</span><span> </span><span id="ValidationError"><span class="annot"><a href="Ledger.Index.Internal.html#ValidationError"><span class="hs-identifier hs-var">ValidationError</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-71"></span><span>    </span><span id="TxOutRefNotFound"><span class="annot"><a href="Ledger.Index.Internal.html#TxOutRefNotFound"><span class="hs-identifier hs-var">TxOutRefNotFound</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.TxIn</span></span><span>
+</span><span id="line-72"></span><span>    </span><span class="hs-comment">-- ^ The transaction output consumed by a transaction input could not be found (either because it was already spent, or because</span><span>
+</span><span id="line-73"></span><span>    </span><span class="hs-comment">-- there was no transaction with the given hash on the blockchain).</span><span>
+</span><span id="line-74"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="ScriptFailure"><span class="annot"><a href="Ledger.Index.Internal.html#ScriptFailure"><span class="hs-identifier hs-var">ScriptFailure</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Scripts.ScriptError</span></span><span>
+</span><span id="line-75"></span><span>    </span><span class="hs-comment">-- ^ For pay-to-script outputs: evaluation of the validator script failed.</span><span>
+</span><span id="line-76"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="CardanoLedgerValidationError"><span class="annot"><a href="Ledger.Index.Internal.html#CardanoLedgerValidationError"><span class="hs-identifier hs-var">CardanoLedgerValidationError</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span>
+</span><span id="line-77"></span><span>    </span><span class="hs-comment">-- ^ An error from Cardano.Ledger validation</span><span>
+</span><span id="line-78"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="MaxCollateralInputsExceeded"><span class="annot"><a href="Ledger.Index.Internal.html#MaxCollateralInputsExceeded"><span class="hs-identifier hs-var">MaxCollateralInputsExceeded</span></a></span></span><span>
+</span><span id="line-79"></span><span>    </span><span class="hs-comment">-- ^ Balancing failed, it needed more than the maximum number of collateral inputs</span><span>
+</span><span id="line-80"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679742513"><span id="local-6989586621679742515"><span class="annot"><span class="annottext">ValidationError -&gt; ValidationError -&gt; Bool
+(ValidationError -&gt; ValidationError -&gt; Bool)
+-&gt; (ValidationError -&gt; ValidationError -&gt; Bool)
+-&gt; Eq ValidationError
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: ValidationError -&gt; ValidationError -&gt; Bool
+$c/= :: ValidationError -&gt; ValidationError -&gt; Bool
+== :: ValidationError -&gt; ValidationError -&gt; Bool
+$c== :: ValidationError -&gt; ValidationError -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679742507"><span id="local-6989586621679742509"><span id="local-6989586621679742511"><span class="annot"><span class="annottext">Int -&gt; ValidationError -&gt; ShowS
+[ValidationError] -&gt; ShowS
+ValidationError -&gt; String
+(Int -&gt; ValidationError -&gt; ShowS)
+-&gt; (ValidationError -&gt; String)
+-&gt; ([ValidationError] -&gt; ShowS)
+-&gt; Show ValidationError
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [ValidationError] -&gt; ShowS
+$cshowList :: [ValidationError] -&gt; ShowS
+show :: ValidationError -&gt; String
+$cshow :: ValidationError -&gt; String
+showsPrec :: Int -&gt; ValidationError -&gt; ShowS
+$cshowsPrec :: Int -&gt; ValidationError -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. ValidationError -&gt; Rep ValidationError x)
+-&gt; (forall x. Rep ValidationError x -&gt; ValidationError)
+-&gt; Generic ValidationError
+forall x. Rep ValidationError x -&gt; ValidationError
+forall x. ValidationError -&gt; Rep ValidationError x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep ValidationError x -&gt; ValidationError
+$cfrom :: forall x. ValidationError -&gt; Rep ValidationError x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-81"></span><span id="_MaxCollateralInputsExceeded"><span id="_CardanoLedgerValidationError"><span id="_ScriptFailure"><span id="_TxOutRefNotFound"><span class="hs-identifier">makePrisms</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">ValidationError</span></span></span></span></span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679742497"><span id="local-6989586621679742499"><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="Ledger.Index.Internal.html#ValidationError"><span class="hs-identifier hs-type">ValidationError</span></a></span></span></span><span>
+</span><span id="line-84"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679742488"><span id="local-6989586621679742490"><span id="local-6989586621679742492"><span id="local-6989586621679742494"><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><a href="Ledger.Index.Internal.html#ValidationError"><span class="hs-identifier hs-type">ValidationError</span></a></span></span></span></span></span><span>
+</span><span id="line-85"></span><span id="local-6989586621679742483"><span id="local-6989586621679742485"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">via</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Prettyprinter.Extras.html#PrettyShow"><span class="hs-identifier hs-type">PrettyShow</span></a></span><span> </span><span class="annot"><a href="Ledger.Index.Internal.html#ValidationError"><span class="hs-identifier hs-type">ValidationError</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Pretty</span></span><span> </span><span class="annot"><a href="Ledger.Index.Internal.html#ValidationError"><span class="hs-identifier hs-type">ValidationError</span></a></span></span></span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span id="local-6989586621679742480"><span id="local-6989586621679742481"></span></span><span class="hs-keyword">data</span><span> </span><span id="ValidationPhase"><span class="annot"><a href="Ledger.Index.Internal.html#ValidationPhase"><span class="hs-identifier hs-var">ValidationPhase</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Phase1"><span class="annot"><a href="Ledger.Index.Internal.html#Phase1"><span class="hs-identifier hs-var">Phase1</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Phase2"><span class="annot"><a href="Ledger.Index.Internal.html#Phase2"><span class="hs-identifier hs-var">Phase2</span></a></span></span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679742474"><span id="local-6989586621679742476"><span class="annot"><span class="annottext">ValidationPhase -&gt; ValidationPhase -&gt; Bool
+(ValidationPhase -&gt; ValidationPhase -&gt; Bool)
+-&gt; (ValidationPhase -&gt; ValidationPhase -&gt; Bool)
+-&gt; Eq ValidationPhase
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: ValidationPhase -&gt; ValidationPhase -&gt; Bool
+$c/= :: ValidationPhase -&gt; ValidationPhase -&gt; Bool
+== :: ValidationPhase -&gt; ValidationPhase -&gt; Bool
+$c== :: ValidationPhase -&gt; ValidationPhase -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679742468"><span id="local-6989586621679742470"><span id="local-6989586621679742472"><span class="annot"><span class="annottext">Int -&gt; ValidationPhase -&gt; ShowS
+[ValidationPhase] -&gt; ShowS
+ValidationPhase -&gt; String
+(Int -&gt; ValidationPhase -&gt; ShowS)
+-&gt; (ValidationPhase -&gt; String)
+-&gt; ([ValidationPhase] -&gt; ShowS)
+-&gt; Show ValidationPhase
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [ValidationPhase] -&gt; ShowS
+$cshowList :: [ValidationPhase] -&gt; ShowS
+show :: ValidationPhase -&gt; String
+$cshow :: ValidationPhase -&gt; String
+showsPrec :: Int -&gt; ValidationPhase -&gt; ShowS
+$cshowsPrec :: Int -&gt; ValidationPhase -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. ValidationPhase -&gt; Rep ValidationPhase x)
+-&gt; (forall x. Rep ValidationPhase x -&gt; ValidationPhase)
+-&gt; Generic ValidationPhase
+forall x. Rep ValidationPhase x -&gt; ValidationPhase
+forall x. ValidationPhase -&gt; Rep ValidationPhase x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep ValidationPhase x -&gt; ValidationPhase
+$cfrom :: forall x. ValidationPhase -&gt; Rep ValidationPhase x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679742462"><span id="local-6989586621679742464"><span class="annot"><span class="annottext">Value -&gt; Parser [ValidationPhase]
+Value -&gt; Parser ValidationPhase
+(Value -&gt; Parser ValidationPhase)
+-&gt; (Value -&gt; Parser [ValidationPhase]) -&gt; FromJSON ValidationPhase
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+parseJSONList :: Value -&gt; Parser [ValidationPhase]
+$cparseJSONList :: Value -&gt; Parser [ValidationPhase]
+parseJSON :: Value -&gt; Parser ValidationPhase
+$cparseJSON :: Value -&gt; Parser ValidationPhase
+</span><a href="#local-6989586621679742462"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679742454"><span id="local-6989586621679742456"><span id="local-6989586621679742458"><span id="local-6989586621679742460"><span class="annot"><span class="annottext">[ValidationPhase] -&gt; Encoding
+[ValidationPhase] -&gt; Value
+ValidationPhase -&gt; Encoding
+ValidationPhase -&gt; Value
+(ValidationPhase -&gt; Value)
+-&gt; (ValidationPhase -&gt; Encoding)
+-&gt; ([ValidationPhase] -&gt; Value)
+-&gt; ([ValidationPhase] -&gt; Encoding)
+-&gt; ToJSON ValidationPhase
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; ToJSON a
+toEncodingList :: [ValidationPhase] -&gt; Encoding
+$ctoEncodingList :: [ValidationPhase] -&gt; Encoding
+toJSONList :: [ValidationPhase] -&gt; Value
+$ctoJSONList :: [ValidationPhase] -&gt; Value
+toEncoding :: ValidationPhase -&gt; Encoding
+$ctoEncoding :: ValidationPhase -&gt; Encoding
+toJSON :: ValidationPhase -&gt; Value
+$ctoJSON :: ValidationPhase -&gt; Value
+</span><a href="#local-6989586621679742454"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></a></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span id="local-6989586621679742450"><span id="local-6989586621679742452"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">via</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Prettyprinter.Extras.html#PrettyShow"><span class="hs-identifier hs-type">PrettyShow</span></a></span><span> </span><span class="annot"><a href="Ledger.Index.Internal.html#ValidationPhase"><span class="hs-identifier hs-type">ValidationPhase</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Pretty</span></span><span> </span><span class="annot"><a href="Ledger.Index.Internal.html#ValidationPhase"><span class="hs-identifier hs-type">ValidationPhase</span></a></span></span></span><span>
+</span><span id="line-89"></span><span class="hs-keyword">type</span><span> </span><span id="ValidationErrorInPhase"><span class="annot"><a href="Ledger.Index.Internal.html#ValidationErrorInPhase"><span class="hs-identifier hs-var">ValidationErrorInPhase</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Index.Internal.html#ValidationPhase"><span class="hs-identifier hs-type">ValidationPhase</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Index.Internal.html#ValidationError"><span class="hs-identifier hs-type">ValidationError</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-90"></span><span class="hs-keyword">type</span><span> </span><span id="ValidationSuccess"><span class="annot"><a href="Ledger.Index.Internal.html#ValidationSuccess"><span class="hs-identifier hs-var">ValidationSuccess</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Index.Internal.html#RedeemerReport"><span class="hs-identifier hs-type">RedeemerReport</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Validated</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Tx</span></span><span> </span><span class="annot"><a href="Ledger.Index.Internal.html#EmulatorEra"><span class="hs-identifier hs-type">EmulatorEra</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-91"></span><span class="hs-keyword">type</span><span> </span><span id="RedeemerReport"><span class="annot"><a href="Ledger.Index.Internal.html#RedeemerReport"><span class="hs-identifier hs-var">RedeemerReport</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map.Map</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">RdmrPtr</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ExUnits</span></span><span class="hs-special">)</span><span>
+</span><span id="line-92"></span><span>
+</span><span id="line-93"></span><span id="local-6989586621679742446"><span id="local-6989586621679742447"></span></span><span class="hs-keyword">data</span><span> </span><span id="ValidationResult"><span class="annot"><a href="Ledger.Index.Internal.html#ValidationResult"><span class="hs-identifier hs-var">ValidationResult</span></a></span></span><span>
+</span><span id="line-94"></span><span>    </span><span class="hs-glyph">=</span><span> </span><span id="FailPhase1"><span class="annot"><a href="Ledger.Index.Internal.html#FailPhase1"><span class="hs-identifier hs-var">FailPhase1</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Ledger.Tx.CardanoAPI.Internal.html#CardanoTx"><span class="hs-identifier hs-type">CardanoTx</span></a></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Ledger.Index.Internal.html#ValidationError"><span class="hs-identifier hs-type">ValidationError</span></a></span><span>
+</span><span id="line-95"></span><span>    </span><span class="hs-comment">-- ^ A transaction failed to validate in phase 1.</span><span>
+</span><span id="line-96"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="FailPhase2"><span class="annot"><a href="Ledger.Index.Internal.html#FailPhase2"><span class="hs-identifier hs-var">FailPhase2</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Ledger.Index.Internal.html#OnChainTx"><span class="hs-identifier hs-type">OnChainTx</span></a></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Ledger.Index.Internal.html#ValidationError"><span class="hs-identifier hs-type">ValidationError</span></a></span><span> </span><span class="hs-glyph">!</span><span class="annot"><span class="hs-identifier hs-type">C.Value</span></span><span>
+</span><span id="line-97"></span><span>    </span><span class="hs-comment">-- ^ A transaction failed to validate in phase 2. The @Value@ indicates the amount of collateral stored in the transaction.</span><span>
+</span><span id="line-98"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="Success"><span class="annot"><a href="Ledger.Index.Internal.html#Success"><span class="hs-identifier hs-var">Success</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Ledger.Index.Internal.html#OnChainTx"><span class="hs-identifier hs-type">OnChainTx</span></a></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Ledger.Index.Internal.html#RedeemerReport"><span class="hs-identifier hs-type">RedeemerReport</span></a></span><span>
+</span><span id="line-99"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679742439"><span id="local-6989586621679742441"><span class="annot"><span class="annottext">ValidationResult -&gt; ValidationResult -&gt; Bool
+(ValidationResult -&gt; ValidationResult -&gt; Bool)
+-&gt; (ValidationResult -&gt; ValidationResult -&gt; Bool)
+-&gt; Eq ValidationResult
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: ValidationResult -&gt; ValidationResult -&gt; Bool
+$c/= :: ValidationResult -&gt; ValidationResult -&gt; Bool
+== :: ValidationResult -&gt; ValidationResult -&gt; Bool
+$c== :: ValidationResult -&gt; ValidationResult -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679742433"><span id="local-6989586621679742435"><span id="local-6989586621679742437"><span class="annot"><span class="annottext">Int -&gt; ValidationResult -&gt; ShowS
+[ValidationResult] -&gt; ShowS
+ValidationResult -&gt; String
+(Int -&gt; ValidationResult -&gt; ShowS)
+-&gt; (ValidationResult -&gt; String)
+-&gt; ([ValidationResult] -&gt; ShowS)
+-&gt; Show ValidationResult
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [ValidationResult] -&gt; ShowS
+$cshowList :: [ValidationResult] -&gt; ShowS
+show :: ValidationResult -&gt; String
+$cshow :: ValidationResult -&gt; String
+showsPrec :: Int -&gt; ValidationResult -&gt; ShowS
+$cshowsPrec :: Int -&gt; ValidationResult -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. ValidationResult -&gt; Rep ValidationResult x)
+-&gt; (forall x. Rep ValidationResult x -&gt; ValidationResult)
+-&gt; Generic ValidationResult
+forall x. Rep ValidationResult x -&gt; ValidationResult
+forall x. ValidationResult -&gt; Rep ValidationResult x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep ValidationResult x -&gt; ValidationResult
+$cfrom :: forall x. ValidationResult -&gt; Rep ValidationResult x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-100"></span><span>
+</span><span id="line-101"></span><span id="_Success"><span id="_FailPhase2"><span id="_FailPhase1"><span class="hs-identifier">makePrisms</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">ValidationResult</span></span></span></span><span>
+</span><span id="line-102"></span><span>
+</span><span id="line-103"></span><span id="local-6989586621679742426"><span id="local-6989586621679742427"></span></span><span class="hs-keyword">data</span><span> </span><span id="ValidationResultSimple"><span class="annot"><a href="Ledger.Index.Internal.html#ValidationResultSimple"><span class="hs-identifier hs-var">ValidationResultSimple</span></a></span></span><span>
+</span><span id="line-104"></span><span>    </span><span class="hs-glyph">=</span><span> </span><span id="ValidationFailPhase1"><span class="annot"><a href="Ledger.Index.Internal.html#ValidationFailPhase1"><span class="hs-identifier hs-var">ValidationFailPhase1</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Ledger.Tx.CardanoAPI.Internal.html#CardanoTx"><span class="hs-identifier hs-type">CardanoTx</span></a></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Ledger.Index.Internal.html#ValidationError"><span class="hs-identifier hs-type">ValidationError</span></a></span><span>
+</span><span id="line-105"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="ValidationFailPhase2"><span class="annot"><a href="Ledger.Index.Internal.html#ValidationFailPhase2"><span class="hs-identifier hs-var">ValidationFailPhase2</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Ledger.Tx.CardanoAPI.Internal.html#CardanoTx"><span class="hs-identifier hs-type">CardanoTx</span></a></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Ledger.Index.Internal.html#ValidationError"><span class="hs-identifier hs-type">ValidationError</span></a></span><span> </span><span class="hs-glyph">!</span><span class="annot"><span class="hs-identifier hs-type">C.Value</span></span><span>
+</span><span id="line-106"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="ValidationSuccess"><span class="annot"><a href="Ledger.Index.Internal.html#ValidationSuccess"><span class="hs-identifier hs-var">ValidationSuccess</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Ledger.Tx.CardanoAPI.Internal.html#CardanoTx"><span class="hs-identifier hs-type">CardanoTx</span></a></span><span>
+</span><span id="line-107"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="annot"><span class="annottext">(forall x. ValidationResultSimple -&gt; Rep ValidationResultSimple x)
+-&gt; (forall x.
+    Rep ValidationResultSimple x -&gt; ValidationResultSimple)
+-&gt; Generic ValidationResultSimple
+forall x. Rep ValidationResultSimple x -&gt; ValidationResultSimple
+forall x. ValidationResultSimple -&gt; Rep ValidationResultSimple x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep ValidationResultSimple x -&gt; ValidationResultSimple
+$cfrom :: forall x. ValidationResultSimple -&gt; Rep ValidationResultSimple x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span>
+</span><span id="line-108"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679742413"><span id="local-6989586621679742415"><span id="local-6989586621679742417"><span id="local-6989586621679742419"><span class="annot"><span class="annottext">[ValidationResultSimple] -&gt; Encoding
+[ValidationResultSimple] -&gt; Value
+ValidationResultSimple -&gt; Encoding
+ValidationResultSimple -&gt; Value
+(ValidationResultSimple -&gt; Value)
+-&gt; (ValidationResultSimple -&gt; Encoding)
+-&gt; ([ValidationResultSimple] -&gt; Value)
+-&gt; ([ValidationResultSimple] -&gt; Encoding)
+-&gt; ToJSON ValidationResultSimple
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; ToJSON a
+toEncodingList :: [ValidationResultSimple] -&gt; Encoding
+$ctoEncodingList :: [ValidationResultSimple] -&gt; Encoding
+toJSONList :: [ValidationResultSimple] -&gt; Value
+$ctoJSONList :: [ValidationResultSimple] -&gt; Value
+toEncoding :: ValidationResultSimple -&gt; Encoding
+$ctoEncoding :: ValidationResultSimple -&gt; Encoding
+toJSON :: ValidationResultSimple -&gt; Value
+$ctoJSON :: ValidationResultSimple -&gt; Value
+</span><a href="#local-6989586621679742413"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679742409"><span id="local-6989586621679742411"><span class="annot"><span class="annottext">Value -&gt; Parser [ValidationResultSimple]
+Value -&gt; Parser ValidationResultSimple
+(Value -&gt; Parser ValidationResultSimple)
+-&gt; (Value -&gt; Parser [ValidationResultSimple])
+-&gt; FromJSON ValidationResultSimple
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+parseJSONList :: Value -&gt; Parser [ValidationResultSimple]
+$cparseJSONList :: Value -&gt; Parser [ValidationResultSimple]
+parseJSON :: Value -&gt; Parser ValidationResultSimple
+$cparseJSON :: Value -&gt; Parser ValidationResultSimple
+</span><a href="#local-6989586621679742409"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-109"></span><span>
+</span><span id="line-110"></span><span class="annot"><a href="Ledger.Index.Internal.html#toValidationResultSimple"><span class="hs-identifier hs-type">toValidationResultSimple</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Ledger.Index.Internal.html#ValidationResult"><span class="hs-identifier hs-type">ValidationResult</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Ledger.Index.Internal.html#ValidationResultSimple"><span class="hs-identifier hs-type">ValidationResultSimple</span></a></span><span>
+</span><span id="line-111"></span><span id="toValidationResultSimple"><span class="annot"><span class="annottext">toValidationResultSimple :: ValidationResult -&gt; ValidationResultSimple
+</span><a href="Ledger.Index.Internal.html#toValidationResultSimple"><span class="hs-identifier hs-var hs-var">toValidationResultSimple</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Index.Internal.html#FailPhase1"><span class="hs-identifier hs-type">FailPhase1</span></a></span><span> </span><span id="local-6989586621679742407"><span class="annot"><span class="annottext">CardanoTx
+</span><a href="#local-6989586621679742407"><span class="hs-identifier hs-var">tx</span></a></span></span><span> </span><span id="local-6989586621679742406"><span class="annot"><span class="annottext">ValidationError
+</span><a href="#local-6989586621679742406"><span class="hs-identifier hs-var">err</span></a></span></span><span class="hs-special">)</span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CardanoTx -&gt; ValidationError -&gt; ValidationResultSimple
+</span><a href="Ledger.Index.Internal.html#ValidationFailPhase1"><span class="hs-identifier hs-var">ValidationFailPhase1</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoTx
+</span><a href="#local-6989586621679742407"><span class="hs-identifier hs-var">tx</span></a></span><span> </span><span class="annot"><span class="annottext">ValidationError
+</span><a href="#local-6989586621679742406"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-112"></span><span class="annot"><a href="Ledger.Index.Internal.html#toValidationResultSimple"><span class="hs-identifier hs-var">toValidationResultSimple</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Index.Internal.html#FailPhase2"><span class="hs-identifier hs-type">FailPhase2</span></a></span><span> </span><span id="local-6989586621679742405"><span class="annot"><span class="annottext">OnChainTx
+</span><a href="#local-6989586621679742405"><span class="hs-identifier hs-var">vtx</span></a></span></span><span> </span><span id="local-6989586621679742404"><span class="annot"><span class="annottext">ValidationError
+</span><a href="#local-6989586621679742404"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span id="local-6989586621679742403"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679742403"><span class="hs-identifier hs-var">val</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CardanoTx -&gt; ValidationError -&gt; Value -&gt; ValidationResultSimple
+</span><a href="Ledger.Index.Internal.html#ValidationFailPhase2"><span class="hs-identifier hs-var">ValidationFailPhase2</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">OnChainTx -&gt; CardanoTx
+</span><a href="Ledger.Index.Internal.html#unOnChain"><span class="hs-identifier hs-var">unOnChain</span></a></span><span> </span><span class="annot"><span class="annottext">OnChainTx
+</span><a href="#local-6989586621679742405"><span class="hs-identifier hs-var">vtx</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">ValidationError
+</span><a href="#local-6989586621679742404"><span class="hs-identifier hs-var">err</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679742403"><span class="hs-identifier hs-var">val</span></a></span><span>
+</span><span id="line-113"></span><span class="annot"><a href="Ledger.Index.Internal.html#toValidationResultSimple"><span class="hs-identifier hs-var">toValidationResultSimple</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Index.Internal.html#Success"><span class="hs-identifier hs-type">Success</span></a></span><span> </span><span id="local-6989586621679742402"><span class="annot"><span class="annottext">OnChainTx
+</span><a href="#local-6989586621679742402"><span class="hs-identifier hs-var">vtx</span></a></span></span><span> </span><span class="annot"><span class="annottext">RedeemerReport
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CardanoTx -&gt; ValidationResultSimple
+</span><a href="Ledger.Index.Internal.html#ValidationSuccess"><span class="hs-identifier hs-var">ValidationSuccess</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">OnChainTx -&gt; CardanoTx
+</span><a href="Ledger.Index.Internal.html#unOnChain"><span class="hs-identifier hs-var">unOnChain</span></a></span><span> </span><span class="annot"><span class="annottext">OnChainTx
+</span><a href="#local-6989586621679742402"><span class="hs-identifier hs-var">vtx</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-114"></span><span>
+</span><span id="line-115"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679742395"><span id="local-6989586621679742397"><span id="local-6989586621679742399"><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><a href="Ledger.Index.Internal.html#ValidationResult"><span class="hs-identifier hs-type">ValidationResult</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-116"></span><span>    </span><span id="local-6989586621679742394"><span class="annot"><span class="annottext">toJSON :: ValidationResult -&gt; Value
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ValidationResultSimple -&gt; Value
+forall a. ToJSON a =&gt; a -&gt; Value
+</span><span class="hs-identifier hs-var">toJSON</span></span><span> </span><span class="annot"><span class="annottext">(ValidationResultSimple -&gt; Value)
+-&gt; (ValidationResult -&gt; ValidationResultSimple)
+-&gt; ValidationResult
+-&gt; Value
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ValidationResult -&gt; ValidationResultSimple
+</span><a href="Ledger.Index.Internal.html#toValidationResultSimple"><span class="hs-identifier hs-var">toValidationResultSimple</span></a></span><span>
+</span><span id="line-117"></span><span>
+</span><span id="line-118"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679742390"><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="Ledger.Index.Internal.html#ValidationResult"><span class="hs-identifier hs-type">ValidationResult</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-119"></span><span>    </span><span id="local-6989586621679742389"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser ValidationResult
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Value -&gt; Parser ValidationResult
+forall a. Monoid a =&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="hs-comment">-- Always fail, this instance isn't really used, but required by pab's logging framework.</span><span>
+</span><span id="line-120"></span><span>
+</span><span id="line-121"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679742385"><span class="annot"><span class="hs-identifier hs-type">Pretty</span></span><span> </span><span class="annot"><a href="Ledger.Index.Internal.html#ValidationResult"><span class="hs-identifier hs-type">ValidationResult</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-122"></span><span>    </span><span id="local-6989586621679742384"><span class="annot"><span class="annottext">pretty :: ValidationResult -&gt; Doc ann
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">pretty</span></span></span><span> </span><span id="local-6989586621679742382"><span class="annot"><span class="annottext">ValidationResult
+</span><a href="#local-6989586621679742382"><span class="hs-identifier hs-var">res</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Doc ann -&gt; Doc ann
+forall ann. Int -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-identifier hs-var">hang</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span> </span><span class="annot"><span class="annottext">(Doc ann -&gt; Doc ann) -&gt; Doc ann -&gt; Doc ann
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Doc ann] -&gt; Doc ann
+forall ann. [Doc ann] -&gt; Doc ann
+</span><span class="hs-identifier hs-var">vsep</span></span><span> </span><span class="annot"><span class="annottext">([Doc ann] -&gt; Doc ann) -&gt; [Doc ann] -&gt; Doc ann
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-123"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">ValidationResult
+</span><a href="#local-6989586621679742382"><span class="hs-identifier hs-var">res</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-124"></span><span>            </span><span class="annot"><a href="Ledger.Index.Internal.html#FailPhase1"><span class="hs-identifier hs-type">FailPhase1</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoTx
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679742381"><span class="annot"><span class="annottext">ValidationError
+</span><a href="#local-6989586621679742381"><span class="hs-identifier hs-var">err</span></a></span></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Validation failed in phase 1:&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">ValidationError -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">ValidationError
+</span><a href="#local-6989586621679742381"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-125"></span><span>            </span><span class="annot"><a href="Ledger.Index.Internal.html#FailPhase2"><span class="hs-identifier hs-type">FailPhase2</span></a></span><span> </span><span class="annot"><span class="annottext">OnChainTx
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679742380"><span class="annot"><span class="annottext">ValidationError
+</span><a href="#local-6989586621679742380"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="annot"><span class="annottext">Value
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Validation failed in phase 2:&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">ValidationError -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">ValidationError
+</span><a href="#local-6989586621679742380"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-126"></span><span>            </span><span class="annot"><a href="Ledger.Index.Internal.html#Success"><span class="hs-identifier hs-type">Success</span></a></span><span class="hs-special">{</span><span class="hs-special">}</span><span>          </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Validation success&quot;</span></span><span>
+</span><span id="line-127"></span><span>        </span><span class="annot"><span class="annottext">Doc ann -&gt; [Doc ann] -&gt; [Doc ann]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Doc ann) -&gt; [Text] -&gt; [Doc ann]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Doc ann
+forall ann. Text -&gt; Doc ann
+</span><span class="hs-identifier hs-var">reflow</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ValidationResult -&gt; [Text]
+</span><a href="Ledger.Index.Internal.html#getEvaluationLogs"><span class="hs-identifier hs-var">getEvaluationLogs</span></a></span><span> </span><span class="annot"><span class="annottext">ValidationResult
+</span><a href="#local-6989586621679742382"><span class="hs-identifier hs-var">res</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-128"></span><span>
+</span><span id="line-129"></span><span>
+</span><span id="line-130"></span><span class="annot"><a href="Ledger.Index.Internal.html#cardanoTxFromValidationResult"><span class="hs-identifier hs-type">cardanoTxFromValidationResult</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Ledger.Index.Internal.html#ValidationResult"><span class="hs-identifier hs-type">ValidationResult</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Ledger.Tx.CardanoAPI.Internal.html#CardanoTx"><span class="hs-identifier hs-type">CardanoTx</span></a></span><span>
+</span><span id="line-131"></span><span id="cardanoTxFromValidationResult"><span class="annot"><span class="annottext">cardanoTxFromValidationResult :: ValidationResult -&gt; CardanoTx
+</span><a href="Ledger.Index.Internal.html#cardanoTxFromValidationResult"><span class="hs-identifier hs-var hs-var">cardanoTxFromValidationResult</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Index.Internal.html#FailPhase1"><span class="hs-identifier hs-type">FailPhase1</span></a></span><span> </span><span id="local-6989586621679742377"><span class="annot"><span class="annottext">CardanoTx
+</span><a href="#local-6989586621679742377"><span class="hs-identifier hs-var">tx</span></a></span></span><span> </span><span class="annot"><span class="annottext">ValidationError
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CardanoTx
+</span><a href="#local-6989586621679742377"><span class="hs-identifier hs-var">tx</span></a></span><span>
+</span><span id="line-132"></span><span class="annot"><a href="Ledger.Index.Internal.html#cardanoTxFromValidationResult"><span class="hs-identifier hs-var">cardanoTxFromValidationResult</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Index.Internal.html#FailPhase2"><span class="hs-identifier hs-type">FailPhase2</span></a></span><span> </span><span id="local-6989586621679742376"><span class="annot"><span class="annottext">OnChainTx
+</span><a href="#local-6989586621679742376"><span class="hs-identifier hs-var">vtx</span></a></span></span><span> </span><span class="annot"><span class="annottext">ValidationError
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Value
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OnChainTx -&gt; CardanoTx
+</span><a href="Ledger.Index.Internal.html#unOnChain"><span class="hs-identifier hs-var">unOnChain</span></a></span><span> </span><span class="annot"><span class="annottext">OnChainTx
+</span><a href="#local-6989586621679742376"><span class="hs-identifier hs-var">vtx</span></a></span><span>
+</span><span id="line-133"></span><span class="annot"><a href="Ledger.Index.Internal.html#cardanoTxFromValidationResult"><span class="hs-identifier hs-var">cardanoTxFromValidationResult</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Index.Internal.html#Success"><span class="hs-identifier hs-type">Success</span></a></span><span> </span><span id="local-6989586621679742375"><span class="annot"><span class="annottext">OnChainTx
+</span><a href="#local-6989586621679742375"><span class="hs-identifier hs-var">vtx</span></a></span></span><span> </span><span class="annot"><span class="annottext">RedeemerReport
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OnChainTx -&gt; CardanoTx
+</span><a href="Ledger.Index.Internal.html#unOnChain"><span class="hs-identifier hs-var">unOnChain</span></a></span><span> </span><span class="annot"><span class="annottext">OnChainTx
+</span><a href="#local-6989586621679742375"><span class="hs-identifier hs-var">vtx</span></a></span><span>
+</span><span id="line-134"></span><span>
+</span><span id="line-135"></span><span class="annot"><a href="Ledger.Index.Internal.html#toOnChain"><span class="hs-identifier hs-type">toOnChain</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Ledger.Index.Internal.html#ValidationResult"><span class="hs-identifier hs-type">ValidationResult</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Ledger.Index.Internal.html#OnChainTx"><span class="hs-identifier hs-type">OnChainTx</span></a></span><span>
+</span><span id="line-136"></span><span id="toOnChain"><span class="annot"><span class="annottext">toOnChain :: ValidationResult -&gt; Maybe OnChainTx
+</span><a href="Ledger.Index.Internal.html#toOnChain"><span class="hs-identifier hs-var hs-var">toOnChain</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Index.Internal.html#Success"><span class="hs-identifier hs-type">Success</span></a></span><span> </span><span id="local-6989586621679742373"><span class="annot"><span class="annottext">OnChainTx
+</span><a href="#local-6989586621679742373"><span class="hs-identifier hs-var">tx</span></a></span></span><span> </span><span class="annot"><span class="annottext">RedeemerReport
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OnChainTx -&gt; Maybe OnChainTx
+forall a. a -&gt; Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">OnChainTx
+</span><a href="#local-6989586621679742373"><span class="hs-identifier hs-var">tx</span></a></span><span>
+</span><span id="line-137"></span><span class="annot"><a href="Ledger.Index.Internal.html#toOnChain"><span class="hs-identifier hs-var">toOnChain</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Index.Internal.html#FailPhase2"><span class="hs-identifier hs-type">FailPhase2</span></a></span><span> </span><span id="local-6989586621679742372"><span class="annot"><span class="annottext">OnChainTx
+</span><a href="#local-6989586621679742372"><span class="hs-identifier hs-var">tx</span></a></span></span><span> </span><span class="annot"><span class="annottext">ValidationError
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Value
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OnChainTx -&gt; Maybe OnChainTx
+forall a. a -&gt; Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">OnChainTx
+</span><a href="#local-6989586621679742372"><span class="hs-identifier hs-var">tx</span></a></span><span>
+</span><span id="line-138"></span><span class="annot"><a href="Ledger.Index.Internal.html#toOnChain"><span class="hs-identifier hs-var">toOnChain</span></a></span><span> </span><span class="annot"><span class="annottext">ValidationResult
+</span><span class="hs-identifier">_</span></span><span>                   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe OnChainTx
+forall a. Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-139"></span><span>
+</span><span id="line-140"></span><span class="hs-comment">-- | Get logs from evaluating plutus scripts.</span><span>
+</span><span id="line-141"></span><span class="annot"><a href="Ledger.Index.Internal.html#getEvaluationLogs"><span class="hs-identifier hs-type">getEvaluationLogs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Ledger.Index.Internal.html#ValidationResult"><span class="hs-identifier hs-type">ValidationResult</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span class="hs-special">]</span><span>
+</span><span id="line-142"></span><span id="getEvaluationLogs"><span class="annot"><span class="annottext">getEvaluationLogs :: ValidationResult -&gt; [Text]
+</span><a href="Ledger.Index.Internal.html#getEvaluationLogs"><span class="hs-identifier hs-var hs-var">getEvaluationLogs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-143"></span><span>    </span><span class="annot"><a href="Ledger.Index.Internal.html#Success"><span class="hs-identifier hs-type">Success</span></a></span><span> </span><span class="annot"><span class="annottext">OnChainTx
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679742371"><span class="annot"><span class="annottext">RedeemerReport
+</span><a href="#local-6989586621679742371"><span class="hs-identifier hs-var">r</span></a></span></span><span>        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">((RdmrPtr, ([Text], ExUnits)) -&gt; [Text])
+-&gt; [(RdmrPtr, ([Text], ExUnits))] -&gt; [Text]
+forall (t :: * -&gt; *) a b. Foldable t =&gt; (a -&gt; [b]) -&gt; t a -&gt; [b]
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">concatMap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">([Text], ExUnits) -&gt; [Text]
+forall a b. (a, b) -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fst</span></a></span><span> </span><span class="annot"><span class="annottext">(([Text], ExUnits) -&gt; [Text])
+-&gt; ((RdmrPtr, ([Text], ExUnits)) -&gt; ([Text], ExUnits))
+-&gt; (RdmrPtr, ([Text], ExUnits))
+-&gt; [Text]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(RdmrPtr, ([Text], ExUnits)) -&gt; ([Text], ExUnits)
+forall a b. (a, b) -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">snd</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([(RdmrPtr, ([Text], ExUnits))] -&gt; [Text])
+-&gt; [(RdmrPtr, ([Text], ExUnits))] -&gt; [Text]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">RedeemerReport -&gt; [(RdmrPtr, ([Text], ExUnits))]
+forall k a. Map k a -&gt; [(k, a)]
+</span><span class="hs-identifier hs-var">Map.toList</span></span><span> </span><span class="annot"><span class="annottext">RedeemerReport
+</span><a href="#local-6989586621679742371"><span class="hs-identifier hs-var">r</span></a></span><span>
+</span><span id="line-144"></span><span>    </span><span class="annot"><a href="Ledger.Index.Internal.html#FailPhase1"><span class="hs-identifier hs-type">FailPhase1</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoTx
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679742368"><span class="annot"><span class="annottext">ValidationError
+</span><a href="#local-6989586621679742368"><span class="hs-identifier hs-var">err</span></a></span></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ValidationError -&gt; [Text]
+</span><a href="#local-6989586621679742367"><span class="hs-identifier hs-var">logs</span></a></span><span> </span><span class="annot"><span class="annottext">ValidationError
+</span><a href="#local-6989586621679742368"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-145"></span><span>    </span><span class="annot"><a href="Ledger.Index.Internal.html#FailPhase2"><span class="hs-identifier hs-type">FailPhase2</span></a></span><span> </span><span class="annot"><span class="annottext">OnChainTx
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679742366"><span class="annot"><span class="annottext">ValidationError
+</span><a href="#local-6989586621679742366"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="annot"><span class="annottext">Value
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ValidationError -&gt; [Text]
+</span><a href="#local-6989586621679742367"><span class="hs-identifier hs-var">logs</span></a></span><span> </span><span class="annot"><span class="annottext">ValidationError
+</span><a href="#local-6989586621679742366"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-146"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-147"></span><span>        </span><span id="local-6989586621679742367"><span class="annot"><span class="annottext">logs :: ValidationError -&gt; [Text]
+</span><a href="#local-6989586621679742367"><span class="hs-identifier hs-var hs-var">logs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-148"></span><span>            </span><span class="annot"><a href="Ledger.Index.Internal.html#ScriptFailure"><span class="hs-identifier hs-type">ScriptFailure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Scripts.EvaluationError</span></span><span> </span><span id="local-6989586621679742364"><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679742364"><span class="hs-identifier hs-var">msgs</span></a></span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679742364"><span class="hs-identifier hs-var">msgs</span></a></span><span>
+</span><span id="line-149"></span><span>            </span><span class="annot"><span class="annottext">ValidationError
+</span><span class="hs-identifier">_</span></span><span>                                              </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-150"></span></pre></body></html>

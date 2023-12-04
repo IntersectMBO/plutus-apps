@@ -1,0 +1,216 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass     #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DerivingVia        #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances  #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE GADTs              #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings  #-}</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Ledger.Orphans</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.Api</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">C</span></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Codec.Serialise.Class</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Serialise</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">JSON</span></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Data.Aeson.Extras.html"><span class="hs-identifier">Data.Aeson.Extras</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">JSON</span></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson.Types</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">JSON</span></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Data.Bifunctor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">bimap</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteArray</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BA</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Data.Data</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Data</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Hashable</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Hashable</span></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Scientific</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">floatingOrInteger</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">scientific</span></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Text</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Text</span></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Ledger.Crypto.html"><span class="hs-identifier">Ledger.Crypto</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Crypto.html#PrivateKey"><span class="hs-identifier">PrivateKey</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Crypto.html#PrivateKey"><span class="hs-identifier">PrivateKey</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Crypto.html#getPrivateKey"><span class="hs-identifier">getPrivateKey</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.V1.Ledger.Api</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">LedgerBytes</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">POSIXTime</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">POSIXTime</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">TxId</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">TxId</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">fromBytes</span></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.V1.Ledger.Bytes</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">bytes</span></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.V1.Ledger.Scripts</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">ScriptError</span></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Web.HttpApiData</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">FromHttpApiData</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">parseUrlPiece</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ToHttpApiData</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">toUrlPiece</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-comment">-- TODO: remove this dependency here once the instance of Ord for AddressInEra</span><span>
+</span><span id="line-31"></span><span class="hs-comment">-- can be obtained from upstream and removed from quickcheck-contractmodel.</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Test.QuickCheck.ContractModel.Internal.Common</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679738774"><span id="local-6989586621679738776"><span id="local-6989586621679738778"><span class="annot"><span class="hs-identifier hs-type">ToHttpApiData</span></span><span> </span><span class="annot"><a href="Ledger.Crypto.html#PrivateKey"><span class="hs-identifier hs-type">PrivateKey</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-35"></span><span>    </span><span id="local-6989586621679738772"><span class="annot"><span class="annottext">toUrlPiece :: PrivateKey -&gt; Text
+</span><a href="#local-6989586621679738772"><span class="hs-identifier hs-var hs-var hs-var hs-var">toUrlPiece</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">LedgerBytes -&gt; Text
+forall a. ToHttpApiData a =&gt; a -&gt; Text
+</span><span class="hs-identifier hs-var">toUrlPiece</span></span><span> </span><span class="annot"><span class="annottext">(LedgerBytes -&gt; Text)
+-&gt; (PrivateKey -&gt; LedgerBytes) -&gt; PrivateKey -&gt; Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">PrivateKey -&gt; LedgerBytes
+</span><a href="Ledger.Crypto.html#getPrivateKey"><span class="hs-identifier hs-var hs-var">getPrivateKey</span></a></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679738766"><span id="local-6989586621679738768"><span class="annot"><span class="hs-identifier hs-type">FromHttpApiData</span></span><span> </span><span class="annot"><a href="Ledger.Crypto.html#PrivateKey"><span class="hs-identifier hs-type">PrivateKey</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-38"></span><span>    </span><span id="local-6989586621679738764"><span class="annot"><span class="annottext">parseUrlPiece :: Text -&gt; Either Text PrivateKey
+</span><a href="#local-6989586621679738764"><span class="hs-identifier hs-var hs-var hs-var hs-var">parseUrlPiece</span></a></span></span><span> </span><span id="local-6989586621679738763"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679738763"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">LedgerBytes -&gt; PrivateKey
+</span><a href="Ledger.Crypto.html#PrivateKey"><span class="hs-identifier hs-var">PrivateKey</span></a></span><span> </span><span class="annot"><span class="annottext">(LedgerBytes -&gt; PrivateKey)
+-&gt; Either Text LedgerBytes -&gt; Either Text PrivateKey
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Either Text LedgerBytes
+forall a. FromHttpApiData a =&gt; Text -&gt; Either Text a
+</span><span class="hs-identifier hs-var">parseUrlPiece</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679738763"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679738755"><span id="local-6989586621679738757"><span id="local-6989586621679738759"><span class="annot"><span class="hs-identifier hs-type">ToHttpApiData</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">LedgerBytes</span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-41"></span><span>    </span><span id="local-6989586621679738754"><span class="annot"><span class="annottext">toUrlPiece :: LedgerBytes -&gt; Text
+</span><a href="#local-6989586621679738754"><span class="hs-identifier hs-var hs-var hs-var hs-var">toUrlPiece</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Text
+</span><a href="Data.Aeson.Extras.html#encodeByteString"><span class="hs-identifier hs-var">JSON.encodeByteString</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Text)
+-&gt; (LedgerBytes -&gt; ByteString) -&gt; LedgerBytes -&gt; Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">LedgerBytes -&gt; ByteString
+</span><span class="hs-identifier hs-var">bytes</span></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679738748"><span id="local-6989586621679738750"><span class="annot"><span class="hs-identifier hs-type">FromHttpApiData</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">LedgerBytes</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-43"></span><span>    </span><span id="local-6989586621679738747"><span class="annot"><span class="annottext">parseUrlPiece :: Text -&gt; Either Text LedgerBytes
+</span><a href="#local-6989586621679738747"><span class="hs-identifier hs-var hs-var hs-var hs-var">parseUrlPiece</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(String -&gt; Text)
+-&gt; (ByteString -&gt; LedgerBytes)
+-&gt; Either String ByteString
+-&gt; Either Text LedgerBytes
+forall (p :: * -&gt; * -&gt; *) a b c d.
+Bifunctor p =&gt;
+(a -&gt; b) -&gt; (c -&gt; d) -&gt; p a c -&gt; p b d
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">bimap</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Text
+</span><span class="hs-identifier hs-var">Text.pack</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; LedgerBytes
+</span><span class="hs-identifier hs-var">fromBytes</span></span><span> </span><span class="annot"><span class="annottext">(Either String ByteString -&gt; Either Text LedgerBytes)
+-&gt; (Text -&gt; Either String ByteString)
+-&gt; Text
+-&gt; Either Text LedgerBytes
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Either String ByteString
+</span><a href="Data.Aeson.Extras.html#tryDecode"><span class="hs-identifier hs-var">JSON.tryDecode</span></a></span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- | ByteArrayAccess instance for signing support</span><span>
+</span><span id="line-46"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679738741"><span class="annot"><span class="hs-identifier hs-type">BA.ByteArrayAccess</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">TxId</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-47"></span><span>  </span><span id="local-6989586621679738739"><span class="annot"><span class="annottext">length :: TxId -&gt; Int
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">length</span></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">TxId</span></span><span> </span><span id="local-6989586621679738737"><span class="annot"><span class="annottext">BuiltinByteString
+</span><a href="#local-6989586621679738737"><span class="hs-identifier hs-var">bis</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BuiltinByteString -&gt; Int
+forall ba. ByteArrayAccess ba =&gt; ba -&gt; Int
+</span><span class="hs-identifier hs-var">BA.length</span></span><span> </span><span class="annot"><span class="annottext">BuiltinByteString
+</span><a href="#local-6989586621679738737"><span class="hs-identifier hs-var">bis</span></a></span><span>
+</span><span id="line-48"></span><span>  </span><span id="local-6989586621679738736"><span class="annot"><span class="annottext">withByteArray :: TxId -&gt; (Ptr p -&gt; IO a) -&gt; IO a
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">withByteArray</span></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">TxId</span></span><span> </span><span id="local-6989586621679738734"><span class="annot"><span class="annottext">BuiltinByteString
+</span><a href="#local-6989586621679738734"><span class="hs-identifier hs-var">bis</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BuiltinByteString -&gt; (Ptr p -&gt; IO a) -&gt; IO a
+forall ba p a. ByteArrayAccess ba =&gt; ba -&gt; (Ptr p -&gt; IO a) -&gt; IO a
+</span><span class="hs-identifier hs-var">BA.withByteArray</span></span><span> </span><span class="annot"><span class="annottext">BuiltinByteString
+</span><a href="#local-6989586621679738734"><span class="hs-identifier hs-var">bis</span></a></span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span id="%24cNetworkMagic"><span id="%24tNetworkMagic"><span id="local-6989586621679738705"><span id="local-6989586621679738707"><span id="local-6989586621679738709"><span id="local-6989586621679738711"><span id="local-6989586621679738713"><span id="local-6989586621679738715"><span id="local-6989586621679738717"><span id="local-6989586621679738719"><span id="local-6989586621679738721"><span id="local-6989586621679738723"><span id="local-6989586621679738725"><span id="local-6989586621679738727"><span id="local-6989586621679738729"><span id="local-6989586621679738731"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Data</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.NetworkMagic</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-51"></span><span id="%24cTestnet"><span id="%24cMainnet"><span id="%24tNetworkId"><span id="local-6989586621679738673"><span id="local-6989586621679738675"><span id="local-6989586621679738677"><span id="local-6989586621679738679"><span id="local-6989586621679738681"><span id="local-6989586621679738683"><span id="local-6989586621679738685"><span id="local-6989586621679738687"><span id="local-6989586621679738689"><span id="local-6989586621679738691"><span id="local-6989586621679738693"><span id="local-6989586621679738695"><span id="local-6989586621679738697"><span id="local-6989586621679738699"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Data</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.NetworkId</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-52"></span><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Generic</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.NetworkId</span></span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679738661"><span id="local-6989586621679738663"><span class="annot"><span class="hs-identifier hs-type">Serialise</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">C.AddressInEra</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.BabbageEra</span></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-55"></span><span>  </span><span id="local-6989586621679738659"><span class="annot"><span class="annottext">encode :: AddressInEra BabbageEra -&gt; Encoding
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">encode</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Encoding
+forall a. Serialise a =&gt; a -&gt; Encoding
+</span><span class="hs-identifier hs-var">encode</span></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Encoding)
+-&gt; (AddressInEra BabbageEra -&gt; ByteString)
+-&gt; AddressInEra BabbageEra
+-&gt; Encoding
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">AddressInEra BabbageEra -&gt; ByteString
+forall a. SerialiseAsRawBytes a =&gt; a -&gt; ByteString
+</span><span class="hs-identifier hs-var">C.serialiseToRawBytes</span></span><span>
+</span><span id="line-56"></span><span>  </span><span id="local-6989586621679738656"><span class="annot"><span class="annottext">decode :: Decoder s (AddressInEra BabbageEra)
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">decode</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-57"></span><span>    </span><span id="local-6989586621679738654"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679738654"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Decoder s ByteString
+forall a s. Serialise a =&gt; Decoder s a
+</span><span class="hs-identifier hs-var">decode</span></span><span>
+</span><span id="line-58"></span><span>    </span><span class="annot"><span class="annottext">Decoder s (AddressInEra BabbageEra)
+-&gt; (AddressInEra BabbageEra -&gt; Decoder s (AddressInEra BabbageEra))
+-&gt; Maybe (AddressInEra BabbageEra)
+-&gt; Decoder s (AddressInEra BabbageEra)
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Decoder s (AddressInEra BabbageEra)
+forall (m :: * -&gt; *) a. MonadFail m =&gt; String -&gt; m a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fail</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Can get back Address&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span>      </span><span class="annot"><span class="annottext">AddressInEra BabbageEra -&gt; Decoder s (AddressInEra BabbageEra)
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span>
+</span><span id="line-60"></span><span>      </span><span class="annot"><span class="annottext">(Maybe (AddressInEra BabbageEra)
+ -&gt; Decoder s (AddressInEra BabbageEra))
+-&gt; Maybe (AddressInEra BabbageEra)
+-&gt; Decoder s (AddressInEra BabbageEra)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">AsType (AddressInEra BabbageEra)
+-&gt; ByteString -&gt; Maybe (AddressInEra BabbageEra)
+forall a.
+SerialiseAsRawBytes a =&gt;
+AsType a -&gt; ByteString -&gt; Maybe a
+</span><span class="hs-identifier hs-var">C.deserialiseFromRawBytes</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AsType BabbageEra -&gt; AsType (AddressInEra BabbageEra)
+forall era. AsType era -&gt; AsType (AddressInEra era)
+</span><span class="hs-identifier hs-var">C.AsAddressInEra</span></span><span> </span><span class="annot"><span class="annottext">AsType BabbageEra
+</span><span class="hs-identifier hs-var">C.AsBabbageEra</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679738654"><span class="hs-identifier hs-var">bs</span></a></span><span>
+</span><span id="line-61"></span><span>
+</span><span id="line-62"></span><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Generic</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.Lovelace</span></span><span>
+</span><span id="line-63"></span><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Generic</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.PolicyId</span></span><span>
+</span><span id="line-64"></span><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Generic</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.Quantity</span></span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span class="hs-comment">-- 'POSIXTime' instances</span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span class="hs-comment">-- | Custom `FromJSON` instance which allows to parse a JSON number to a</span><span>
+</span><span id="line-69"></span><span class="hs-comment">-- 'POSIXTime' value. The parsed JSON value MUST be an 'Integer' or else the</span><span>
+</span><span id="line-70"></span><span class="hs-comment">-- parsing fails.</span><span>
+</span><span id="line-71"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679738641"><span class="annot"><span class="hs-identifier hs-type">JSON.FromJSON</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">POSIXTime</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-72"></span><span>  </span><span id="local-6989586621679738639"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser POSIXTime
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></span></span><span> </span><span id="local-6989586621679738637"><span class="annot"><span class="annottext">v :: Value
+</span><a href="#local-6989586621679738637"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">JSON.Number</span></span><span> </span><span id="local-6989586621679738635"><span class="annot"><span class="annottext">Scientific
+</span><a href="#local-6989586621679738635"><span class="hs-identifier hs-var">n</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-73"></span><span>      </span><span class="annot"><span class="annottext">(Double -&gt; Parser POSIXTime)
+-&gt; (Integer -&gt; Parser POSIXTime)
+-&gt; Either Double Integer
+-&gt; Parser POSIXTime
+forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">either</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">Double
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; Parser POSIXTime -&gt; Parser POSIXTime
+forall a. String -&gt; Parser a -&gt; Parser a
+</span><span class="hs-identifier hs-var">JSON.prependFailure</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;parsing POSIXTime failed, &quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Value -&gt; Parser POSIXTime
+forall a. String -&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">JSON.typeMismatch</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Integer&quot;</span></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679738637"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-74"></span><span>             </span><span class="hs-special">(</span><span class="annot"><span class="annottext">POSIXTime -&gt; Parser POSIXTime
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(POSIXTime -&gt; Parser POSIXTime)
+-&gt; (Integer -&gt; POSIXTime) -&gt; Integer -&gt; Parser POSIXTime
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; POSIXTime
+</span><span class="hs-identifier hs-var">POSIXTime</span></span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span><span>             </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Scientific -&gt; Either Double Integer
+forall r i. (RealFloat r, Integral i) =&gt; Scientific -&gt; Either r i
+</span><span class="hs-identifier hs-var">floatingOrInteger</span></span><span> </span><span class="annot"><span class="annottext">Scientific
+</span><a href="#local-6989586621679738635"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">Double</span></a></span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/integer-gmp-1.0.3.0/src"><span class="hs-identifier hs-type">Integer</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">parseJSON</span></span><span> </span><span id="local-6989586621679738631"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679738631"><span class="hs-identifier hs-var">invalid</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-77"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; Parser POSIXTime -&gt; Parser POSIXTime
+forall a. String -&gt; Parser a -&gt; Parser a
+</span><span class="hs-identifier hs-var">JSON.prependFailure</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;parsing POSIXTime failed, &quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Value -&gt; Parser POSIXTime
+forall a. String -&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">JSON.typeMismatch</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Number&quot;</span></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679738631"><span class="hs-identifier hs-var">invalid</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span class="hs-comment">-- | Custom 'ToJSON' instance which allows to simply convert a 'POSIXTime'</span><span>
+</span><span id="line-80"></span><span class="hs-comment">-- value to a JSON number.</span><span>
+</span><span id="line-81"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679738624"><span id="local-6989586621679738626"><span id="local-6989586621679738628"><span class="annot"><span class="hs-identifier hs-type">JSON.ToJSON</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">POSIXTime</span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-82"></span><span>  </span><span id="local-6989586621679738622"><span class="annot"><span class="annottext">toJSON :: POSIXTime -&gt; Value
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">POSIXTime</span></span><span> </span><span id="local-6989586621679738620"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679738620"><span class="hs-identifier hs-var">n</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Scientific -&gt; Value
+</span><span class="hs-identifier hs-var">JSON.Number</span></span><span> </span><span class="annot"><span class="annottext">(Scientific -&gt; Value) -&gt; Scientific -&gt; Value
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Int -&gt; Scientific
+</span><span class="hs-identifier hs-var">scientific</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679738620"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span id="local-6989586621679738612"><span id="local-6989586621679738614"><span id="local-6989586621679738616"><span id="local-6989586621679738618"><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Serialise</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">POSIXTime</span></span></span></span></span></span><span>
+</span><span id="line-85"></span><span id="local-6989586621679738608"><span id="local-6989586621679738610"><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Hashable</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">POSIXTime</span></span></span></span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span id="local-6989586621679738599"><span id="local-6989586621679738601"><span id="local-6989586621679738603"><span id="local-6989586621679738605"><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">JSON.ToJSON</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ScriptError</span></span></span></span></span></span><span>
+</span><span id="line-88"></span><span id="local-6989586621679738595"><span id="local-6989586621679738597"><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">JSON.FromJSON</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ScriptError</span></span></span></span><span>
+</span><span id="line-89"></span></pre></body></html>

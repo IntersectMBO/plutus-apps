@@ -1,0 +1,436 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="%24con2tag_GT7lW0bxK0p09Y3HW3JOu6"><span id="%24con2tag_FnTxAtXR7uv3d4nqSnnHt4"></span></span><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass     #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DerivingStrategies #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase         #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings  #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE RecordWildCards    #-}</span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Plutus.ChainIndex.ChainIndexError</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.ChainIndex.ChainIndexError.html#ChainIndexError"><span class="hs-identifier">ChainIndexError</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.ChainIndex.ChainIndexError.html#InsertUtxoFailed"><span class="hs-identifier">InsertUtxoFailed</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.ChainIndex.ChainIndexError.html#RollbackFailed"><span class="hs-identifier">RollbackFailed</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Freer.Extras.Beam</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">BeamError</span></span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">FromJSON</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ToJSON</span></span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Ledger.Tx.CardanoAPI.Internal</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">ToCardanoError</span></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Types.html"><span class="hs-identifier">Plutus.ChainIndex.Types</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.ChainIndex.Types.html#Point"><span class="hs-identifier">Point</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Types.html#Tip"><span class="hs-identifier">Tip</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Prettyprinter</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Pretty</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">colon</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-operator">(&lt;+&gt;)</span></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span id="local-6989586621679681630"><span id="local-6989586621679681631"></span></span><span class="hs-keyword">data</span><span> </span><span id="ChainIndexError"><span class="annot"><a href="Plutus.ChainIndex.ChainIndexError.html#ChainIndexError"><span class="hs-identifier hs-var">ChainIndexError</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-16"></span><span>    </span><span id="InsertionFailed"><span class="annot"><a href="Plutus.ChainIndex.ChainIndexError.html#InsertionFailed"><span class="hs-identifier hs-var">InsertionFailed</span></a></span></span><span> </span><span class="annot"><a href="Plutus.ChainIndex.ChainIndexError.html#InsertUtxoFailed"><span class="hs-identifier hs-type">InsertUtxoFailed</span></a></span><span>
+</span><span id="line-17"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="RollbackFailed"><span class="annot"><a href="Plutus.ChainIndex.ChainIndexError.html#RollbackFailed"><span class="hs-identifier hs-var">RollbackFailed</span></a></span></span><span> </span><span class="annot"><a href="Plutus.ChainIndex.ChainIndexError.html#RollbackFailed"><span class="hs-identifier hs-type">RollbackFailed</span></a></span><span>
+</span><span id="line-18"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="ResumeNotSupported"><span class="annot"><a href="Plutus.ChainIndex.ChainIndexError.html#ResumeNotSupported"><span class="hs-identifier hs-var">ResumeNotSupported</span></a></span></span><span>
+</span><span id="line-19"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="QueryFailedNoTip"><span class="annot"><a href="Plutus.ChainIndex.ChainIndexError.html#QueryFailedNoTip"><span class="hs-identifier hs-var">QueryFailedNoTip</span></a></span></span><span> </span><span class="hs-comment">-- ^ Query failed because the chain index does not have a tip (not synchronised with node)</span><span>
+</span><span id="line-20"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="BeamEffectError"><span class="annot"><a href="Plutus.ChainIndex.ChainIndexError.html#BeamEffectError"><span class="hs-identifier hs-var">BeamEffectError</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">BeamError</span></span><span>
+</span><span id="line-21"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="ToCardanoError"><span class="annot"><a href="Plutus.ChainIndex.ChainIndexError.html#ToCardanoError"><span class="hs-identifier hs-var">ToCardanoError</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ToCardanoError</span></span><span>
+</span><span id="line-22"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="UnsupportedQuery"><span class="annot"><a href="Plutus.ChainIndex.ChainIndexError.html#UnsupportedQuery"><span class="hs-identifier hs-var">UnsupportedQuery</span></a></span></span><span>
+</span><span id="line-23"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="UnsupportedControlOperation"><span class="annot"><a href="Plutus.ChainIndex.ChainIndexError.html#UnsupportedControlOperation"><span class="hs-identifier hs-var">UnsupportedControlOperation</span></a></span></span><span>
+</span><span id="line-24"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679681618"><span id="local-6989586621679681620"><span class="annot"><span class="annottext">ChainIndexError -&gt; ChainIndexError -&gt; Bool
+(ChainIndexError -&gt; ChainIndexError -&gt; Bool)
+-&gt; (ChainIndexError -&gt; ChainIndexError -&gt; Bool)
+-&gt; Eq ChainIndexError
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: ChainIndexError -&gt; ChainIndexError -&gt; Bool
+$c/= :: ChainIndexError -&gt; ChainIndexError -&gt; Bool
+== :: ChainIndexError -&gt; ChainIndexError -&gt; Bool
+$c== :: ChainIndexError -&gt; ChainIndexError -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679681611"><span id="local-6989586621679681613"><span id="local-6989586621679681615"><span class="annot"><span class="annottext">Int -&gt; ChainIndexError -&gt; ShowS
+[ChainIndexError] -&gt; ShowS
+ChainIndexError -&gt; String
+(Int -&gt; ChainIndexError -&gt; ShowS)
+-&gt; (ChainIndexError -&gt; String)
+-&gt; ([ChainIndexError] -&gt; ShowS)
+-&gt; Show ChainIndexError
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [ChainIndexError] -&gt; ShowS
+$cshowList :: [ChainIndexError] -&gt; ShowS
+show :: ChainIndexError -&gt; String
+$cshow :: ChainIndexError -&gt; String
+showsPrec :: Int -&gt; ChainIndexError -&gt; ShowS
+$cshowsPrec :: Int -&gt; ChainIndexError -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. ChainIndexError -&gt; Rep ChainIndexError x)
+-&gt; (forall x. Rep ChainIndexError x -&gt; ChainIndexError)
+-&gt; Generic ChainIndexError
+forall x. Rep ChainIndexError x -&gt; ChainIndexError
+forall x. ChainIndexError -&gt; Rep ChainIndexError x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep ChainIndexError x -&gt; ChainIndexError
+$cfrom :: forall x. ChainIndexError -&gt; Rep ChainIndexError x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679681603"><span id="local-6989586621679681605"><span class="annot"><span class="annottext">Value -&gt; Parser [ChainIndexError]
+Value -&gt; Parser ChainIndexError
+(Value -&gt; Parser ChainIndexError)
+-&gt; (Value -&gt; Parser [ChainIndexError]) -&gt; FromJSON ChainIndexError
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+parseJSONList :: Value -&gt; Parser [ChainIndexError]
+$cparseJSONList :: Value -&gt; Parser [ChainIndexError]
+parseJSON :: Value -&gt; Parser ChainIndexError
+$cparseJSON :: Value -&gt; Parser ChainIndexError
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679681594"><span id="local-6989586621679681596"><span id="local-6989586621679681598"><span id="local-6989586621679681600"><span class="annot"><span class="annottext">[ChainIndexError] -&gt; Encoding
+[ChainIndexError] -&gt; Value
+ChainIndexError -&gt; Encoding
+ChainIndexError -&gt; Value
+(ChainIndexError -&gt; Value)
+-&gt; (ChainIndexError -&gt; Encoding)
+-&gt; ([ChainIndexError] -&gt; Value)
+-&gt; ([ChainIndexError] -&gt; Encoding)
+-&gt; ToJSON ChainIndexError
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; ToJSON a
+toEncodingList :: [ChainIndexError] -&gt; Encoding
+$ctoEncodingList :: [ChainIndexError] -&gt; Encoding
+toJSONList :: [ChainIndexError] -&gt; Value
+$ctoJSONList :: [ChainIndexError] -&gt; Value
+toEncoding :: ChainIndexError -&gt; Encoding
+$ctoEncoding :: ChainIndexError -&gt; Encoding
+toJSON :: ChainIndexError -&gt; Value
+$ctoJSON :: ChainIndexError -&gt; Value
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679681590"><span class="annot"><span class="hs-identifier hs-type">Pretty</span></span><span> </span><span class="annot"><a href="Plutus.ChainIndex.ChainIndexError.html#ChainIndexError"><span class="hs-identifier hs-type">ChainIndexError</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-28"></span><span>  </span><span id="local-6989586621679681588"><span class="annot"><span class="annottext">pretty :: ChainIndexError -&gt; Doc ann
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">pretty</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-29"></span><span>    </span><span class="annot"><a href="Plutus.ChainIndex.ChainIndexError.html#InsertionFailed"><span class="hs-identifier hs-type">InsertionFailed</span></a></span><span> </span><span id="local-6989586621679681586"><span class="annot"><span class="annottext">InsertUtxoFailed
+</span><a href="#local-6989586621679681586"><span class="hs-identifier hs-var">err</span></a></span></span><span>         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Insertion failed&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann
+forall ann. Doc ann
+</span><span class="hs-identifier hs-var">colon</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">InsertUtxoFailed -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">InsertUtxoFailed
+</span><a href="#local-6989586621679681586"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-30"></span><span>    </span><span class="annot"><a href="Plutus.ChainIndex.ChainIndexError.html#RollbackFailed"><span class="hs-identifier hs-type">RollbackFailed</span></a></span><span> </span><span id="local-6989586621679681585"><span class="annot"><span class="annottext">RollbackFailed
+</span><a href="#local-6989586621679681585"><span class="hs-identifier hs-var">err</span></a></span></span><span>          </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Rollback failed&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann
+forall ann. Doc ann
+</span><span class="hs-identifier hs-var">colon</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">RollbackFailed -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">RollbackFailed
+</span><a href="#local-6989586621679681585"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-31"></span><span>    </span><span class="annot"><span class="annottext">ChainIndexError
+</span><a href="Plutus.ChainIndex.ChainIndexError.html#ResumeNotSupported"><span class="hs-identifier hs-var">ResumeNotSupported</span></a></span><span>          </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Resume is not supported&quot;</span></span><span>
+</span><span id="line-32"></span><span>    </span><span class="annot"><span class="annottext">ChainIndexError
+</span><a href="Plutus.ChainIndex.ChainIndexError.html#QueryFailedNoTip"><span class="hs-identifier hs-var">QueryFailedNoTip</span></a></span><span>            </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Query failed&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann
+forall ann. Doc ann
+</span><span class="hs-identifier hs-var">colon</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;No tip.&quot;</span></span><span>
+</span><span id="line-33"></span><span>    </span><span class="annot"><a href="Plutus.ChainIndex.ChainIndexError.html#BeamEffectError"><span class="hs-identifier hs-type">BeamEffectError</span></a></span><span> </span><span id="local-6989586621679681584"><span class="annot"><span class="annottext">BeamError
+</span><a href="#local-6989586621679681584"><span class="hs-identifier hs-var">err</span></a></span></span><span>         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Error during Beam operation&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann
+forall ann. Doc ann
+</span><span class="hs-identifier hs-var">colon</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">BeamError -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">BeamError
+</span><a href="#local-6989586621679681584"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-34"></span><span>    </span><span class="annot"><a href="Plutus.ChainIndex.ChainIndexError.html#ToCardanoError"><span class="hs-identifier hs-type">ToCardanoError</span></a></span><span> </span><span id="local-6989586621679681583"><span class="annot"><span class="annottext">ToCardanoError
+</span><a href="#local-6989586621679681583"><span class="hs-identifier hs-var">err</span></a></span></span><span>          </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ToCardanoError -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">ToCardanoError
+</span><a href="#local-6989586621679681583"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-35"></span><span>    </span><span class="annot"><span class="annottext">ChainIndexError
+</span><a href="Plutus.ChainIndex.ChainIndexError.html#UnsupportedControlOperation"><span class="hs-identifier hs-var">UnsupportedControlOperation</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;The given control operation is not supported&quot;</span></span><span>
+</span><span id="line-36"></span><span>    </span><span class="annot"><span class="annottext">ChainIndexError
+</span><a href="Plutus.ChainIndex.ChainIndexError.html#UnsupportedQuery"><span class="hs-identifier hs-var">UnsupportedQuery</span></a></span><span>            </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;The given query is not supported&quot;</span></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- | UTXO state could not be inserted into the chain index</span><span>
+</span><span id="line-40"></span><span id="local-6989586621679681581"><span id="local-6989586621679681582"></span></span><span class="hs-keyword">data</span><span> </span><span id="InsertUtxoFailed"><span class="annot"><a href="Plutus.ChainIndex.ChainIndexError.html#InsertUtxoFailed"><span class="hs-identifier hs-var">InsertUtxoFailed</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-41"></span><span>    </span><span id="DuplicateBlock"><span class="annot"><a href="Plutus.ChainIndex.ChainIndexError.html#DuplicateBlock"><span class="hs-identifier hs-var">DuplicateBlock</span></a></span></span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Types.html#Tip"><span class="hs-identifier hs-type">Tip</span></a></span><span> </span><span class="hs-comment">-- ^ Insertion failed as there was already a block with the given number</span><span>
+</span><span id="line-42"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="InsertUtxoNoTip"><span class="annot"><a href="Plutus.ChainIndex.ChainIndexError.html#InsertUtxoNoTip"><span class="hs-identifier hs-var">InsertUtxoNoTip</span></a></span></span><span> </span><span class="hs-comment">-- ^ The '_usTip' field of the argument was 'Last Nothing'</span><span>
+</span><span id="line-43"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679681575"><span id="local-6989586621679681577"><span class="annot"><span class="annottext">InsertUtxoFailed -&gt; InsertUtxoFailed -&gt; Bool
+(InsertUtxoFailed -&gt; InsertUtxoFailed -&gt; Bool)
+-&gt; (InsertUtxoFailed -&gt; InsertUtxoFailed -&gt; Bool)
+-&gt; Eq InsertUtxoFailed
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: InsertUtxoFailed -&gt; InsertUtxoFailed -&gt; Bool
+$c/= :: InsertUtxoFailed -&gt; InsertUtxoFailed -&gt; Bool
+== :: InsertUtxoFailed -&gt; InsertUtxoFailed -&gt; Bool
+$c== :: InsertUtxoFailed -&gt; InsertUtxoFailed -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679681560"><span id="local-6989586621679681562"><span id="local-6989586621679681564"><span id="local-6989586621679681566"><span id="local-6989586621679681568"><span id="local-6989586621679681570"><span id="local-6989586621679681572"><span class="annot"><span class="annottext">Eq InsertUtxoFailed
+Eq InsertUtxoFailed
+-&gt; (InsertUtxoFailed -&gt; InsertUtxoFailed -&gt; Ordering)
+-&gt; (InsertUtxoFailed -&gt; InsertUtxoFailed -&gt; Bool)
+-&gt; (InsertUtxoFailed -&gt; InsertUtxoFailed -&gt; Bool)
+-&gt; (InsertUtxoFailed -&gt; InsertUtxoFailed -&gt; Bool)
+-&gt; (InsertUtxoFailed -&gt; InsertUtxoFailed -&gt; Bool)
+-&gt; (InsertUtxoFailed -&gt; InsertUtxoFailed -&gt; InsertUtxoFailed)
+-&gt; (InsertUtxoFailed -&gt; InsertUtxoFailed -&gt; InsertUtxoFailed)
+-&gt; Ord InsertUtxoFailed
+InsertUtxoFailed -&gt; InsertUtxoFailed -&gt; Bool
+InsertUtxoFailed -&gt; InsertUtxoFailed -&gt; Ordering
+InsertUtxoFailed -&gt; InsertUtxoFailed -&gt; InsertUtxoFailed
+forall a.
+Eq a
+-&gt; (a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+min :: InsertUtxoFailed -&gt; InsertUtxoFailed -&gt; InsertUtxoFailed
+$cmin :: InsertUtxoFailed -&gt; InsertUtxoFailed -&gt; InsertUtxoFailed
+max :: InsertUtxoFailed -&gt; InsertUtxoFailed -&gt; InsertUtxoFailed
+$cmax :: InsertUtxoFailed -&gt; InsertUtxoFailed -&gt; InsertUtxoFailed
+&gt;= :: InsertUtxoFailed -&gt; InsertUtxoFailed -&gt; Bool
+$c&gt;= :: InsertUtxoFailed -&gt; InsertUtxoFailed -&gt; Bool
+&gt; :: InsertUtxoFailed -&gt; InsertUtxoFailed -&gt; Bool
+$c&gt; :: InsertUtxoFailed -&gt; InsertUtxoFailed -&gt; Bool
+&lt;= :: InsertUtxoFailed -&gt; InsertUtxoFailed -&gt; Bool
+$c&lt;= :: InsertUtxoFailed -&gt; InsertUtxoFailed -&gt; Bool
+&lt; :: InsertUtxoFailed -&gt; InsertUtxoFailed -&gt; Bool
+$c&lt; :: InsertUtxoFailed -&gt; InsertUtxoFailed -&gt; Bool
+compare :: InsertUtxoFailed -&gt; InsertUtxoFailed -&gt; Ordering
+$ccompare :: InsertUtxoFailed -&gt; InsertUtxoFailed -&gt; Ordering
+$cp1Ord :: Eq InsertUtxoFailed
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679681553"><span id="local-6989586621679681555"><span id="local-6989586621679681557"><span class="annot"><span class="annottext">Int -&gt; InsertUtxoFailed -&gt; ShowS
+[InsertUtxoFailed] -&gt; ShowS
+InsertUtxoFailed -&gt; String
+(Int -&gt; InsertUtxoFailed -&gt; ShowS)
+-&gt; (InsertUtxoFailed -&gt; String)
+-&gt; ([InsertUtxoFailed] -&gt; ShowS)
+-&gt; Show InsertUtxoFailed
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [InsertUtxoFailed] -&gt; ShowS
+$cshowList :: [InsertUtxoFailed] -&gt; ShowS
+show :: InsertUtxoFailed -&gt; String
+$cshow :: InsertUtxoFailed -&gt; String
+showsPrec :: Int -&gt; InsertUtxoFailed -&gt; ShowS
+$cshowsPrec :: Int -&gt; InsertUtxoFailed -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. InsertUtxoFailed -&gt; Rep InsertUtxoFailed x)
+-&gt; (forall x. Rep InsertUtxoFailed x -&gt; InsertUtxoFailed)
+-&gt; Generic InsertUtxoFailed
+forall x. Rep InsertUtxoFailed x -&gt; InsertUtxoFailed
+forall x. InsertUtxoFailed -&gt; Rep InsertUtxoFailed x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep InsertUtxoFailed x -&gt; InsertUtxoFailed
+$cfrom :: forall x. InsertUtxoFailed -&gt; Rep InsertUtxoFailed x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679681547"><span id="local-6989586621679681549"><span class="annot"><span class="annottext">Value -&gt; Parser [InsertUtxoFailed]
+Value -&gt; Parser InsertUtxoFailed
+(Value -&gt; Parser InsertUtxoFailed)
+-&gt; (Value -&gt; Parser [InsertUtxoFailed])
+-&gt; FromJSON InsertUtxoFailed
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+parseJSONList :: Value -&gt; Parser [InsertUtxoFailed]
+$cparseJSONList :: Value -&gt; Parser [InsertUtxoFailed]
+parseJSON :: Value -&gt; Parser InsertUtxoFailed
+$cparseJSON :: Value -&gt; Parser InsertUtxoFailed
+</span><a href="#local-6989586621679681547"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679681539"><span id="local-6989586621679681541"><span id="local-6989586621679681543"><span id="local-6989586621679681545"><span class="annot"><span class="annottext">[InsertUtxoFailed] -&gt; Encoding
+[InsertUtxoFailed] -&gt; Value
+InsertUtxoFailed -&gt; Encoding
+InsertUtxoFailed -&gt; Value
+(InsertUtxoFailed -&gt; Value)
+-&gt; (InsertUtxoFailed -&gt; Encoding)
+-&gt; ([InsertUtxoFailed] -&gt; Value)
+-&gt; ([InsertUtxoFailed] -&gt; Encoding)
+-&gt; ToJSON InsertUtxoFailed
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; ToJSON a
+toEncodingList :: [InsertUtxoFailed] -&gt; Encoding
+$ctoEncodingList :: [InsertUtxoFailed] -&gt; Encoding
+toJSONList :: [InsertUtxoFailed] -&gt; Value
+$ctoJSONList :: [InsertUtxoFailed] -&gt; Value
+toEncoding :: InsertUtxoFailed -&gt; Encoding
+$ctoEncoding :: InsertUtxoFailed -&gt; Encoding
+toJSON :: InsertUtxoFailed -&gt; Value
+$ctoJSON :: InsertUtxoFailed -&gt; Value
+</span><a href="#local-6989586621679681539"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></a></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679681536"><span class="annot"><span class="hs-identifier hs-type">Pretty</span></span><span> </span><span class="annot"><a href="Plutus.ChainIndex.ChainIndexError.html#InsertUtxoFailed"><span class="hs-identifier hs-type">InsertUtxoFailed</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-47"></span><span>  </span><span id="local-6989586621679681535"><span class="annot"><span class="annottext">pretty :: InsertUtxoFailed -&gt; Doc ann
+</span><a href="#local-6989586621679681535"><span class="hs-identifier hs-var hs-var hs-var hs-var">pretty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-48"></span><span>    </span><span class="annot"><a href="Plutus.ChainIndex.ChainIndexError.html#DuplicateBlock"><span class="hs-identifier hs-type">DuplicateBlock</span></a></span><span> </span><span class="annot"><span class="annottext">Tip
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;UTxO insertion failed - already a block with the given number&quot;</span></span><span>
+</span><span id="line-49"></span><span>    </span><span class="annot"><span class="annottext">InsertUtxoFailed
+</span><a href="Plutus.ChainIndex.ChainIndexError.html#InsertUtxoNoTip"><span class="hs-identifier hs-var">InsertUtxoNoTip</span></a></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;UTxO insertion failed - no tip&quot;</span></span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span class="hs-comment">-- | Reason why the 'rollback' operation failed</span><span>
+</span><span id="line-52"></span><span id="local-6989586621679681533"><span id="local-6989586621679681534"></span></span><span class="hs-keyword">data</span><span> </span><span id="RollbackFailed"><span class="annot"><a href="Plutus.ChainIndex.ChainIndexError.html#RollbackFailed"><span class="hs-identifier hs-var">RollbackFailed</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-53"></span><span>    </span><span id="RollbackNoTip"><span class="annot"><a href="Plutus.ChainIndex.ChainIndexError.html#RollbackNoTip"><span class="hs-identifier hs-var">RollbackNoTip</span></a></span></span><span>  </span><span class="hs-comment">-- ^ Rollback failed because the utxo index had no tip (not synchronised)</span><span>
+</span><span id="line-54"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="TipMismatch"><span class="annot"><a href="Plutus.ChainIndex.ChainIndexError.html#TipMismatch"><span class="hs-identifier hs-var">TipMismatch</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="foundTip"><span class="annot"><span class="annottext">RollbackFailed -&gt; Tip
+</span><a href="Plutus.ChainIndex.ChainIndexError.html#foundTip"><span class="hs-identifier hs-var hs-var">foundTip</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Types.html#Tip"><span class="hs-identifier hs-type">Tip</span></a></span><span class="hs-special">,</span><span> </span><span id="targetPoint"><span class="annot"><span class="annottext">RollbackFailed -&gt; Point
+</span><a href="Plutus.ChainIndex.ChainIndexError.html#targetPoint"><span class="hs-identifier hs-var hs-var">targetPoint</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Types.html#Point"><span class="hs-identifier hs-type">Point</span></a></span><span> </span><span class="hs-special">}</span><span> </span><span class="hs-comment">-- ^ Unable to roll back to 'expectedTip' because the tip at that position was different</span><span>
+</span><span id="line-55"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="OldPointNotFound"><span class="annot"><a href="Plutus.ChainIndex.ChainIndexError.html#OldPointNotFound"><span class="hs-identifier hs-var">OldPointNotFound</span></a></span></span><span> </span><span class="annot"><a href="Plutus.ChainIndex.Types.html#Point"><span class="hs-identifier hs-type">Point</span></a></span><span> </span><span class="hs-comment">-- ^ Unable to find the old tip</span><span>
+</span><span id="line-56"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679681524"><span id="local-6989586621679681526"><span class="annot"><span class="annottext">RollbackFailed -&gt; RollbackFailed -&gt; Bool
+(RollbackFailed -&gt; RollbackFailed -&gt; Bool)
+-&gt; (RollbackFailed -&gt; RollbackFailed -&gt; Bool) -&gt; Eq RollbackFailed
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: RollbackFailed -&gt; RollbackFailed -&gt; Bool
+$c/= :: RollbackFailed -&gt; RollbackFailed -&gt; Bool
+== :: RollbackFailed -&gt; RollbackFailed -&gt; Bool
+$c== :: RollbackFailed -&gt; RollbackFailed -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679681509"><span id="local-6989586621679681511"><span id="local-6989586621679681513"><span id="local-6989586621679681515"><span id="local-6989586621679681517"><span id="local-6989586621679681519"><span id="local-6989586621679681521"><span class="annot"><span class="annottext">Eq RollbackFailed
+Eq RollbackFailed
+-&gt; (RollbackFailed -&gt; RollbackFailed -&gt; Ordering)
+-&gt; (RollbackFailed -&gt; RollbackFailed -&gt; Bool)
+-&gt; (RollbackFailed -&gt; RollbackFailed -&gt; Bool)
+-&gt; (RollbackFailed -&gt; RollbackFailed -&gt; Bool)
+-&gt; (RollbackFailed -&gt; RollbackFailed -&gt; Bool)
+-&gt; (RollbackFailed -&gt; RollbackFailed -&gt; RollbackFailed)
+-&gt; (RollbackFailed -&gt; RollbackFailed -&gt; RollbackFailed)
+-&gt; Ord RollbackFailed
+RollbackFailed -&gt; RollbackFailed -&gt; Bool
+RollbackFailed -&gt; RollbackFailed -&gt; Ordering
+RollbackFailed -&gt; RollbackFailed -&gt; RollbackFailed
+forall a.
+Eq a
+-&gt; (a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+min :: RollbackFailed -&gt; RollbackFailed -&gt; RollbackFailed
+$cmin :: RollbackFailed -&gt; RollbackFailed -&gt; RollbackFailed
+max :: RollbackFailed -&gt; RollbackFailed -&gt; RollbackFailed
+$cmax :: RollbackFailed -&gt; RollbackFailed -&gt; RollbackFailed
+&gt;= :: RollbackFailed -&gt; RollbackFailed -&gt; Bool
+$c&gt;= :: RollbackFailed -&gt; RollbackFailed -&gt; Bool
+&gt; :: RollbackFailed -&gt; RollbackFailed -&gt; Bool
+$c&gt; :: RollbackFailed -&gt; RollbackFailed -&gt; Bool
+&lt;= :: RollbackFailed -&gt; RollbackFailed -&gt; Bool
+$c&lt;= :: RollbackFailed -&gt; RollbackFailed -&gt; Bool
+&lt; :: RollbackFailed -&gt; RollbackFailed -&gt; Bool
+$c&lt; :: RollbackFailed -&gt; RollbackFailed -&gt; Bool
+compare :: RollbackFailed -&gt; RollbackFailed -&gt; Ordering
+$ccompare :: RollbackFailed -&gt; RollbackFailed -&gt; Ordering
+$cp1Ord :: Eq RollbackFailed
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679681503"><span id="local-6989586621679681505"><span id="local-6989586621679681507"><span class="annot"><span class="annottext">Int -&gt; RollbackFailed -&gt; ShowS
+[RollbackFailed] -&gt; ShowS
+RollbackFailed -&gt; String
+(Int -&gt; RollbackFailed -&gt; ShowS)
+-&gt; (RollbackFailed -&gt; String)
+-&gt; ([RollbackFailed] -&gt; ShowS)
+-&gt; Show RollbackFailed
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [RollbackFailed] -&gt; ShowS
+$cshowList :: [RollbackFailed] -&gt; ShowS
+show :: RollbackFailed -&gt; String
+$cshow :: RollbackFailed -&gt; String
+showsPrec :: Int -&gt; RollbackFailed -&gt; ShowS
+$cshowsPrec :: Int -&gt; RollbackFailed -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. RollbackFailed -&gt; Rep RollbackFailed x)
+-&gt; (forall x. Rep RollbackFailed x -&gt; RollbackFailed)
+-&gt; Generic RollbackFailed
+forall x. Rep RollbackFailed x -&gt; RollbackFailed
+forall x. RollbackFailed -&gt; Rep RollbackFailed x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep RollbackFailed x -&gt; RollbackFailed
+$cfrom :: forall x. RollbackFailed -&gt; Rep RollbackFailed x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679681497"><span id="local-6989586621679681499"><span class="annot"><span class="annottext">Value -&gt; Parser [RollbackFailed]
+Value -&gt; Parser RollbackFailed
+(Value -&gt; Parser RollbackFailed)
+-&gt; (Value -&gt; Parser [RollbackFailed]) -&gt; FromJSON RollbackFailed
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+parseJSONList :: Value -&gt; Parser [RollbackFailed]
+$cparseJSONList :: Value -&gt; Parser [RollbackFailed]
+parseJSON :: Value -&gt; Parser RollbackFailed
+$cparseJSON :: Value -&gt; Parser RollbackFailed
+</span><a href="#local-6989586621679681497"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679681489"><span id="local-6989586621679681491"><span id="local-6989586621679681493"><span id="local-6989586621679681495"><span class="annot"><span class="annottext">[RollbackFailed] -&gt; Encoding
+[RollbackFailed] -&gt; Value
+RollbackFailed -&gt; Encoding
+RollbackFailed -&gt; Value
+(RollbackFailed -&gt; Value)
+-&gt; (RollbackFailed -&gt; Encoding)
+-&gt; ([RollbackFailed] -&gt; Value)
+-&gt; ([RollbackFailed] -&gt; Encoding)
+-&gt; ToJSON RollbackFailed
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; ToJSON a
+toEncodingList :: [RollbackFailed] -&gt; Encoding
+$ctoEncodingList :: [RollbackFailed] -&gt; Encoding
+toJSONList :: [RollbackFailed] -&gt; Value
+$ctoJSONList :: [RollbackFailed] -&gt; Value
+toEncoding :: RollbackFailed -&gt; Encoding
+$ctoEncoding :: RollbackFailed -&gt; Encoding
+toJSON :: RollbackFailed -&gt; Value
+$ctoJSON :: RollbackFailed -&gt; Value
+</span><a href="#local-6989586621679681489"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></a></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679681486"><span class="annot"><span class="hs-identifier hs-type">Pretty</span></span><span> </span><span class="annot"><a href="Plutus.ChainIndex.ChainIndexError.html#RollbackFailed"><span class="hs-identifier hs-type">RollbackFailed</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-60"></span><span>  </span><span id="local-6989586621679681485"><span class="annot"><span class="annottext">pretty :: RollbackFailed -&gt; Doc ann
+</span><a href="#local-6989586621679681485"><span class="hs-identifier hs-var hs-var hs-var hs-var">pretty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-61"></span><span>    </span><span class="annot"><span class="annottext">RollbackFailed
+</span><a href="Plutus.ChainIndex.ChainIndexError.html#RollbackNoTip"><span class="hs-identifier hs-var">RollbackNoTip</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;UTxO index had no tip (not synchronised)&quot;</span></span><span>
+</span><span id="line-62"></span><span>    </span><span class="annot"><a href="Plutus.ChainIndex.ChainIndexError.html#TipMismatch"><span class="hs-identifier hs-type">TipMismatch</span></a></span><span class="hs-special">{</span><span id="local-6989586621679681483"><span id="local-6989586621679681484"><span class="annot"><span class="annottext">Tip
+Point
+targetPoint :: Point
+foundTip :: Tip
+targetPoint :: RollbackFailed -&gt; Point
+foundTip :: RollbackFailed -&gt; Tip
+</span><a href="#local-6989586621679681483"><span class="hs-glyph hs-var hs-var hs-var hs-var">..</span></a></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-63"></span><span>          </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Unable to rollback to&quot;</span></span><span>
+</span><span id="line-64"></span><span>      </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">Point -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">Point
+</span><a href="#local-6989586621679681483"><span class="hs-identifier hs-var">targetPoint</span></a></span><span>
+</span><span id="line-65"></span><span>      </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;because the tip at that position&quot;</span></span><span>
+</span><span id="line-66"></span><span>      </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">Tip -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">Tip
+</span><a href="#local-6989586621679681484"><span class="hs-identifier hs-var">foundTip</span></a></span><span>
+</span><span id="line-67"></span><span>      </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;was different&quot;</span></span><span>
+</span><span id="line-68"></span><span>    </span><span class="annot"><a href="Plutus.ChainIndex.ChainIndexError.html#OldPointNotFound"><span class="hs-identifier hs-type">OldPointNotFound</span></a></span><span> </span><span id="local-6989586621679681482"><span class="annot"><span class="annottext">Point
+</span><a href="#local-6989586621679681482"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Unable to find the old tip&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">Point -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">Point
+</span><a href="#local-6989586621679681482"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-69"></span></pre></body></html>

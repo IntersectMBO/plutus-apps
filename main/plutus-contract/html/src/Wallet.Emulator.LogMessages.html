@@ -1,0 +1,152 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass     #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric      #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DerivingStrategies #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase         #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings  #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE TemplateHaskell    #-}</span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- | The log messages produced by the emulator.</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Wallet.Emulator.LogMessages</span><span class="hs-special">(</span><span>
+</span><span id="line-9"></span><span>  </span><span class="annot"><a href="Wallet.Emulator.LogMessages.html#RequestHandlerLogMsg"><span class="hs-identifier">RequestHandlerLogMsg</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">TxBalanceMsg</span></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Wallet.Emulator.LogMessages.html#_AdjustingUnbalancedTx"><span class="hs-identifier">_AdjustingUnbalancedTx</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">_BalancingUnbalancedTx</span></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">_ValidationFailed</span></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.Api</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">C</span></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.Node.Emulator.LogMessages</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">TxBalanceMsg</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">_BalancingUnbalancedTx</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">_ValidationFailed</span></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Lens.TH</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">makePrisms</span></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">FromJSON</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ToJSON</span></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Ledger</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Address</span></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Ledger.Slot</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Slot</span></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Prettyprinter</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Pretty</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">viaShow</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-operator">(&lt;+&gt;)</span></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Wallet.Emulator.Error.html"><span class="hs-identifier">Wallet.Emulator.Error</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Wallet.Emulator.Error.html#WalletAPIError"><span class="hs-identifier">WalletAPIError</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span id="local-6989586621680554508"><span id="local-6989586621680554509"></span></span><span class="hs-keyword">data</span><span> </span><span id="RequestHandlerLogMsg"><span class="annot"><a href="Wallet.Emulator.LogMessages.html#RequestHandlerLogMsg"><span class="hs-identifier hs-var">RequestHandlerLogMsg</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-27"></span><span>    </span><span id="SlotNoticationTargetVsCurrent"><span class="annot"><a href="Wallet.Emulator.LogMessages.html#SlotNoticationTargetVsCurrent"><span class="hs-identifier hs-var">SlotNoticationTargetVsCurrent</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Slot</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Slot</span></span><span>
+</span><span id="line-28"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="StartWatchingContractAddresses"><span class="annot"><a href="Wallet.Emulator.LogMessages.html#StartWatchingContractAddresses"><span class="hs-identifier hs-var">StartWatchingContractAddresses</span></a></span></span><span>
+</span><span id="line-29"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="HandleTxFailed"><span class="annot"><a href="Wallet.Emulator.LogMessages.html#HandleTxFailed"><span class="hs-identifier hs-var">HandleTxFailed</span></a></span></span><span> </span><span class="annot"><a href="Wallet.Emulator.Error.html#WalletAPIError"><span class="hs-identifier hs-type">WalletAPIError</span></a></span><span>
+</span><span id="line-30"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="UtxoAtFailed"><span class="annot"><a href="Wallet.Emulator.LogMessages.html#UtxoAtFailed"><span class="hs-identifier hs-var">UtxoAtFailed</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Address</span></span><span>
+</span><span id="line-31"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="AdjustingUnbalancedTx"><span class="annot"><a href="Wallet.Emulator.LogMessages.html#AdjustingUnbalancedTx"><span class="hs-identifier hs-var">AdjustingUnbalancedTx</span></a></span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">C.Lovelace</span></span><span class="hs-special">]</span><span>
+</span><span id="line-32"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680554499"><span id="local-6989586621680554501"><span class="annot"><span class="annottext">RequestHandlerLogMsg -&gt; RequestHandlerLogMsg -&gt; Bool
+(RequestHandlerLogMsg -&gt; RequestHandlerLogMsg -&gt; Bool)
+-&gt; (RequestHandlerLogMsg -&gt; RequestHandlerLogMsg -&gt; Bool)
+-&gt; Eq RequestHandlerLogMsg
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: RequestHandlerLogMsg -&gt; RequestHandlerLogMsg -&gt; Bool
+$c/= :: RequestHandlerLogMsg -&gt; RequestHandlerLogMsg -&gt; Bool
+== :: RequestHandlerLogMsg -&gt; RequestHandlerLogMsg -&gt; Bool
+$c== :: RequestHandlerLogMsg -&gt; RequestHandlerLogMsg -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680554492"><span id="local-6989586621680554494"><span id="local-6989586621680554496"><span class="annot"><span class="annottext">Int -&gt; RequestHandlerLogMsg -&gt; ShowS
+[RequestHandlerLogMsg] -&gt; ShowS
+RequestHandlerLogMsg -&gt; String
+(Int -&gt; RequestHandlerLogMsg -&gt; ShowS)
+-&gt; (RequestHandlerLogMsg -&gt; String)
+-&gt; ([RequestHandlerLogMsg] -&gt; ShowS)
+-&gt; Show RequestHandlerLogMsg
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [RequestHandlerLogMsg] -&gt; ShowS
+$cshowList :: [RequestHandlerLogMsg] -&gt; ShowS
+show :: RequestHandlerLogMsg -&gt; String
+$cshow :: RequestHandlerLogMsg -&gt; String
+showsPrec :: Int -&gt; RequestHandlerLogMsg -&gt; ShowS
+$cshowsPrec :: Int -&gt; RequestHandlerLogMsg -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. RequestHandlerLogMsg -&gt; Rep RequestHandlerLogMsg x)
+-&gt; (forall x. Rep RequestHandlerLogMsg x -&gt; RequestHandlerLogMsg)
+-&gt; Generic RequestHandlerLogMsg
+forall x. Rep RequestHandlerLogMsg x -&gt; RequestHandlerLogMsg
+forall x. RequestHandlerLogMsg -&gt; Rep RequestHandlerLogMsg x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep RequestHandlerLogMsg x -&gt; RequestHandlerLogMsg
+$cfrom :: forall x. RequestHandlerLogMsg -&gt; Rep RequestHandlerLogMsg x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680554480"><span id="local-6989586621680554482"><span id="local-6989586621680554484"><span id="local-6989586621680554486"><span class="annot"><span class="annottext">[RequestHandlerLogMsg] -&gt; Encoding
+[RequestHandlerLogMsg] -&gt; Value
+RequestHandlerLogMsg -&gt; Encoding
+RequestHandlerLogMsg -&gt; Value
+(RequestHandlerLogMsg -&gt; Value)
+-&gt; (RequestHandlerLogMsg -&gt; Encoding)
+-&gt; ([RequestHandlerLogMsg] -&gt; Value)
+-&gt; ([RequestHandlerLogMsg] -&gt; Encoding)
+-&gt; ToJSON RequestHandlerLogMsg
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; ToJSON a
+toEncodingList :: [RequestHandlerLogMsg] -&gt; Encoding
+$ctoEncodingList :: [RequestHandlerLogMsg] -&gt; Encoding
+toJSONList :: [RequestHandlerLogMsg] -&gt; Value
+$ctoJSONList :: [RequestHandlerLogMsg] -&gt; Value
+toEncoding :: RequestHandlerLogMsg -&gt; Encoding
+$ctoEncoding :: RequestHandlerLogMsg -&gt; Encoding
+toJSON :: RequestHandlerLogMsg -&gt; Value
+$ctoJSON :: RequestHandlerLogMsg -&gt; Value
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680554475"><span id="local-6989586621680554477"><span class="annot"><span class="annottext">Value -&gt; Parser [RequestHandlerLogMsg]
+Value -&gt; Parser RequestHandlerLogMsg
+(Value -&gt; Parser RequestHandlerLogMsg)
+-&gt; (Value -&gt; Parser [RequestHandlerLogMsg])
+-&gt; FromJSON RequestHandlerLogMsg
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+parseJSONList :: Value -&gt; Parser [RequestHandlerLogMsg]
+$cparseJSONList :: Value -&gt; Parser [RequestHandlerLogMsg]
+parseJSON :: Value -&gt; Parser RequestHandlerLogMsg
+$cparseJSON :: Value -&gt; Parser RequestHandlerLogMsg
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span id="_UtxoAtFailed"><span id="_HandleTxFailed"><span id="_StartWatchingContractAddresses"><span id="_SlotNoticationTargetVsCurrent"><span id="_AdjustingUnbalancedTx"><span class="hs-identifier">makePrisms</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">RequestHandlerLogMsg</span></span></span></span></span></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621680554467"><span class="annot"><span class="hs-identifier hs-type">Pretty</span></span><span> </span><span class="annot"><a href="Wallet.Emulator.LogMessages.html#RequestHandlerLogMsg"><span class="hs-identifier hs-type">RequestHandlerLogMsg</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-38"></span><span>    </span><span id="local-6989586621680554465"><span class="annot"><span class="annottext">pretty :: RequestHandlerLogMsg -&gt; Doc ann
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">pretty</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-39"></span><span>        </span><span class="annot"><a href="Wallet.Emulator.LogMessages.html#SlotNoticationTargetVsCurrent"><span class="hs-identifier hs-type">SlotNoticationTargetVsCurrent</span></a></span><span> </span><span id="local-6989586621680554463"><span class="annot"><span class="annottext">Slot
+</span><a href="#local-6989586621680554463"><span class="hs-identifier hs-var">target</span></a></span></span><span> </span><span id="local-6989586621680554462"><span class="annot"><span class="annottext">Slot
+</span><a href="#local-6989586621680554462"><span class="hs-identifier hs-var">current</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-40"></span><span>            </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;target slot:&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">Slot -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">Slot
+</span><a href="#local-6989586621680554463"><span class="hs-identifier hs-var">target</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;; current slot:&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">Slot -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">Slot
+</span><a href="#local-6989586621680554462"><span class="hs-identifier hs-var">current</span></a></span><span>
+</span><span id="line-41"></span><span>        </span><span class="annot"><span class="annottext">RequestHandlerLogMsg
+</span><a href="Wallet.Emulator.LogMessages.html#StartWatchingContractAddresses"><span class="hs-identifier hs-var">StartWatchingContractAddresses</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Start watching contract addresses&quot;</span></span><span>
+</span><span id="line-42"></span><span>        </span><span class="annot"><a href="Wallet.Emulator.LogMessages.html#HandleTxFailed"><span class="hs-identifier hs-type">HandleTxFailed</span></a></span><span> </span><span id="local-6989586621680554461"><span class="annot"><span class="annottext">WalletAPIError
+</span><a href="#local-6989586621680554461"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;handleTx failed:&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">WalletAPIError -&gt; Doc ann
+forall a ann. Show a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">viaShow</span></span><span> </span><span class="annot"><span class="annottext">WalletAPIError
+</span><a href="#local-6989586621680554461"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-43"></span><span>        </span><span class="annot"><a href="Wallet.Emulator.LogMessages.html#UtxoAtFailed"><span class="hs-identifier hs-type">UtxoAtFailed</span></a></span><span> </span><span id="local-6989586621680554460"><span class="annot"><span class="annottext">Address
+</span><a href="#local-6989586621680554460"><span class="hs-identifier hs-var">addr</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;UtxoAt failed:&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">Address -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">Address
+</span><a href="#local-6989586621680554460"><span class="hs-identifier hs-var">addr</span></a></span><span>
+</span><span id="line-44"></span><span>        </span><span class="annot"><a href="Wallet.Emulator.LogMessages.html#AdjustingUnbalancedTx"><span class="hs-identifier hs-type">AdjustingUnbalancedTx</span></a></span><span> </span><span id="local-6989586621680554459"><span class="annot"><span class="annottext">[Lovelace]
+</span><a href="#local-6989586621680554459"><span class="hs-identifier hs-var">vl</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Adjusting an unbalanced transaction:&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">[Lovelace] -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">[Lovelace]
+</span><a href="#local-6989586621680554459"><span class="hs-identifier hs-var">vl</span></a></span><span>
+</span><span id="line-45"></span></pre></body></html>

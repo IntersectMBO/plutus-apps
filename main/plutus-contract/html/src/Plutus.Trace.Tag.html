@@ -1,0 +1,135 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass     #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric      #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DerivingStrategies #-}</span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Plutus.Trace.Tag</span><span class="hs-special">(</span><span class="annot"><a href="Plutus.Trace.Tag.html#Tag"><span class="hs-identifier">Tag</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">FromJSON</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ToJSON</span></span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Data.String</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">IsString</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Text</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Text</span></span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Prettyprinter</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Pretty</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">braces</span></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- | A human-readable piece of data, used to identify threads and contract</span><span>
+</span><span id="line-13"></span><span class="hs-comment">--   instances. See note [Thread Tag]</span><span>
+</span><span id="line-14"></span><span id="local-6989586621680553588"><span id="local-6989586621680553589"></span></span><span class="hs-keyword">newtype</span><span> </span><span id="Tag"><span class="annot"><a href="Plutus.Trace.Tag.html#Tag"><span class="hs-identifier hs-var">Tag</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Tag"><span class="annot"><a href="Plutus.Trace.Tag.html#Tag"><span class="hs-identifier hs-var">Tag</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="unTag"><span class="annot"><span class="annottext">Tag -&gt; Text
+</span><a href="Plutus.Trace.Tag.html#unTag"><span class="hs-identifier hs-var hs-var">unTag</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-15"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680553582"><span id="local-6989586621680553584"><span class="annot"><span class="annottext">Tag -&gt; Tag -&gt; Bool
+(Tag -&gt; Tag -&gt; Bool) -&gt; (Tag -&gt; Tag -&gt; Bool) -&gt; Eq Tag
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: Tag -&gt; Tag -&gt; Bool
+$c/= :: Tag -&gt; Tag -&gt; Bool
+== :: Tag -&gt; Tag -&gt; Bool
+$c== :: Tag -&gt; Tag -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680553566"><span id="local-6989586621680553568"><span id="local-6989586621680553570"><span id="local-6989586621680553572"><span id="local-6989586621680553574"><span id="local-6989586621680553576"><span id="local-6989586621680553578"><span class="annot"><span class="annottext">Eq Tag
+Eq Tag
+-&gt; (Tag -&gt; Tag -&gt; Ordering)
+-&gt; (Tag -&gt; Tag -&gt; Bool)
+-&gt; (Tag -&gt; Tag -&gt; Bool)
+-&gt; (Tag -&gt; Tag -&gt; Bool)
+-&gt; (Tag -&gt; Tag -&gt; Bool)
+-&gt; (Tag -&gt; Tag -&gt; Tag)
+-&gt; (Tag -&gt; Tag -&gt; Tag)
+-&gt; Ord Tag
+Tag -&gt; Tag -&gt; Bool
+Tag -&gt; Tag -&gt; Ordering
+Tag -&gt; Tag -&gt; Tag
+forall a.
+Eq a
+-&gt; (a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+min :: Tag -&gt; Tag -&gt; Tag
+$cmin :: Tag -&gt; Tag -&gt; Tag
+max :: Tag -&gt; Tag -&gt; Tag
+$cmax :: Tag -&gt; Tag -&gt; Tag
+&gt;= :: Tag -&gt; Tag -&gt; Bool
+$c&gt;= :: Tag -&gt; Tag -&gt; Bool
+&gt; :: Tag -&gt; Tag -&gt; Bool
+$c&gt; :: Tag -&gt; Tag -&gt; Bool
+&lt;= :: Tag -&gt; Tag -&gt; Bool
+$c&lt;= :: Tag -&gt; Tag -&gt; Bool
+&lt; :: Tag -&gt; Tag -&gt; Bool
+$c&lt; :: Tag -&gt; Tag -&gt; Bool
+compare :: Tag -&gt; Tag -&gt; Ordering
+$ccompare :: Tag -&gt; Tag -&gt; Ordering
+$cp1Ord :: Eq Tag
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680553559"><span id="local-6989586621680553561"><span id="local-6989586621680553563"><span class="annot"><span class="annottext">Int -&gt; Tag -&gt; ShowS
+[Tag] -&gt; ShowS
+Tag -&gt; String
+(Int -&gt; Tag -&gt; ShowS)
+-&gt; (Tag -&gt; String) -&gt; ([Tag] -&gt; ShowS) -&gt; Show Tag
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [Tag] -&gt; ShowS
+$cshowList :: [Tag] -&gt; ShowS
+show :: Tag -&gt; String
+$cshow :: Tag -&gt; String
+showsPrec :: Int -&gt; Tag -&gt; ShowS
+$cshowsPrec :: Int -&gt; Tag -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. Tag -&gt; Rep Tag x)
+-&gt; (forall x. Rep Tag x -&gt; Tag) -&gt; Generic Tag
+forall x. Rep Tag x -&gt; Tag
+forall x. Tag -&gt; Rep Tag x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep Tag x -&gt; Tag
+$cfrom :: forall x. Tag -&gt; Rep Tag x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680553553"><span class="annot"><span class="annottext">String -&gt; Tag
+(String -&gt; Tag) -&gt; IsString Tag
+forall a. (String -&gt; a) -&gt; IsString a
+fromString :: String -&gt; Tag
+$cfromString :: String -&gt; Tag
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">IsString</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680553544"><span id="local-6989586621680553546"><span id="local-6989586621680553548"><span id="local-6989586621680553550"><span class="annot"><span class="annottext">[Tag] -&gt; Encoding
+[Tag] -&gt; Value
+Tag -&gt; Encoding
+Tag -&gt; Value
+(Tag -&gt; Value)
+-&gt; (Tag -&gt; Encoding)
+-&gt; ([Tag] -&gt; Value)
+-&gt; ([Tag] -&gt; Encoding)
+-&gt; ToJSON Tag
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; ToJSON a
+toEncodingList :: [Tag] -&gt; Encoding
+$ctoEncodingList :: [Tag] -&gt; Encoding
+toJSONList :: [Tag] -&gt; Value
+$ctoJSONList :: [Tag] -&gt; Value
+toEncoding :: Tag -&gt; Encoding
+$ctoEncoding :: Tag -&gt; Encoding
+toJSON :: Tag -&gt; Value
+$ctoJSON :: Tag -&gt; Value
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680553539"><span id="local-6989586621680553541"><span class="annot"><span class="annottext">Value -&gt; Parser [Tag]
+Value -&gt; Parser Tag
+(Value -&gt; Parser Tag) -&gt; (Value -&gt; Parser [Tag]) -&gt; FromJSON Tag
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+parseJSONList :: Value -&gt; Parser [Tag]
+$cparseJSONList :: Value -&gt; Parser [Tag]
+parseJSON :: Value -&gt; Parser Tag
+$cparseJSON :: Value -&gt; Parser Tag
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621680553535"><span class="annot"><span class="hs-identifier hs-type">Pretty</span></span><span> </span><span class="annot"><a href="Plutus.Trace.Tag.html#Tag"><span class="hs-identifier hs-type">Tag</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-20"></span><span>    </span><span id="local-6989586621680553533"><span class="annot"><span class="annottext">pretty :: Tag -&gt; Doc ann
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">pretty</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann
+</span><span class="hs-identifier hs-var">braces</span></span><span> </span><span class="annot"><span class="annottext">(Doc ann -&gt; Doc ann) -&gt; (Tag -&gt; Doc ann) -&gt; Tag -&gt; Doc ann
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Doc ann) -&gt; (Tag -&gt; Text) -&gt; Tag -&gt; Doc ann
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Tag -&gt; Text
+</span><a href="Plutus.Trace.Tag.html#unTag"><span class="hs-identifier hs-var hs-var">unTag</span></a></span><span>
+</span><span id="line-21"></span></pre></body></html>

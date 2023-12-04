@@ -1,0 +1,1401 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE ConstraintKinds          #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass           #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DerivingVia              #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances        #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase               #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses    #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE PolyKinds                #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE StandaloneKindSignatures #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE TemplateHaskell          #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications         #-}</span><span>
+</span><span id="line-11"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies             #-}</span><span>
+</span><span id="line-12"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances     #-}</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">PlutusCore.Core.Type</span><span>
+</span><span id="line-15"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="PlutusCore.Core.Type.html#Kind"><span class="hs-identifier">Kind</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="PlutusCore.Core.Type.html#Type"><span class="hs-identifier">Type</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="PlutusCore.Core.Type.html#Term"><span class="hs-identifier">Term</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="PlutusCore.Core.Type.html#Version"><span class="hs-identifier">Version</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="PlutusCore.Core.Type.html#Program"><span class="hs-identifier">Program</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="PlutusCore.Core.Type.html#UniOf"><span class="hs-identifier">UniOf</span></a></span><span>
+</span><span id="line-21"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="PlutusCore.Core.Type.html#Normalized"><span class="hs-identifier">Normalized</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="PlutusCore.Core.Type.html#TyVarDecl"><span class="hs-identifier">TyVarDecl</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="PlutusCore.Core.Type.html#VarDecl"><span class="hs-identifier">VarDecl</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="PlutusCore.Core.Type.html#TyDecl"><span class="hs-identifier">TyDecl</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="PlutusCore.Core.Type.html#tyDeclVar"><span class="hs-identifier">tyDeclVar</span></a></span><span>
+</span><span id="line-26"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="PlutusCore.Core.Type.html#HasUniques"><span class="hs-identifier">HasUniques</span></a></span><span>
+</span><span id="line-27"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="PlutusCore.Core.Type.html#Binder"><span class="hs-identifier">Binder</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="PlutusCore.Core.Type.html#defaultVersion"><span class="hs-identifier">defaultVersion</span></a></span><span>
+</span><span id="line-29"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Helper functions</span></span><span>
+</span><span id="line-30"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="PlutusCore.Core.Type.html#termAnn"><span class="hs-identifier">termAnn</span></a></span><span>
+</span><span id="line-31"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="PlutusCore.Core.Type.html#typeAnn"><span class="hs-identifier">typeAnn</span></a></span><span>
+</span><span id="line-32"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="PlutusCore.Core.Type.html#mapFun"><span class="hs-identifier">mapFun</span></a></span><span>
+</span><span id="line-33"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="PlutusCore.Core.Type.html#tyVarDeclAnn"><span class="hs-identifier">tyVarDeclAnn</span></a></span><span>
+</span><span id="line-34"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="PlutusCore.Core.Type.html#tyVarDeclName"><span class="hs-identifier">tyVarDeclName</span></a></span><span>
+</span><span id="line-35"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="PlutusCore.Core.Type.html#tyVarDeclKind"><span class="hs-identifier">tyVarDeclKind</span></a></span><span>
+</span><span id="line-36"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="PlutusCore.Core.Type.html#varDeclAnn"><span class="hs-identifier">varDeclAnn</span></a></span><span>
+</span><span id="line-37"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="PlutusCore.Core.Type.html#varDeclName"><span class="hs-identifier">varDeclName</span></a></span><span>
+</span><span id="line-38"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="PlutusCore.Core.Type.html#varDeclType"><span class="hs-identifier">varDeclType</span></a></span><span>
+</span><span id="line-39"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="PlutusCore.Core.Type.html#tyDeclAnn"><span class="hs-identifier">tyDeclAnn</span></a></span><span>
+</span><span id="line-40"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="PlutusCore.Core.Type.html#tyDeclType"><span class="hs-identifier">tyDeclType</span></a></span><span>
+</span><span id="line-41"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="PlutusCore.Core.Type.html#tyDeclKind"><span class="hs-identifier">tyDeclKind</span></a></span><span>
+</span><span id="line-42"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="PlutusCore.Core.Type.html#progAnn"><span class="hs-identifier">progAnn</span></a></span><span>
+</span><span id="line-43"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="PlutusCore.Core.Type.html#progVer"><span class="hs-identifier">progVer</span></a></span><span>
+</span><span id="line-44"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="PlutusCore.Core.Type.html#progTerm"><span class="hs-identifier">progTerm</span></a></span><span>
+</span><span id="line-45"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="PlutusPrelude.html"><span class="hs-identifier">PlutusPrelude</span></a></span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="PlutusCore.Name.html"><span class="hs-identifier">PlutusCore.Name</span></a></span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Lens</span></span><span>
+</span><span id="line-53"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Hashable</span></span><span>
+</span><span id="line-54"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Data.Kind</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">GHC</span></span><span>
+</span><span id="line-55"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Instances.TH.Lift</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Language.Haskell.TH.Lift</span></span><span>
+</span><span id="line-57"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Universe.html"><span class="hs-identifier">Universe</span></a></span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span id="local-6989586621680928153"><span id="local-6989586621680928154"></span></span><span class="hs-keyword">data</span><span> </span><span id="Kind"><span class="annot"><a href="PlutusCore.Core.Type.html#Kind"><span class="hs-identifier hs-var">Kind</span></a></span></span><span> </span><span id="local-6989586621680928152"><span class="annot"><a href="#local-6989586621680928152"><span class="hs-identifier hs-type">ann</span></a></span></span><span>
+</span><span id="line-60"></span><span>    </span><span class="hs-glyph">=</span><span> </span><span id="Type"><span class="annot"><a href="PlutusCore.Core.Type.html#Type"><span class="hs-identifier hs-var">Type</span></a></span></span><span> </span><span class="annot"><a href="#local-6989586621680928152"><span class="hs-identifier hs-type">ann</span></a></span><span>
+</span><span id="line-61"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="KindArrow"><span class="annot"><a href="PlutusCore.Core.Type.html#KindArrow"><span class="hs-identifier hs-var">KindArrow</span></a></span></span><span> </span><span class="annot"><a href="#local-6989586621680928152"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#Kind"><span class="hs-identifier hs-type">Kind</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928152"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#Kind"><span class="hs-identifier hs-type">Kind</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928152"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680928146"><span id="local-6989586621680928148"><span class="annot"><span class="annottext">Kind ann -&gt; Kind ann -&gt; Bool
+(Kind ann -&gt; Kind ann -&gt; Bool)
+-&gt; (Kind ann -&gt; Kind ann -&gt; Bool) -&gt; Eq (Kind ann)
+forall ann. Eq ann =&gt; Kind ann -&gt; Kind ann -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: Kind ann -&gt; Kind ann -&gt; Bool
+$c/= :: forall ann. Eq ann =&gt; Kind ann -&gt; Kind ann -&gt; Bool
+== :: Kind ann -&gt; Kind ann -&gt; Bool
+$c== :: forall ann. Eq ann =&gt; Kind ann -&gt; Kind ann -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680928139"><span id="local-6989586621680928141"><span id="local-6989586621680928143"><span class="annot"><span class="annottext">Int -&gt; Kind ann -&gt; ShowS
+[Kind ann] -&gt; ShowS
+Kind ann -&gt; String
+(Int -&gt; Kind ann -&gt; ShowS)
+-&gt; (Kind ann -&gt; String) -&gt; ([Kind ann] -&gt; ShowS) -&gt; Show (Kind ann)
+forall ann. Show ann =&gt; Int -&gt; Kind ann -&gt; ShowS
+forall ann. Show ann =&gt; [Kind ann] -&gt; ShowS
+forall ann. Show ann =&gt; Kind ann -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [Kind ann] -&gt; ShowS
+$cshowList :: forall ann. Show ann =&gt; [Kind ann] -&gt; ShowS
+show :: Kind ann -&gt; String
+$cshow :: forall ann. Show ann =&gt; Kind ann -&gt; String
+showsPrec :: Int -&gt; Kind ann -&gt; ShowS
+$cshowsPrec :: forall ann. Show ann =&gt; Int -&gt; Kind ann -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680928134"><span id="local-6989586621680928136"><span class="annot"><span class="annottext">a -&gt; Kind b -&gt; Kind a
+(a -&gt; b) -&gt; Kind a -&gt; Kind b
+(forall a b. (a -&gt; b) -&gt; Kind a -&gt; Kind b)
+-&gt; (forall a b. a -&gt; Kind b -&gt; Kind a) -&gt; Functor Kind
+forall a b. a -&gt; Kind b -&gt; Kind a
+forall a b. (a -&gt; b) -&gt; Kind a -&gt; Kind b
+forall (f :: * -&gt; *).
+(forall a b. (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b. a -&gt; f b -&gt; f a) -&gt; Functor f
+&lt;$ :: a -&gt; Kind b -&gt; Kind a
+$c&lt;$ :: forall a b. a -&gt; Kind b -&gt; Kind a
+fmap :: (a -&gt; b) -&gt; Kind a -&gt; Kind b
+$cfmap :: forall a b. (a -&gt; b) -&gt; Kind a -&gt; Kind b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Functor</span></a></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. Kind ann -&gt; Rep (Kind ann) x)
+-&gt; (forall x. Rep (Kind ann) x -&gt; Kind ann) -&gt; Generic (Kind ann)
+forall x. Rep (Kind ann) x -&gt; Kind ann
+forall x. Kind ann -&gt; Rep (Kind ann) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall ann x. Rep (Kind ann) x -&gt; Kind ann
+forall ann x. Kind ann -&gt; Rep (Kind ann) x
+$cto :: forall ann x. Rep (Kind ann) x -&gt; Kind ann
+$cfrom :: forall ann x. Kind ann -&gt; Rep (Kind ann) x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680928126"><span id="local-6989586621680928128"><span class="annot"><span class="annottext">Kind ann -&gt; Q Exp
+Kind ann -&gt; Q (TExp (Kind ann))
+(Kind ann -&gt; Q Exp)
+-&gt; (Kind ann -&gt; Q (TExp (Kind ann))) -&gt; Lift (Kind ann)
+forall ann. Lift ann =&gt; Kind ann -&gt; Q Exp
+forall ann. Lift ann =&gt; Kind ann -&gt; Q (TExp (Kind ann))
+forall t. (t -&gt; Q Exp) -&gt; (t -&gt; Q (TExp t)) -&gt; Lift t
+liftTyped :: Kind ann -&gt; Q (TExp (Kind ann))
+$cliftTyped :: forall ann. Lift ann =&gt; Kind ann -&gt; Q (TExp (Kind ann))
+lift :: Kind ann -&gt; Q Exp
+$clift :: forall ann. Lift ann =&gt; Kind ann -&gt; Q Exp
+</span><a href="../../../../ghc/html/libraries/template-haskell-2.16.0.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Lift</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680928123"><span class="annot"><span class="annottext">Kind ann -&gt; ()
+(Kind ann -&gt; ()) -&gt; NFData (Kind ann)
+forall ann. NFData ann =&gt; Kind ann -&gt; ()
+forall a. (a -&gt; ()) -&gt; NFData a
+rnf :: Kind ann -&gt; ()
+$crnf :: forall ann. NFData ann =&gt; Kind ann -&gt; ()
+</span><a href="../../../../ghc/html/libraries/deepseq-1.4.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680928118"><span id="local-6989586621680928120"><span class="annot"><span class="annottext">Int -&gt; Kind ann -&gt; Int
+Kind ann -&gt; Int
+(Int -&gt; Kind ann -&gt; Int)
+-&gt; (Kind ann -&gt; Int) -&gt; Hashable (Kind ann)
+forall ann. Hashable ann =&gt; Int -&gt; Kind ann -&gt; Int
+forall ann. Hashable ann =&gt; Kind ann -&gt; Int
+forall a. (Int -&gt; a -&gt; Int) -&gt; (a -&gt; Int) -&gt; Hashable a
+hash :: Kind ann -&gt; Int
+$chash :: forall ann. Hashable ann =&gt; Kind ann -&gt; Int
+hashWithSalt :: Int -&gt; Kind ann -&gt; Int
+$chashWithSalt :: forall ann. Hashable ann =&gt; Int -&gt; Kind ann -&gt; Int
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Hashable</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span class="hs-comment">-- | A 'Type' assigned to expressions.</span><span>
+</span><span id="line-66"></span><span class="hs-keyword">type</span><span> </span><span class="annot"><a href="PlutusCore.Core.Type.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">GHC.Type</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">GHC.Type</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">GHC.Type</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">GHC.Type</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">GHC.Type</span></a></span><span>
+</span><span id="line-67"></span><span id="local-6989586621680928115"><span id="local-6989586621680928116"></span></span><span class="hs-keyword">data</span><span> </span><span id="Type"><span class="annot"><a href="PlutusCore.Core.Type.html#Type"><span class="hs-identifier hs-var">Type</span></a></span></span><span> </span><span id="local-6989586621680928338"><span class="annot"><a href="#local-6989586621680928338"><span class="hs-identifier hs-type">tyname</span></a></span></span><span> </span><span id="local-6989586621680928337"><span class="annot"><a href="#local-6989586621680928337"><span class="hs-identifier hs-type">uni</span></a></span></span><span> </span><span id="local-6989586621680928339"><span class="annot"><a href="#local-6989586621680928339"><span class="hs-identifier hs-type">ann</span></a></span></span><span>
+</span><span id="line-68"></span><span>    </span><span class="hs-glyph">=</span><span> </span><span id="TyVar"><span class="annot"><a href="PlutusCore.Core.Type.html#TyVar"><span class="hs-identifier hs-var">TyVar</span></a></span></span><span> </span><span class="annot"><a href="#local-6989586621680928339"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928338"><span class="hs-identifier hs-type">tyname</span></a></span><span>
+</span><span id="line-69"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="TyFun"><span class="annot"><a href="PlutusCore.Core.Type.html#TyFun"><span class="hs-identifier hs-var">TyFun</span></a></span></span><span> </span><span class="annot"><a href="#local-6989586621680928339"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928338"><span class="hs-identifier hs-type">tyname</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928337"><span class="hs-identifier hs-type">uni</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928339"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928338"><span class="hs-identifier hs-type">tyname</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928337"><span class="hs-identifier hs-type">uni</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928339"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="TyIFix"><span class="annot"><a href="PlutusCore.Core.Type.html#TyIFix"><span class="hs-identifier hs-var">TyIFix</span></a></span></span><span> </span><span class="annot"><a href="#local-6989586621680928339"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928338"><span class="hs-identifier hs-type">tyname</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928337"><span class="hs-identifier hs-type">uni</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928339"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928338"><span class="hs-identifier hs-type">tyname</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928337"><span class="hs-identifier hs-type">uni</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928339"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span>      </span><span class="hs-comment">-- ^ Fix-point type, for constructing self-recursive types</span><span>
+</span><span id="line-72"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="TyForall"><span class="annot"><a href="PlutusCore.Core.Type.html#TyForall"><span class="hs-identifier hs-var">TyForall</span></a></span></span><span> </span><span class="annot"><a href="#local-6989586621680928339"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928338"><span class="hs-identifier hs-type">tyname</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#Kind"><span class="hs-identifier hs-type">Kind</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928339"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928338"><span class="hs-identifier hs-type">tyname</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928337"><span class="hs-identifier hs-type">uni</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928339"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-73"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="TyBuiltin"><span class="annot"><a href="PlutusCore.Core.Type.html#TyBuiltin"><span class="hs-identifier hs-var">TyBuiltin</span></a></span></span><span> </span><span class="annot"><a href="#local-6989586621680928339"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Universe.Core.html#SomeTypeIn"><span class="hs-identifier hs-type">SomeTypeIn</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928337"><span class="hs-identifier hs-type">uni</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-comment">-- ^ Builtin type</span><span>
+</span><span id="line-74"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="TyLam"><span class="annot"><a href="PlutusCore.Core.Type.html#TyLam"><span class="hs-identifier hs-var">TyLam</span></a></span></span><span> </span><span class="annot"><a href="#local-6989586621680928339"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928338"><span class="hs-identifier hs-type">tyname</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#Kind"><span class="hs-identifier hs-type">Kind</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928339"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928338"><span class="hs-identifier hs-type">tyname</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928337"><span class="hs-identifier hs-type">uni</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928339"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="TyApp"><span class="annot"><a href="PlutusCore.Core.Type.html#TyApp"><span class="hs-identifier hs-var">TyApp</span></a></span></span><span> </span><span class="annot"><a href="#local-6989586621680928339"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928338"><span class="hs-identifier hs-type">tyname</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928337"><span class="hs-identifier hs-type">uni</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928339"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928338"><span class="hs-identifier hs-type">tyname</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928337"><span class="hs-identifier hs-type">uni</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928339"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680928102"><span id="local-6989586621680928104"><span id="local-6989586621680928106"><span class="annot"><span class="annottext">Int -&gt; Type tyname uni ann -&gt; ShowS
+[Type tyname uni ann] -&gt; ShowS
+Type tyname uni ann -&gt; String
+(Int -&gt; Type tyname uni ann -&gt; ShowS)
+-&gt; (Type tyname uni ann -&gt; String)
+-&gt; ([Type tyname uni ann] -&gt; ShowS)
+-&gt; Show (Type tyname uni ann)
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+forall tyname (uni :: * -&gt; *) ann.
+(Show ann, Show tyname, GShow uni) =&gt;
+Int -&gt; Type tyname uni ann -&gt; ShowS
+forall tyname (uni :: * -&gt; *) ann.
+(Show ann, Show tyname, GShow uni) =&gt;
+[Type tyname uni ann] -&gt; ShowS
+forall tyname (uni :: * -&gt; *) ann.
+(Show ann, Show tyname, GShow uni) =&gt;
+Type tyname uni ann -&gt; String
+showList :: [Type tyname uni ann] -&gt; ShowS
+$cshowList :: forall tyname (uni :: * -&gt; *) ann.
+(Show ann, Show tyname, GShow uni) =&gt;
+[Type tyname uni ann] -&gt; ShowS
+show :: Type tyname uni ann -&gt; String
+$cshow :: forall tyname (uni :: * -&gt; *) ann.
+(Show ann, Show tyname, GShow uni) =&gt;
+Type tyname uni ann -&gt; String
+showsPrec :: Int -&gt; Type tyname uni ann -&gt; ShowS
+$cshowsPrec :: forall tyname (uni :: * -&gt; *) ann.
+(Show ann, Show tyname, GShow uni) =&gt;
+Int -&gt; Type tyname uni ann -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680928098"><span id="local-6989586621680928100"><span class="annot"><span class="annottext">a -&gt; Type tyname uni b -&gt; Type tyname uni a
+(a -&gt; b) -&gt; Type tyname uni a -&gt; Type tyname uni b
+(forall a b. (a -&gt; b) -&gt; Type tyname uni a -&gt; Type tyname uni b)
+-&gt; (forall a b. a -&gt; Type tyname uni b -&gt; Type tyname uni a)
+-&gt; Functor (Type tyname uni)
+forall a b. a -&gt; Type tyname uni b -&gt; Type tyname uni a
+forall a b. (a -&gt; b) -&gt; Type tyname uni a -&gt; Type tyname uni b
+forall tyname (uni :: * -&gt; *) a b.
+a -&gt; Type tyname uni b -&gt; Type tyname uni a
+forall tyname (uni :: * -&gt; *) a b.
+(a -&gt; b) -&gt; Type tyname uni a -&gt; Type tyname uni b
+forall (f :: * -&gt; *).
+(forall a b. (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b. a -&gt; f b -&gt; f a) -&gt; Functor f
+&lt;$ :: a -&gt; Type tyname uni b -&gt; Type tyname uni a
+$c&lt;$ :: forall tyname (uni :: * -&gt; *) a b.
+a -&gt; Type tyname uni b -&gt; Type tyname uni a
+fmap :: (a -&gt; b) -&gt; Type tyname uni a -&gt; Type tyname uni b
+$cfmap :: forall tyname (uni :: * -&gt; *) a b.
+(a -&gt; b) -&gt; Type tyname uni a -&gt; Type tyname uni b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Functor</span></a></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. Type tyname uni ann -&gt; Rep (Type tyname uni ann) x)
+-&gt; (forall x. Rep (Type tyname uni ann) x -&gt; Type tyname uni ann)
+-&gt; Generic (Type tyname uni ann)
+forall x. Rep (Type tyname uni ann) x -&gt; Type tyname uni ann
+forall x. Type tyname uni ann -&gt; Rep (Type tyname uni ann) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall tyname (uni :: * -&gt; *) ann x.
+Rep (Type tyname uni ann) x -&gt; Type tyname uni ann
+forall tyname (uni :: * -&gt; *) ann x.
+Type tyname uni ann -&gt; Rep (Type tyname uni ann) x
+$cto :: forall tyname (uni :: * -&gt; *) ann x.
+Rep (Type tyname uni ann) x -&gt; Type tyname uni ann
+$cfrom :: forall tyname (uni :: * -&gt; *) ann x.
+Type tyname uni ann -&gt; Rep (Type tyname uni ann) x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680928094"><span class="annot"><span class="annottext">Type tyname uni ann -&gt; ()
+(Type tyname uni ann -&gt; ()) -&gt; NFData (Type tyname uni ann)
+forall a. (a -&gt; ()) -&gt; NFData a
+forall tyname (uni :: * -&gt; *) ann.
+(NFData ann, NFData tyname, Closed uni) =&gt;
+Type tyname uni ann -&gt; ()
+rnf :: Type tyname uni ann -&gt; ()
+$crnf :: forall tyname (uni :: * -&gt; *) ann.
+(NFData ann, NFData tyname, Closed uni) =&gt;
+Type tyname uni ann -&gt; ()
+</span><a href="#local-6989586621680928094"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span id="local-6989586621680928092"><span id="local-6989586621680928093"></span></span><span class="hs-keyword">data</span><span> </span><span id="Term"><span class="annot"><a href="PlutusCore.Core.Type.html#Term"><span class="hs-identifier hs-var">Term</span></a></span></span><span> </span><span id="local-6989586621680928178"><span class="annot"><a href="#local-6989586621680928178"><span class="hs-identifier hs-type">tyname</span></a></span></span><span> </span><span id="local-6989586621680928179"><span class="annot"><a href="#local-6989586621680928179"><span class="hs-identifier hs-type">name</span></a></span></span><span> </span><span id="local-6989586621680928177"><span class="annot"><a href="#local-6989586621680928177"><span class="hs-identifier hs-type">uni</span></a></span></span><span> </span><span id="local-6989586621680928176"><span class="annot"><a href="#local-6989586621680928176"><span class="hs-identifier hs-type">fun</span></a></span></span><span> </span><span id="local-6989586621680928180"><span class="annot"><a href="#local-6989586621680928180"><span class="hs-identifier hs-type">ann</span></a></span></span><span>
+</span><span id="line-80"></span><span>    </span><span class="hs-glyph">=</span><span> </span><span id="Var"><span class="annot"><a href="PlutusCore.Core.Type.html#Var"><span class="hs-identifier hs-var">Var</span></a></span></span><span> </span><span class="annot"><a href="#local-6989586621680928180"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928179"><span class="hs-identifier hs-type">name</span></a></span><span> </span><span class="hs-comment">-- ^ a named variable</span><span>
+</span><span id="line-81"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="TyAbs"><span class="annot"><a href="PlutusCore.Core.Type.html#TyAbs"><span class="hs-identifier hs-var">TyAbs</span></a></span></span><span> </span><span class="annot"><a href="#local-6989586621680928180"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928178"><span class="hs-identifier hs-type">tyname</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#Kind"><span class="hs-identifier hs-type">Kind</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928180"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928178"><span class="hs-identifier hs-type">tyname</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928179"><span class="hs-identifier hs-type">name</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928177"><span class="hs-identifier hs-type">uni</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928176"><span class="hs-identifier hs-type">fun</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928180"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="LamAbs"><span class="annot"><a href="PlutusCore.Core.Type.html#LamAbs"><span class="hs-identifier hs-var">LamAbs</span></a></span></span><span> </span><span class="annot"><a href="#local-6989586621680928180"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928179"><span class="hs-identifier hs-type">name</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928178"><span class="hs-identifier hs-type">tyname</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928177"><span class="hs-identifier hs-type">uni</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928180"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928178"><span class="hs-identifier hs-type">tyname</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928179"><span class="hs-identifier hs-type">name</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928177"><span class="hs-identifier hs-type">uni</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928176"><span class="hs-identifier hs-type">fun</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928180"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-83"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="Apply"><span class="annot"><a href="PlutusCore.Core.Type.html#Apply"><span class="hs-identifier hs-var">Apply</span></a></span></span><span> </span><span class="annot"><a href="#local-6989586621680928180"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928178"><span class="hs-identifier hs-type">tyname</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928179"><span class="hs-identifier hs-type">name</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928177"><span class="hs-identifier hs-type">uni</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928176"><span class="hs-identifier hs-type">fun</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928180"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928178"><span class="hs-identifier hs-type">tyname</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928179"><span class="hs-identifier hs-type">name</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928177"><span class="hs-identifier hs-type">uni</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928176"><span class="hs-identifier hs-type">fun</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928180"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-84"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="Constant"><span class="annot"><a href="PlutusCore.Core.Type.html#Constant"><span class="hs-identifier hs-var">Constant</span></a></span></span><span> </span><span class="annot"><a href="#local-6989586621680928180"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Some</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Universe.Core.html#ValueOf"><span class="hs-identifier hs-type">ValueOf</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928177"><span class="hs-identifier hs-type">uni</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-comment">-- ^ a constant term</span><span>
+</span><span id="line-85"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="Builtin"><span class="annot"><a href="PlutusCore.Core.Type.html#Builtin"><span class="hs-identifier hs-var">Builtin</span></a></span></span><span> </span><span class="annot"><a href="#local-6989586621680928180"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928176"><span class="hs-identifier hs-type">fun</span></a></span><span>
+</span><span id="line-86"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="TyInst"><span class="annot"><a href="PlutusCore.Core.Type.html#TyInst"><span class="hs-identifier hs-var">TyInst</span></a></span></span><span> </span><span class="annot"><a href="#local-6989586621680928180"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928178"><span class="hs-identifier hs-type">tyname</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928179"><span class="hs-identifier hs-type">name</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928177"><span class="hs-identifier hs-type">uni</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928176"><span class="hs-identifier hs-type">fun</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928180"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928178"><span class="hs-identifier hs-type">tyname</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928177"><span class="hs-identifier hs-type">uni</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928180"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-87"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="Unwrap"><span class="annot"><a href="PlutusCore.Core.Type.html#Unwrap"><span class="hs-identifier hs-var">Unwrap</span></a></span></span><span> </span><span class="annot"><a href="#local-6989586621680928180"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928178"><span class="hs-identifier hs-type">tyname</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928179"><span class="hs-identifier hs-type">name</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928177"><span class="hs-identifier hs-type">uni</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928176"><span class="hs-identifier hs-type">fun</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928180"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="IWrap"><span class="annot"><a href="PlutusCore.Core.Type.html#IWrap"><span class="hs-identifier hs-var">IWrap</span></a></span></span><span> </span><span class="annot"><a href="#local-6989586621680928180"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928178"><span class="hs-identifier hs-type">tyname</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928177"><span class="hs-identifier hs-type">uni</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928180"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928178"><span class="hs-identifier hs-type">tyname</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928177"><span class="hs-identifier hs-type">uni</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928180"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928178"><span class="hs-identifier hs-type">tyname</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928179"><span class="hs-identifier hs-type">name</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928177"><span class="hs-identifier hs-type">uni</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928176"><span class="hs-identifier hs-type">fun</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928180"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-89"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="Error"><span class="annot"><a href="PlutusCore.Core.Type.html#Error"><span class="hs-identifier hs-var">Error</span></a></span></span><span> </span><span class="annot"><a href="#local-6989586621680928180"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928178"><span class="hs-identifier hs-type">tyname</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928177"><span class="hs-identifier hs-type">uni</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928180"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-90"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680928076"><span id="local-6989586621680928078"><span id="local-6989586621680928080"><span class="annot"><span class="annottext">Int -&gt; Term tyname name uni fun ann -&gt; ShowS
+[Term tyname name uni fun ann] -&gt; ShowS
+Term tyname name uni fun ann -&gt; String
+(Int -&gt; Term tyname name uni fun ann -&gt; ShowS)
+-&gt; (Term tyname name uni fun ann -&gt; String)
+-&gt; ([Term tyname name uni fun ann] -&gt; ShowS)
+-&gt; Show (Term tyname name uni fun ann)
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+forall tyname name (uni :: * -&gt; *) fun ann.
+(Everywhere uni Show, GShow uni, Closed uni, Show ann, Show name,
+ Show tyname, Show fun) =&gt;
+Int -&gt; Term tyname name uni fun ann -&gt; ShowS
+forall tyname name (uni :: * -&gt; *) fun ann.
+(Everywhere uni Show, GShow uni, Closed uni, Show ann, Show name,
+ Show tyname, Show fun) =&gt;
+[Term tyname name uni fun ann] -&gt; ShowS
+forall tyname name (uni :: * -&gt; *) fun ann.
+(Everywhere uni Show, GShow uni, Closed uni, Show ann, Show name,
+ Show tyname, Show fun) =&gt;
+Term tyname name uni fun ann -&gt; String
+showList :: [Term tyname name uni fun ann] -&gt; ShowS
+$cshowList :: forall tyname name (uni :: * -&gt; *) fun ann.
+(Everywhere uni Show, GShow uni, Closed uni, Show ann, Show name,
+ Show tyname, Show fun) =&gt;
+[Term tyname name uni fun ann] -&gt; ShowS
+show :: Term tyname name uni fun ann -&gt; String
+$cshow :: forall tyname name (uni :: * -&gt; *) fun ann.
+(Everywhere uni Show, GShow uni, Closed uni, Show ann, Show name,
+ Show tyname, Show fun) =&gt;
+Term tyname name uni fun ann -&gt; String
+showsPrec :: Int -&gt; Term tyname name uni fun ann -&gt; ShowS
+$cshowsPrec :: forall tyname name (uni :: * -&gt; *) fun ann.
+(Everywhere uni Show, GShow uni, Closed uni, Show ann, Show name,
+ Show tyname, Show fun) =&gt;
+Int -&gt; Term tyname name uni fun ann -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680928072"><span id="local-6989586621680928074"><span class="annot"><span class="annottext">a -&gt; Term tyname name uni fun b -&gt; Term tyname name uni fun a
+(a -&gt; b)
+-&gt; Term tyname name uni fun a -&gt; Term tyname name uni fun b
+(forall a b.
+ (a -&gt; b)
+ -&gt; Term tyname name uni fun a -&gt; Term tyname name uni fun b)
+-&gt; (forall a b.
+    a -&gt; Term tyname name uni fun b -&gt; Term tyname name uni fun a)
+-&gt; Functor (Term tyname name uni fun)
+forall a b.
+a -&gt; Term tyname name uni fun b -&gt; Term tyname name uni fun a
+forall a b.
+(a -&gt; b)
+-&gt; Term tyname name uni fun a -&gt; Term tyname name uni fun b
+forall tyname name (uni :: * -&gt; *) fun a b.
+a -&gt; Term tyname name uni fun b -&gt; Term tyname name uni fun a
+forall tyname name (uni :: * -&gt; *) fun a b.
+(a -&gt; b)
+-&gt; Term tyname name uni fun a -&gt; Term tyname name uni fun b
+forall (f :: * -&gt; *).
+(forall a b. (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b. a -&gt; f b -&gt; f a) -&gt; Functor f
+&lt;$ :: a -&gt; Term tyname name uni fun b -&gt; Term tyname name uni fun a
+$c&lt;$ :: forall tyname name (uni :: * -&gt; *) fun a b.
+a -&gt; Term tyname name uni fun b -&gt; Term tyname name uni fun a
+fmap :: (a -&gt; b)
+-&gt; Term tyname name uni fun a -&gt; Term tyname name uni fun b
+$cfmap :: forall tyname name (uni :: * -&gt; *) fun a b.
+(a -&gt; b)
+-&gt; Term tyname name uni fun a -&gt; Term tyname name uni fun b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Functor</span></a></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x.
+ Term tyname name uni fun ann
+ -&gt; Rep (Term tyname name uni fun ann) x)
+-&gt; (forall x.
+    Rep (Term tyname name uni fun ann) x
+    -&gt; Term tyname name uni fun ann)
+-&gt; Generic (Term tyname name uni fun ann)
+forall x.
+Rep (Term tyname name uni fun ann) x
+-&gt; Term tyname name uni fun ann
+forall x.
+Term tyname name uni fun ann
+-&gt; Rep (Term tyname name uni fun ann) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall tyname name (uni :: * -&gt; *) fun ann x.
+Rep (Term tyname name uni fun ann) x
+-&gt; Term tyname name uni fun ann
+forall tyname name (uni :: * -&gt; *) fun ann x.
+Term tyname name uni fun ann
+-&gt; Rep (Term tyname name uni fun ann) x
+$cto :: forall tyname name (uni :: * -&gt; *) fun ann x.
+Rep (Term tyname name uni fun ann) x
+-&gt; Term tyname name uni fun ann
+$cfrom :: forall tyname name (uni :: * -&gt; *) fun ann x.
+Term tyname name uni fun ann
+-&gt; Rep (Term tyname name uni fun ann) x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-91"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680928068"><span class="annot"><span class="annottext">Term tyname name uni fun ann -&gt; ()
+(Term tyname name uni fun ann -&gt; ())
+-&gt; NFData (Term tyname name uni fun ann)
+forall a. (a -&gt; ()) -&gt; NFData a
+forall tyname name (uni :: * -&gt; *) fun ann.
+(Everywhere uni NFData, Closed uni, NFData ann, NFData name,
+ NFData tyname, NFData fun) =&gt;
+Term tyname name uni fun ann -&gt; ()
+rnf :: Term tyname name uni fun ann -&gt; ()
+$crnf :: forall tyname name (uni :: * -&gt; *) fun ann.
+(Everywhere uni NFData, Closed uni, NFData ann, NFData name,
+ NFData tyname, NFData fun) =&gt;
+Term tyname name uni fun ann -&gt; ()
+</span><a href="#local-6989586621680928068"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-92"></span><span>
+</span><span id="line-93"></span><span class="hs-comment">-- | Version of Plutus Core to be used for the program.</span><span>
+</span><span id="line-94"></span><span id="local-6989586621680928066"><span id="local-6989586621680928067"></span></span><span class="hs-keyword">data</span><span> </span><span id="Version"><span class="annot"><a href="PlutusCore.Core.Type.html#Version"><span class="hs-identifier hs-var">Version</span></a></span></span><span> </span><span id="local-6989586621680928198"><span class="annot"><a href="#local-6989586621680928198"><span class="hs-identifier hs-type">ann</span></a></span></span><span>
+</span><span id="line-95"></span><span>    </span><span class="hs-glyph">=</span><span> </span><span id="Version"><span class="annot"><a href="PlutusCore.Core.Type.html#Version"><span class="hs-identifier hs-var">Version</span></a></span></span><span> </span><span class="annot"><a href="#local-6989586621680928198"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Natural</span></a></span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Natural</span></a></span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Natural</span></a></span><span>
+</span><span id="line-96"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680928061"><span id="local-6989586621680928063"><span class="annot"><span class="annottext">Version ann -&gt; Version ann -&gt; Bool
+(Version ann -&gt; Version ann -&gt; Bool)
+-&gt; (Version ann -&gt; Version ann -&gt; Bool) -&gt; Eq (Version ann)
+forall ann. Eq ann =&gt; Version ann -&gt; Version ann -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: Version ann -&gt; Version ann -&gt; Bool
+$c/= :: forall ann. Eq ann =&gt; Version ann -&gt; Version ann -&gt; Bool
+== :: Version ann -&gt; Version ann -&gt; Bool
+$c== :: forall ann. Eq ann =&gt; Version ann -&gt; Version ann -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680928055"><span id="local-6989586621680928057"><span id="local-6989586621680928059"><span class="annot"><span class="annottext">Int -&gt; Version ann -&gt; ShowS
+[Version ann] -&gt; ShowS
+Version ann -&gt; String
+(Int -&gt; Version ann -&gt; ShowS)
+-&gt; (Version ann -&gt; String)
+-&gt; ([Version ann] -&gt; ShowS)
+-&gt; Show (Version ann)
+forall ann. Show ann =&gt; Int -&gt; Version ann -&gt; ShowS
+forall ann. Show ann =&gt; [Version ann] -&gt; ShowS
+forall ann. Show ann =&gt; Version ann -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [Version ann] -&gt; ShowS
+$cshowList :: forall ann. Show ann =&gt; [Version ann] -&gt; ShowS
+show :: Version ann -&gt; String
+$cshow :: forall ann. Show ann =&gt; Version ann -&gt; String
+showsPrec :: Int -&gt; Version ann -&gt; ShowS
+$cshowsPrec :: forall ann. Show ann =&gt; Int -&gt; Version ann -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680928051"><span id="local-6989586621680928053"><span class="annot"><span class="annottext">a -&gt; Version b -&gt; Version a
+(a -&gt; b) -&gt; Version a -&gt; Version b
+(forall a b. (a -&gt; b) -&gt; Version a -&gt; Version b)
+-&gt; (forall a b. a -&gt; Version b -&gt; Version a) -&gt; Functor Version
+forall a b. a -&gt; Version b -&gt; Version a
+forall a b. (a -&gt; b) -&gt; Version a -&gt; Version b
+forall (f :: * -&gt; *).
+(forall a b. (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b. a -&gt; f b -&gt; f a) -&gt; Functor f
+&lt;$ :: a -&gt; Version b -&gt; Version a
+$c&lt;$ :: forall a b. a -&gt; Version b -&gt; Version a
+fmap :: (a -&gt; b) -&gt; Version a -&gt; Version b
+$cfmap :: forall a b. (a -&gt; b) -&gt; Version a -&gt; Version b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Functor</span></a></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. Version ann -&gt; Rep (Version ann) x)
+-&gt; (forall x. Rep (Version ann) x -&gt; Version ann)
+-&gt; Generic (Version ann)
+forall x. Rep (Version ann) x -&gt; Version ann
+forall x. Version ann -&gt; Rep (Version ann) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall ann x. Rep (Version ann) x -&gt; Version ann
+forall ann x. Version ann -&gt; Rep (Version ann) x
+$cto :: forall ann x. Rep (Version ann) x -&gt; Version ann
+$cfrom :: forall ann x. Version ann -&gt; Rep (Version ann) x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-97"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680928047"><span class="annot"><span class="annottext">Version ann -&gt; ()
+(Version ann -&gt; ()) -&gt; NFData (Version ann)
+forall ann. NFData ann =&gt; Version ann -&gt; ()
+forall a. (a -&gt; ()) -&gt; NFData a
+rnf :: Version ann -&gt; ()
+$crnf :: forall ann. NFData ann =&gt; Version ann -&gt; ()
+</span><a href="#local-6989586621680928047"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680928043"><span id="local-6989586621680928045"><span class="annot"><span class="annottext">Int -&gt; Version ann -&gt; Int
+Version ann -&gt; Int
+(Int -&gt; Version ann -&gt; Int)
+-&gt; (Version ann -&gt; Int) -&gt; Hashable (Version ann)
+forall ann. Hashable ann =&gt; Int -&gt; Version ann -&gt; Int
+forall ann. Hashable ann =&gt; Version ann -&gt; Int
+forall a. (Int -&gt; a -&gt; Int) -&gt; (a -&gt; Int) -&gt; Hashable a
+hash :: Version ann -&gt; Int
+$chash :: forall ann. Hashable ann =&gt; Version ann -&gt; Int
+hashWithSalt :: Int -&gt; Version ann -&gt; Int
+$chashWithSalt :: forall ann. Hashable ann =&gt; Int -&gt; Version ann -&gt; Int
+</span><a href="#local-6989586621680928043"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Hashable</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-98"></span><span>
+</span><span id="line-99"></span><span class="hs-comment">-- | A 'Program' is simply a 'Term' coupled with a 'Version' of the core language.</span><span>
+</span><span id="line-100"></span><span id="local-6989586621680928041"><span id="local-6989586621680928042"></span></span><span class="hs-keyword">data</span><span> </span><span id="Program"><span class="annot"><a href="PlutusCore.Core.Type.html#Program"><span class="hs-identifier hs-var">Program</span></a></span></span><span> </span><span id="local-6989586621680928040"><span class="annot"><a href="#local-6989586621680928040"><span class="hs-identifier hs-type">tyname</span></a></span></span><span> </span><span id="local-6989586621680928039"><span class="annot"><a href="#local-6989586621680928039"><span class="hs-identifier hs-type">name</span></a></span></span><span> </span><span id="local-6989586621680928038"><span class="annot"><a href="#local-6989586621680928038"><span class="hs-identifier hs-type">uni</span></a></span></span><span> </span><span id="local-6989586621680928037"><span class="annot"><a href="#local-6989586621680928037"><span class="hs-identifier hs-type">fun</span></a></span></span><span> </span><span id="local-6989586621680928036"><span class="annot"><a href="#local-6989586621680928036"><span class="hs-identifier hs-type">ann</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Program"><span class="annot"><a href="PlutusCore.Core.Type.html#Program"><span class="hs-identifier hs-var">Program</span></a></span></span><span>
+</span><span id="line-101"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="_progAnn"><span class="annot"><span class="annottext">Program tyname name uni fun ann -&gt; ann
+</span><a href="PlutusCore.Core.Type.html#_progAnn"><span class="hs-identifier hs-var hs-var">_progAnn</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621680928036"><span class="hs-identifier hs-type">ann</span></a></span><span>
+</span><span id="line-102"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="_progVer"><span class="annot"><span class="annottext">Program tyname name uni fun ann -&gt; Version ann
+</span><a href="PlutusCore.Core.Type.html#_progVer"><span class="hs-identifier hs-var hs-var">_progVer</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="PlutusCore.Core.Type.html#Version"><span class="hs-identifier hs-type">Version</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928036"><span class="hs-identifier hs-type">ann</span></a></span><span>
+</span><span id="line-103"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="_progTerm"><span class="annot"><span class="annottext">Program tyname name uni fun ann -&gt; Term tyname name uni fun ann
+</span><a href="PlutusCore.Core.Type.html#_progTerm"><span class="hs-identifier hs-var hs-var">_progTerm</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="PlutusCore.Core.Type.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928040"><span class="hs-identifier hs-type">tyname</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928039"><span class="hs-identifier hs-type">name</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928038"><span class="hs-identifier hs-type">uni</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928037"><span class="hs-identifier hs-type">fun</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928036"><span class="hs-identifier hs-type">ann</span></a></span><span>
+</span><span id="line-104"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-105"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680928026"><span id="local-6989586621680928028"><span id="local-6989586621680928030"><span class="annot"><span class="annottext">Int -&gt; Program tyname name uni fun ann -&gt; ShowS
+[Program tyname name uni fun ann] -&gt; ShowS
+Program tyname name uni fun ann -&gt; String
+(Int -&gt; Program tyname name uni fun ann -&gt; ShowS)
+-&gt; (Program tyname name uni fun ann -&gt; String)
+-&gt; ([Program tyname name uni fun ann] -&gt; ShowS)
+-&gt; Show (Program tyname name uni fun ann)
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+forall tyname name (uni :: * -&gt; *) fun ann.
+(Everywhere uni Show, GShow uni, Closed uni, Show ann, Show name,
+ Show tyname, Show fun) =&gt;
+Int -&gt; Program tyname name uni fun ann -&gt; ShowS
+forall tyname name (uni :: * -&gt; *) fun ann.
+(Everywhere uni Show, GShow uni, Closed uni, Show ann, Show name,
+ Show tyname, Show fun) =&gt;
+[Program tyname name uni fun ann] -&gt; ShowS
+forall tyname name (uni :: * -&gt; *) fun ann.
+(Everywhere uni Show, GShow uni, Closed uni, Show ann, Show name,
+ Show tyname, Show fun) =&gt;
+Program tyname name uni fun ann -&gt; String
+showList :: [Program tyname name uni fun ann] -&gt; ShowS
+$cshowList :: forall tyname name (uni :: * -&gt; *) fun ann.
+(Everywhere uni Show, GShow uni, Closed uni, Show ann, Show name,
+ Show tyname, Show fun) =&gt;
+[Program tyname name uni fun ann] -&gt; ShowS
+show :: Program tyname name uni fun ann -&gt; String
+$cshow :: forall tyname name (uni :: * -&gt; *) fun ann.
+(Everywhere uni Show, GShow uni, Closed uni, Show ann, Show name,
+ Show tyname, Show fun) =&gt;
+Program tyname name uni fun ann -&gt; String
+showsPrec :: Int -&gt; Program tyname name uni fun ann -&gt; ShowS
+$cshowsPrec :: forall tyname name (uni :: * -&gt; *) fun ann.
+(Everywhere uni Show, GShow uni, Closed uni, Show ann, Show name,
+ Show tyname, Show fun) =&gt;
+Int -&gt; Program tyname name uni fun ann -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680928022"><span id="local-6989586621680928024"><span class="annot"><span class="annottext">a -&gt; Program tyname name uni fun b -&gt; Program tyname name uni fun a
+(a -&gt; b)
+-&gt; Program tyname name uni fun a -&gt; Program tyname name uni fun b
+(forall a b.
+ (a -&gt; b)
+ -&gt; Program tyname name uni fun a -&gt; Program tyname name uni fun b)
+-&gt; (forall a b.
+    a
+    -&gt; Program tyname name uni fun b -&gt; Program tyname name uni fun a)
+-&gt; Functor (Program tyname name uni fun)
+forall a b.
+a -&gt; Program tyname name uni fun b -&gt; Program tyname name uni fun a
+forall a b.
+(a -&gt; b)
+-&gt; Program tyname name uni fun a -&gt; Program tyname name uni fun b
+forall tyname name (uni :: * -&gt; *) fun a b.
+a -&gt; Program tyname name uni fun b -&gt; Program tyname name uni fun a
+forall tyname name (uni :: * -&gt; *) fun a b.
+(a -&gt; b)
+-&gt; Program tyname name uni fun a -&gt; Program tyname name uni fun b
+forall (f :: * -&gt; *).
+(forall a b. (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b. a -&gt; f b -&gt; f a) -&gt; Functor f
+&lt;$ :: a -&gt; Program tyname name uni fun b -&gt; Program tyname name uni fun a
+$c&lt;$ :: forall tyname name (uni :: * -&gt; *) fun a b.
+a -&gt; Program tyname name uni fun b -&gt; Program tyname name uni fun a
+fmap :: (a -&gt; b)
+-&gt; Program tyname name uni fun a -&gt; Program tyname name uni fun b
+$cfmap :: forall tyname name (uni :: * -&gt; *) fun a b.
+(a -&gt; b)
+-&gt; Program tyname name uni fun a -&gt; Program tyname name uni fun b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Functor</span></a></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x.
+ Program tyname name uni fun ann
+ -&gt; Rep (Program tyname name uni fun ann) x)
+-&gt; (forall x.
+    Rep (Program tyname name uni fun ann) x
+    -&gt; Program tyname name uni fun ann)
+-&gt; Generic (Program tyname name uni fun ann)
+forall x.
+Rep (Program tyname name uni fun ann) x
+-&gt; Program tyname name uni fun ann
+forall x.
+Program tyname name uni fun ann
+-&gt; Rep (Program tyname name uni fun ann) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall tyname name (uni :: * -&gt; *) fun ann x.
+Rep (Program tyname name uni fun ann) x
+-&gt; Program tyname name uni fun ann
+forall tyname name (uni :: * -&gt; *) fun ann x.
+Program tyname name uni fun ann
+-&gt; Rep (Program tyname name uni fun ann) x
+$cto :: forall tyname name (uni :: * -&gt; *) fun ann x.
+Rep (Program tyname name uni fun ann) x
+-&gt; Program tyname name uni fun ann
+$cfrom :: forall tyname name (uni :: * -&gt; *) fun ann x.
+Program tyname name uni fun ann
+-&gt; Rep (Program tyname name uni fun ann) x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-106"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680928018"><span class="annot"><span class="annottext">Program tyname name uni fun ann -&gt; ()
+(Program tyname name uni fun ann -&gt; ())
+-&gt; NFData (Program tyname name uni fun ann)
+forall a. (a -&gt; ()) -&gt; NFData a
+forall tyname name (uni :: * -&gt; *) fun ann.
+(Everywhere uni NFData, Closed uni, NFData ann, NFData name,
+ NFData tyname, NFData fun) =&gt;
+Program tyname name uni fun ann -&gt; ()
+rnf :: Program tyname name uni fun ann -&gt; ()
+$crnf :: forall tyname name (uni :: * -&gt; *) fun ann.
+(Everywhere uni NFData, Closed uni, NFData ann, NFData name,
+ NFData tyname, NFData fun) =&gt;
+Program tyname name uni fun ann -&gt; ()
+</span><a href="#local-6989586621680928018"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-107"></span><span id="local-6989586621680928014"><span id="local-6989586621680928015"><span id="local-6989586621680928016"><span id="local-6989586621680928017"><span id="local-6989586621680928036"><span id="local-6989586621680928037"><span id="local-6989586621680928038"><span id="local-6989586621680928039"><span id="local-6989586621680928040"><span id="progTerm"><span id="progVer"><span id="progAnn"><span class="hs-identifier">makeLenses</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">Program</span></span></span></span></span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-108"></span><span>
+</span><span id="line-109"></span><span class="hs-comment">-- | Extract the universe from a type.</span><span>
+</span><span id="line-110"></span><span class="hs-keyword">type</span><span> </span><span class="hs-keyword">family</span><span> </span><span id="UniOf"><span class="annot"><a href="PlutusCore.Core.Type.html#UniOf"><span class="hs-identifier hs-var">UniOf</span></a></span></span><span> </span><span id="local-6989586621680928013"><span class="annot"><a href="#local-6989586621680928013"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">GHC.Type</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">GHC.Type</span></a></span><span>
+</span><span id="line-111"></span><span>
+</span><span id="line-112"></span><span class="hs-keyword">type</span><span> </span><span class="hs-keyword">instance</span><span> </span><span id="UniOf"><span class="annot"><a href="PlutusCore.Core.Type.html#UniOf"><span class="hs-identifier hs-var">UniOf</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span id="local-6989586621680928012"><span class="annot"><a href="#local-6989586621680928012"><span class="hs-identifier hs-type hs-type">tyname</span></a></span></span><span> </span><span id="local-6989586621680928011"><span class="annot"><a href="#local-6989586621680928011"><span class="hs-identifier hs-type hs-type">name</span></a></span></span><span> </span><span id="local-6989586621680928010"><span class="annot"><a href="#local-6989586621680928010"><span class="hs-identifier hs-type hs-type">uni</span></a></span></span><span> </span><span id="local-6989586621680928009"><span class="annot"><a href="#local-6989586621680928009"><span class="hs-identifier hs-type hs-type">fun</span></a></span></span><span> </span><span id="local-6989586621680928008"><span class="annot"><a href="#local-6989586621680928008"><span class="hs-identifier hs-type hs-type">ann</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621680928010"><span class="hs-identifier hs-type">uni</span></a></span><span>
+</span><span id="line-113"></span><span>
+</span><span id="line-114"></span><span class="hs-comment">-- | A &quot;type variable declaration&quot;, i.e. a name and a kind for a type variable.</span><span>
+</span><span id="line-115"></span><span id="local-6989586621680928006"><span id="local-6989586621680928007"></span></span><span class="hs-keyword">data</span><span> </span><span id="TyVarDecl"><span class="annot"><a href="PlutusCore.Core.Type.html#TyVarDecl"><span class="hs-identifier hs-var">TyVarDecl</span></a></span></span><span> </span><span id="local-6989586621680928323"><span class="annot"><a href="#local-6989586621680928323"><span class="hs-identifier hs-type">tyname</span></a></span></span><span> </span><span id="local-6989586621680928324"><span class="annot"><a href="#local-6989586621680928324"><span class="hs-identifier hs-type">ann</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="TyVarDecl"><span class="annot"><a href="PlutusCore.Core.Type.html#TyVarDecl"><span class="hs-identifier hs-var">TyVarDecl</span></a></span></span><span>
+</span><span id="line-116"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="_tyVarDeclAnn"><span class="annot"><span class="annottext">TyVarDecl tyname ann -&gt; ann
+</span><a href="PlutusCore.Core.Type.html#_tyVarDeclAnn"><span class="hs-identifier hs-var hs-var">_tyVarDeclAnn</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621680928324"><span class="hs-identifier hs-type">ann</span></a></span><span>
+</span><span id="line-117"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="_tyVarDeclName"><span class="annot"><span class="annottext">TyVarDecl tyname ann -&gt; tyname
+</span><a href="PlutusCore.Core.Type.html#_tyVarDeclName"><span class="hs-identifier hs-var hs-var">_tyVarDeclName</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621680928323"><span class="hs-identifier hs-type">tyname</span></a></span><span>
+</span><span id="line-118"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="_tyVarDeclKind"><span class="annot"><span class="annottext">TyVarDecl tyname ann -&gt; Kind ann
+</span><a href="PlutusCore.Core.Type.html#_tyVarDeclKind"><span class="hs-identifier hs-var hs-var">_tyVarDeclKind</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="PlutusCore.Core.Type.html#Kind"><span class="hs-identifier hs-type">Kind</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928324"><span class="hs-identifier hs-type">ann</span></a></span><span>
+</span><span id="line-119"></span><span>    </span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680927998"><span id="local-6989586621680928000"><span class="annot"><span class="annottext">a -&gt; TyVarDecl tyname b -&gt; TyVarDecl tyname a
+(a -&gt; b) -&gt; TyVarDecl tyname a -&gt; TyVarDecl tyname b
+(forall a b. (a -&gt; b) -&gt; TyVarDecl tyname a -&gt; TyVarDecl tyname b)
+-&gt; (forall a b. a -&gt; TyVarDecl tyname b -&gt; TyVarDecl tyname a)
+-&gt; Functor (TyVarDecl tyname)
+forall a b. a -&gt; TyVarDecl tyname b -&gt; TyVarDecl tyname a
+forall a b. (a -&gt; b) -&gt; TyVarDecl tyname a -&gt; TyVarDecl tyname b
+forall tyname a b. a -&gt; TyVarDecl tyname b -&gt; TyVarDecl tyname a
+forall tyname a b.
+(a -&gt; b) -&gt; TyVarDecl tyname a -&gt; TyVarDecl tyname b
+forall (f :: * -&gt; *).
+(forall a b. (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b. a -&gt; f b -&gt; f a) -&gt; Functor f
+&lt;$ :: a -&gt; TyVarDecl tyname b -&gt; TyVarDecl tyname a
+$c&lt;$ :: forall tyname a b. a -&gt; TyVarDecl tyname b -&gt; TyVarDecl tyname a
+fmap :: (a -&gt; b) -&gt; TyVarDecl tyname a -&gt; TyVarDecl tyname b
+$cfmap :: forall tyname a b.
+(a -&gt; b) -&gt; TyVarDecl tyname a -&gt; TyVarDecl tyname b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Functor</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680927992"><span id="local-6989586621680927994"><span id="local-6989586621680927996"><span class="annot"><span class="annottext">Int -&gt; TyVarDecl tyname ann -&gt; ShowS
+[TyVarDecl tyname ann] -&gt; ShowS
+TyVarDecl tyname ann -&gt; String
+(Int -&gt; TyVarDecl tyname ann -&gt; ShowS)
+-&gt; (TyVarDecl tyname ann -&gt; String)
+-&gt; ([TyVarDecl tyname ann] -&gt; ShowS)
+-&gt; Show (TyVarDecl tyname ann)
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+forall tyname ann.
+(Show ann, Show tyname) =&gt;
+Int -&gt; TyVarDecl tyname ann -&gt; ShowS
+forall tyname ann.
+(Show ann, Show tyname) =&gt;
+[TyVarDecl tyname ann] -&gt; ShowS
+forall tyname ann.
+(Show ann, Show tyname) =&gt;
+TyVarDecl tyname ann -&gt; String
+showList :: [TyVarDecl tyname ann] -&gt; ShowS
+$cshowList :: forall tyname ann.
+(Show ann, Show tyname) =&gt;
+[TyVarDecl tyname ann] -&gt; ShowS
+show :: TyVarDecl tyname ann -&gt; String
+$cshow :: forall tyname ann.
+(Show ann, Show tyname) =&gt;
+TyVarDecl tyname ann -&gt; String
+showsPrec :: Int -&gt; TyVarDecl tyname ann -&gt; ShowS
+$cshowsPrec :: forall tyname ann.
+(Show ann, Show tyname) =&gt;
+Int -&gt; TyVarDecl tyname ann -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. TyVarDecl tyname ann -&gt; Rep (TyVarDecl tyname ann) x)
+-&gt; (forall x. Rep (TyVarDecl tyname ann) x -&gt; TyVarDecl tyname ann)
+-&gt; Generic (TyVarDecl tyname ann)
+forall x. Rep (TyVarDecl tyname ann) x -&gt; TyVarDecl tyname ann
+forall x. TyVarDecl tyname ann -&gt; Rep (TyVarDecl tyname ann) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall tyname ann x.
+Rep (TyVarDecl tyname ann) x -&gt; TyVarDecl tyname ann
+forall tyname ann x.
+TyVarDecl tyname ann -&gt; Rep (TyVarDecl tyname ann) x
+$cto :: forall tyname ann x.
+Rep (TyVarDecl tyname ann) x -&gt; TyVarDecl tyname ann
+$cfrom :: forall tyname ann x.
+TyVarDecl tyname ann -&gt; Rep (TyVarDecl tyname ann) x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-120"></span><span id="local-6989586621680927989"><span id="tyVarDeclKind"><span id="tyVarDeclName"><span id="tyVarDeclAnn"><span id="local-6989586621680928323"><span id="local-6989586621680928324"><span class="hs-identifier">makeLenses</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">TyVarDecl</span></span></span></span></span></span></span><span>
+</span><span id="line-121"></span><span>
+</span><span id="line-122"></span><span class="hs-comment">-- | A &quot;variable declaration&quot;, i.e. a name and a type for a variable.</span><span>
+</span><span id="line-123"></span><span id="local-6989586621680927987"><span id="local-6989586621680927988"></span></span><span class="hs-keyword">data</span><span> </span><span id="VarDecl"><span class="annot"><a href="PlutusCore.Core.Type.html#VarDecl"><span class="hs-identifier hs-var">VarDecl</span></a></span></span><span> </span><span id="local-6989586621680928311"><span class="annot"><a href="#local-6989586621680928311"><span class="hs-identifier hs-type">tyname</span></a></span></span><span> </span><span id="local-6989586621680928312"><span class="annot"><a href="#local-6989586621680928312"><span class="hs-identifier hs-type">name</span></a></span></span><span> </span><span id="local-6989586621680928310"><span class="annot"><a href="#local-6989586621680928310"><span class="hs-identifier hs-type">uni</span></a></span></span><span> </span><span id="local-6989586621680928309"><span class="annot"><a href="#local-6989586621680928309"><span class="hs-identifier hs-type">fun</span></a></span></span><span> </span><span id="local-6989586621680928313"><span class="annot"><a href="#local-6989586621680928313"><span class="hs-identifier hs-type">ann</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="VarDecl"><span class="annot"><a href="PlutusCore.Core.Type.html#VarDecl"><span class="hs-identifier hs-var">VarDecl</span></a></span></span><span>
+</span><span id="line-124"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="_varDeclAnn"><span class="annot"><span class="annottext">VarDecl tyname name uni fun ann -&gt; ann
+</span><a href="PlutusCore.Core.Type.html#_varDeclAnn"><span class="hs-identifier hs-var hs-var">_varDeclAnn</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621680928313"><span class="hs-identifier hs-type">ann</span></a></span><span>
+</span><span id="line-125"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="_varDeclName"><span class="annot"><span class="annottext">VarDecl tyname name uni fun ann -&gt; name
+</span><a href="PlutusCore.Core.Type.html#_varDeclName"><span class="hs-identifier hs-var hs-var">_varDeclName</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621680928312"><span class="hs-identifier hs-type">name</span></a></span><span>
+</span><span id="line-126"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="_varDeclType"><span class="annot"><span class="annottext">VarDecl tyname name uni fun ann -&gt; Type tyname uni ann
+</span><a href="PlutusCore.Core.Type.html#_varDeclType"><span class="hs-identifier hs-var hs-var">_varDeclType</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="PlutusCore.Core.Type.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928311"><span class="hs-identifier hs-type">tyname</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928310"><span class="hs-identifier hs-type">uni</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928313"><span class="hs-identifier hs-type">ann</span></a></span><span>
+</span><span id="line-127"></span><span>    </span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680927979"><span id="local-6989586621680927981"><span class="annot"><span class="annottext">a -&gt; VarDecl tyname name uni fun b -&gt; VarDecl tyname name uni fun a
+(a -&gt; b)
+-&gt; VarDecl tyname name uni fun a -&gt; VarDecl tyname name uni fun b
+(forall a b.
+ (a -&gt; b)
+ -&gt; VarDecl tyname name uni fun a -&gt; VarDecl tyname name uni fun b)
+-&gt; (forall a b.
+    a
+    -&gt; VarDecl tyname name uni fun b -&gt; VarDecl tyname name uni fun a)
+-&gt; Functor (VarDecl tyname name uni fun)
+forall a b.
+a -&gt; VarDecl tyname name uni fun b -&gt; VarDecl tyname name uni fun a
+forall a b.
+(a -&gt; b)
+-&gt; VarDecl tyname name uni fun a -&gt; VarDecl tyname name uni fun b
+forall tyname name (uni :: * -&gt; *) k (fun :: k) a b.
+a -&gt; VarDecl tyname name uni fun b -&gt; VarDecl tyname name uni fun a
+forall tyname name (uni :: * -&gt; *) k (fun :: k) a b.
+(a -&gt; b)
+-&gt; VarDecl tyname name uni fun a -&gt; VarDecl tyname name uni fun b
+forall (f :: * -&gt; *).
+(forall a b. (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b. a -&gt; f b -&gt; f a) -&gt; Functor f
+&lt;$ :: a -&gt; VarDecl tyname name uni fun b -&gt; VarDecl tyname name uni fun a
+$c&lt;$ :: forall tyname name (uni :: * -&gt; *) k (fun :: k) a b.
+a -&gt; VarDecl tyname name uni fun b -&gt; VarDecl tyname name uni fun a
+fmap :: (a -&gt; b)
+-&gt; VarDecl tyname name uni fun a -&gt; VarDecl tyname name uni fun b
+$cfmap :: forall tyname name (uni :: * -&gt; *) k (fun :: k) a b.
+(a -&gt; b)
+-&gt; VarDecl tyname name uni fun a -&gt; VarDecl tyname name uni fun b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Functor</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680927973"><span id="local-6989586621680927975"><span id="local-6989586621680927977"><span class="annot"><span class="annottext">Int -&gt; VarDecl tyname name uni fun ann -&gt; ShowS
+[VarDecl tyname name uni fun ann] -&gt; ShowS
+VarDecl tyname name uni fun ann -&gt; String
+(Int -&gt; VarDecl tyname name uni fun ann -&gt; ShowS)
+-&gt; (VarDecl tyname name uni fun ann -&gt; String)
+-&gt; ([VarDecl tyname name uni fun ann] -&gt; ShowS)
+-&gt; Show (VarDecl tyname name uni fun ann)
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+forall tyname name (uni :: * -&gt; *) k (fun :: k) ann.
+(Show ann, Show name, Show tyname, GShow uni) =&gt;
+Int -&gt; VarDecl tyname name uni fun ann -&gt; ShowS
+forall tyname name (uni :: * -&gt; *) k (fun :: k) ann.
+(Show ann, Show name, Show tyname, GShow uni) =&gt;
+[VarDecl tyname name uni fun ann] -&gt; ShowS
+forall tyname name (uni :: * -&gt; *) k (fun :: k) ann.
+(Show ann, Show name, Show tyname, GShow uni) =&gt;
+VarDecl tyname name uni fun ann -&gt; String
+showList :: [VarDecl tyname name uni fun ann] -&gt; ShowS
+$cshowList :: forall tyname name (uni :: * -&gt; *) k (fun :: k) ann.
+(Show ann, Show name, Show tyname, GShow uni) =&gt;
+[VarDecl tyname name uni fun ann] -&gt; ShowS
+show :: VarDecl tyname name uni fun ann -&gt; String
+$cshow :: forall tyname name (uni :: * -&gt; *) k (fun :: k) ann.
+(Show ann, Show name, Show tyname, GShow uni) =&gt;
+VarDecl tyname name uni fun ann -&gt; String
+showsPrec :: Int -&gt; VarDecl tyname name uni fun ann -&gt; ShowS
+$cshowsPrec :: forall tyname name (uni :: * -&gt; *) k (fun :: k) ann.
+(Show ann, Show name, Show tyname, GShow uni) =&gt;
+Int -&gt; VarDecl tyname name uni fun ann -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x.
+ VarDecl tyname name uni fun ann
+ -&gt; Rep (VarDecl tyname name uni fun ann) x)
+-&gt; (forall x.
+    Rep (VarDecl tyname name uni fun ann) x
+    -&gt; VarDecl tyname name uni fun ann)
+-&gt; Generic (VarDecl tyname name uni fun ann)
+forall x.
+Rep (VarDecl tyname name uni fun ann) x
+-&gt; VarDecl tyname name uni fun ann
+forall x.
+VarDecl tyname name uni fun ann
+-&gt; Rep (VarDecl tyname name uni fun ann) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall tyname name (uni :: * -&gt; *) k (fun :: k) ann x.
+Rep (VarDecl tyname name uni fun ann) x
+-&gt; VarDecl tyname name uni fun ann
+forall tyname name (uni :: * -&gt; *) k (fun :: k) ann x.
+VarDecl tyname name uni fun ann
+-&gt; Rep (VarDecl tyname name uni fun ann) x
+$cto :: forall tyname name (uni :: * -&gt; *) k (fun :: k) ann x.
+Rep (VarDecl tyname name uni fun ann) x
+-&gt; VarDecl tyname name uni fun ann
+$cfrom :: forall tyname name (uni :: * -&gt; *) k (fun :: k) ann x.
+VarDecl tyname name uni fun ann
+-&gt; Rep (VarDecl tyname name uni fun ann) x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-128"></span><span id="local-6989586621680927962"><span id="local-6989586621680927963"><span id="local-6989586621680927964"><span id="local-6989586621680927965"><span id="local-6989586621680927966"><span id="local-6989586621680927967"><span id="local-6989586621680927968"><span id="local-6989586621680927969"><span id="local-6989586621680927970"><span id="varDeclType"><span id="varDeclName"><span id="varDeclAnn"><span id="local-6989586621680928309"><span id="local-6989586621680928310"><span id="local-6989586621680928311"><span id="local-6989586621680928312"><span id="local-6989586621680928313"><span id="local-6989586621680928314"><span class="hs-identifier">makeLenses</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">VarDecl</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-129"></span><span>
+</span><span id="line-130"></span><span class="hs-comment">-- | A &quot;type declaration&quot;, i.e. a kind for a type.</span><span>
+</span><span id="line-131"></span><span id="local-6989586621680927960"><span id="local-6989586621680927961"></span></span><span class="hs-keyword">data</span><span> </span><span id="TyDecl"><span class="annot"><a href="PlutusCore.Core.Type.html#TyDecl"><span class="hs-identifier hs-var">TyDecl</span></a></span></span><span> </span><span id="local-6989586621680928341"><span class="annot"><a href="#local-6989586621680928341"><span class="hs-identifier hs-type">tyname</span></a></span></span><span> </span><span id="local-6989586621680928340"><span class="annot"><a href="#local-6989586621680928340"><span class="hs-identifier hs-type">uni</span></a></span></span><span> </span><span id="local-6989586621680928342"><span class="annot"><a href="#local-6989586621680928342"><span class="hs-identifier hs-type">ann</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="TyDecl"><span class="annot"><a href="PlutusCore.Core.Type.html#TyDecl"><span class="hs-identifier hs-var">TyDecl</span></a></span></span><span>
+</span><span id="line-132"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="_tyDeclAnn"><span class="annot"><span class="annottext">TyDecl tyname uni ann -&gt; ann
+</span><a href="PlutusCore.Core.Type.html#_tyDeclAnn"><span class="hs-identifier hs-var hs-var">_tyDeclAnn</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621680928342"><span class="hs-identifier hs-type">ann</span></a></span><span>
+</span><span id="line-133"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="_tyDeclType"><span class="annot"><span class="annottext">TyDecl tyname uni ann -&gt; Type tyname uni ann
+</span><a href="PlutusCore.Core.Type.html#_tyDeclType"><span class="hs-identifier hs-var hs-var">_tyDeclType</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="PlutusCore.Core.Type.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928341"><span class="hs-identifier hs-type">tyname</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928340"><span class="hs-identifier hs-type">uni</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928342"><span class="hs-identifier hs-type">ann</span></a></span><span>
+</span><span id="line-134"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="_tyDeclKind"><span class="annot"><span class="annottext">TyDecl tyname uni ann -&gt; Kind ann
+</span><a href="PlutusCore.Core.Type.html#_tyDeclKind"><span class="hs-identifier hs-var hs-var">_tyDeclKind</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="PlutusCore.Core.Type.html#Kind"><span class="hs-identifier hs-type">Kind</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680928342"><span class="hs-identifier hs-type">ann</span></a></span><span>
+</span><span id="line-135"></span><span>    </span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680927952"><span id="local-6989586621680927954"><span class="annot"><span class="annottext">a -&gt; TyDecl tyname uni b -&gt; TyDecl tyname uni a
+(a -&gt; b) -&gt; TyDecl tyname uni a -&gt; TyDecl tyname uni b
+(forall a b.
+ (a -&gt; b) -&gt; TyDecl tyname uni a -&gt; TyDecl tyname uni b)
+-&gt; (forall a b. a -&gt; TyDecl tyname uni b -&gt; TyDecl tyname uni a)
+-&gt; Functor (TyDecl tyname uni)
+forall a b. a -&gt; TyDecl tyname uni b -&gt; TyDecl tyname uni a
+forall a b. (a -&gt; b) -&gt; TyDecl tyname uni a -&gt; TyDecl tyname uni b
+forall tyname (uni :: * -&gt; *) a b.
+a -&gt; TyDecl tyname uni b -&gt; TyDecl tyname uni a
+forall tyname (uni :: * -&gt; *) a b.
+(a -&gt; b) -&gt; TyDecl tyname uni a -&gt; TyDecl tyname uni b
+forall (f :: * -&gt; *).
+(forall a b. (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b. a -&gt; f b -&gt; f a) -&gt; Functor f
+&lt;$ :: a -&gt; TyDecl tyname uni b -&gt; TyDecl tyname uni a
+$c&lt;$ :: forall tyname (uni :: * -&gt; *) a b.
+a -&gt; TyDecl tyname uni b -&gt; TyDecl tyname uni a
+fmap :: (a -&gt; b) -&gt; TyDecl tyname uni a -&gt; TyDecl tyname uni b
+$cfmap :: forall tyname (uni :: * -&gt; *) a b.
+(a -&gt; b) -&gt; TyDecl tyname uni a -&gt; TyDecl tyname uni b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Functor</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680927946"><span id="local-6989586621680927948"><span id="local-6989586621680927950"><span class="annot"><span class="annottext">Int -&gt; TyDecl tyname uni ann -&gt; ShowS
+[TyDecl tyname uni ann] -&gt; ShowS
+TyDecl tyname uni ann -&gt; String
+(Int -&gt; TyDecl tyname uni ann -&gt; ShowS)
+-&gt; (TyDecl tyname uni ann -&gt; String)
+-&gt; ([TyDecl tyname uni ann] -&gt; ShowS)
+-&gt; Show (TyDecl tyname uni ann)
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+forall tyname (uni :: * -&gt; *) ann.
+(Show ann, Show tyname, GShow uni) =&gt;
+Int -&gt; TyDecl tyname uni ann -&gt; ShowS
+forall tyname (uni :: * -&gt; *) ann.
+(Show ann, Show tyname, GShow uni) =&gt;
+[TyDecl tyname uni ann] -&gt; ShowS
+forall tyname (uni :: * -&gt; *) ann.
+(Show ann, Show tyname, GShow uni) =&gt;
+TyDecl tyname uni ann -&gt; String
+showList :: [TyDecl tyname uni ann] -&gt; ShowS
+$cshowList :: forall tyname (uni :: * -&gt; *) ann.
+(Show ann, Show tyname, GShow uni) =&gt;
+[TyDecl tyname uni ann] -&gt; ShowS
+show :: TyDecl tyname uni ann -&gt; String
+$cshow :: forall tyname (uni :: * -&gt; *) ann.
+(Show ann, Show tyname, GShow uni) =&gt;
+TyDecl tyname uni ann -&gt; String
+showsPrec :: Int -&gt; TyDecl tyname uni ann -&gt; ShowS
+$cshowsPrec :: forall tyname (uni :: * -&gt; *) ann.
+(Show ann, Show tyname, GShow uni) =&gt;
+Int -&gt; TyDecl tyname uni ann -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. TyDecl tyname uni ann -&gt; Rep (TyDecl tyname uni ann) x)
+-&gt; (forall x.
+    Rep (TyDecl tyname uni ann) x -&gt; TyDecl tyname uni ann)
+-&gt; Generic (TyDecl tyname uni ann)
+forall x. Rep (TyDecl tyname uni ann) x -&gt; TyDecl tyname uni ann
+forall x. TyDecl tyname uni ann -&gt; Rep (TyDecl tyname uni ann) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall tyname (uni :: * -&gt; *) ann x.
+Rep (TyDecl tyname uni ann) x -&gt; TyDecl tyname uni ann
+forall tyname (uni :: * -&gt; *) ann x.
+TyDecl tyname uni ann -&gt; Rep (TyDecl tyname uni ann) x
+$cto :: forall tyname (uni :: * -&gt; *) ann x.
+Rep (TyDecl tyname uni ann) x -&gt; TyDecl tyname uni ann
+$cfrom :: forall tyname (uni :: * -&gt; *) ann x.
+TyDecl tyname uni ann -&gt; Rep (TyDecl tyname uni ann) x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-136"></span><span id="local-6989586621680927942"><span id="local-6989586621680927943"><span id="tyDeclKind"><span id="tyDeclType"><span id="tyDeclAnn"><span id="local-6989586621680928340"><span id="local-6989586621680928341"><span id="local-6989586621680928342"><span class="hs-identifier">makeLenses</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">TyDecl</span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-137"></span><span>
+</span><span id="line-138"></span><span id="local-6989586621680927939"><span id="local-6989586621680927940"><span id="local-6989586621680927941"><span class="annot"><a href="PlutusCore.Core.Type.html#tyDeclVar"><span class="hs-identifier hs-type">tyDeclVar</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="PlutusCore.Core.Type.html#TyVarDecl"><span class="hs-identifier hs-type">TyVarDecl</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680927941"><span class="hs-identifier hs-type">tyname</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680927940"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="PlutusCore.Core.Type.html#TyDecl"><span class="hs-identifier hs-type">TyDecl</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680927941"><span class="hs-identifier hs-type">tyname</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680927939"><span class="hs-identifier hs-type">uni</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680927940"><span class="hs-identifier hs-type">ann</span></a></span></span></span></span><span>
+</span><span id="line-139"></span><span id="tyDeclVar"><span class="annot"><span class="annottext">tyDeclVar :: TyVarDecl tyname ann -&gt; TyDecl tyname uni ann
+</span><a href="PlutusCore.Core.Type.html#tyDeclVar"><span class="hs-identifier hs-var hs-var">tyDeclVar</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#TyVarDecl"><span class="hs-identifier hs-type">TyVarDecl</span></a></span><span> </span><span id="local-6989586621680927938"><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927938"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span id="local-6989586621680927937"><span class="annot"><span class="annottext">tyname
+</span><a href="#local-6989586621680927937"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span id="local-6989586621680927936"><span class="annot"><span class="annottext">Kind ann
+</span><a href="#local-6989586621680927936"><span class="hs-identifier hs-var">kind</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ann -&gt; Type tyname uni ann -&gt; Kind ann -&gt; TyDecl tyname uni ann
+forall tyname (uni :: * -&gt; *) ann.
+ann -&gt; Type tyname uni ann -&gt; Kind ann -&gt; TyDecl tyname uni ann
+</span><a href="PlutusCore.Core.Type.html#TyDecl"><span class="hs-identifier hs-var">TyDecl</span></a></span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927938"><span class="hs-identifier hs-var">ann</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ann -&gt; tyname -&gt; Type tyname uni ann
+forall tyname (uni :: * -&gt; *) ann.
+ann -&gt; tyname -&gt; Type tyname uni ann
+</span><a href="PlutusCore.Core.Type.html#TyVar"><span class="hs-identifier hs-var">TyVar</span></a></span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927938"><span class="hs-identifier hs-var">ann</span></a></span><span> </span><span class="annot"><span class="annottext">tyname
+</span><a href="#local-6989586621680927937"><span class="hs-identifier hs-var">name</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Kind ann
+</span><a href="#local-6989586621680927936"><span class="hs-identifier hs-var">kind</span></a></span><span>
+</span><span id="line-140"></span><span>
+</span><span id="line-141"></span><span id="local-6989586621680927934"><span id="local-6989586621680927935"><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="PlutusCore.Name.html#HasUnique"><span class="hs-identifier hs-type">HasUnique</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680927935"><span class="hs-identifier hs-type">tyname</span></a></span><span> </span><span class="annot"><a href="PlutusCore.Name.html#TypeUnique"><span class="hs-identifier hs-type">TypeUnique</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="PlutusCore.Name.html#HasUnique"><span class="hs-identifier hs-type">HasUnique</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#TyVarDecl"><span class="hs-identifier hs-type">TyVarDecl</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680927935"><span class="hs-identifier hs-type">tyname</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680927934"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="PlutusCore.Name.html#TypeUnique"><span class="hs-identifier hs-type">TypeUnique</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-142"></span><span>    </span><span id="local-6989586621680927930"><span class="annot"><span class="annottext">unique :: (TypeUnique -&gt; f TypeUnique)
+-&gt; TyVarDecl tyname ann -&gt; f (TyVarDecl tyname ann)
+</span><a href="PlutusCore.Name.html#unique"><span class="hs-identifier hs-var hs-var hs-var hs-var">unique</span></a></span></span><span> </span><span id="local-6989586621680927928"><span class="annot"><span class="annottext">TypeUnique -&gt; f TypeUnique
+</span><a href="#local-6989586621680927928"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#TyVarDecl"><span class="hs-identifier hs-type">TyVarDecl</span></a></span><span> </span><span id="local-6989586621680927927"><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927927"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span id="local-6989586621680927926"><span class="annot"><span class="annottext">tyname
+</span><a href="#local-6989586621680927926"><span class="hs-identifier hs-var">tyname</span></a></span></span><span> </span><span id="local-6989586621680927925"><span class="annot"><span class="annottext">Kind ann
+</span><a href="#local-6989586621680927925"><span class="hs-identifier hs-var">kind</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-143"></span><span>        </span><span class="annot"><span class="annottext">(TypeUnique -&gt; f TypeUnique) -&gt; tyname -&gt; f tyname
+forall a unique. HasUnique a unique =&gt; Lens' a unique
+</span><a href="PlutusCore.Name.html#unique"><span class="hs-identifier hs-var">unique</span></a></span><span> </span><span class="annot"><span class="annottext">TypeUnique -&gt; f TypeUnique
+</span><a href="#local-6989586621680927928"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">tyname
+</span><a href="#local-6989586621680927926"><span class="hs-identifier hs-var">tyname</span></a></span><span> </span><span class="annot"><span class="annottext">f tyname
+-&gt; (tyname -&gt; TyVarDecl tyname ann) -&gt; f (TyVarDecl tyname ann)
+forall (f :: * -&gt; *) a b. Functor f =&gt; f a -&gt; (a -&gt; b) -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;&amp;&gt;</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621680927923"><span class="annot"><span class="annottext">tyname
+</span><a href="#local-6989586621680927923"><span class="hs-identifier hs-var">tyname'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ann -&gt; tyname -&gt; Kind ann -&gt; TyVarDecl tyname ann
+forall tyname ann.
+ann -&gt; tyname -&gt; Kind ann -&gt; TyVarDecl tyname ann
+</span><a href="PlutusCore.Core.Type.html#TyVarDecl"><span class="hs-identifier hs-var">TyVarDecl</span></a></span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927927"><span class="hs-identifier hs-var">ann</span></a></span><span> </span><span class="annot"><span class="annottext">tyname
+</span><a href="#local-6989586621680927923"><span class="hs-identifier hs-var">tyname'</span></a></span><span> </span><span class="annot"><span class="annottext">Kind ann
+</span><a href="#local-6989586621680927925"><span class="hs-identifier hs-var">kind</span></a></span></span></span><span>
+</span><span id="line-144"></span><span>
+</span><span id="line-145"></span><span id="local-6989586621680927918"><span id="local-6989586621680927919"><span id="local-6989586621680927920"><span id="local-6989586621680927921"><span id="local-6989586621680927922"><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="PlutusCore.Name.html#HasUnique"><span class="hs-identifier hs-type">HasUnique</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680927922"><span class="hs-identifier hs-type">name</span></a></span><span> </span><span class="annot"><a href="PlutusCore.Name.html#TermUnique"><span class="hs-identifier hs-type">TermUnique</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="PlutusCore.Name.html#HasUnique"><span class="hs-identifier hs-type">HasUnique</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#VarDecl"><span class="hs-identifier hs-type">VarDecl</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680927921"><span class="hs-identifier hs-type">tyname</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680927922"><span class="hs-identifier hs-type">name</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680927920"><span class="hs-identifier hs-type">uni</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680927919"><span class="hs-identifier hs-type">fun</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680927918"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="PlutusCore.Name.html#TermUnique"><span class="hs-identifier hs-type">TermUnique</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-146"></span><span>    </span><span id="local-6989586621680927915"><span class="annot"><span class="annottext">unique :: (TermUnique -&gt; f TermUnique)
+-&gt; VarDecl tyname name uni fun ann
+-&gt; f (VarDecl tyname name uni fun ann)
+</span><a href="#local-6989586621680927915"><span class="hs-identifier hs-var hs-var hs-var hs-var">unique</span></a></span></span><span> </span><span id="local-6989586621680927914"><span class="annot"><span class="annottext">TermUnique -&gt; f TermUnique
+</span><a href="#local-6989586621680927914"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#VarDecl"><span class="hs-identifier hs-type">VarDecl</span></a></span><span> </span><span id="local-6989586621680927913"><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927913"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span id="local-6989586621680927912"><span class="annot"><span class="annottext">name
+</span><a href="#local-6989586621680927912"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span id="local-6989586621680927911"><span class="annot"><span class="annottext">Type tyname uni ann
+</span><a href="#local-6989586621680927911"><span class="hs-identifier hs-var">ty</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-147"></span><span>        </span><span class="annot"><span class="annottext">(TermUnique -&gt; f TermUnique) -&gt; name -&gt; f name
+forall a unique. HasUnique a unique =&gt; Lens' a unique
+</span><a href="PlutusCore.Name.html#unique"><span class="hs-identifier hs-var">unique</span></a></span><span> </span><span class="annot"><span class="annottext">TermUnique -&gt; f TermUnique
+</span><a href="#local-6989586621680927914"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">name
+</span><a href="#local-6989586621680927912"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">f name
+-&gt; (name -&gt; VarDecl tyname name uni fun ann)
+-&gt; f (VarDecl tyname name uni fun ann)
+forall (f :: * -&gt; *) a b. Functor f =&gt; f a -&gt; (a -&gt; b) -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;&amp;&gt;</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621680927910"><span class="annot"><span class="annottext">name
+</span><a href="#local-6989586621680927910"><span class="hs-identifier hs-var">name'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ann
+-&gt; name -&gt; Type tyname uni ann -&gt; VarDecl tyname name uni fun ann
+forall k tyname name (uni :: * -&gt; *) (fun :: k) ann.
+ann
+-&gt; name -&gt; Type tyname uni ann -&gt; VarDecl tyname name uni fun ann
+</span><a href="PlutusCore.Core.Type.html#VarDecl"><span class="hs-identifier hs-var">VarDecl</span></a></span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927913"><span class="hs-identifier hs-var">ann</span></a></span><span> </span><span class="annot"><span class="annottext">name
+</span><a href="#local-6989586621680927910"><span class="hs-identifier hs-var">name'</span></a></span><span> </span><span class="annot"><span class="annottext">Type tyname uni ann
+</span><a href="#local-6989586621680927911"><span class="hs-identifier hs-var">ty</span></a></span></span></span></span></span></span><span>
+</span><span id="line-148"></span><span>
+</span><span id="line-149"></span><span id="local-6989586621680927908"><span id="local-6989586621680927909"></span></span><span class="hs-keyword">newtype</span><span> </span><span id="Normalized"><span class="annot"><a href="PlutusCore.Core.Type.html#Normalized"><span class="hs-identifier hs-var">Normalized</span></a></span></span><span> </span><span id="local-6989586621680927907"><span class="annot"><a href="#local-6989586621680927907"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Normalized"><span class="annot"><a href="PlutusCore.Core.Type.html#Normalized"><span class="hs-identifier hs-var">Normalized</span></a></span></span><span>
+</span><span id="line-150"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="unNormalized"><span class="annot"><span class="annottext">Normalized a -&gt; a
+</span><a href="PlutusCore.Core.Type.html#unNormalized"><span class="hs-identifier hs-var hs-var">unNormalized</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621680927907"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-151"></span><span>    </span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680927899"><span id="local-6989586621680927901"><span id="local-6989586621680927903"><span class="annot"><span class="annottext">Int -&gt; Normalized a -&gt; ShowS
+[Normalized a] -&gt; ShowS
+Normalized a -&gt; String
+(Int -&gt; Normalized a -&gt; ShowS)
+-&gt; (Normalized a -&gt; String)
+-&gt; ([Normalized a] -&gt; ShowS)
+-&gt; Show (Normalized a)
+forall a. Show a =&gt; Int -&gt; Normalized a -&gt; ShowS
+forall a. Show a =&gt; [Normalized a] -&gt; ShowS
+forall a. Show a =&gt; Normalized a -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [Normalized a] -&gt; ShowS
+$cshowList :: forall a. Show a =&gt; [Normalized a] -&gt; ShowS
+show :: Normalized a -&gt; String
+$cshow :: forall a. Show a =&gt; Normalized a -&gt; String
+showsPrec :: Int -&gt; Normalized a -&gt; ShowS
+$cshowsPrec :: forall a. Show a =&gt; Int -&gt; Normalized a -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680927895"><span id="local-6989586621680927897"><span class="annot"><span class="annottext">Normalized a -&gt; Normalized a -&gt; Bool
+(Normalized a -&gt; Normalized a -&gt; Bool)
+-&gt; (Normalized a -&gt; Normalized a -&gt; Bool) -&gt; Eq (Normalized a)
+forall a. Eq a =&gt; Normalized a -&gt; Normalized a -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: Normalized a -&gt; Normalized a -&gt; Bool
+$c/= :: forall a. Eq a =&gt; Normalized a -&gt; Normalized a -&gt; Bool
+== :: Normalized a -&gt; Normalized a -&gt; Bool
+$c== :: forall a. Eq a =&gt; Normalized a -&gt; Normalized a -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680927891"><span id="local-6989586621680927893"><span class="annot"><span class="annottext">a -&gt; Normalized b -&gt; Normalized a
+(a -&gt; b) -&gt; Normalized a -&gt; Normalized b
+(forall a b. (a -&gt; b) -&gt; Normalized a -&gt; Normalized b)
+-&gt; (forall a b. a -&gt; Normalized b -&gt; Normalized a)
+-&gt; Functor Normalized
+forall a b. a -&gt; Normalized b -&gt; Normalized a
+forall a b. (a -&gt; b) -&gt; Normalized a -&gt; Normalized b
+forall (f :: * -&gt; *).
+(forall a b. (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b. a -&gt; f b -&gt; f a) -&gt; Functor f
+&lt;$ :: a -&gt; Normalized b -&gt; Normalized a
+$c&lt;$ :: forall a b. a -&gt; Normalized b -&gt; Normalized a
+fmap :: (a -&gt; b) -&gt; Normalized a -&gt; Normalized b
+$cfmap :: forall a b. (a -&gt; b) -&gt; Normalized a -&gt; Normalized b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Functor</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680927857"><span id="local-6989586621680927859"><span id="local-6989586621680927861"><span id="local-6989586621680927863"><span id="local-6989586621680927865"><span id="local-6989586621680927867"><span id="local-6989586621680927869"><span id="local-6989586621680927871"><span id="local-6989586621680927873"><span id="local-6989586621680927875"><span id="local-6989586621680927877"><span id="local-6989586621680927879"><span id="local-6989586621680927881"><span id="local-6989586621680927883"><span id="local-6989586621680927885"><span id="local-6989586621680927887"><span id="local-6989586621680927889"><span class="annot"><span class="annottext">Normalized a -&gt; Bool
+(a -&gt; m) -&gt; Normalized a -&gt; m
+(a -&gt; b -&gt; b) -&gt; b -&gt; Normalized a -&gt; b
+(forall m. Monoid m =&gt; Normalized m -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Normalized a -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Normalized a -&gt; m)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Normalized a -&gt; b)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Normalized a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Normalized a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Normalized a -&gt; b)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; Normalized a -&gt; a)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; Normalized a -&gt; a)
+-&gt; (forall a. Normalized a -&gt; [a])
+-&gt; (forall a. Normalized a -&gt; Bool)
+-&gt; (forall a. Normalized a -&gt; Int)
+-&gt; (forall a. Eq a =&gt; a -&gt; Normalized a -&gt; Bool)
+-&gt; (forall a. Ord a =&gt; Normalized a -&gt; a)
+-&gt; (forall a. Ord a =&gt; Normalized a -&gt; a)
+-&gt; (forall a. Num a =&gt; Normalized a -&gt; a)
+-&gt; (forall a. Num a =&gt; Normalized a -&gt; a)
+-&gt; Foldable Normalized
+forall a. Eq a =&gt; a -&gt; Normalized a -&gt; Bool
+forall a. Num a =&gt; Normalized a -&gt; a
+forall a. Ord a =&gt; Normalized a -&gt; a
+forall m. Monoid m =&gt; Normalized m -&gt; m
+forall a. Normalized a -&gt; Bool
+forall a. Normalized a -&gt; Int
+forall a. Normalized a -&gt; [a]
+forall a. (a -&gt; a -&gt; a) -&gt; Normalized a -&gt; a
+forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Normalized a -&gt; m
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Normalized a -&gt; b
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Normalized a -&gt; b
+forall (t :: * -&gt; *).
+(forall m. Monoid m =&gt; t m -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; t a -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; t a -&gt; m)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; t a -&gt; a)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; t a -&gt; a)
+-&gt; (forall a. t a -&gt; [a])
+-&gt; (forall a. t a -&gt; Bool)
+-&gt; (forall a. t a -&gt; Int)
+-&gt; (forall a. Eq a =&gt; a -&gt; t a -&gt; Bool)
+-&gt; (forall a. Ord a =&gt; t a -&gt; a)
+-&gt; (forall a. Ord a =&gt; t a -&gt; a)
+-&gt; (forall a. Num a =&gt; t a -&gt; a)
+-&gt; (forall a. Num a =&gt; t a -&gt; a)
+-&gt; Foldable t
+product :: Normalized a -&gt; a
+$cproduct :: forall a. Num a =&gt; Normalized a -&gt; a
+sum :: Normalized a -&gt; a
+$csum :: forall a. Num a =&gt; Normalized a -&gt; a
+minimum :: Normalized a -&gt; a
+$cminimum :: forall a. Ord a =&gt; Normalized a -&gt; a
+maximum :: Normalized a -&gt; a
+$cmaximum :: forall a. Ord a =&gt; Normalized a -&gt; a
+elem :: a -&gt; Normalized a -&gt; Bool
+$celem :: forall a. Eq a =&gt; a -&gt; Normalized a -&gt; Bool
+length :: Normalized a -&gt; Int
+$clength :: forall a. Normalized a -&gt; Int
+null :: Normalized a -&gt; Bool
+$cnull :: forall a. Normalized a -&gt; Bool
+toList :: Normalized a -&gt; [a]
+$ctoList :: forall a. Normalized a -&gt; [a]
+foldl1 :: (a -&gt; a -&gt; a) -&gt; Normalized a -&gt; a
+$cfoldl1 :: forall a. (a -&gt; a -&gt; a) -&gt; Normalized a -&gt; a
+foldr1 :: (a -&gt; a -&gt; a) -&gt; Normalized a -&gt; a
+$cfoldr1 :: forall a. (a -&gt; a -&gt; a) -&gt; Normalized a -&gt; a
+foldl' :: (b -&gt; a -&gt; b) -&gt; b -&gt; Normalized a -&gt; b
+$cfoldl' :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Normalized a -&gt; b
+foldl :: (b -&gt; a -&gt; b) -&gt; b -&gt; Normalized a -&gt; b
+$cfoldl :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Normalized a -&gt; b
+foldr' :: (a -&gt; b -&gt; b) -&gt; b -&gt; Normalized a -&gt; b
+$cfoldr' :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Normalized a -&gt; b
+foldr :: (a -&gt; b -&gt; b) -&gt; b -&gt; Normalized a -&gt; b
+$cfoldr :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Normalized a -&gt; b
+foldMap' :: (a -&gt; m) -&gt; Normalized a -&gt; m
+$cfoldMap' :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Normalized a -&gt; m
+foldMap :: (a -&gt; m) -&gt; Normalized a -&gt; m
+$cfoldMap :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Normalized a -&gt; m
+fold :: Normalized m -&gt; m
+$cfold :: forall m. Monoid m =&gt; Normalized m -&gt; m
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Foldable</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680927846"><span id="local-6989586621680927848"><span id="local-6989586621680927850"><span id="local-6989586621680927852"><span class="annot"><span class="annottext">Functor Normalized
+Foldable Normalized
+Functor Normalized
+-&gt; Foldable Normalized
+-&gt; (forall (f :: * -&gt; *) a b.
+    Applicative f =&gt;
+    (a -&gt; f b) -&gt; Normalized a -&gt; f (Normalized b))
+-&gt; (forall (f :: * -&gt; *) a.
+    Applicative f =&gt;
+    Normalized (f a) -&gt; f (Normalized a))
+-&gt; (forall (m :: * -&gt; *) a b.
+    Monad m =&gt;
+    (a -&gt; m b) -&gt; Normalized a -&gt; m (Normalized b))
+-&gt; (forall (m :: * -&gt; *) a.
+    Monad m =&gt;
+    Normalized (m a) -&gt; m (Normalized a))
+-&gt; Traversable Normalized
+(a -&gt; f b) -&gt; Normalized a -&gt; f (Normalized b)
+forall (t :: * -&gt; *).
+Functor t
+-&gt; Foldable t
+-&gt; (forall (f :: * -&gt; *) a b.
+    Applicative f =&gt;
+    (a -&gt; f b) -&gt; t a -&gt; f (t b))
+-&gt; (forall (f :: * -&gt; *) a. Applicative f =&gt; t (f a) -&gt; f (t a))
+-&gt; (forall (m :: * -&gt; *) a b.
+    Monad m =&gt;
+    (a -&gt; m b) -&gt; t a -&gt; m (t b))
+-&gt; (forall (m :: * -&gt; *) a. Monad m =&gt; t (m a) -&gt; m (t a))
+-&gt; Traversable t
+forall (m :: * -&gt; *) a.
+Monad m =&gt;
+Normalized (m a) -&gt; m (Normalized a)
+forall (f :: * -&gt; *) a.
+Applicative f =&gt;
+Normalized (f a) -&gt; f (Normalized a)
+forall (m :: * -&gt; *) a b.
+Monad m =&gt;
+(a -&gt; m b) -&gt; Normalized a -&gt; m (Normalized b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; Normalized a -&gt; f (Normalized b)
+sequence :: Normalized (m a) -&gt; m (Normalized a)
+$csequence :: forall (m :: * -&gt; *) a.
+Monad m =&gt;
+Normalized (m a) -&gt; m (Normalized a)
+mapM :: (a -&gt; m b) -&gt; Normalized a -&gt; m (Normalized b)
+$cmapM :: forall (m :: * -&gt; *) a b.
+Monad m =&gt;
+(a -&gt; m b) -&gt; Normalized a -&gt; m (Normalized b)
+sequenceA :: Normalized (f a) -&gt; f (Normalized a)
+$csequenceA :: forall (f :: * -&gt; *) a.
+Applicative f =&gt;
+Normalized (f a) -&gt; f (Normalized a)
+traverse :: (a -&gt; f b) -&gt; Normalized a -&gt; f (Normalized b)
+$ctraverse :: forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; Normalized a -&gt; f (Normalized b)
+$cp2Traversable :: Foldable Normalized
+$cp1Traversable :: Functor Normalized
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Traversable</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. Normalized a -&gt; Rep (Normalized a) x)
+-&gt; (forall x. Rep (Normalized a) x -&gt; Normalized a)
+-&gt; Generic (Normalized a)
+forall x. Rep (Normalized a) x -&gt; Normalized a
+forall x. Normalized a -&gt; Rep (Normalized a) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall a x. Rep (Normalized a) x -&gt; Normalized a
+forall a x. Normalized a -&gt; Rep (Normalized a) x
+$cto :: forall a x. Rep (Normalized a) x -&gt; Normalized a
+$cfrom :: forall a x. Normalized a -&gt; Rep (Normalized a) x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-152"></span><span>      </span><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621680927842"><span class="annot"><a href="#local-6989586621680927842"><span class="hs-keyword hs-type">newtype</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680927840"><span class="annot"><span class="annottext">Normalized a -&gt; ()
+(Normalized a -&gt; ()) -&gt; NFData (Normalized a)
+forall a. NFData a =&gt; Normalized a -&gt; ()
+forall a. (a -&gt; ()) -&gt; NFData a
+rnf :: Normalized a -&gt; ()
+$crnf :: forall a. NFData a =&gt; Normalized a -&gt; ()
+</span><a href="#local-6989586621680927840"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680927836"><span id="local-6989586621680927838"><span class="annot"><span class="annottext">[Normalized a] -&gt; Doc ann
+Normalized a -&gt; Doc ann
+(forall ann. Normalized a -&gt; Doc ann)
+-&gt; (forall ann. [Normalized a] -&gt; Doc ann) -&gt; Pretty (Normalized a)
+forall ann. [Normalized a] -&gt; Doc ann
+forall a ann. Pretty a =&gt; [Normalized a] -&gt; Doc ann
+forall a ann. Pretty a =&gt; Normalized a -&gt; Doc ann
+forall ann. Normalized a -&gt; Doc ann
+forall a.
+(forall ann. a -&gt; Doc ann)
+-&gt; (forall ann. [a] -&gt; Doc ann) -&gt; Pretty a
+prettyList :: [Normalized a] -&gt; Doc ann
+$cprettyList :: forall a ann. Pretty a =&gt; [Normalized a] -&gt; Doc ann
+pretty :: Normalized a -&gt; Doc ann
+$cpretty :: forall a ann. Pretty a =&gt; Normalized a -&gt; Doc ann
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Pretty</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680927831"><span id="local-6989586621680927833"><span class="annot"><span class="hs-identifier hs-type">PrettyBy</span></span><span> </span><span class="annot"><a href="#local-6989586621680927842"><span class="hs-identifier hs-type">config</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-153"></span><span>      </span><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621680927819"><span id="local-6989586621680927821"><span id="local-6989586621680927823"><span id="local-6989586621680927825"><span id="local-6989586621680927827"><span class="annot"><span class="annottext">Functor Normalized
+a -&gt; Normalized a
+Functor Normalized
+-&gt; (forall a. a -&gt; Normalized a)
+-&gt; (forall a b.
+    Normalized (a -&gt; b) -&gt; Normalized a -&gt; Normalized b)
+-&gt; (forall a b c.
+    (a -&gt; b -&gt; c) -&gt; Normalized a -&gt; Normalized b -&gt; Normalized c)
+-&gt; (forall a b. Normalized a -&gt; Normalized b -&gt; Normalized b)
+-&gt; (forall a b. Normalized a -&gt; Normalized b -&gt; Normalized a)
+-&gt; Applicative Normalized
+Normalized a -&gt; Normalized b -&gt; Normalized b
+Normalized a -&gt; Normalized b -&gt; Normalized a
+Normalized (a -&gt; b) -&gt; Normalized a -&gt; Normalized b
+(a -&gt; b -&gt; c) -&gt; Normalized a -&gt; Normalized b -&gt; Normalized c
+forall a. a -&gt; Normalized a
+forall a b. Normalized a -&gt; Normalized b -&gt; Normalized a
+forall a b. Normalized a -&gt; Normalized b -&gt; Normalized b
+forall a b. Normalized (a -&gt; b) -&gt; Normalized a -&gt; Normalized b
+forall a b c.
+(a -&gt; b -&gt; c) -&gt; Normalized a -&gt; Normalized b -&gt; Normalized c
+forall (f :: * -&gt; *).
+Functor f
+-&gt; (forall a. a -&gt; f a)
+-&gt; (forall a b. f (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b c. (a -&gt; b -&gt; c) -&gt; f a -&gt; f b -&gt; f c)
+-&gt; (forall a b. f a -&gt; f b -&gt; f b)
+-&gt; (forall a b. f a -&gt; f b -&gt; f a)
+-&gt; Applicative f
+&lt;* :: Normalized a -&gt; Normalized b -&gt; Normalized a
+$c&lt;* :: forall a b. Normalized a -&gt; Normalized b -&gt; Normalized a
+*&gt; :: Normalized a -&gt; Normalized b -&gt; Normalized b
+$c*&gt; :: forall a b. Normalized a -&gt; Normalized b -&gt; Normalized b
+liftA2 :: (a -&gt; b -&gt; c) -&gt; Normalized a -&gt; Normalized b -&gt; Normalized c
+$cliftA2 :: forall a b c.
+(a -&gt; b -&gt; c) -&gt; Normalized a -&gt; Normalized b -&gt; Normalized c
+&lt;*&gt; :: Normalized (a -&gt; b) -&gt; Normalized a -&gt; Normalized b
+$c&lt;*&gt; :: forall a b. Normalized (a -&gt; b) -&gt; Normalized a -&gt; Normalized b
+pure :: a -&gt; Normalized a
+$cpure :: forall a. a -&gt; Normalized a
+$cp1Applicative :: Functor Normalized
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Applicative</span></a></span></span></span></span></span></span><span> </span><span class="hs-keyword">via</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Identity</span></a></span><span>
+</span><span id="line-154"></span><span>
+</span><span id="line-155"></span><span class="hs-comment">-- | All kinds of uniques an entity contains.</span><span>
+</span><span id="line-156"></span><span class="hs-keyword">type</span><span> </span><span class="hs-keyword">family</span><span> </span><span id="HasUniques"><span class="annot"><a href="PlutusCore.Core.Type.html#HasUniques"><span class="hs-identifier hs-var">HasUniques</span></a></span></span><span> </span><span id="local-6989586621680927816"><span class="annot"><a href="#local-6989586621680927816"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">GHC.Constraint</span></a></span><span>
+</span><span id="line-157"></span><span class="hs-keyword">type</span><span> </span><span class="hs-keyword">instance</span><span> </span><span id="HasUniques"><span class="annot"><a href="PlutusCore.Core.Type.html#HasUniques"><span class="hs-identifier hs-var">HasUniques</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#Kind"><span class="hs-identifier hs-type">Kind</span></a></span><span> </span><span id="local-6989586621680927815"><span class="annot"><a href="#local-6989586621680927815"><span class="hs-identifier hs-type hs-type">ann</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-158"></span><span class="hs-keyword">type</span><span> </span><span class="hs-keyword">instance</span><span> </span><span id="HasUniques"><span class="annot"><a href="PlutusCore.Core.Type.html#HasUniques"><span class="hs-identifier hs-var">HasUniques</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span> </span><span id="local-6989586621680927814"><span class="annot"><a href="#local-6989586621680927814"><span class="hs-identifier hs-type hs-type">tyname</span></a></span></span><span> </span><span id="local-6989586621680927813"><span class="annot"><a href="#local-6989586621680927813"><span class="hs-identifier hs-type hs-type">uni</span></a></span></span><span> </span><span id="local-6989586621680927812"><span class="annot"><a href="#local-6989586621680927812"><span class="hs-identifier hs-type hs-type">ann</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="PlutusCore.Name.html#HasUnique"><span class="hs-identifier hs-type">HasUnique</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680927814"><span class="hs-identifier hs-type">tyname</span></a></span><span> </span><span class="annot"><a href="PlutusCore.Name.html#TypeUnique"><span class="hs-identifier hs-type">TypeUnique</span></a></span><span>
+</span><span id="line-159"></span><span class="hs-keyword">type</span><span> </span><span class="hs-keyword">instance</span><span> </span><span id="HasUniques"><span class="annot"><a href="PlutusCore.Core.Type.html#HasUniques"><span class="hs-identifier hs-var">HasUniques</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span id="local-6989586621680927811"><span class="annot"><a href="#local-6989586621680927811"><span class="hs-identifier hs-type hs-type">tyname</span></a></span></span><span> </span><span id="local-6989586621680927810"><span class="annot"><a href="#local-6989586621680927810"><span class="hs-identifier hs-type hs-type">name</span></a></span></span><span> </span><span id="local-6989586621680927809"><span class="annot"><a href="#local-6989586621680927809"><span class="hs-identifier hs-type hs-type">uni</span></a></span></span><span> </span><span id="local-6989586621680927808"><span class="annot"><a href="#local-6989586621680927808"><span class="hs-identifier hs-type hs-type">fun</span></a></span></span><span> </span><span id="local-6989586621680927807"><span class="annot"><a href="#local-6989586621680927807"><span class="hs-identifier hs-type hs-type">ann</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-160"></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Name.html#HasUnique"><span class="hs-identifier hs-type">HasUnique</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680927811"><span class="hs-identifier hs-type">tyname</span></a></span><span> </span><span class="annot"><a href="PlutusCore.Name.html#TypeUnique"><span class="hs-identifier hs-type">TypeUnique</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="PlutusCore.Name.html#HasUnique"><span class="hs-identifier hs-type">HasUnique</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680927810"><span class="hs-identifier hs-type">name</span></a></span><span> </span><span class="annot"><a href="PlutusCore.Name.html#TermUnique"><span class="hs-identifier hs-type">TermUnique</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-161"></span><span class="hs-keyword">type</span><span> </span><span class="hs-keyword">instance</span><span> </span><span id="HasUniques"><span class="annot"><a href="PlutusCore.Core.Type.html#HasUniques"><span class="hs-identifier hs-var">HasUniques</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#Program"><span class="hs-identifier hs-type">Program</span></a></span><span> </span><span id="local-6989586621680927806"><span class="annot"><a href="#local-6989586621680927806"><span class="hs-identifier hs-type hs-type">tyname</span></a></span></span><span> </span><span id="local-6989586621680927805"><span class="annot"><a href="#local-6989586621680927805"><span class="hs-identifier hs-type hs-type">name</span></a></span></span><span> </span><span id="local-6989586621680927804"><span class="annot"><a href="#local-6989586621680927804"><span class="hs-identifier hs-type hs-type">uni</span></a></span></span><span> </span><span id="local-6989586621680927803"><span class="annot"><a href="#local-6989586621680927803"><span class="hs-identifier hs-type hs-type">fun</span></a></span></span><span> </span><span id="local-6989586621680927802"><span class="annot"><a href="#local-6989586621680927802"><span class="hs-identifier hs-type hs-type">ann</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-162"></span><span>    </span><span class="annot"><a href="PlutusCore.Core.Type.html#HasUniques"><span class="hs-identifier hs-type">HasUniques</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680927806"><span class="hs-identifier hs-type">tyname</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680927805"><span class="hs-identifier hs-type">name</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680927804"><span class="hs-identifier hs-type">uni</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680927803"><span class="hs-identifier hs-type">fun</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680927802"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-163"></span><span>
+</span><span id="line-164"></span><span class="hs-comment">-- | The default version of Plutus Core supported by this library.</span><span>
+</span><span id="line-165"></span><span id="local-6989586621680927801"><span class="annot"><a href="PlutusCore.Core.Type.html#defaultVersion"><span class="hs-identifier hs-type">defaultVersion</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621680927801"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="PlutusCore.Core.Type.html#Version"><span class="hs-identifier hs-type">Version</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680927801"><span class="hs-identifier hs-type">ann</span></a></span></span><span>
+</span><span id="line-166"></span><span id="defaultVersion"><span class="annot"><span class="annottext">defaultVersion :: ann -&gt; Version ann
+</span><a href="PlutusCore.Core.Type.html#defaultVersion"><span class="hs-identifier hs-var hs-var">defaultVersion</span></a></span></span><span> </span><span id="local-6989586621680927800"><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927800"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ann -&gt; Natural -&gt; Natural -&gt; Natural -&gt; Version ann
+forall ann. ann -&gt; Natural -&gt; Natural -&gt; Natural -&gt; Version ann
+</span><a href="PlutusCore.Core.Type.html#Version"><span class="hs-identifier hs-var">Version</span></a></span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927800"><span class="hs-identifier hs-var">ann</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-167"></span><span>
+</span><span id="line-168"></span><span id="local-6989586621680927797"><span id="local-6989586621680927798"><span id="local-6989586621680927799"><span class="annot"><a href="PlutusCore.Core.Type.html#typeAnn"><span class="hs-identifier hs-type">typeAnn</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="PlutusCore.Core.Type.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680927799"><span class="hs-identifier hs-type">tyname</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680927798"><span class="hs-identifier hs-type">uni</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680927797"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621680927797"><span class="hs-identifier hs-type">ann</span></a></span></span></span></span><span>
+</span><span id="line-169"></span><span id="typeAnn"><span class="annot"><span class="annottext">typeAnn :: Type tyname uni ann -&gt; ann
+</span><a href="PlutusCore.Core.Type.html#typeAnn"><span class="hs-identifier hs-var hs-var">typeAnn</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#TyVar"><span class="hs-identifier hs-type">TyVar</span></a></span><span> </span><span id="local-6989586621680927796"><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927796"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span class="annot"><span class="annottext">tyname
+</span><span class="hs-identifier">_</span></span><span>       </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927796"><span class="hs-identifier hs-var">ann</span></a></span><span>
+</span><span id="line-170"></span><span class="annot"><a href="PlutusCore.Core.Type.html#typeAnn"><span class="hs-identifier hs-var">typeAnn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#TyFun"><span class="hs-identifier hs-type">TyFun</span></a></span><span> </span><span id="local-6989586621680927795"><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927795"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span class="annot"><span class="annottext">Type tyname uni ann
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Type tyname uni ann
+</span><span class="hs-identifier">_</span></span><span>     </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927795"><span class="hs-identifier hs-var">ann</span></a></span><span>
+</span><span id="line-171"></span><span class="annot"><a href="PlutusCore.Core.Type.html#typeAnn"><span class="hs-identifier hs-var">typeAnn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#TyIFix"><span class="hs-identifier hs-type">TyIFix</span></a></span><span> </span><span id="local-6989586621680927794"><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927794"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span class="annot"><span class="annottext">Type tyname uni ann
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Type tyname uni ann
+</span><span class="hs-identifier">_</span></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927794"><span class="hs-identifier hs-var">ann</span></a></span><span>
+</span><span id="line-172"></span><span class="annot"><a href="PlutusCore.Core.Type.html#typeAnn"><span class="hs-identifier hs-var">typeAnn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#TyForall"><span class="hs-identifier hs-type">TyForall</span></a></span><span> </span><span id="local-6989586621680927793"><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927793"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span class="annot"><span class="annottext">tyname
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Kind ann
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Type tyname uni ann
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927793"><span class="hs-identifier hs-var">ann</span></a></span><span>
+</span><span id="line-173"></span><span class="annot"><a href="PlutusCore.Core.Type.html#typeAnn"><span class="hs-identifier hs-var">typeAnn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#TyBuiltin"><span class="hs-identifier hs-type">TyBuiltin</span></a></span><span> </span><span id="local-6989586621680927792"><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927792"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span class="annot"><span class="annottext">SomeTypeIn uni
+</span><span class="hs-identifier">_</span></span><span>   </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927792"><span class="hs-identifier hs-var">ann</span></a></span><span>
+</span><span id="line-174"></span><span class="annot"><a href="PlutusCore.Core.Type.html#typeAnn"><span class="hs-identifier hs-var">typeAnn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#TyLam"><span class="hs-identifier hs-type">TyLam</span></a></span><span> </span><span id="local-6989586621680927791"><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927791"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span class="annot"><span class="annottext">tyname
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Kind ann
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Type tyname uni ann
+</span><span class="hs-identifier">_</span></span><span>   </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927791"><span class="hs-identifier hs-var">ann</span></a></span><span>
+</span><span id="line-175"></span><span class="annot"><a href="PlutusCore.Core.Type.html#typeAnn"><span class="hs-identifier hs-var">typeAnn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#TyApp"><span class="hs-identifier hs-type">TyApp</span></a></span><span> </span><span id="local-6989586621680927790"><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927790"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span class="annot"><span class="annottext">Type tyname uni ann
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Type tyname uni ann
+</span><span class="hs-identifier">_</span></span><span>     </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927790"><span class="hs-identifier hs-var">ann</span></a></span><span>
+</span><span id="line-176"></span><span>
+</span><span id="line-177"></span><span id="local-6989586621680927785"><span id="local-6989586621680927786"><span id="local-6989586621680927787"><span id="local-6989586621680927788"><span id="local-6989586621680927789"><span class="annot"><a href="PlutusCore.Core.Type.html#termAnn"><span class="hs-identifier hs-type">termAnn</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="PlutusCore.Core.Type.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680927789"><span class="hs-identifier hs-type">tyname</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680927788"><span class="hs-identifier hs-type">name</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680927787"><span class="hs-identifier hs-type">uni</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680927786"><span class="hs-identifier hs-type">fun</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680927785"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621680927785"><span class="hs-identifier hs-type">ann</span></a></span></span></span></span></span></span><span>
+</span><span id="line-178"></span><span id="termAnn"><span class="annot"><span class="annottext">termAnn :: Term tyname name uni fun ann -&gt; ann
+</span><a href="PlutusCore.Core.Type.html#termAnn"><span class="hs-identifier hs-var hs-var">termAnn</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#Var"><span class="hs-identifier hs-type">Var</span></a></span><span> </span><span id="local-6989586621680927784"><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927784"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span class="annot"><span class="annottext">name
+</span><span class="hs-identifier">_</span></span><span>       </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927784"><span class="hs-identifier hs-var">ann</span></a></span><span>
+</span><span id="line-179"></span><span class="annot"><a href="PlutusCore.Core.Type.html#termAnn"><span class="hs-identifier hs-var">termAnn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#TyAbs"><span class="hs-identifier hs-type">TyAbs</span></a></span><span> </span><span id="local-6989586621680927783"><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927783"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span class="annot"><span class="annottext">tyname
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Kind ann
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Term tyname name uni fun ann
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927783"><span class="hs-identifier hs-var">ann</span></a></span><span>
+</span><span id="line-180"></span><span class="annot"><a href="PlutusCore.Core.Type.html#termAnn"><span class="hs-identifier hs-var">termAnn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#Apply"><span class="hs-identifier hs-type">Apply</span></a></span><span> </span><span id="local-6989586621680927782"><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927782"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span class="annot"><span class="annottext">Term tyname name uni fun ann
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Term tyname name uni fun ann
+</span><span class="hs-identifier">_</span></span><span>   </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927782"><span class="hs-identifier hs-var">ann</span></a></span><span>
+</span><span id="line-181"></span><span class="annot"><a href="PlutusCore.Core.Type.html#termAnn"><span class="hs-identifier hs-var">termAnn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#Constant"><span class="hs-identifier hs-type">Constant</span></a></span><span> </span><span id="local-6989586621680927781"><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927781"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span class="annot"><span class="annottext">Some (ValueOf uni)
+</span><span class="hs-identifier">_</span></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927781"><span class="hs-identifier hs-var">ann</span></a></span><span>
+</span><span id="line-182"></span><span class="annot"><a href="PlutusCore.Core.Type.html#termAnn"><span class="hs-identifier hs-var">termAnn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#Builtin"><span class="hs-identifier hs-type">Builtin</span></a></span><span>  </span><span id="local-6989586621680927780"><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927780"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span class="annot"><span class="annottext">fun
+</span><span class="hs-identifier">_</span></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927780"><span class="hs-identifier hs-var">ann</span></a></span><span>
+</span><span id="line-183"></span><span class="annot"><a href="PlutusCore.Core.Type.html#termAnn"><span class="hs-identifier hs-var">termAnn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#TyInst"><span class="hs-identifier hs-type">TyInst</span></a></span><span> </span><span id="local-6989586621680927779"><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927779"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span class="annot"><span class="annottext">Term tyname name uni fun ann
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Type tyname uni ann
+</span><span class="hs-identifier">_</span></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927779"><span class="hs-identifier hs-var">ann</span></a></span><span>
+</span><span id="line-184"></span><span class="annot"><a href="PlutusCore.Core.Type.html#termAnn"><span class="hs-identifier hs-var">termAnn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#Unwrap"><span class="hs-identifier hs-type">Unwrap</span></a></span><span> </span><span id="local-6989586621680927778"><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927778"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span class="annot"><span class="annottext">Term tyname name uni fun ann
+</span><span class="hs-identifier">_</span></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927778"><span class="hs-identifier hs-var">ann</span></a></span><span>
+</span><span id="line-185"></span><span class="annot"><a href="PlutusCore.Core.Type.html#termAnn"><span class="hs-identifier hs-var">termAnn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#IWrap"><span class="hs-identifier hs-type">IWrap</span></a></span><span> </span><span id="local-6989586621680927777"><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927777"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span class="annot"><span class="annottext">Type tyname uni ann
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Type tyname uni ann
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Term tyname name uni fun ann
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927777"><span class="hs-identifier hs-var">ann</span></a></span><span>
+</span><span id="line-186"></span><span class="annot"><a href="PlutusCore.Core.Type.html#termAnn"><span class="hs-identifier hs-var">termAnn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#Error"><span class="hs-identifier hs-type">Error</span></a></span><span> </span><span id="local-6989586621680927776"><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927776"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span class="annot"><span class="annottext">Type tyname uni ann
+</span><span class="hs-identifier">_</span></span><span>     </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927776"><span class="hs-identifier hs-var">ann</span></a></span><span>
+</span><span id="line-187"></span><span class="annot"><a href="PlutusCore.Core.Type.html#termAnn"><span class="hs-identifier hs-var">termAnn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#LamAbs"><span class="hs-identifier hs-type">LamAbs</span></a></span><span> </span><span id="local-6989586621680927775"><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927775"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span class="annot"><span class="annottext">name
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Type tyname uni ann
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Term tyname name uni fun ann
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927775"><span class="hs-identifier hs-var">ann</span></a></span><span>
+</span><span id="line-188"></span><span>
+</span><span id="line-189"></span><span class="hs-comment">-- | Map a function over the set of built-in functions.</span><span>
+</span><span id="line-190"></span><span id="local-6989586621680927769"><span id="local-6989586621680927770"><span id="local-6989586621680927771"><span id="local-6989586621680927772"><span id="local-6989586621680927773"><span id="local-6989586621680927774"><span class="annot"><a href="PlutusCore.Core.Type.html#mapFun"><span class="hs-identifier hs-type">mapFun</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621680927774"><span class="hs-identifier hs-type">fun</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621680927773"><span class="hs-identifier hs-type">fun'</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="PlutusCore.Core.Type.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680927772"><span class="hs-identifier hs-type">tyname</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680927771"><span class="hs-identifier hs-type">name</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680927770"><span class="hs-identifier hs-type">uni</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680927774"><span class="hs-identifier hs-type">fun</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680927769"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="PlutusCore.Core.Type.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680927772"><span class="hs-identifier hs-type">tyname</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680927771"><span class="hs-identifier hs-type">name</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680927770"><span class="hs-identifier hs-type">uni</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680927773"><span class="hs-identifier hs-type">fun'</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680927769"><span class="hs-identifier hs-type">ann</span></a></span></span></span></span></span></span></span><span>
+</span><span id="line-191"></span><span id="mapFun"><span class="annot"><span class="annottext">mapFun :: (fun -&gt; fun')
+-&gt; Term tyname name uni fun ann -&gt; Term tyname name uni fun' ann
+</span><a href="PlutusCore.Core.Type.html#mapFun"><span class="hs-identifier hs-var hs-var">mapFun</span></a></span></span><span> </span><span id="local-6989586621680927768"><span class="annot"><span class="annottext">fun -&gt; fun'
+</span><a href="#local-6989586621680927768"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Term tyname name uni fun ann -&gt; Term tyname name uni fun' ann
+</span><a href="#local-6989586621680927767"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-192"></span><span>    </span><span id="local-6989586621680927767"><span class="annot"><span class="annottext">go :: Term tyname name uni fun ann -&gt; Term tyname name uni fun' ann
+</span><a href="#local-6989586621680927767"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#LamAbs"><span class="hs-identifier hs-type">LamAbs</span></a></span><span> </span><span id="local-6989586621680927766"><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927766"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span id="local-6989586621680927765"><span class="annot"><span class="annottext">name
+</span><a href="#local-6989586621680927765"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span id="local-6989586621680927764"><span class="annot"><span class="annottext">Type tyname uni ann
+</span><a href="#local-6989586621680927764"><span class="hs-identifier hs-var">ty</span></a></span></span><span> </span><span id="local-6989586621680927763"><span class="annot"><span class="annottext">Term tyname name uni fun ann
+</span><a href="#local-6989586621680927763"><span class="hs-identifier hs-var">body</span></a></span></span><span class="hs-special">)</span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ann
+-&gt; name
+-&gt; Type tyname uni ann
+-&gt; Term tyname name uni fun' ann
+-&gt; Term tyname name uni fun' ann
+forall tyname name (uni :: * -&gt; *) fun ann.
+ann
+-&gt; name
+-&gt; Type tyname uni ann
+-&gt; Term tyname name uni fun ann
+-&gt; Term tyname name uni fun ann
+</span><a href="PlutusCore.Core.Type.html#LamAbs"><span class="hs-identifier hs-var">LamAbs</span></a></span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927766"><span class="hs-identifier hs-var">ann</span></a></span><span> </span><span class="annot"><span class="annottext">name
+</span><a href="#local-6989586621680927765"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">Type tyname uni ann
+</span><a href="#local-6989586621680927764"><span class="hs-identifier hs-var">ty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term tyname name uni fun ann -&gt; Term tyname name uni fun' ann
+</span><a href="#local-6989586621680927767"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Term tyname name uni fun ann
+</span><a href="#local-6989586621680927763"><span class="hs-identifier hs-var">body</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-193"></span><span>    </span><span class="annot"><a href="#local-6989586621680927767"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#TyAbs"><span class="hs-identifier hs-type">TyAbs</span></a></span><span> </span><span id="local-6989586621680927762"><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927762"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span id="local-6989586621680927761"><span class="annot"><span class="annottext">tyname
+</span><a href="#local-6989586621680927761"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span id="local-6989586621680927760"><span class="annot"><span class="annottext">Kind ann
+</span><a href="#local-6989586621680927760"><span class="hs-identifier hs-var">kind</span></a></span></span><span> </span><span id="local-6989586621680927759"><span class="annot"><span class="annottext">Term tyname name uni fun ann
+</span><a href="#local-6989586621680927759"><span class="hs-identifier hs-var">body</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ann
+-&gt; tyname
+-&gt; Kind ann
+-&gt; Term tyname name uni fun' ann
+-&gt; Term tyname name uni fun' ann
+forall tyname name (uni :: * -&gt; *) fun ann.
+ann
+-&gt; tyname
+-&gt; Kind ann
+-&gt; Term tyname name uni fun ann
+-&gt; Term tyname name uni fun ann
+</span><a href="PlutusCore.Core.Type.html#TyAbs"><span class="hs-identifier hs-var">TyAbs</span></a></span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927762"><span class="hs-identifier hs-var">ann</span></a></span><span> </span><span class="annot"><span class="annottext">tyname
+</span><a href="#local-6989586621680927761"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">Kind ann
+</span><a href="#local-6989586621680927760"><span class="hs-identifier hs-var">kind</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term tyname name uni fun ann -&gt; Term tyname name uni fun' ann
+</span><a href="#local-6989586621680927767"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Term tyname name uni fun ann
+</span><a href="#local-6989586621680927759"><span class="hs-identifier hs-var">body</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-194"></span><span>    </span><span class="annot"><a href="#local-6989586621680927767"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#IWrap"><span class="hs-identifier hs-type">IWrap</span></a></span><span> </span><span id="local-6989586621680927758"><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927758"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span id="local-6989586621680927757"><span class="annot"><span class="annottext">Type tyname uni ann
+</span><a href="#local-6989586621680927757"><span class="hs-identifier hs-var">pat</span></a></span></span><span> </span><span id="local-6989586621680927756"><span class="annot"><span class="annottext">Type tyname uni ann
+</span><a href="#local-6989586621680927756"><span class="hs-identifier hs-var">arg</span></a></span></span><span> </span><span id="local-6989586621680927755"><span class="annot"><span class="annottext">Term tyname name uni fun ann
+</span><a href="#local-6989586621680927755"><span class="hs-identifier hs-var">term</span></a></span></span><span class="hs-special">)</span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ann
+-&gt; Type tyname uni ann
+-&gt; Type tyname uni ann
+-&gt; Term tyname name uni fun' ann
+-&gt; Term tyname name uni fun' ann
+forall tyname name (uni :: * -&gt; *) fun ann.
+ann
+-&gt; Type tyname uni ann
+-&gt; Type tyname uni ann
+-&gt; Term tyname name uni fun ann
+-&gt; Term tyname name uni fun ann
+</span><a href="PlutusCore.Core.Type.html#IWrap"><span class="hs-identifier hs-var">IWrap</span></a></span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927758"><span class="hs-identifier hs-var">ann</span></a></span><span> </span><span class="annot"><span class="annottext">Type tyname uni ann
+</span><a href="#local-6989586621680927757"><span class="hs-identifier hs-var">pat</span></a></span><span> </span><span class="annot"><span class="annottext">Type tyname uni ann
+</span><a href="#local-6989586621680927756"><span class="hs-identifier hs-var">arg</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term tyname name uni fun ann -&gt; Term tyname name uni fun' ann
+</span><a href="#local-6989586621680927767"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Term tyname name uni fun ann
+</span><a href="#local-6989586621680927755"><span class="hs-identifier hs-var">term</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-195"></span><span>    </span><span class="annot"><a href="#local-6989586621680927767"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#Apply"><span class="hs-identifier hs-type">Apply</span></a></span><span> </span><span id="local-6989586621680927754"><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927754"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span id="local-6989586621680927753"><span class="annot"><span class="annottext">Term tyname name uni fun ann
+</span><a href="#local-6989586621680927753"><span class="hs-identifier hs-var">fun</span></a></span></span><span> </span><span id="local-6989586621680927752"><span class="annot"><span class="annottext">Term tyname name uni fun ann
+</span><a href="#local-6989586621680927752"><span class="hs-identifier hs-var">arg</span></a></span></span><span class="hs-special">)</span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ann
+-&gt; Term tyname name uni fun' ann
+-&gt; Term tyname name uni fun' ann
+-&gt; Term tyname name uni fun' ann
+forall tyname name (uni :: * -&gt; *) fun ann.
+ann
+-&gt; Term tyname name uni fun ann
+-&gt; Term tyname name uni fun ann
+-&gt; Term tyname name uni fun ann
+</span><a href="PlutusCore.Core.Type.html#Apply"><span class="hs-identifier hs-var">Apply</span></a></span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927754"><span class="hs-identifier hs-var">ann</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term tyname name uni fun ann -&gt; Term tyname name uni fun' ann
+</span><a href="#local-6989586621680927767"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Term tyname name uni fun ann
+</span><a href="#local-6989586621680927753"><span class="hs-identifier hs-var">fun</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term tyname name uni fun ann -&gt; Term tyname name uni fun' ann
+</span><a href="#local-6989586621680927767"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Term tyname name uni fun ann
+</span><a href="#local-6989586621680927752"><span class="hs-identifier hs-var">arg</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-196"></span><span>    </span><span class="annot"><a href="#local-6989586621680927767"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#Unwrap"><span class="hs-identifier hs-type">Unwrap</span></a></span><span> </span><span id="local-6989586621680927751"><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927751"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span id="local-6989586621680927750"><span class="annot"><span class="annottext">Term tyname name uni fun ann
+</span><a href="#local-6989586621680927750"><span class="hs-identifier hs-var">term</span></a></span></span><span class="hs-special">)</span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ann
+-&gt; Term tyname name uni fun' ann -&gt; Term tyname name uni fun' ann
+forall tyname name (uni :: * -&gt; *) fun ann.
+ann -&gt; Term tyname name uni fun ann -&gt; Term tyname name uni fun ann
+</span><a href="PlutusCore.Core.Type.html#Unwrap"><span class="hs-identifier hs-var">Unwrap</span></a></span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927751"><span class="hs-identifier hs-var">ann</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term tyname name uni fun ann -&gt; Term tyname name uni fun' ann
+</span><a href="#local-6989586621680927767"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Term tyname name uni fun ann
+</span><a href="#local-6989586621680927750"><span class="hs-identifier hs-var">term</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-197"></span><span>    </span><span class="annot"><a href="#local-6989586621680927767"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#Error"><span class="hs-identifier hs-type">Error</span></a></span><span> </span><span id="local-6989586621680927749"><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927749"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span id="local-6989586621680927748"><span class="annot"><span class="annottext">Type tyname uni ann
+</span><a href="#local-6989586621680927748"><span class="hs-identifier hs-var">ty</span></a></span></span><span class="hs-special">)</span><span>             </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ann -&gt; Type tyname uni ann -&gt; Term tyname name uni fun' ann
+forall tyname name (uni :: * -&gt; *) fun ann.
+ann -&gt; Type tyname uni ann -&gt; Term tyname name uni fun ann
+</span><a href="PlutusCore.Core.Type.html#Error"><span class="hs-identifier hs-var">Error</span></a></span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927749"><span class="hs-identifier hs-var">ann</span></a></span><span> </span><span class="annot"><span class="annottext">Type tyname uni ann
+</span><a href="#local-6989586621680927748"><span class="hs-identifier hs-var">ty</span></a></span><span>
+</span><span id="line-198"></span><span>    </span><span class="annot"><a href="#local-6989586621680927767"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#TyInst"><span class="hs-identifier hs-type">TyInst</span></a></span><span> </span><span id="local-6989586621680927747"><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927747"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span id="local-6989586621680927746"><span class="annot"><span class="annottext">Term tyname name uni fun ann
+</span><a href="#local-6989586621680927746"><span class="hs-identifier hs-var">term</span></a></span></span><span> </span><span id="local-6989586621680927745"><span class="annot"><span class="annottext">Type tyname uni ann
+</span><a href="#local-6989586621680927745"><span class="hs-identifier hs-var">ty</span></a></span></span><span class="hs-special">)</span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ann
+-&gt; Term tyname name uni fun' ann
+-&gt; Type tyname uni ann
+-&gt; Term tyname name uni fun' ann
+forall tyname name (uni :: * -&gt; *) fun ann.
+ann
+-&gt; Term tyname name uni fun ann
+-&gt; Type tyname uni ann
+-&gt; Term tyname name uni fun ann
+</span><a href="PlutusCore.Core.Type.html#TyInst"><span class="hs-identifier hs-var">TyInst</span></a></span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927747"><span class="hs-identifier hs-var">ann</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term tyname name uni fun ann -&gt; Term tyname name uni fun' ann
+</span><a href="#local-6989586621680927767"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Term tyname name uni fun ann
+</span><a href="#local-6989586621680927746"><span class="hs-identifier hs-var">term</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Type tyname uni ann
+</span><a href="#local-6989586621680927745"><span class="hs-identifier hs-var">ty</span></a></span><span>
+</span><span id="line-199"></span><span>    </span><span class="annot"><a href="#local-6989586621680927767"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#Var"><span class="hs-identifier hs-type">Var</span></a></span><span> </span><span id="local-6989586621680927744"><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927744"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span id="local-6989586621680927743"><span class="annot"><span class="annottext">name
+</span><a href="#local-6989586621680927743"><span class="hs-identifier hs-var">name</span></a></span></span><span class="hs-special">)</span><span>             </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ann -&gt; name -&gt; Term tyname name uni fun' ann
+forall tyname name (uni :: * -&gt; *) fun ann.
+ann -&gt; name -&gt; Term tyname name uni fun ann
+</span><a href="PlutusCore.Core.Type.html#Var"><span class="hs-identifier hs-var">Var</span></a></span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927744"><span class="hs-identifier hs-var">ann</span></a></span><span> </span><span class="annot"><span class="annottext">name
+</span><a href="#local-6989586621680927743"><span class="hs-identifier hs-var">name</span></a></span><span>
+</span><span id="line-200"></span><span>    </span><span class="annot"><a href="#local-6989586621680927767"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#Constant"><span class="hs-identifier hs-type">Constant</span></a></span><span> </span><span id="local-6989586621680927742"><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927742"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span id="local-6989586621680927741"><span class="annot"><span class="annottext">Some (ValueOf uni)
+</span><a href="#local-6989586621680927741"><span class="hs-identifier hs-var">con</span></a></span></span><span class="hs-special">)</span><span>         </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ann -&gt; Some (ValueOf uni) -&gt; Term tyname name uni fun' ann
+forall tyname name (uni :: * -&gt; *) fun ann.
+ann -&gt; Some (ValueOf uni) -&gt; Term tyname name uni fun ann
+</span><a href="PlutusCore.Core.Type.html#Constant"><span class="hs-identifier hs-var">Constant</span></a></span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927742"><span class="hs-identifier hs-var">ann</span></a></span><span> </span><span class="annot"><span class="annottext">Some (ValueOf uni)
+</span><a href="#local-6989586621680927741"><span class="hs-identifier hs-var">con</span></a></span><span>
+</span><span id="line-201"></span><span>    </span><span class="annot"><a href="#local-6989586621680927767"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="PlutusCore.Core.Type.html#Builtin"><span class="hs-identifier hs-type">Builtin</span></a></span><span> </span><span id="local-6989586621680927740"><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927740"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span id="local-6989586621680927739"><span class="annot"><span class="annottext">fun
+</span><a href="#local-6989586621680927739"><span class="hs-identifier hs-var">fun</span></a></span></span><span class="hs-special">)</span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ann -&gt; fun' -&gt; Term tyname name uni fun' ann
+forall tyname name (uni :: * -&gt; *) fun ann.
+ann -&gt; fun -&gt; Term tyname name uni fun ann
+</span><a href="PlutusCore.Core.Type.html#Builtin"><span class="hs-identifier hs-var">Builtin</span></a></span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621680927740"><span class="hs-identifier hs-var">ann</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">fun -&gt; fun'
+</span><a href="#local-6989586621680927768"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">fun
+</span><a href="#local-6989586621680927739"><span class="hs-identifier hs-var">fun</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-202"></span><span>
+</span><span id="line-203"></span><span class="hs-comment">-- | This is a wrapper to mark the place where the binder is introduced (i.e. LamAbs/TyAbs)</span><span>
+</span><span id="line-204"></span><span class="hs-comment">-- and not where it is actually used (TyVar/Var..).</span><span>
+</span><span id="line-205"></span><span class="hs-comment">-- This marking allows us to skip the (de)serialization of binders at LamAbs/TyAbs positions</span><span>
+</span><span id="line-206"></span><span class="hs-comment">-- iff 'name' is DeBruijn-encoded (level or index). See for example the instance of  'UntypedPlutusCore.Core.Instance.Flat'</span><span>
+</span><span id="line-207"></span><span class="hs-keyword">newtype</span><span> </span><span id="Binder"><span class="annot"><a href="PlutusCore.Core.Type.html#Binder"><span class="hs-identifier hs-var">Binder</span></a></span></span><span> </span><span id="local-6989586621680927738"><span class="annot"><a href="#local-6989586621680927738"><span class="hs-identifier hs-type">name</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Binder"><span class="annot"><a href="PlutusCore.Core.Type.html#Binder"><span class="hs-identifier hs-var">Binder</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="unBinder"><span class="annot"><span class="annottext">Binder name -&gt; name
+</span><a href="PlutusCore.Core.Type.html#unBinder"><span class="hs-identifier hs-var hs-var">unBinder</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621680927738"><span class="hs-identifier hs-type">name</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-208"></span></pre></body></html>

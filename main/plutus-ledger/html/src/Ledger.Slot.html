@@ -1,0 +1,660 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass       #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric        #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DerivingStrategies   #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts     #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances    #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE MonoLocalBinds       #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE NoImplicitPrelude    #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings    #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE TemplateHaskell      #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- Otherwise we get a complaint about the 'fromIntegral' call in the generated instance of 'Integral' for 'Ada'</span><span>
+</span><span id="line-12"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-identities #-}</span><span>
+</span><span id="line-13"></span><span class="hs-pragma">{-# OPTIONS_GHC -fno-ignore-interface-pragmas #-}</span><span>
+</span><span id="line-14"></span><span class="hs-pragma">{-# OPTIONS_GHC -fno-omit-interface-pragmas #-}</span><span>
+</span><span id="line-15"></span><span class="hs-pragma">{-# OPTIONS_GHC -fno-warn-orphans #-}</span><span>
+</span><span id="line-16"></span><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable   #-}</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-comment">-- | Slots and slot ranges.</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Ledger.Slot</span><span class="hs-special">(</span><span>
+</span><span id="line-20"></span><span>      </span><span class="annot"><a href="Ledger.Slot.html#Slot"><span class="hs-identifier">Slot</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Slot.html#SlotRange"><span class="hs-identifier">SlotRange</span></a></span><span>
+</span><span id="line-22"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Slot.html#width"><span class="hs-identifier">width</span></a></span><span>
+</span><span id="line-23"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Codec.Serialise.Class</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Serialise</span></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">FromJSON</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">FromJSONKey</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ToJSON</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ToJSONKey</span></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Hashable</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Hashable</span></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Haskell</span></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Prettyprinter</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Pretty</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">pretty</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-operator">(&lt;+&gt;)</span></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">PlutusTx</span></span><span> </span><span class="hs-keyword">qualified</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">PlutusTx.Lift</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">makeLift</span></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">PlutusTx.Prelude</span></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Data.Data</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Data</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.V1.Ledger.Interval</span></span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="hs-comment">{- HLINT ignore &quot;Redundant if&quot; -}</span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- | The slot number. This is a good proxy for time, since on the Cardano blockchain</span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- slots pass at a constant rate.</span><span>
+</span><span id="line-44"></span><span id="local-6989586621679736633"><span id="local-6989586621679736634"></span></span><span class="hs-keyword">newtype</span><span> </span><span id="Slot"><span class="annot"><a href="Ledger.Slot.html#Slot"><span class="hs-identifier hs-var">Slot</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Slot"><span class="annot"><a href="Ledger.Slot.html#Slot"><span class="hs-identifier hs-var">Slot</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="getSlot"><span class="annot"><span class="annottext">Slot -&gt; Integer
+</span><a href="Ledger.Slot.html#getSlot"><span class="hs-identifier hs-var hs-var">getSlot</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/integer-gmp-1.0.3.0/src"><span class="hs-identifier hs-type">Integer</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-45"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679736627"><span id="local-6989586621679736629"><span class="annot"><span class="annottext">Slot -&gt; Slot -&gt; Bool
+(Slot -&gt; Slot -&gt; Bool) -&gt; (Slot -&gt; Slot -&gt; Bool) -&gt; Eq Slot
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: Slot -&gt; Slot -&gt; Bool
+$c/= :: Slot -&gt; Slot -&gt; Bool
+== :: Slot -&gt; Slot -&gt; Bool
+$c== :: Slot -&gt; Slot -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Haskell.Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679736611"><span id="local-6989586621679736613"><span id="local-6989586621679736615"><span id="local-6989586621679736617"><span id="local-6989586621679736619"><span id="local-6989586621679736621"><span id="local-6989586621679736623"><span class="annot"><span class="annottext">Eq Slot
+Eq Slot
+-&gt; (Slot -&gt; Slot -&gt; Ordering)
+-&gt; (Slot -&gt; Slot -&gt; Bool)
+-&gt; (Slot -&gt; Slot -&gt; Bool)
+-&gt; (Slot -&gt; Slot -&gt; Bool)
+-&gt; (Slot -&gt; Slot -&gt; Bool)
+-&gt; (Slot -&gt; Slot -&gt; Slot)
+-&gt; (Slot -&gt; Slot -&gt; Slot)
+-&gt; Ord Slot
+Slot -&gt; Slot -&gt; Bool
+Slot -&gt; Slot -&gt; Ordering
+Slot -&gt; Slot -&gt; Slot
+forall a.
+Eq a
+-&gt; (a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+min :: Slot -&gt; Slot -&gt; Slot
+$cmin :: Slot -&gt; Slot -&gt; Slot
+max :: Slot -&gt; Slot -&gt; Slot
+$cmax :: Slot -&gt; Slot -&gt; Slot
+&gt;= :: Slot -&gt; Slot -&gt; Bool
+$c&gt;= :: Slot -&gt; Slot -&gt; Bool
+&gt; :: Slot -&gt; Slot -&gt; Bool
+$c&gt; :: Slot -&gt; Slot -&gt; Bool
+&lt;= :: Slot -&gt; Slot -&gt; Bool
+$c&lt;= :: Slot -&gt; Slot -&gt; Bool
+&lt; :: Slot -&gt; Slot -&gt; Bool
+$c&lt; :: Slot -&gt; Slot -&gt; Bool
+compare :: Slot -&gt; Slot -&gt; Ordering
+$ccompare :: Slot -&gt; Slot -&gt; Ordering
+$cp1Ord :: Eq Slot
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Haskell.Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679736604"><span id="local-6989586621679736606"><span id="local-6989586621679736608"><span class="annot"><span class="annottext">Int -&gt; Slot -&gt; ShowS
+[Slot] -&gt; ShowS
+Slot -&gt; String
+(Int -&gt; Slot -&gt; ShowS)
+-&gt; (Slot -&gt; String) -&gt; ([Slot] -&gt; ShowS) -&gt; Show Slot
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [Slot] -&gt; ShowS
+$cshowList :: [Slot] -&gt; ShowS
+show :: Slot -&gt; String
+$cshow :: Slot -&gt; String
+showsPrec :: Int -&gt; Slot -&gt; ShowS
+$cshowsPrec :: Int -&gt; Slot -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Haskell.Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. Slot -&gt; Rep Slot x)
+-&gt; (forall x. Rep Slot x -&gt; Slot) -&gt; Generic Slot
+forall x. Rep Slot x -&gt; Slot
+forall x. Slot -&gt; Rep Slot x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep Slot x -&gt; Slot
+$cfrom :: forall x. Slot -&gt; Rep Slot x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">,</span><span> </span><span id="%24cSlot"><span id="%24tSlot"><span id="local-6989586621679736571"><span id="local-6989586621679736573"><span id="local-6989586621679736575"><span id="local-6989586621679736577"><span id="local-6989586621679736579"><span id="local-6989586621679736581"><span id="local-6989586621679736583"><span id="local-6989586621679736585"><span id="local-6989586621679736587"><span id="local-6989586621679736589"><span id="local-6989586621679736591"><span id="local-6989586621679736593"><span id="local-6989586621679736595"><span id="local-6989586621679736597"><span class="annot"><span class="annottext">Typeable Slot
+DataType
+Constr
+Typeable Slot
+-&gt; (forall (c :: * -&gt; *).
+    (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+    -&gt; (forall g. g -&gt; c g) -&gt; Slot -&gt; c Slot)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Slot)
+-&gt; (Slot -&gt; Constr)
+-&gt; (Slot -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c Slot))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c Slot))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; Slot -&gt; Slot)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Slot -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Slot -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Slot -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Slot -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Slot -&gt; m Slot)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Slot -&gt; m Slot)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Slot -&gt; m Slot)
+-&gt; Data Slot
+Slot -&gt; DataType
+Slot -&gt; Constr
+(forall b. Data b =&gt; b -&gt; b) -&gt; Slot -&gt; Slot
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Slot -&gt; c Slot
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Slot
+forall a.
+Typeable a
+-&gt; (forall (c :: * -&gt; *).
+    (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+    -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Slot -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Slot -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Slot -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Slot -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Slot -&gt; m Slot
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Slot -&gt; m Slot
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Slot
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Slot -&gt; c Slot
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c Slot)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c Slot)
+$cSlot :: Constr
+$tSlot :: DataType
+gmapMo :: (forall d. Data d =&gt; d -&gt; m d) -&gt; Slot -&gt; m Slot
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Slot -&gt; m Slot
+gmapMp :: (forall d. Data d =&gt; d -&gt; m d) -&gt; Slot -&gt; m Slot
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Slot -&gt; m Slot
+gmapM :: (forall d. Data d =&gt; d -&gt; m d) -&gt; Slot -&gt; m Slot
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Slot -&gt; m Slot
+gmapQi :: Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Slot -&gt; u
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Slot -&gt; u
+gmapQ :: (forall d. Data d =&gt; d -&gt; u) -&gt; Slot -&gt; [u]
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Slot -&gt; [u]
+gmapQr :: (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Slot -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Slot -&gt; r
+gmapQl :: (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Slot -&gt; r
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Slot -&gt; r
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; Slot -&gt; Slot
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; Slot -&gt; Slot
+dataCast2 :: (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c Slot)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c Slot)
+dataCast1 :: (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c Slot)
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c Slot)
+dataTypeOf :: Slot -&gt; DataType
+$cdataTypeOf :: Slot -&gt; DataType
+toConstr :: Slot -&gt; Constr
+$ctoConstr :: Slot -&gt; Constr
+gunfold :: (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Slot
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Slot
+gfoldl :: (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Slot -&gt; c Slot
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Slot -&gt; c Slot
+$cp1Data :: Typeable Slot
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679736564"><span id="local-6989586621679736566"><span class="annot"><span class="annottext">Value -&gt; Parser [Slot]
+Value -&gt; Parser Slot
+(Value -&gt; Parser Slot) -&gt; (Value -&gt; Parser [Slot]) -&gt; FromJSON Slot
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+parseJSONList :: Value -&gt; Parser [Slot]
+$cparseJSONList :: Value -&gt; Parser [Slot]
+parseJSON :: Value -&gt; Parser Slot
+$cparseJSON :: Value -&gt; Parser Slot
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679736559"><span id="local-6989586621679736561"><span class="annot"><span class="annottext">FromJSONKeyFunction [Slot]
+FromJSONKeyFunction Slot
+FromJSONKeyFunction Slot
+-&gt; FromJSONKeyFunction [Slot] -&gt; FromJSONKey Slot
+forall a.
+FromJSONKeyFunction a -&gt; FromJSONKeyFunction [a] -&gt; FromJSONKey a
+fromJSONKeyList :: FromJSONKeyFunction [Slot]
+$cfromJSONKeyList :: FromJSONKeyFunction [Slot]
+fromJSONKey :: FromJSONKeyFunction Slot
+$cfromJSONKey :: FromJSONKeyFunction Slot
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSONKey</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679736550"><span id="local-6989586621679736552"><span id="local-6989586621679736554"><span id="local-6989586621679736556"><span class="annot"><span class="annottext">[Slot] -&gt; Encoding
+[Slot] -&gt; Value
+Slot -&gt; Encoding
+Slot -&gt; Value
+(Slot -&gt; Value)
+-&gt; (Slot -&gt; Encoding)
+-&gt; ([Slot] -&gt; Value)
+-&gt; ([Slot] -&gt; Encoding)
+-&gt; ToJSON Slot
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; ToJSON a
+toEncodingList :: [Slot] -&gt; Encoding
+$ctoEncodingList :: [Slot] -&gt; Encoding
+toJSONList :: [Slot] -&gt; Value
+$ctoJSONList :: [Slot] -&gt; Value
+toEncoding :: Slot -&gt; Encoding
+$ctoEncoding :: Slot -&gt; Encoding
+toJSON :: Slot -&gt; Value
+$ctoJSON :: Slot -&gt; Value
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679736545"><span id="local-6989586621679736547"><span class="annot"><span class="annottext">ToJSONKeyFunction [Slot]
+ToJSONKeyFunction Slot
+ToJSONKeyFunction Slot
+-&gt; ToJSONKeyFunction [Slot] -&gt; ToJSONKey Slot
+forall a.
+ToJSONKeyFunction a -&gt; ToJSONKeyFunction [a] -&gt; ToJSONKey a
+toJSONKeyList :: ToJSONKeyFunction [Slot]
+$ctoJSONKeyList :: ToJSONKeyFunction [Slot]
+toJSONKey :: ToJSONKeyFunction Slot
+$ctoJSONKey :: ToJSONKeyFunction Slot
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">ToJSONKey</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679736542"><span class="annot"><span class="annottext">Slot -&gt; Slot -&gt; Slot
+(Slot -&gt; Slot -&gt; Slot) -&gt; AdditiveSemigroup Slot
+forall a. (a -&gt; a -&gt; a) -&gt; AdditiveSemigroup a
++ :: Slot -&gt; Slot -&gt; Slot
+$c+ :: Slot -&gt; Slot -&gt; Slot
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">AdditiveSemigroup</span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679736538"><span class="annot"><span class="annottext">AdditiveSemigroup Slot
+Slot
+AdditiveSemigroup Slot -&gt; Slot -&gt; AdditiveMonoid Slot
+forall a. AdditiveSemigroup a -&gt; a -&gt; AdditiveMonoid a
+zero :: Slot
+$czero :: Slot
+$cp1AdditiveMonoid :: AdditiveSemigroup Slot
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var">AdditiveMonoid</span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679736534"><span class="annot"><span class="annottext">AdditiveMonoid Slot
+AdditiveMonoid Slot -&gt; (Slot -&gt; Slot -&gt; Slot) -&gt; AdditiveGroup Slot
+Slot -&gt; Slot -&gt; Slot
+forall a. AdditiveMonoid a -&gt; (a -&gt; a -&gt; a) -&gt; AdditiveGroup a
+- :: Slot -&gt; Slot -&gt; Slot
+$c- :: Slot -&gt; Slot -&gt; Slot
+$cp1AdditiveGroup :: AdditiveMonoid Slot
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var">AdditiveGroup</span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679736531"><span class="annot"><span class="annottext">Slot -&gt; Slot -&gt; Bool
+(Slot -&gt; Slot -&gt; Bool) -&gt; Eq Slot
+forall a. (a -&gt; a -&gt; Bool) -&gt; Eq a
+== :: Slot -&gt; Slot -&gt; Bool
+$c== :: Slot -&gt; Slot -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">Eq</span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679736515"><span id="local-6989586621679736517"><span id="local-6989586621679736519"><span id="local-6989586621679736521"><span id="local-6989586621679736523"><span id="local-6989586621679736525"><span id="local-6989586621679736527"><span class="annot"><span class="annottext">Eq Slot
+Eq Slot
+-&gt; (Slot -&gt; Slot -&gt; Ordering)
+-&gt; (Slot -&gt; Slot -&gt; Bool)
+-&gt; (Slot -&gt; Slot -&gt; Bool)
+-&gt; (Slot -&gt; Slot -&gt; Bool)
+-&gt; (Slot -&gt; Slot -&gt; Bool)
+-&gt; (Slot -&gt; Slot -&gt; Slot)
+-&gt; (Slot -&gt; Slot -&gt; Slot)
+-&gt; Ord Slot
+Slot -&gt; Slot -&gt; Bool
+Slot -&gt; Slot -&gt; Ordering
+Slot -&gt; Slot -&gt; Slot
+forall a.
+Eq a
+-&gt; (a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+min :: Slot -&gt; Slot -&gt; Slot
+$cmin :: Slot -&gt; Slot -&gt; Slot
+max :: Slot -&gt; Slot -&gt; Slot
+$cmax :: Slot -&gt; Slot -&gt; Slot
+&gt;= :: Slot -&gt; Slot -&gt; Bool
+$c&gt;= :: Slot -&gt; Slot -&gt; Bool
+&gt; :: Slot -&gt; Slot -&gt; Bool
+$c&gt; :: Slot -&gt; Slot -&gt; Bool
+&lt;= :: Slot -&gt; Slot -&gt; Bool
+$c&lt;= :: Slot -&gt; Slot -&gt; Bool
+&lt; :: Slot -&gt; Slot -&gt; Bool
+$c&lt; :: Slot -&gt; Slot -&gt; Bool
+compare :: Slot -&gt; Slot -&gt; Ordering
+$ccompare :: Slot -&gt; Slot -&gt; Ordering
+$cp1Ord :: Eq Slot
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679736506"><span id="local-6989586621679736508"><span id="local-6989586621679736510"><span id="local-6989586621679736512"><span class="annot"><span class="annottext">Integer -&gt; Slot
+Slot -&gt; Integer
+Slot -&gt; Slot
+(Slot -&gt; Slot)
+-&gt; (Slot -&gt; Slot)
+-&gt; (Integer -&gt; Slot)
+-&gt; (Slot -&gt; Integer)
+-&gt; Enum Slot
+forall a.
+(a -&gt; a) -&gt; (a -&gt; a) -&gt; (Integer -&gt; a) -&gt; (a -&gt; Integer) -&gt; Enum a
+fromEnum :: Slot -&gt; Integer
+$cfromEnum :: Slot -&gt; Integer
+toEnum :: Integer -&gt; Slot
+$ctoEnum :: Integer -&gt; Slot
+pred :: Slot -&gt; Slot
+$cpred :: Slot -&gt; Slot
+succ :: Slot -&gt; Slot
+$csucc :: Slot -&gt; Slot
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Enum</span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679736503"><span class="annot"><span class="annottext">Slot -&gt; BuiltinData
+(Slot -&gt; BuiltinData) -&gt; ToData Slot
+forall a. (a -&gt; BuiltinData) -&gt; ToData a
+toBuiltinData :: Slot -&gt; BuiltinData
+$ctoBuiltinData :: Slot -&gt; BuiltinData
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">PlutusTx.ToData</span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679736500"><span class="annot"><span class="annottext">BuiltinData -&gt; Maybe Slot
+(BuiltinData -&gt; Maybe Slot) -&gt; FromData Slot
+forall a. (BuiltinData -&gt; Maybe a) -&gt; FromData a
+fromBuiltinData :: BuiltinData -&gt; Maybe Slot
+$cfromBuiltinData :: BuiltinData -&gt; Maybe Slot
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">PlutusTx.FromData</span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679736497"><span class="annot"><span class="annottext">BuiltinData -&gt; Slot
+(BuiltinData -&gt; Slot) -&gt; UnsafeFromData Slot
+forall a. (BuiltinData -&gt; a) -&gt; UnsafeFromData a
+unsafeFromBuiltinData :: BuiltinData -&gt; Slot
+$cunsafeFromBuiltinData :: BuiltinData -&gt; Slot
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">PlutusTx.UnsafeFromData</span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679736482"><span id="local-6989586621679736484"><span id="local-6989586621679736486"><span id="local-6989586621679736488"><span id="local-6989586621679736490"><span id="local-6989586621679736492"><span id="local-6989586621679736494"><span class="annot"><span class="annottext">Integer -&gt; Slot
+Slot -&gt; Slot
+Slot -&gt; Slot -&gt; Slot
+(Slot -&gt; Slot -&gt; Slot)
+-&gt; (Slot -&gt; Slot -&gt; Slot)
+-&gt; (Slot -&gt; Slot -&gt; Slot)
+-&gt; (Slot -&gt; Slot)
+-&gt; (Slot -&gt; Slot)
+-&gt; (Slot -&gt; Slot)
+-&gt; (Integer -&gt; Slot)
+-&gt; Num Slot
+forall a.
+(a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Integer -&gt; a)
+-&gt; Num a
+fromInteger :: Integer -&gt; Slot
+$cfromInteger :: Integer -&gt; Slot
+signum :: Slot -&gt; Slot
+$csignum :: Slot -&gt; Slot
+abs :: Slot -&gt; Slot
+$cabs :: Slot -&gt; Slot
+negate :: Slot -&gt; Slot
+$cnegate :: Slot -&gt; Slot
+* :: Slot -&gt; Slot -&gt; Slot
+$c* :: Slot -&gt; Slot -&gt; Slot
+- :: Slot -&gt; Slot -&gt; Slot
+$c- :: Slot -&gt; Slot -&gt; Slot
++ :: Slot -&gt; Slot -&gt; Slot
+$c+ :: Slot -&gt; Slot -&gt; Slot
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Haskell.Num</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679736465"><span id="local-6989586621679736467"><span id="local-6989586621679736469"><span id="local-6989586621679736471"><span id="local-6989586621679736473"><span id="local-6989586621679736475"><span id="local-6989586621679736477"><span id="local-6989586621679736479"><span class="annot"><span class="annottext">Int -&gt; Slot
+Slot -&gt; Int
+Slot -&gt; [Slot]
+Slot -&gt; Slot
+Slot -&gt; Slot -&gt; [Slot]
+Slot -&gt; Slot -&gt; Slot -&gt; [Slot]
+(Slot -&gt; Slot)
+-&gt; (Slot -&gt; Slot)
+-&gt; (Int -&gt; Slot)
+-&gt; (Slot -&gt; Int)
+-&gt; (Slot -&gt; [Slot])
+-&gt; (Slot -&gt; Slot -&gt; [Slot])
+-&gt; (Slot -&gt; Slot -&gt; [Slot])
+-&gt; (Slot -&gt; Slot -&gt; Slot -&gt; [Slot])
+-&gt; Enum Slot
+forall a.
+(a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Int -&gt; a)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; a -&gt; [a])
+-&gt; Enum a
+enumFromThenTo :: Slot -&gt; Slot -&gt; Slot -&gt; [Slot]
+$cenumFromThenTo :: Slot -&gt; Slot -&gt; Slot -&gt; [Slot]
+enumFromTo :: Slot -&gt; Slot -&gt; [Slot]
+$cenumFromTo :: Slot -&gt; Slot -&gt; [Slot]
+enumFromThen :: Slot -&gt; Slot -&gt; [Slot]
+$cenumFromThen :: Slot -&gt; Slot -&gt; [Slot]
+enumFrom :: Slot -&gt; [Slot]
+$cenumFrom :: Slot -&gt; [Slot]
+fromEnum :: Slot -&gt; Int
+$cfromEnum :: Slot -&gt; Int
+toEnum :: Int -&gt; Slot
+$ctoEnum :: Int -&gt; Slot
+pred :: Slot -&gt; Slot
+$cpred :: Slot -&gt; Slot
+succ :: Slot -&gt; Slot
+$csucc :: Slot -&gt; Slot
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Haskell.Enum</span></a></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679736460"><span class="annot"><span class="annottext">Num Slot
+Ord Slot
+Num Slot -&gt; Ord Slot -&gt; (Slot -&gt; Rational) -&gt; Real Slot
+Slot -&gt; Rational
+forall a. Num a -&gt; Ord a -&gt; (a -&gt; Rational) -&gt; Real a
+toRational :: Slot -&gt; Rational
+$ctoRational :: Slot -&gt; Rational
+$cp2Real :: Ord Slot
+$cp1Real :: Num Slot
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Haskell.Real</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679736443"><span id="local-6989586621679736445"><span id="local-6989586621679736447"><span id="local-6989586621679736449"><span id="local-6989586621679736451"><span id="local-6989586621679736453"><span id="local-6989586621679736455"><span class="annot"><span class="annottext">Enum Slot
+Real Slot
+Real Slot
+-&gt; Enum Slot
+-&gt; (Slot -&gt; Slot -&gt; Slot)
+-&gt; (Slot -&gt; Slot -&gt; Slot)
+-&gt; (Slot -&gt; Slot -&gt; Slot)
+-&gt; (Slot -&gt; Slot -&gt; Slot)
+-&gt; (Slot -&gt; Slot -&gt; (Slot, Slot))
+-&gt; (Slot -&gt; Slot -&gt; (Slot, Slot))
+-&gt; (Slot -&gt; Integer)
+-&gt; Integral Slot
+Slot -&gt; Integer
+Slot -&gt; Slot -&gt; (Slot, Slot)
+Slot -&gt; Slot -&gt; Slot
+forall a.
+Real a
+-&gt; Enum a
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; (a, a))
+-&gt; (a -&gt; a -&gt; (a, a))
+-&gt; (a -&gt; Integer)
+-&gt; Integral a
+toInteger :: Slot -&gt; Integer
+$ctoInteger :: Slot -&gt; Integer
+divMod :: Slot -&gt; Slot -&gt; (Slot, Slot)
+$cdivMod :: Slot -&gt; Slot -&gt; (Slot, Slot)
+quotRem :: Slot -&gt; Slot -&gt; (Slot, Slot)
+$cquotRem :: Slot -&gt; Slot -&gt; (Slot, Slot)
+mod :: Slot -&gt; Slot -&gt; Slot
+$cmod :: Slot -&gt; Slot -&gt; Slot
+div :: Slot -&gt; Slot -&gt; Slot
+$cdiv :: Slot -&gt; Slot -&gt; Slot
+rem :: Slot -&gt; Slot -&gt; Slot
+$crem :: Slot -&gt; Slot -&gt; Slot
+quot :: Slot -&gt; Slot -&gt; Slot
+$cquot :: Slot -&gt; Slot -&gt; Slot
+$cp2Integral :: Enum Slot
+$cp1Integral :: Real Slot
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Haskell.Integral</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679736434"><span id="local-6989586621679736436"><span id="local-6989586621679736438"><span id="local-6989586621679736440"><span class="annot"><span class="annottext">Decoder s Slot
+Decoder s [Slot]
+[Slot] -&gt; Encoding
+Slot -&gt; Encoding
+(Slot -&gt; Encoding)
+-&gt; (forall s. Decoder s Slot)
+-&gt; ([Slot] -&gt; Encoding)
+-&gt; (forall s. Decoder s [Slot])
+-&gt; Serialise Slot
+forall s. Decoder s [Slot]
+forall s. Decoder s Slot
+forall a.
+(a -&gt; Encoding)
+-&gt; (forall s. Decoder s a)
+-&gt; ([a] -&gt; Encoding)
+-&gt; (forall s. Decoder s [a])
+-&gt; Serialise a
+decodeList :: Decoder s [Slot]
+$cdecodeList :: forall s. Decoder s [Slot]
+encodeList :: [Slot] -&gt; Encoding
+$cencodeList :: [Slot] -&gt; Encoding
+decode :: Decoder s Slot
+$cdecode :: forall s. Decoder s Slot
+encode :: Slot -&gt; Encoding
+$cencode :: Slot -&gt; Encoding
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Serialise</span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679736429"><span id="local-6989586621679736431"><span class="annot"><span class="annottext">Int -&gt; Slot -&gt; Int
+Slot -&gt; Int
+(Int -&gt; Slot -&gt; Int) -&gt; (Slot -&gt; Int) -&gt; Hashable Slot
+forall a. (Int -&gt; a -&gt; Int) -&gt; (a -&gt; Int) -&gt; Hashable a
+hash :: Slot -&gt; Int
+$chash :: Slot -&gt; Int
+hashWithSalt :: Int -&gt; Slot -&gt; Int
+$chashWithSalt :: Int -&gt; Slot -&gt; Int
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Hashable</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span id="local-6989586621679736424"><span id="local-6989586621679736426"><span class="hs-identifier">makeLift</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">Slot</span></span></span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679736417"><span class="annot"><span class="hs-identifier hs-type">Pretty</span></span><span> </span><span class="annot"><a href="Ledger.Slot.html#Slot"><span class="hs-identifier hs-type">Slot</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-53"></span><span>    </span><span id="local-6989586621679736415"><span class="annot"><span class="annottext">pretty :: Slot -&gt; Doc ann
+</span><a href="#local-6989586621679736415"><span class="hs-identifier hs-var hs-var hs-var hs-var">pretty</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Slot.html#Slot"><span class="hs-identifier hs-type">Slot</span></a></span><span> </span><span id="local-6989586621679736414"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679736414"><span class="hs-identifier hs-var">i</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Slot&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679736414"><span class="hs-identifier hs-var">i</span></a></span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- | An 'Interval' of 'Slot's.</span><span>
+</span><span id="line-56"></span><span class="hs-keyword">type</span><span> </span><span id="SlotRange"><span class="annot"><a href="Ledger.Slot.html#SlotRange"><span class="hs-identifier hs-var">SlotRange</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Interval</span></span><span> </span><span class="annot"><a href="Ledger.Slot.html#Slot"><span class="hs-identifier hs-type">Slot</span></a></span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span class="hs-pragma">{-# INLINABLE</span><span> </span><span class="annot"><a href="Ledger.Slot.html#width"><span class="hs-pragma hs-type">width</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-59"></span><span class="hs-comment">-- | Number of 'Slot's covered by the interval, if finite. @width (from x) == Nothing@.</span><span>
+</span><span id="line-60"></span><span class="annot"><a href="Ledger.Slot.html#width"><span class="hs-identifier hs-type">width</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Ledger.Slot.html#SlotRange"><span class="hs-identifier hs-type">SlotRange</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/integer-gmp-1.0.3.0/src"><span class="hs-identifier hs-type">Integer</span></a></span><span>
+</span><span id="line-61"></span><span id="width"><span class="annot"><span class="annottext">width :: SlotRange -&gt; Maybe Integer
+</span><a href="Ledger.Slot.html#width"><span class="hs-identifier hs-var hs-var">width</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Interval</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">LowerBound</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Finite</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Slot.html#Slot"><span class="hs-identifier hs-type">Slot</span></a></span><span> </span><span id="local-6989586621679736410"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679736410"><span class="hs-identifier hs-var">s1</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span id="local-6989586621679736409"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679736409"><span class="hs-identifier hs-var">in1</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">UpperBound</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Finite</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Slot.html#Slot"><span class="hs-identifier hs-type">Slot</span></a></span><span> </span><span id="local-6989586621679736407"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679736407"><span class="hs-identifier hs-var">s2</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span id="local-6989586621679736406"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679736406"><span class="hs-identifier hs-var">in2</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-62"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679736405"><span class="annot"><span class="annottext">lowestValue :: Integer
+</span><a href="#local-6989586621679736405"><span class="hs-identifier hs-var hs-var">lowestValue</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679736409"><span class="hs-identifier hs-var">in1</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679736410"><span class="hs-identifier hs-var">s1</span></a></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679736410"><span class="hs-identifier hs-var">s1</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. AdditiveSemigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-63"></span><span>        </span><span id="local-6989586621679736403"><span class="annot"><span class="annottext">highestValue :: Integer
+</span><a href="#local-6989586621679736403"><span class="hs-identifier hs-var hs-var">highestValue</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679736406"><span class="hs-identifier hs-var">in2</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679736407"><span class="hs-identifier hs-var">s2</span></a></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679736407"><span class="hs-identifier hs-var">s2</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. AdditiveGroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-64"></span><span>    </span><span class="hs-keyword">in</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679736405"><span class="hs-identifier hs-var">lowestValue</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;=</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679736403"><span class="hs-identifier hs-var">highestValue</span></a></span><span>
+</span><span id="line-65"></span><span>    </span><span class="hs-comment">-- +1 avoids fencepost error: width of [2,4] is 3.</span><span>
+</span><span id="line-66"></span><span>    </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Maybe Integer
+forall a. a -&gt; Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(Integer -&gt; Maybe Integer) -&gt; Integer -&gt; Maybe Integer
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679736403"><span class="hs-identifier hs-var">highestValue</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. AdditiveGroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679736405"><span class="hs-identifier hs-var">lowestValue</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. AdditiveSemigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-67"></span><span>    </span><span class="hs-comment">-- low &gt; high, i.e. empty interval</span><span>
+</span><span id="line-68"></span><span>    </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+forall a. Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-69"></span><span class="hs-comment">-- Infinity is involved!</span><span>
+</span><span id="line-70"></span><span class="annot"><a href="Ledger.Slot.html#width"><span class="hs-identifier hs-var">width</span></a></span><span> </span><span class="annot"><span class="annottext">SlotRange
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+forall a. Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span id="local-6989586621679736396"><span id="local-6989586621679736398"><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621679736395"><span class="annot"><a href="#local-6989586621679736395"><span class="hs-keyword hs-type">anyclass</span></a></span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Hashable</span></span><span> </span><span class="annot"><a href="#local-6989586621679736395"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Hashable</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Interval</span></span><span> </span><span class="annot"><a href="#local-6989586621679736395"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-74"></span><span id="local-6989586621679736387"><span id="local-6989586621679736389"><span id="local-6989586621679736391"><span id="local-6989586621679736393"><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621679736386"><span class="annot"><a href="#local-6989586621679736386"><span class="hs-keyword hs-type">anyclass</span></a></span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Serialise</span></span><span> </span><span class="annot"><a href="#local-6989586621679736386"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Serialise</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Interval</span></span><span> </span><span class="annot"><a href="#local-6989586621679736386"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-75"></span><span id="local-6989586621679736378"><span id="local-6989586621679736380"><span id="local-6989586621679736382"><span id="local-6989586621679736384"><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621679736377"><span class="annot"><a href="#local-6989586621679736377"><span class="hs-keyword hs-type">anyclass</span></a></span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><a href="#local-6989586621679736377"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Interval</span></span><span> </span><span class="annot"><a href="#local-6989586621679736377"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-76"></span><span id="local-6989586621679736373"><span id="local-6989586621679736375"><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621679736372"><span class="annot"><a href="#local-6989586621679736372"><span class="hs-keyword hs-type">anyclass</span></a></span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="#local-6989586621679736372"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Interval</span></span><span> </span><span class="annot"><a href="#local-6989586621679736372"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span id="local-6989586621679736368"><span id="local-6989586621679736370"><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621679736367"><span class="annot"><a href="#local-6989586621679736367"><span class="hs-keyword hs-type">anyclass</span></a></span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Hashable</span></span><span> </span><span class="annot"><a href="#local-6989586621679736367"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Hashable</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">LowerBound</span></span><span> </span><span class="annot"><a href="#local-6989586621679736367"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-79"></span><span id="local-6989586621679736359"><span id="local-6989586621679736361"><span id="local-6989586621679736363"><span id="local-6989586621679736365"><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621679736358"><span class="annot"><a href="#local-6989586621679736358"><span class="hs-keyword hs-type">anyclass</span></a></span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Serialise</span></span><span> </span><span class="annot"><a href="#local-6989586621679736358"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Serialise</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">LowerBound</span></span><span> </span><span class="annot"><a href="#local-6989586621679736358"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-80"></span><span id="local-6989586621679736350"><span id="local-6989586621679736352"><span id="local-6989586621679736354"><span id="local-6989586621679736356"><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621679736349"><span class="annot"><a href="#local-6989586621679736349"><span class="hs-keyword hs-type">anyclass</span></a></span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><a href="#local-6989586621679736349"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">LowerBound</span></span><span> </span><span class="annot"><a href="#local-6989586621679736349"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-81"></span><span id="local-6989586621679736345"><span id="local-6989586621679736347"><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621679736344"><span class="annot"><a href="#local-6989586621679736344"><span class="hs-keyword hs-type">anyclass</span></a></span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="#local-6989586621679736344"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">LowerBound</span></span><span> </span><span class="annot"><a href="#local-6989586621679736344"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span id="local-6989586621679736340"><span id="local-6989586621679736342"><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621679736339"><span class="annot"><a href="#local-6989586621679736339"><span class="hs-keyword hs-type">anyclass</span></a></span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Hashable</span></span><span> </span><span class="annot"><a href="#local-6989586621679736339"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Hashable</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">UpperBound</span></span><span> </span><span class="annot"><a href="#local-6989586621679736339"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-84"></span><span id="local-6989586621679736331"><span id="local-6989586621679736333"><span id="local-6989586621679736335"><span id="local-6989586621679736337"><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621679736330"><span class="annot"><a href="#local-6989586621679736330"><span class="hs-keyword hs-type">anyclass</span></a></span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Serialise</span></span><span> </span><span class="annot"><a href="#local-6989586621679736330"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Serialise</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">UpperBound</span></span><span> </span><span class="annot"><a href="#local-6989586621679736330"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-85"></span><span id="local-6989586621679736322"><span id="local-6989586621679736324"><span id="local-6989586621679736326"><span id="local-6989586621679736328"><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621679736321"><span class="annot"><a href="#local-6989586621679736321"><span class="hs-keyword hs-type">anyclass</span></a></span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><a href="#local-6989586621679736321"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">UpperBound</span></span><span> </span><span class="annot"><a href="#local-6989586621679736321"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-86"></span><span id="local-6989586621679736317"><span id="local-6989586621679736319"><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621679736316"><span class="annot"><a href="#local-6989586621679736316"><span class="hs-keyword hs-type">anyclass</span></a></span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="#local-6989586621679736316"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">UpperBound</span></span><span> </span><span class="annot"><a href="#local-6989586621679736316"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span id="local-6989586621679736312"><span id="local-6989586621679736314"><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621679736311"><span class="annot"><a href="#local-6989586621679736311"><span class="hs-keyword hs-type">anyclass</span></a></span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Hashable</span></span><span> </span><span class="annot"><a href="#local-6989586621679736311"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Hashable</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Extended</span></span><span> </span><span class="annot"><a href="#local-6989586621679736311"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-89"></span><span id="local-6989586621679736303"><span id="local-6989586621679736305"><span id="local-6989586621679736307"><span id="local-6989586621679736309"><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621679736302"><span class="annot"><a href="#local-6989586621679736302"><span class="hs-keyword hs-type">anyclass</span></a></span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Serialise</span></span><span> </span><span class="annot"><a href="#local-6989586621679736302"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Serialise</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Extended</span></span><span> </span><span class="annot"><a href="#local-6989586621679736302"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-90"></span><span id="local-6989586621679736294"><span id="local-6989586621679736296"><span id="local-6989586621679736298"><span id="local-6989586621679736300"><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621679736293"><span class="annot"><a href="#local-6989586621679736293"><span class="hs-keyword hs-type">anyclass</span></a></span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><a href="#local-6989586621679736293"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Extended</span></span><span> </span><span class="annot"><a href="#local-6989586621679736293"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-91"></span><span id="local-6989586621679736289"><span id="local-6989586621679736291"><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621679736288"><span class="annot"><a href="#local-6989586621679736288"><span class="hs-keyword hs-type">anyclass</span></a></span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="#local-6989586621679736288"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Extended</span></span><span> </span><span class="annot"><a href="#local-6989586621679736288"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-92"></span></pre></body></html>

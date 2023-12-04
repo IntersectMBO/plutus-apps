@@ -1,0 +1,149 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds           #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts    #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE GADTs               #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings   #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Node.Socket.Emulator.Mock</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Control.Concurrent</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">threadDelay</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Control.Concurrent.MVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">MVar</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">putMVar</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">takeMVar</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Lens</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">set</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">view</span></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Control.Monad</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">forever</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">void</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Control.Monad.IO.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">MonadIO</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">liftIO</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Time.Clock.POSIX</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Time</span></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Time.Units</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Millisecond</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">toMicroseconds</span></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Time.Units.Extra</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Servant</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">NoContent</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">NoContent</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.Node.Emulator.Internal.API</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">EmulatorLogs</span></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.Node.Emulator.Internal.Node.TimeSlot</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">SlotConfig</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">currentSlot</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">nominalDiffTimeToPOSIXTime</span></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>                                                     </span><span class="annot"><span class="hs-identifier">slotToBeginPOSIXTime</span></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Node.Socket.Emulator.Server.html"><span class="hs-identifier">Cardano.Node.Socket.Emulator.Server</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Server</span></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Node.Socket.Emulator.Types.html"><span class="hs-identifier">Cardano.Node.Socket.Emulator.Types</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Socket.Emulator.Types.html#AppState"><span class="hs-identifier">AppState</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Socket.Emulator.Types.html#emulatorLogs"><span class="hs-identifier">emulatorLogs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span id="local-6989586621679331061"><span class="annot"><a href="Cardano.Node.Socket.Emulator.Mock.html#healthcheck"><span class="hs-identifier hs-type">healthcheck</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679331061"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679331061"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">NoContent</span></span></span><span>
+</span><span id="line-26"></span><span id="healthcheck"><span class="annot"><span class="annottext">healthcheck :: m NoContent
+</span><a href="Cardano.Node.Socket.Emulator.Mock.html#healthcheck"><span class="hs-identifier hs-var hs-var">healthcheck</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NoContent -&gt; m NoContent
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">NoContent
+</span><span class="hs-identifier hs-var">NoContent</span></span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span id="local-6989586621679331059"><span class="annot"><a href="Cardano.Node.Socket.Emulator.Mock.html#consumeEventHistory"><span class="hs-identifier hs-type">consumeEventHistory</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679331059"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Socket.Emulator.Types.html#AppState"><span class="hs-identifier hs-type">AppState</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679331059"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">EmulatorLogs</span></span></span><span>
+</span><span id="line-29"></span><span id="consumeEventHistory"><span class="annot"><span class="annottext">consumeEventHistory :: MVar AppState -&gt; m EmulatorLogs
+</span><a href="Cardano.Node.Socket.Emulator.Mock.html#consumeEventHistory"><span class="hs-identifier hs-var hs-var">consumeEventHistory</span></a></span></span><span> </span><span id="local-6989586621679331057"><span class="annot"><span class="annottext">MVar AppState
+</span><a href="#local-6989586621679331057"><span class="hs-identifier hs-var">stateVar</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-30"></span><span>    </span><span class="annot"><span class="annottext">IO EmulatorLogs -&gt; m EmulatorLogs
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO EmulatorLogs -&gt; m EmulatorLogs)
+-&gt; IO EmulatorLogs -&gt; m EmulatorLogs
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-31"></span><span>        </span><span id="local-6989586621679331056"><span class="annot"><span class="annottext">AppState
+</span><a href="#local-6989586621679331056"><span class="hs-identifier hs-var">oldState</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">MVar AppState -&gt; IO AppState
+forall a. MVar a -&gt; IO a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">takeMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar AppState
+</span><a href="#local-6989586621679331057"><span class="hs-identifier hs-var">stateVar</span></a></span><span>
+</span><span id="line-32"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679331055"><span class="annot"><span class="annottext">events :: EmulatorLogs
+</span><a href="#local-6989586621679331055"><span class="hs-identifier hs-var hs-var">events</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Getting EmulatorLogs AppState EmulatorLogs
+-&gt; AppState -&gt; EmulatorLogs
+forall s (m :: * -&gt; *) a. MonadReader s m =&gt; Getting a s a -&gt; m a
+</span><span class="hs-identifier hs-var">view</span></span><span> </span><span class="annot"><span class="annottext">Getting EmulatorLogs AppState EmulatorLogs
+Lens' AppState EmulatorLogs
+</span><a href="Cardano.Node.Socket.Emulator.Types.html#emulatorLogs"><span class="hs-identifier hs-var">emulatorLogs</span></a></span><span> </span><span class="annot"><span class="annottext">AppState
+</span><a href="#local-6989586621679331056"><span class="hs-identifier hs-var">oldState</span></a></span><span>
+</span><span id="line-33"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679331054"><span class="annot"><span class="annottext">newState :: AppState
+</span><a href="#local-6989586621679331054"><span class="hs-identifier hs-var hs-var">newState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ASetter AppState AppState EmulatorLogs EmulatorLogs
+-&gt; EmulatorLogs -&gt; AppState -&gt; AppState
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-identifier hs-var">set</span></span><span> </span><span class="annot"><span class="annottext">ASetter AppState AppState EmulatorLogs EmulatorLogs
+Lens' AppState EmulatorLogs
+</span><a href="Cardano.Node.Socket.Emulator.Types.html#emulatorLogs"><span class="hs-identifier hs-var">emulatorLogs</span></a></span><span> </span><span class="annot"><span class="annottext">EmulatorLogs
+forall a. Monoid a =&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="annot"><span class="annottext">AppState
+</span><a href="#local-6989586621679331056"><span class="hs-identifier hs-var">oldState</span></a></span><span>
+</span><span id="line-34"></span><span>        </span><span class="annot"><span class="annottext">MVar AppState -&gt; AppState -&gt; IO ()
+forall a. MVar a -&gt; a -&gt; IO ()
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">putMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar AppState
+</span><a href="#local-6989586621679331057"><span class="hs-identifier hs-var">stateVar</span></a></span><span> </span><span class="annot"><span class="annottext">AppState
+</span><a href="#local-6989586621679331054"><span class="hs-identifier hs-var">newState</span></a></span><span>
+</span><span id="line-35"></span><span>        </span><span class="annot"><span class="annottext">EmulatorLogs -&gt; IO EmulatorLogs
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">EmulatorLogs
+</span><a href="#local-6989586621679331055"><span class="hs-identifier hs-var">events</span></a></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- | Calls 'addBlock' at the start of every slot, causing pending transactions</span><span>
+</span><span id="line-38"></span><span class="hs-comment">--   to be validated and added to the chain.</span><span>
+</span><span id="line-39"></span><span id="local-6989586621679331053"><span class="annot"><a href="Cardano.Node.Socket.Emulator.Mock.html#slotCoordinator"><span class="hs-identifier hs-type">slotCoordinator</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-40"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">SlotConfig</span></span><span>
+</span><span id="line-41"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Node.Socket.Emulator.Server.html#ServerHandler"><span class="hs-identifier hs-type">Server.ServerHandler</span></a></span><span>
+</span><span id="line-42"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679331053"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-43"></span><span id="slotCoordinator"><span class="annot"><span class="annottext">slotCoordinator :: SlotConfig -&gt; ServerHandler -&gt; IO a
+</span><a href="Cardano.Node.Socket.Emulator.Mock.html#slotCoordinator"><span class="hs-identifier hs-var hs-var">slotCoordinator</span></a></span></span><span> </span><span id="local-6989586621679331051"><span class="annot"><span class="annottext">SlotConfig
+</span><a href="#local-6989586621679331051"><span class="hs-identifier hs-var">sc</span></a></span></span><span> </span><span id="local-6989586621679331050"><span class="annot"><span class="annottext">ServerHandler
+</span><a href="#local-6989586621679331050"><span class="hs-identifier hs-var">serverHandler</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-44"></span><span>    </span><span class="annot"><span class="annottext">IO () -&gt; IO a
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">forever</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO a) -&gt; IO () -&gt; IO a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-45"></span><span>        </span><span id="local-6989586621679331049"><span class="annot"><span class="annottext">Slot
+</span><a href="#local-6989586621679331049"><span class="hs-identifier hs-var">slot</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">SlotConfig -&gt; IO Slot
+</span><span class="hs-identifier hs-var">currentSlot</span></span><span> </span><span class="annot"><span class="annottext">SlotConfig
+</span><a href="#local-6989586621679331051"><span class="hs-identifier hs-var">sc</span></a></span><span>
+</span><span id="line-46"></span><span>        </span><span class="annot"><span class="annottext">IO Slot -&gt; IO ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(IO Slot -&gt; IO ()) -&gt; IO Slot -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(Slot -&gt; Slot) -&gt; ServerHandler -&gt; IO Slot
+forall (m :: * -&gt; *).
+MonadIO m =&gt;
+(Slot -&gt; Slot) -&gt; ServerHandler -&gt; m Slot
+</span><a href="Cardano.Node.Socket.Emulator.Server.html#modifySlot"><span class="hs-identifier hs-var">Server.modifySlot</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Slot -&gt; Slot -&gt; Slot
+forall a b. a -&gt; b -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="annot"><span class="annottext">Slot
+</span><a href="#local-6989586621679331049"><span class="hs-identifier hs-var">slot</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">ServerHandler
+</span><a href="#local-6989586621679331050"><span class="hs-identifier hs-var">serverHandler</span></a></span><span>
+</span><span id="line-47"></span><span>        </span><span id="local-6989586621679331046"><span class="annot"><span class="annottext">POSIXTime
+</span><a href="#local-6989586621679331046"><span class="hs-identifier hs-var">now</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO POSIXTime
+</span><span class="hs-identifier hs-var">Time.getPOSIXTime</span></span><span>
+</span><span id="line-48"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679331044"><span class="annot"><span class="annottext">delay :: POSIXTime
+</span><a href="#local-6989586621679331044"><span class="hs-identifier hs-var hs-var">delay</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SlotConfig -&gt; Slot -&gt; POSIXTime
+</span><span class="hs-identifier hs-var">slotToBeginPOSIXTime</span></span><span> </span><span class="annot"><span class="annottext">SlotConfig
+</span><a href="#local-6989586621679331051"><span class="hs-identifier hs-var">sc</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Slot
+</span><a href="#local-6989586621679331049"><span class="hs-identifier hs-var">slot</span></a></span><span> </span><span class="annot"><span class="annottext">Slot -&gt; Slot -&gt; Slot
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Slot
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">POSIXTime -&gt; POSIXTime -&gt; POSIXTime
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">POSIXTime -&gt; POSIXTime
+</span><span class="hs-identifier hs-var">nominalDiffTimeToPOSIXTime</span></span><span> </span><span class="annot"><span class="annottext">POSIXTime
+</span><a href="#local-6989586621679331046"><span class="hs-identifier hs-var">now</span></a></span><span>
+</span><span id="line-49"></span><span>        </span><span class="annot"><span class="annottext">IO () -&gt; IO ()
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO ()) -&gt; IO () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; IO ()
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">threadDelay</span></a></span><span>
+</span><span id="line-50"></span><span>               </span><span class="annot"><span class="annottext">(Int -&gt; IO ()) -&gt; Int -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Int
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span>
+</span><span id="line-51"></span><span>               </span><span class="annot"><span class="annottext">(Integer -&gt; Int) -&gt; Integer -&gt; Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Millisecond -&gt; Integer
+forall a. TimeUnit a =&gt; a -&gt; Integer
+</span><span class="hs-identifier hs-var">toMicroseconds</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">POSIXTime -&gt; Millisecond
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">POSIXTime
+</span><a href="#local-6989586621679331044"><span class="hs-identifier hs-var">delay</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Millisecond</span></span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span>        </span><span class="annot"><span class="annottext">IO Block -&gt; IO ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(IO Block -&gt; IO ()) -&gt; IO Block -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ServerHandler -&gt; IO Block
+forall (m :: * -&gt; *). MonadIO m =&gt; ServerHandler -&gt; m Block
+</span><a href="Cardano.Node.Socket.Emulator.Server.html#processBlock"><span class="hs-identifier hs-var">Server.processBlock</span></a></span><span> </span><span class="annot"><span class="annottext">ServerHandler
+</span><a href="#local-6989586621679331050"><span class="hs-identifier hs-var">serverHandler</span></a></span><span>
+</span><span id="line-53"></span></pre></body></html>

@@ -1,0 +1,2337 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds                  #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass             #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable         #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric              #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE DerivingStrategies         #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts           #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses      #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE NoImplicitPrelude          #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings          #-}</span><span>
+</span><span id="line-11"></span><span class="hs-pragma">{-# LANGUAGE RecordWildCards            #-}</span><span>
+</span><span id="line-12"></span><span class="hs-pragma">{-# LANGUAGE TemplateHaskell            #-}</span><span>
+</span><span id="line-13"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies               #-}</span><span>
+</span><span id="line-14"></span><span class="hs-pragma">{-# LANGUAGE TypeOperators              #-}</span><span>
+</span><span id="line-15"></span><span class="hs-pragma">{-# options_ghc -Wno-redundant-constraints #-}</span><span>
+</span><span id="line-16"></span><span class="hs-pragma">{-# options_ghc -fno-specialise            #-}</span><span>
+</span><span id="line-17"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Plutus.Contracts.Uniswap.Types</span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">FromJSON</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ToJSON</span></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Data.Data</span></a></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.OpenApi</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">OpenApi</span></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Ledger.Value.Orphans</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.Script.Utils.Value</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">AssetClass</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">CurrencySymbol</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">TokenName</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Value</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">assetClass</span></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>                                  </span><span class="annot"><span class="hs-identifier">assetClassValue</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">assetClassValueOf</span></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">PlutusTx</span></span><span> </span><span class="hs-keyword">qualified</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">PlutusTx.Prelude</span></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Haskell</span></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Text.Printf</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">PrintfArg</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="hs-comment">-- | Uniswap coin token</span><span>
+</span><span id="line-35"></span><span id="local-6989586621680926272"><span id="local-6989586621680926273"></span></span><span class="hs-keyword">data</span><span> </span><span id="U"><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#U"><span class="hs-identifier hs-var">U</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="U"><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#U"><span class="hs-identifier hs-var">U</span></a></span></span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621680926265"><span id="local-6989586621680926267"><span id="local-6989586621680926269"><span class="annot"><span class="annottext">Int -&gt; U -&gt; ShowS
+[U] -&gt; ShowS
+U -&gt; String
+(Int -&gt; U -&gt; ShowS) -&gt; (U -&gt; String) -&gt; ([U] -&gt; ShowS) -&gt; Show U
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [U] -&gt; ShowS
+$cshowList :: [U] -&gt; ShowS
+show :: U -&gt; String
+$cshow :: U -&gt; String
+showsPrec :: Int -&gt; U -&gt; ShowS
+$cshowsPrec :: Int -&gt; U -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Haskell.Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680926260"><span id="local-6989586621680926262"><span class="annot"><span class="annottext">U -&gt; U -&gt; Bool
+(U -&gt; U -&gt; Bool) -&gt; (U -&gt; U -&gt; Bool) -&gt; Eq U
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: U -&gt; U -&gt; Bool
+$c/= :: U -&gt; U -&gt; Bool
+== :: U -&gt; U -&gt; Bool
+$c== :: U -&gt; U -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Haskell.Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. U -&gt; Rep U x) -&gt; (forall x. Rep U x -&gt; U) -&gt; Generic U
+forall x. Rep U x -&gt; U
+forall x. U -&gt; Rep U x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep U x -&gt; U
+$cfrom :: forall x. U -&gt; Rep U x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">,</span><span> </span><span id="%24cU"><span id="%24tU"><span id="local-6989586621680926227"><span id="local-6989586621680926229"><span id="local-6989586621680926231"><span id="local-6989586621680926233"><span id="local-6989586621680926235"><span id="local-6989586621680926237"><span id="local-6989586621680926239"><span id="local-6989586621680926241"><span id="local-6989586621680926243"><span id="local-6989586621680926245"><span id="local-6989586621680926247"><span id="local-6989586621680926249"><span id="local-6989586621680926251"><span id="local-6989586621680926253"><span class="annot"><span class="annottext">Typeable U
+DataType
+Constr
+Typeable U
+-&gt; (forall (c :: * -&gt; *).
+    (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+    -&gt; (forall g. g -&gt; c g) -&gt; U -&gt; c U)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c U)
+-&gt; (U -&gt; Constr)
+-&gt; (U -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c U))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c U))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; U -&gt; U)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; U -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; U -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; U -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; U -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; U -&gt; m U)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; U -&gt; m U)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; U -&gt; m U)
+-&gt; Data U
+U -&gt; DataType
+U -&gt; Constr
+(forall b. Data b =&gt; b -&gt; b) -&gt; U -&gt; U
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; U -&gt; c U
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c U
+forall a.
+Typeable a
+-&gt; (forall (c :: * -&gt; *).
+    (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+    -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; U -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; U -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; U -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; U -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; U -&gt; m U
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; U -&gt; m U
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c U
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; U -&gt; c U
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c U)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c U)
+$cU :: Constr
+$tU :: DataType
+gmapMo :: (forall d. Data d =&gt; d -&gt; m d) -&gt; U -&gt; m U
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; U -&gt; m U
+gmapMp :: (forall d. Data d =&gt; d -&gt; m d) -&gt; U -&gt; m U
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; U -&gt; m U
+gmapM :: (forall d. Data d =&gt; d -&gt; m d) -&gt; U -&gt; m U
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; U -&gt; m U
+gmapQi :: Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; U -&gt; u
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; U -&gt; u
+gmapQ :: (forall d. Data d =&gt; d -&gt; u) -&gt; U -&gt; [u]
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; U -&gt; [u]
+gmapQr :: (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; U -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; U -&gt; r
+gmapQl :: (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; U -&gt; r
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; U -&gt; r
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; U -&gt; U
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; U -&gt; U
+dataCast2 :: (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c U)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c U)
+dataCast1 :: (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c U)
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c U)
+dataTypeOf :: U -&gt; DataType
+$cdataTypeOf :: U -&gt; DataType
+toConstr :: U -&gt; Constr
+$ctoConstr :: U -&gt; Constr
+gunfold :: (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c U
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c U
+gfoldl :: (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; U -&gt; c U
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; U -&gt; c U
+$cp1Data :: Typeable U
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span id="local-6989586621680926218"><span id="local-6989586621680926220"><span id="local-6989586621680926222"><span class="hs-identifier">PlutusTx.makeIsDataIndexed</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">U</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="hs-special">'</span><span class="hs-identifier">U</span><span class="hs-special">,</span><span> </span><span class="hs-number">0</span><span class="hs-special">)</span><span class="hs-special">]</span></span></span></span><span>
+</span><span id="line-37"></span><span id="local-6989586621680926208"><span id="local-6989586621680926210"><span class="hs-identifier">PlutusTx.makeLift</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">U</span></span></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- | &quot;A&quot;-side coin token</span><span>
+</span><span id="line-40"></span><span class="hs-keyword">data</span><span> </span><span id="A"><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#A"><span class="hs-identifier hs-var">A</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="A"><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#A"><span class="hs-identifier hs-var">A</span></a></span></span><span> </span><span class="hs-keyword">deriving</span><span> </span><span id="%24cA"><span id="%24tA"><span id="local-6989586621680926174"><span id="local-6989586621680926176"><span id="local-6989586621680926178"><span id="local-6989586621680926180"><span id="local-6989586621680926182"><span id="local-6989586621680926184"><span id="local-6989586621680926186"><span id="local-6989586621680926188"><span id="local-6989586621680926190"><span id="local-6989586621680926192"><span id="local-6989586621680926194"><span id="local-6989586621680926196"><span id="local-6989586621680926198"><span id="local-6989586621680926200"><span class="annot"><span class="annottext">Typeable A
+DataType
+Constr
+Typeable A
+-&gt; (forall (c :: * -&gt; *).
+    (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+    -&gt; (forall g. g -&gt; c g) -&gt; A -&gt; c A)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c A)
+-&gt; (A -&gt; Constr)
+-&gt; (A -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c A))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c A))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; A -&gt; A)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; A -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; A -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; A -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; A -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; A -&gt; m A)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; A -&gt; m A)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; A -&gt; m A)
+-&gt; Data A
+A -&gt; DataType
+A -&gt; Constr
+(forall b. Data b =&gt; b -&gt; b) -&gt; A -&gt; A
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; A -&gt; c A
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c A
+forall a.
+Typeable a
+-&gt; (forall (c :: * -&gt; *).
+    (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+    -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; A -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; A -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; A -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; A -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; A -&gt; m A
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; A -&gt; m A
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c A
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; A -&gt; c A
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c A)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c A)
+$cA :: Constr
+$tA :: DataType
+gmapMo :: (forall d. Data d =&gt; d -&gt; m d) -&gt; A -&gt; m A
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; A -&gt; m A
+gmapMp :: (forall d. Data d =&gt; d -&gt; m d) -&gt; A -&gt; m A
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; A -&gt; m A
+gmapM :: (forall d. Data d =&gt; d -&gt; m d) -&gt; A -&gt; m A
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; A -&gt; m A
+gmapQi :: Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; A -&gt; u
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; A -&gt; u
+gmapQ :: (forall d. Data d =&gt; d -&gt; u) -&gt; A -&gt; [u]
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; A -&gt; [u]
+gmapQr :: (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; A -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; A -&gt; r
+gmapQl :: (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; A -&gt; r
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; A -&gt; r
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; A -&gt; A
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; A -&gt; A
+dataCast2 :: (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c A)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c A)
+dataCast1 :: (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c A)
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c A)
+dataTypeOf :: A -&gt; DataType
+$cdataTypeOf :: A -&gt; DataType
+toConstr :: A -&gt; Constr
+$ctoConstr :: A -&gt; Constr
+gunfold :: (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c A
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c A
+gfoldl :: (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; A -&gt; c A
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; A -&gt; c A
+$cp1Data :: Typeable A
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-41"></span><span id="local-6989586621680926166"><span id="local-6989586621680926168"><span id="local-6989586621680926170"><span class="hs-identifier">PlutusTx.makeIsDataIndexed</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">A</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="hs-special">'</span><span class="hs-identifier">A</span><span class="hs-special">,</span><span> </span><span class="hs-number">0</span><span class="hs-special">)</span><span class="hs-special">]</span></span></span></span><span>
+</span><span id="line-42"></span><span id="local-6989586621680926162"><span id="local-6989586621680926164"><span class="hs-identifier">PlutusTx.makeLift</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">A</span></span></span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- | &quot;B&quot;-side coin token</span><span>
+</span><span id="line-45"></span><span class="hs-keyword">data</span><span> </span><span id="B"><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#B"><span class="hs-identifier hs-var">B</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="B"><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#B"><span class="hs-identifier hs-var">B</span></a></span></span><span> </span><span class="hs-keyword">deriving</span><span> </span><span id="%24cB"><span id="%24tB"><span id="local-6989586621680926132"><span id="local-6989586621680926134"><span id="local-6989586621680926136"><span id="local-6989586621680926138"><span id="local-6989586621680926140"><span id="local-6989586621680926142"><span id="local-6989586621680926144"><span id="local-6989586621680926146"><span id="local-6989586621680926148"><span id="local-6989586621680926150"><span id="local-6989586621680926152"><span id="local-6989586621680926154"><span id="local-6989586621680926156"><span id="local-6989586621680926158"><span class="annot"><span class="annottext">Typeable B
+DataType
+Constr
+Typeable B
+-&gt; (forall (c :: * -&gt; *).
+    (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+    -&gt; (forall g. g -&gt; c g) -&gt; B -&gt; c B)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c B)
+-&gt; (B -&gt; Constr)
+-&gt; (B -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c B))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c B))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; B -&gt; B)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; B -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; B -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; B -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; B -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; B -&gt; m B)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; B -&gt; m B)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; B -&gt; m B)
+-&gt; Data B
+B -&gt; DataType
+B -&gt; Constr
+(forall b. Data b =&gt; b -&gt; b) -&gt; B -&gt; B
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; B -&gt; c B
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c B
+forall a.
+Typeable a
+-&gt; (forall (c :: * -&gt; *).
+    (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+    -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; B -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; B -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; B -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; B -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; B -&gt; m B
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; B -&gt; m B
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c B
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; B -&gt; c B
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c B)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c B)
+$cB :: Constr
+$tB :: DataType
+gmapMo :: (forall d. Data d =&gt; d -&gt; m d) -&gt; B -&gt; m B
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; B -&gt; m B
+gmapMp :: (forall d. Data d =&gt; d -&gt; m d) -&gt; B -&gt; m B
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; B -&gt; m B
+gmapM :: (forall d. Data d =&gt; d -&gt; m d) -&gt; B -&gt; m B
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; B -&gt; m B
+gmapQi :: Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; B -&gt; u
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; B -&gt; u
+gmapQ :: (forall d. Data d =&gt; d -&gt; u) -&gt; B -&gt; [u]
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; B -&gt; [u]
+gmapQr :: (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; B -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; B -&gt; r
+gmapQl :: (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; B -&gt; r
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; B -&gt; r
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; B -&gt; B
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; B -&gt; B
+dataCast2 :: (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c B)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c B)
+dataCast1 :: (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c B)
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c B)
+dataTypeOf :: B -&gt; DataType
+$cdataTypeOf :: B -&gt; DataType
+toConstr :: B -&gt; Constr
+$ctoConstr :: B -&gt; Constr
+gunfold :: (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c B
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c B
+gfoldl :: (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; B -&gt; c B
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; B -&gt; c B
+$cp1Data :: Typeable B
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-46"></span><span id="local-6989586621680926124"><span id="local-6989586621680926126"><span id="local-6989586621680926128"><span class="hs-identifier">PlutusTx.makeIsDataIndexed</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">B</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="hs-special">'</span><span class="hs-identifier">B</span><span class="hs-special">,</span><span> </span><span class="hs-number">0</span><span class="hs-special">)</span><span class="hs-special">]</span></span></span></span><span>
+</span><span id="line-47"></span><span id="local-6989586621680926120"><span id="local-6989586621680926122"><span class="hs-identifier">PlutusTx.makeLift</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">B</span></span></span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- | Pool-state coin token</span><span>
+</span><span id="line-50"></span><span class="hs-keyword">data</span><span> </span><span id="PoolState"><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#PoolState"><span class="hs-identifier hs-var">PoolState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="PoolState"><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#PoolState"><span class="hs-identifier hs-var">PoolState</span></a></span></span><span> </span><span class="hs-keyword">deriving</span><span> </span><span id="%24cPoolState"><span id="%24tPoolState"><span id="local-6989586621680926090"><span id="local-6989586621680926092"><span id="local-6989586621680926094"><span id="local-6989586621680926096"><span id="local-6989586621680926098"><span id="local-6989586621680926100"><span id="local-6989586621680926102"><span id="local-6989586621680926104"><span id="local-6989586621680926106"><span id="local-6989586621680926108"><span id="local-6989586621680926110"><span id="local-6989586621680926112"><span id="local-6989586621680926114"><span id="local-6989586621680926116"><span class="annot"><span class="annottext">Typeable PoolState
+DataType
+Constr
+Typeable PoolState
+-&gt; (forall (c :: * -&gt; *).
+    (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+    -&gt; (forall g. g -&gt; c g) -&gt; PoolState -&gt; c PoolState)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c PoolState)
+-&gt; (PoolState -&gt; Constr)
+-&gt; (PoolState -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c PoolState))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c PoolState))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; PoolState -&gt; PoolState)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; PoolState -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; PoolState -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; PoolState -&gt; [u])
+-&gt; (forall u.
+    Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; PoolState -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; PoolState -&gt; m PoolState)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; PoolState -&gt; m PoolState)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; PoolState -&gt; m PoolState)
+-&gt; Data PoolState
+PoolState -&gt; DataType
+PoolState -&gt; Constr
+(forall b. Data b =&gt; b -&gt; b) -&gt; PoolState -&gt; PoolState
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; PoolState -&gt; c PoolState
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c PoolState
+forall a.
+Typeable a
+-&gt; (forall (c :: * -&gt; *).
+    (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+    -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; PoolState -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; PoolState -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; PoolState -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; PoolState -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; PoolState -&gt; m PoolState
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; PoolState -&gt; m PoolState
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c PoolState
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; PoolState -&gt; c PoolState
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c PoolState)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c PoolState)
+$cPoolState :: Constr
+$tPoolState :: DataType
+gmapMo :: (forall d. Data d =&gt; d -&gt; m d) -&gt; PoolState -&gt; m PoolState
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; PoolState -&gt; m PoolState
+gmapMp :: (forall d. Data d =&gt; d -&gt; m d) -&gt; PoolState -&gt; m PoolState
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; PoolState -&gt; m PoolState
+gmapM :: (forall d. Data d =&gt; d -&gt; m d) -&gt; PoolState -&gt; m PoolState
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; PoolState -&gt; m PoolState
+gmapQi :: Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; PoolState -&gt; u
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; PoolState -&gt; u
+gmapQ :: (forall d. Data d =&gt; d -&gt; u) -&gt; PoolState -&gt; [u]
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; PoolState -&gt; [u]
+gmapQr :: (r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; PoolState -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; PoolState -&gt; r
+gmapQl :: (r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; PoolState -&gt; r
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; PoolState -&gt; r
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; PoolState -&gt; PoolState
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; PoolState -&gt; PoolState
+dataCast2 :: (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c PoolState)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c PoolState)
+dataCast1 :: (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c PoolState)
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c PoolState)
+dataTypeOf :: PoolState -&gt; DataType
+$cdataTypeOf :: PoolState -&gt; DataType
+toConstr :: PoolState -&gt; Constr
+$ctoConstr :: PoolState -&gt; Constr
+gunfold :: (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c PoolState
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c PoolState
+gfoldl :: (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; PoolState -&gt; c PoolState
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; PoolState -&gt; c PoolState
+$cp1Data :: Typeable PoolState
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-51"></span><span id="local-6989586621680926082"><span id="local-6989586621680926084"><span id="local-6989586621680926086"><span class="hs-identifier">PlutusTx.makeIsDataIndexed</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">PoolState</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="hs-special">'</span><span class="hs-identifier">PoolState</span><span class="hs-special">,</span><span> </span><span class="hs-number">0</span><span class="hs-special">)</span><span class="hs-special">]</span></span></span></span><span>
+</span><span id="line-52"></span><span id="local-6989586621680926078"><span id="local-6989586621680926080"><span class="hs-identifier">PlutusTx.makeLift</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">PoolState</span></span></span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- | Liquidity-state coin token</span><span>
+</span><span id="line-55"></span><span class="hs-keyword">data</span><span> </span><span id="Liquidity"><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#Liquidity"><span class="hs-identifier hs-var">Liquidity</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Liquidity"><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#Liquidity"><span class="hs-identifier hs-var">Liquidity</span></a></span></span><span> </span><span class="hs-keyword">deriving</span><span> </span><span id="%24cLiquidity"><span id="%24tLiquidity"><span id="local-6989586621680926048"><span id="local-6989586621680926050"><span id="local-6989586621680926052"><span id="local-6989586621680926054"><span id="local-6989586621680926056"><span id="local-6989586621680926058"><span id="local-6989586621680926060"><span id="local-6989586621680926062"><span id="local-6989586621680926064"><span id="local-6989586621680926066"><span id="local-6989586621680926068"><span id="local-6989586621680926070"><span id="local-6989586621680926072"><span id="local-6989586621680926074"><span class="annot"><span class="annottext">Typeable Liquidity
+DataType
+Constr
+Typeable Liquidity
+-&gt; (forall (c :: * -&gt; *).
+    (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+    -&gt; (forall g. g -&gt; c g) -&gt; Liquidity -&gt; c Liquidity)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Liquidity)
+-&gt; (Liquidity -&gt; Constr)
+-&gt; (Liquidity -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c Liquidity))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c Liquidity))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; Liquidity -&gt; Liquidity)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Liquidity -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Liquidity -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Liquidity -&gt; [u])
+-&gt; (forall u.
+    Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Liquidity -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Liquidity -&gt; m Liquidity)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Liquidity -&gt; m Liquidity)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Liquidity -&gt; m Liquidity)
+-&gt; Data Liquidity
+Liquidity -&gt; DataType
+Liquidity -&gt; Constr
+(forall b. Data b =&gt; b -&gt; b) -&gt; Liquidity -&gt; Liquidity
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Liquidity -&gt; c Liquidity
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Liquidity
+forall a.
+Typeable a
+-&gt; (forall (c :: * -&gt; *).
+    (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+    -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Liquidity -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Liquidity -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Liquidity -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Liquidity -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Liquidity -&gt; m Liquidity
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Liquidity -&gt; m Liquidity
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Liquidity
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Liquidity -&gt; c Liquidity
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c Liquidity)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c Liquidity)
+$cLiquidity :: Constr
+$tLiquidity :: DataType
+gmapMo :: (forall d. Data d =&gt; d -&gt; m d) -&gt; Liquidity -&gt; m Liquidity
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Liquidity -&gt; m Liquidity
+gmapMp :: (forall d. Data d =&gt; d -&gt; m d) -&gt; Liquidity -&gt; m Liquidity
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Liquidity -&gt; m Liquidity
+gmapM :: (forall d. Data d =&gt; d -&gt; m d) -&gt; Liquidity -&gt; m Liquidity
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Liquidity -&gt; m Liquidity
+gmapQi :: Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Liquidity -&gt; u
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Liquidity -&gt; u
+gmapQ :: (forall d. Data d =&gt; d -&gt; u) -&gt; Liquidity -&gt; [u]
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Liquidity -&gt; [u]
+gmapQr :: (r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Liquidity -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Liquidity -&gt; r
+gmapQl :: (r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Liquidity -&gt; r
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Liquidity -&gt; r
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; Liquidity -&gt; Liquidity
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; Liquidity -&gt; Liquidity
+dataCast2 :: (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c Liquidity)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c Liquidity)
+dataCast1 :: (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c Liquidity)
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c Liquidity)
+dataTypeOf :: Liquidity -&gt; DataType
+$cdataTypeOf :: Liquidity -&gt; DataType
+toConstr :: Liquidity -&gt; Constr
+$ctoConstr :: Liquidity -&gt; Constr
+gunfold :: (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Liquidity
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Liquidity
+gfoldl :: (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Liquidity -&gt; c Liquidity
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Liquidity -&gt; c Liquidity
+$cp1Data :: Typeable Liquidity
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-56"></span><span id="local-6989586621680926040"><span id="local-6989586621680926042"><span id="local-6989586621680926044"><span class="hs-identifier">PlutusTx.makeIsDataIndexed</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">Liquidity</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="hs-special">'</span><span class="hs-identifier">Liquidity</span><span class="hs-special">,</span><span> </span><span class="hs-number">0</span><span class="hs-special">)</span><span class="hs-special">]</span></span></span></span><span>
+</span><span id="line-57"></span><span id="local-6989586621680926036"><span id="local-6989586621680926038"><span class="hs-identifier">PlutusTx.makeLift</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">Liquidity</span></span></span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">OpenApi.ToSchema</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">BuiltinByteString</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-60"></span><span>    </span><span id="local-6989586621680926032"><span class="annot"><span class="annottext">declareNamedSchema :: Proxy BuiltinByteString -&gt; Declare (Definitions Schema) NamedSchema
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">declareNamedSchema</span></span></span><span> </span><span class="annot"><span class="annottext">Proxy BuiltinByteString
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NamedSchema -&gt; Declare (Definitions Schema) NamedSchema
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Haskell.pure</span></a></span><span> </span><span class="annot"><span class="annottext">(NamedSchema -&gt; Declare (Definitions Schema) NamedSchema)
+-&gt; NamedSchema -&gt; Declare (Definitions Schema) NamedSchema
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Maybe Text -&gt; Schema -&gt; NamedSchema
+</span><span class="hs-identifier hs-var">OpenApi.NamedSchema</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; Maybe Text
+forall a. a -&gt; Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Bytes&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Schema
+forall a. Monoid a =&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Haskell.mempty</span></a></span><span>
+</span><span id="line-61"></span><span>
+</span><span id="line-62"></span><span id="local-6989586621680926026"><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">OpenApi.ToSchema</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">TokenName</span></span></span><span>
+</span><span id="line-63"></span><span id="local-6989586621680926023"><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">OpenApi.ToSchema</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">CurrencySymbol</span></span></span><span>
+</span><span id="line-64"></span><span id="local-6989586621680926020"><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">OpenApi.ToSchema</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">AssetClass</span></span></span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span class="hs-comment">-- | A single 'AssetClass'. Because we use three coins, we use a phantom type to track</span><span>
+</span><span id="line-67"></span><span class="hs-comment">-- which one is which.</span><span>
+</span><span id="line-68"></span><span id="local-6989586621680926018"><span id="local-6989586621680926019"></span></span><span class="hs-keyword">newtype</span><span> </span><span id="Coin"><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#Coin"><span class="hs-identifier hs-var">Coin</span></a></span></span><span> </span><span id="local-6989586621680926333"><span class="annot"><a href="#local-6989586621680926333"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Coin"><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#Coin"><span class="hs-identifier hs-var">Coin</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="unCoin"><span class="annot"><span class="annottext">Coin a -&gt; AssetClass
+</span><a href="Plutus.Contracts.Uniswap.Types.html#unCoin"><span class="hs-identifier hs-var hs-var">unCoin</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">AssetClass</span></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span>   </span><span class="hs-special">(</span><span id="local-6989586621680926010"><span id="local-6989586621680926012"><span id="local-6989586621680926014"><span class="annot"><span class="annottext">Int -&gt; Coin a -&gt; ShowS
+[Coin a] -&gt; ShowS
+Coin a -&gt; String
+(Int -&gt; Coin a -&gt; ShowS)
+-&gt; (Coin a -&gt; String) -&gt; ([Coin a] -&gt; ShowS) -&gt; Show (Coin a)
+forall a. Int -&gt; Coin a -&gt; ShowS
+forall a. [Coin a] -&gt; ShowS
+forall a. Coin a -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [Coin a] -&gt; ShowS
+$cshowList :: forall a. [Coin a] -&gt; ShowS
+show :: Coin a -&gt; String
+$cshow :: forall a. Coin a -&gt; String
+showsPrec :: Int -&gt; Coin a -&gt; ShowS
+$cshowsPrec :: forall a. Int -&gt; Coin a -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Haskell.Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. Coin a -&gt; Rep (Coin a) x)
+-&gt; (forall x. Rep (Coin a) x -&gt; Coin a) -&gt; Generic (Coin a)
+forall x. Rep (Coin a) x -&gt; Coin a
+forall x. Coin a -&gt; Rep (Coin a) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall a x. Rep (Coin a) x -&gt; Coin a
+forall a x. Coin a -&gt; Rep (Coin a) x
+$cto :: forall a x. Rep (Coin a) x -&gt; Coin a
+$cfrom :: forall a x. Coin a -&gt; Rep (Coin a) x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">,</span><span> </span><span id="%24cCoin"><span id="%24tCoin"><span id="local-6989586621680925979"><span id="local-6989586621680925981"><span id="local-6989586621680925983"><span id="local-6989586621680925985"><span id="local-6989586621680925987"><span id="local-6989586621680925989"><span id="local-6989586621680925991"><span id="local-6989586621680925993"><span id="local-6989586621680925995"><span id="local-6989586621680925997"><span id="local-6989586621680925999"><span id="local-6989586621680926001"><span id="local-6989586621680926003"><span id="local-6989586621680926005"><span class="annot"><span class="annottext">Typeable (Coin a)
+DataType
+Constr
+Typeable (Coin a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+    -&gt; (forall g. g -&gt; c g) -&gt; Coin a -&gt; c (Coin a))
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c (Coin a))
+-&gt; (Coin a -&gt; Constr)
+-&gt; (Coin a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c (Coin a)))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c (Coin a)))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; Coin a -&gt; Coin a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Coin a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Coin a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Coin a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Coin a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Coin a -&gt; m (Coin a))
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Coin a -&gt; m (Coin a))
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Coin a -&gt; m (Coin a))
+-&gt; Data (Coin a)
+Coin a -&gt; DataType
+Coin a -&gt; Constr
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c (Coin a))
+(forall b. Data b =&gt; b -&gt; b) -&gt; Coin a -&gt; Coin a
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Coin a -&gt; c (Coin a)
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c (Coin a)
+forall a. Data a =&gt; Typeable (Coin a)
+forall a. Data a =&gt; Coin a -&gt; DataType
+forall a. Data a =&gt; Coin a -&gt; Constr
+forall a.
+Data a =&gt;
+(forall b. Data b =&gt; b -&gt; b) -&gt; Coin a -&gt; Coin a
+forall a u.
+Data a =&gt;
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Coin a -&gt; u
+forall a u. Data a =&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Coin a -&gt; [u]
+forall a r r'.
+Data a =&gt;
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Coin a -&gt; r
+forall a r r'.
+Data a =&gt;
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Coin a -&gt; r
+forall a (m :: * -&gt; *).
+(Data a, Monad m) =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Coin a -&gt; m (Coin a)
+forall a (m :: * -&gt; *).
+(Data a, MonadPlus m) =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Coin a -&gt; m (Coin a)
+forall a (c :: * -&gt; *).
+Data a =&gt;
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c (Coin a)
+forall a (c :: * -&gt; *).
+Data a =&gt;
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Coin a -&gt; c (Coin a)
+forall a (t :: * -&gt; *) (c :: * -&gt; *).
+(Data a, Typeable t) =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c (Coin a))
+forall a (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+(Data a, Typeable t) =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c (Coin a))
+forall a.
+Typeable a
+-&gt; (forall (c :: * -&gt; *).
+    (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+    -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Coin a -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Coin a -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Coin a -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Coin a -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Coin a -&gt; m (Coin a)
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Coin a -&gt; m (Coin a)
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c (Coin a)
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Coin a -&gt; c (Coin a)
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c (Coin a))
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c (Coin a))
+$cCoin :: Constr
+$tCoin :: DataType
+gmapMo :: (forall d. Data d =&gt; d -&gt; m d) -&gt; Coin a -&gt; m (Coin a)
+$cgmapMo :: forall a (m :: * -&gt; *).
+(Data a, MonadPlus m) =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Coin a -&gt; m (Coin a)
+gmapMp :: (forall d. Data d =&gt; d -&gt; m d) -&gt; Coin a -&gt; m (Coin a)
+$cgmapMp :: forall a (m :: * -&gt; *).
+(Data a, MonadPlus m) =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Coin a -&gt; m (Coin a)
+gmapM :: (forall d. Data d =&gt; d -&gt; m d) -&gt; Coin a -&gt; m (Coin a)
+$cgmapM :: forall a (m :: * -&gt; *).
+(Data a, Monad m) =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Coin a -&gt; m (Coin a)
+gmapQi :: Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Coin a -&gt; u
+$cgmapQi :: forall a u.
+Data a =&gt;
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Coin a -&gt; u
+gmapQ :: (forall d. Data d =&gt; d -&gt; u) -&gt; Coin a -&gt; [u]
+$cgmapQ :: forall a u. Data a =&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Coin a -&gt; [u]
+gmapQr :: (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Coin a -&gt; r
+$cgmapQr :: forall a r r'.
+Data a =&gt;
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Coin a -&gt; r
+gmapQl :: (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Coin a -&gt; r
+$cgmapQl :: forall a r r'.
+Data a =&gt;
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Coin a -&gt; r
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; Coin a -&gt; Coin a
+$cgmapT :: forall a.
+Data a =&gt;
+(forall b. Data b =&gt; b -&gt; b) -&gt; Coin a -&gt; Coin a
+dataCast2 :: (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c (Coin a))
+$cdataCast2 :: forall a (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+(Data a, Typeable t) =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c (Coin a))
+dataCast1 :: (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c (Coin a))
+$cdataCast1 :: forall a (t :: * -&gt; *) (c :: * -&gt; *).
+(Data a, Typeable t) =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c (Coin a))
+dataTypeOf :: Coin a -&gt; DataType
+$cdataTypeOf :: forall a. Data a =&gt; Coin a -&gt; DataType
+toConstr :: Coin a -&gt; Constr
+$ctoConstr :: forall a. Data a =&gt; Coin a -&gt; Constr
+gunfold :: (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c (Coin a)
+$cgunfold :: forall a (c :: * -&gt; *).
+Data a =&gt;
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c (Coin a)
+gfoldl :: (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Coin a -&gt; c (Coin a)
+$cgfoldl :: forall a (c :: * -&gt; *).
+Data a =&gt;
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Coin a -&gt; c (Coin a)
+$cp1Data :: forall a. Data a =&gt; Typeable (Coin a)
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680925969"><span id="local-6989586621680925971"><span id="local-6989586621680925973"><span id="local-6989586621680925975"><span class="annot"><span class="annottext">[Coin a] -&gt; Encoding
+[Coin a] -&gt; Value
+Coin a -&gt; Encoding
+Coin a -&gt; Value
+(Coin a -&gt; Value)
+-&gt; (Coin a -&gt; Encoding)
+-&gt; ([Coin a] -&gt; Value)
+-&gt; ([Coin a] -&gt; Encoding)
+-&gt; ToJSON (Coin a)
+forall a. [Coin a] -&gt; Encoding
+forall a. [Coin a] -&gt; Value
+forall a. Coin a -&gt; Encoding
+forall a. Coin a -&gt; Value
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; ToJSON a
+toEncodingList :: [Coin a] -&gt; Encoding
+$ctoEncodingList :: forall a. [Coin a] -&gt; Encoding
+toJSONList :: [Coin a] -&gt; Value
+$ctoJSONList :: forall a. [Coin a] -&gt; Value
+toEncoding :: Coin a -&gt; Encoding
+$ctoEncoding :: forall a. Coin a -&gt; Encoding
+toJSON :: Coin a -&gt; Value
+$ctoJSON :: forall a. Coin a -&gt; Value
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680925964"><span id="local-6989586621680925966"><span class="annot"><span class="annottext">Value -&gt; Parser [Coin a]
+Value -&gt; Parser (Coin a)
+(Value -&gt; Parser (Coin a))
+-&gt; (Value -&gt; Parser [Coin a]) -&gt; FromJSON (Coin a)
+forall a. Value -&gt; Parser [Coin a]
+forall a. Value -&gt; Parser (Coin a)
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+parseJSONList :: Value -&gt; Parser [Coin a]
+$cparseJSONList :: forall a. Value -&gt; Parser [Coin a]
+parseJSON :: Value -&gt; Parser (Coin a)
+$cparseJSON :: forall a. Value -&gt; Parser (Coin a)
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680925961"><span class="annot"><span class="annottext">Coin a -&gt; Coin a -&gt; Bool
+(Coin a -&gt; Coin a -&gt; Bool) -&gt; Eq (Coin a)
+forall a. Coin a -&gt; Coin a -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; Eq a
+== :: Coin a -&gt; Coin a -&gt; Bool
+$c== :: forall a. Coin a -&gt; Coin a -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">Eq</span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680925956"><span id="local-6989586621680925958"><span class="annot"><span class="annottext">Coin a -&gt; Coin a -&gt; Bool
+(Coin a -&gt; Coin a -&gt; Bool)
+-&gt; (Coin a -&gt; Coin a -&gt; Bool) -&gt; Eq (Coin a)
+forall a. Coin a -&gt; Coin a -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: Coin a -&gt; Coin a -&gt; Bool
+$c/= :: forall a. Coin a -&gt; Coin a -&gt; Bool
+== :: Coin a -&gt; Coin a -&gt; Bool
+$c== :: forall a. Coin a -&gt; Coin a -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Haskell.Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680925941"><span id="local-6989586621680925943"><span id="local-6989586621680925945"><span id="local-6989586621680925947"><span id="local-6989586621680925949"><span id="local-6989586621680925951"><span id="local-6989586621680925953"><span class="annot"><span class="annottext">Eq (Coin a)
+Eq (Coin a)
+-&gt; (Coin a -&gt; Coin a -&gt; Ordering)
+-&gt; (Coin a -&gt; Coin a -&gt; Bool)
+-&gt; (Coin a -&gt; Coin a -&gt; Bool)
+-&gt; (Coin a -&gt; Coin a -&gt; Bool)
+-&gt; (Coin a -&gt; Coin a -&gt; Bool)
+-&gt; (Coin a -&gt; Coin a -&gt; Coin a)
+-&gt; (Coin a -&gt; Coin a -&gt; Coin a)
+-&gt; Ord (Coin a)
+Coin a -&gt; Coin a -&gt; Bool
+Coin a -&gt; Coin a -&gt; Ordering
+Coin a -&gt; Coin a -&gt; Coin a
+forall a. Eq (Coin a)
+forall a.
+Eq a
+-&gt; (a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+forall a. Coin a -&gt; Coin a -&gt; Bool
+forall a. Coin a -&gt; Coin a -&gt; Ordering
+forall a. Coin a -&gt; Coin a -&gt; Coin a
+min :: Coin a -&gt; Coin a -&gt; Coin a
+$cmin :: forall a. Coin a -&gt; Coin a -&gt; Coin a
+max :: Coin a -&gt; Coin a -&gt; Coin a
+$cmax :: forall a. Coin a -&gt; Coin a -&gt; Coin a
+&gt;= :: Coin a -&gt; Coin a -&gt; Bool
+$c&gt;= :: forall a. Coin a -&gt; Coin a -&gt; Bool
+&gt; :: Coin a -&gt; Coin a -&gt; Bool
+$c&gt; :: forall a. Coin a -&gt; Coin a -&gt; Bool
+&lt;= :: Coin a -&gt; Coin a -&gt; Bool
+$c&lt;= :: forall a. Coin a -&gt; Coin a -&gt; Bool
+&lt; :: Coin a -&gt; Coin a -&gt; Bool
+$c&lt; :: forall a. Coin a -&gt; Coin a -&gt; Bool
+compare :: Coin a -&gt; Coin a -&gt; Ordering
+$ccompare :: forall a. Coin a -&gt; Coin a -&gt; Ordering
+$cp1Ord :: forall a. Eq (Coin a)
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Haskell.Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680925937"><span class="annot"><span class="annottext">Typeable (Coin a)
+Typeable (Coin a)
+-&gt; (Proxy (Coin a) -&gt; Declare (Definitions Schema) NamedSchema)
+-&gt; ToSchema (Coin a)
+Proxy (Coin a) -&gt; Declare (Definitions Schema) NamedSchema
+forall a. Typeable a =&gt; Typeable (Coin a)
+forall a.
+Typeable a =&gt;
+Proxy (Coin a) -&gt; Declare (Definitions Schema) NamedSchema
+forall a.
+Typeable a
+-&gt; (Proxy a -&gt; Declare (Definitions Schema) NamedSchema)
+-&gt; ToSchema a
+declareNamedSchema :: Proxy (Coin a) -&gt; Declare (Definitions Schema) NamedSchema
+$cdeclareNamedSchema :: forall a.
+Typeable a =&gt;
+Proxy (Coin a) -&gt; Declare (Definitions Schema) NamedSchema
+$cp1ToSchema :: forall a. Typeable a =&gt; Typeable (Coin a)
+</span><a href="#local-6989586621680925937"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var">OpenApi.ToSchema</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span id="local-6989586621680925931"><span id="local-6989586621680925933"><span id="local-6989586621680925935"><span id="local-6989586621680926333"><span class="hs-identifier">PlutusTx.makeIsDataIndexed</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">Coin</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="hs-special">'</span><span class="hs-identifier">Coin</span><span class="hs-special">,</span><span> </span><span class="hs-number">0</span><span class="hs-special">)</span><span class="hs-special">]</span></span></span></span></span><span>
+</span><span id="line-72"></span><span id="local-6989586621680925927"><span id="local-6989586621680925929"><span id="local-6989586621680926333"><span class="hs-identifier">PlutusTx.makeLift</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">Coin</span></span></span></span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span class="hs-comment">-- | Likewise for 'Integer'; the corresponding amount we have of the</span><span>
+</span><span id="line-75"></span><span class="hs-comment">-- particular 'Coin'.</span><span>
+</span><span id="line-76"></span><span id="local-6989586621680925925"><span id="local-6989586621680925926"></span></span><span class="hs-keyword">newtype</span><span> </span><span id="Amount"><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#Amount"><span class="hs-identifier hs-var">Amount</span></a></span></span><span> </span><span id="local-6989586621680926332"><span class="annot"><a href="#local-6989586621680926332"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Amount"><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#Amount"><span class="hs-identifier hs-var">Amount</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="unAmount"><span class="annot"><span class="annottext">Amount a -&gt; Integer
+</span><a href="Plutus.Contracts.Uniswap.Types.html#unAmount"><span class="hs-identifier hs-var hs-var">unAmount</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/integer-gmp-1.0.3.0/src"><span class="hs-identifier hs-type">Integer</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-77"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span>   </span><span class="hs-special">(</span><span id="local-6989586621680925917"><span id="local-6989586621680925919"><span id="local-6989586621680925921"><span class="annot"><span class="annottext">Int -&gt; Amount a -&gt; ShowS
+[Amount a] -&gt; ShowS
+Amount a -&gt; String
+(Int -&gt; Amount a -&gt; ShowS)
+-&gt; (Amount a -&gt; String) -&gt; ([Amount a] -&gt; ShowS) -&gt; Show (Amount a)
+forall a. Int -&gt; Amount a -&gt; ShowS
+forall a. [Amount a] -&gt; ShowS
+forall a. Amount a -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [Amount a] -&gt; ShowS
+$cshowList :: forall a. [Amount a] -&gt; ShowS
+show :: Amount a -&gt; String
+$cshow :: forall a. Amount a -&gt; String
+showsPrec :: Int -&gt; Amount a -&gt; ShowS
+$cshowsPrec :: forall a. Int -&gt; Amount a -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Haskell.Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. Amount a -&gt; Rep (Amount a) x)
+-&gt; (forall x. Rep (Amount a) x -&gt; Amount a) -&gt; Generic (Amount a)
+forall x. Rep (Amount a) x -&gt; Amount a
+forall x. Amount a -&gt; Rep (Amount a) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall a x. Rep (Amount a) x -&gt; Amount a
+forall a x. Amount a -&gt; Rep (Amount a) x
+$cto :: forall a x. Rep (Amount a) x -&gt; Amount a
+$cfrom :: forall a x. Amount a -&gt; Rep (Amount a) x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">,</span><span> </span><span id="%24cAmount"><span id="%24tAmount"><span id="local-6989586621680925886"><span id="local-6989586621680925888"><span id="local-6989586621680925890"><span id="local-6989586621680925892"><span id="local-6989586621680925894"><span id="local-6989586621680925896"><span id="local-6989586621680925898"><span id="local-6989586621680925900"><span id="local-6989586621680925902"><span id="local-6989586621680925904"><span id="local-6989586621680925906"><span id="local-6989586621680925908"><span id="local-6989586621680925910"><span id="local-6989586621680925912"><span class="annot"><span class="annottext">Typeable (Amount a)
+DataType
+Constr
+Typeable (Amount a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+    -&gt; (forall g. g -&gt; c g) -&gt; Amount a -&gt; c (Amount a))
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c (Amount a))
+-&gt; (Amount a -&gt; Constr)
+-&gt; (Amount a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c (Amount a)))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e))
+    -&gt; Maybe (c (Amount a)))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; Amount a -&gt; Amount a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Amount a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Amount a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Amount a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Amount a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Amount a -&gt; m (Amount a))
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Amount a -&gt; m (Amount a))
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Amount a -&gt; m (Amount a))
+-&gt; Data (Amount a)
+Amount a -&gt; DataType
+Amount a -&gt; Constr
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c (Amount a))
+(forall b. Data b =&gt; b -&gt; b) -&gt; Amount a -&gt; Amount a
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Amount a -&gt; c (Amount a)
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c (Amount a)
+forall a. Data a =&gt; Typeable (Amount a)
+forall a. Data a =&gt; Amount a -&gt; DataType
+forall a. Data a =&gt; Amount a -&gt; Constr
+forall a.
+Data a =&gt;
+(forall b. Data b =&gt; b -&gt; b) -&gt; Amount a -&gt; Amount a
+forall a u.
+Data a =&gt;
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Amount a -&gt; u
+forall a u.
+Data a =&gt;
+(forall d. Data d =&gt; d -&gt; u) -&gt; Amount a -&gt; [u]
+forall a r r'.
+Data a =&gt;
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Amount a -&gt; r
+forall a r r'.
+Data a =&gt;
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Amount a -&gt; r
+forall a (m :: * -&gt; *).
+(Data a, Monad m) =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Amount a -&gt; m (Amount a)
+forall a (m :: * -&gt; *).
+(Data a, MonadPlus m) =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Amount a -&gt; m (Amount a)
+forall a (c :: * -&gt; *).
+Data a =&gt;
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c (Amount a)
+forall a (c :: * -&gt; *).
+Data a =&gt;
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Amount a -&gt; c (Amount a)
+forall a (t :: * -&gt; *) (c :: * -&gt; *).
+(Data a, Typeable t) =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c (Amount a))
+forall a (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+(Data a, Typeable t) =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c (Amount a))
+forall a.
+Typeable a
+-&gt; (forall (c :: * -&gt; *).
+    (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+    -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Amount a -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Amount a -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Amount a -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Amount a -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Amount a -&gt; m (Amount a)
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Amount a -&gt; m (Amount a)
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c (Amount a)
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Amount a -&gt; c (Amount a)
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c (Amount a))
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c (Amount a))
+$cAmount :: Constr
+$tAmount :: DataType
+gmapMo :: (forall d. Data d =&gt; d -&gt; m d) -&gt; Amount a -&gt; m (Amount a)
+$cgmapMo :: forall a (m :: * -&gt; *).
+(Data a, MonadPlus m) =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Amount a -&gt; m (Amount a)
+gmapMp :: (forall d. Data d =&gt; d -&gt; m d) -&gt; Amount a -&gt; m (Amount a)
+$cgmapMp :: forall a (m :: * -&gt; *).
+(Data a, MonadPlus m) =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Amount a -&gt; m (Amount a)
+gmapM :: (forall d. Data d =&gt; d -&gt; m d) -&gt; Amount a -&gt; m (Amount a)
+$cgmapM :: forall a (m :: * -&gt; *).
+(Data a, Monad m) =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Amount a -&gt; m (Amount a)
+gmapQi :: Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Amount a -&gt; u
+$cgmapQi :: forall a u.
+Data a =&gt;
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Amount a -&gt; u
+gmapQ :: (forall d. Data d =&gt; d -&gt; u) -&gt; Amount a -&gt; [u]
+$cgmapQ :: forall a u.
+Data a =&gt;
+(forall d. Data d =&gt; d -&gt; u) -&gt; Amount a -&gt; [u]
+gmapQr :: (r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Amount a -&gt; r
+$cgmapQr :: forall a r r'.
+Data a =&gt;
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Amount a -&gt; r
+gmapQl :: (r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Amount a -&gt; r
+$cgmapQl :: forall a r r'.
+Data a =&gt;
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Amount a -&gt; r
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; Amount a -&gt; Amount a
+$cgmapT :: forall a.
+Data a =&gt;
+(forall b. Data b =&gt; b -&gt; b) -&gt; Amount a -&gt; Amount a
+dataCast2 :: (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c (Amount a))
+$cdataCast2 :: forall a (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+(Data a, Typeable t) =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c (Amount a))
+dataCast1 :: (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c (Amount a))
+$cdataCast1 :: forall a (t :: * -&gt; *) (c :: * -&gt; *).
+(Data a, Typeable t) =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c (Amount a))
+dataTypeOf :: Amount a -&gt; DataType
+$cdataTypeOf :: forall a. Data a =&gt; Amount a -&gt; DataType
+toConstr :: Amount a -&gt; Constr
+$ctoConstr :: forall a. Data a =&gt; Amount a -&gt; Constr
+gunfold :: (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c (Amount a)
+$cgunfold :: forall a (c :: * -&gt; *).
+Data a =&gt;
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c (Amount a)
+gfoldl :: (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Amount a -&gt; c (Amount a)
+$cgfoldl :: forall a (c :: * -&gt; *).
+Data a =&gt;
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Amount a -&gt; c (Amount a)
+$cp1Data :: forall a. Data a =&gt; Typeable (Amount a)
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-78"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680925876"><span id="local-6989586621680925878"><span id="local-6989586621680925880"><span id="local-6989586621680925882"><span class="annot"><span class="annottext">[Amount a] -&gt; Encoding
+[Amount a] -&gt; Value
+Amount a -&gt; Encoding
+Amount a -&gt; Value
+(Amount a -&gt; Value)
+-&gt; (Amount a -&gt; Encoding)
+-&gt; ([Amount a] -&gt; Value)
+-&gt; ([Amount a] -&gt; Encoding)
+-&gt; ToJSON (Amount a)
+forall a. [Amount a] -&gt; Encoding
+forall a. [Amount a] -&gt; Value
+forall a. Amount a -&gt; Encoding
+forall a. Amount a -&gt; Value
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; ToJSON a
+toEncodingList :: [Amount a] -&gt; Encoding
+$ctoEncodingList :: forall a. [Amount a] -&gt; Encoding
+toJSONList :: [Amount a] -&gt; Value
+$ctoJSONList :: forall a. [Amount a] -&gt; Value
+toEncoding :: Amount a -&gt; Encoding
+$ctoEncoding :: forall a. Amount a -&gt; Encoding
+toJSON :: Amount a -&gt; Value
+$ctoJSON :: forall a. Amount a -&gt; Value
+</span><a href="#local-6989586621680925876"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680925872"><span id="local-6989586621680925874"><span class="annot"><span class="annottext">Value -&gt; Parser [Amount a]
+Value -&gt; Parser (Amount a)
+(Value -&gt; Parser (Amount a))
+-&gt; (Value -&gt; Parser [Amount a]) -&gt; FromJSON (Amount a)
+forall a. Value -&gt; Parser [Amount a]
+forall a. Value -&gt; Parser (Amount a)
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+parseJSONList :: Value -&gt; Parser [Amount a]
+$cparseJSONList :: forall a. Value -&gt; Parser [Amount a]
+parseJSON :: Value -&gt; Parser (Amount a)
+$cparseJSON :: forall a. Value -&gt; Parser (Amount a)
+</span><a href="#local-6989586621680925872"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680925870"><span class="annot"><span class="annottext">Amount a -&gt; Amount a -&gt; Bool
+(Amount a -&gt; Amount a -&gt; Bool) -&gt; Eq (Amount a)
+forall a. Amount a -&gt; Amount a -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; Eq a
+== :: Amount a -&gt; Amount a -&gt; Bool
+$c== :: forall a. Amount a -&gt; Amount a -&gt; Bool
+</span><a href="#local-6989586621680925870"><span class="hs-identifier hs-var hs-var hs-var hs-var">Eq</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680925855"><span id="local-6989586621680925857"><span id="local-6989586621680925859"><span id="local-6989586621680925861"><span id="local-6989586621680925863"><span id="local-6989586621680925865"><span id="local-6989586621680925867"><span class="annot"><span class="annottext">Eq (Amount a)
+Eq (Amount a)
+-&gt; (Amount a -&gt; Amount a -&gt; Ordering)
+-&gt; (Amount a -&gt; Amount a -&gt; Bool)
+-&gt; (Amount a -&gt; Amount a -&gt; Bool)
+-&gt; (Amount a -&gt; Amount a -&gt; Bool)
+-&gt; (Amount a -&gt; Amount a -&gt; Bool)
+-&gt; (Amount a -&gt; Amount a -&gt; Amount a)
+-&gt; (Amount a -&gt; Amount a -&gt; Amount a)
+-&gt; Ord (Amount a)
+Amount a -&gt; Amount a -&gt; Bool
+Amount a -&gt; Amount a -&gt; Ordering
+Amount a -&gt; Amount a -&gt; Amount a
+forall a. Eq (Amount a)
+forall a.
+Eq a
+-&gt; (a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+forall a. Amount a -&gt; Amount a -&gt; Bool
+forall a. Amount a -&gt; Amount a -&gt; Ordering
+forall a. Amount a -&gt; Amount a -&gt; Amount a
+min :: Amount a -&gt; Amount a -&gt; Amount a
+$cmin :: forall a. Amount a -&gt; Amount a -&gt; Amount a
+max :: Amount a -&gt; Amount a -&gt; Amount a
+$cmax :: forall a. Amount a -&gt; Amount a -&gt; Amount a
+&gt;= :: Amount a -&gt; Amount a -&gt; Bool
+$c&gt;= :: forall a. Amount a -&gt; Amount a -&gt; Bool
+&gt; :: Amount a -&gt; Amount a -&gt; Bool
+$c&gt; :: forall a. Amount a -&gt; Amount a -&gt; Bool
+&lt;= :: Amount a -&gt; Amount a -&gt; Bool
+$c&lt;= :: forall a. Amount a -&gt; Amount a -&gt; Bool
+&lt; :: Amount a -&gt; Amount a -&gt; Bool
+$c&lt; :: forall a. Amount a -&gt; Amount a -&gt; Bool
+compare :: Amount a -&gt; Amount a -&gt; Ordering
+$ccompare :: forall a. Amount a -&gt; Amount a -&gt; Ordering
+$cp1Ord :: forall a. Eq (Amount a)
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680925850"><span id="local-6989586621680925852"><span class="annot"><span class="annottext">Amount a -&gt; ModifierParser
+Amount a -&gt; FieldFormatter
+(Amount a -&gt; FieldFormatter)
+-&gt; (Amount a -&gt; ModifierParser) -&gt; PrintfArg (Amount a)
+forall a. Amount a -&gt; ModifierParser
+forall a. Amount a -&gt; FieldFormatter
+forall a.
+(a -&gt; FieldFormatter) -&gt; (a -&gt; ModifierParser) -&gt; PrintfArg a
+parseFormat :: Amount a -&gt; ModifierParser
+$cparseFormat :: forall a. Amount a -&gt; ModifierParser
+formatArg :: Amount a -&gt; FieldFormatter
+$cformatArg :: forall a. Amount a -&gt; FieldFormatter
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">PrintfArg</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-79"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680925845"><span id="local-6989586621680925847"><span class="annot"><span class="annottext">Amount a -&gt; Amount a -&gt; Bool
+(Amount a -&gt; Amount a -&gt; Bool)
+-&gt; (Amount a -&gt; Amount a -&gt; Bool) -&gt; Eq (Amount a)
+forall a. Amount a -&gt; Amount a -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: Amount a -&gt; Amount a -&gt; Bool
+$c/= :: forall a. Amount a -&gt; Amount a -&gt; Bool
+== :: Amount a -&gt; Amount a -&gt; Bool
+$c== :: forall a. Amount a -&gt; Amount a -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Haskell.Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680925830"><span id="local-6989586621680925832"><span id="local-6989586621680925834"><span id="local-6989586621680925836"><span id="local-6989586621680925838"><span id="local-6989586621680925840"><span id="local-6989586621680925842"><span class="annot"><span class="annottext">Eq (Amount a)
+Eq (Amount a)
+-&gt; (Amount a -&gt; Amount a -&gt; Ordering)
+-&gt; (Amount a -&gt; Amount a -&gt; Bool)
+-&gt; (Amount a -&gt; Amount a -&gt; Bool)
+-&gt; (Amount a -&gt; Amount a -&gt; Bool)
+-&gt; (Amount a -&gt; Amount a -&gt; Bool)
+-&gt; (Amount a -&gt; Amount a -&gt; Amount a)
+-&gt; (Amount a -&gt; Amount a -&gt; Amount a)
+-&gt; Ord (Amount a)
+Amount a -&gt; Amount a -&gt; Bool
+Amount a -&gt; Amount a -&gt; Ordering
+Amount a -&gt; Amount a -&gt; Amount a
+forall a. Eq (Amount a)
+forall a.
+Eq a
+-&gt; (a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+forall a. Amount a -&gt; Amount a -&gt; Bool
+forall a. Amount a -&gt; Amount a -&gt; Ordering
+forall a. Amount a -&gt; Amount a -&gt; Amount a
+min :: Amount a -&gt; Amount a -&gt; Amount a
+$cmin :: forall a. Amount a -&gt; Amount a -&gt; Amount a
+max :: Amount a -&gt; Amount a -&gt; Amount a
+$cmax :: forall a. Amount a -&gt; Amount a -&gt; Amount a
+&gt;= :: Amount a -&gt; Amount a -&gt; Bool
+$c&gt;= :: forall a. Amount a -&gt; Amount a -&gt; Bool
+&gt; :: Amount a -&gt; Amount a -&gt; Bool
+$c&gt; :: forall a. Amount a -&gt; Amount a -&gt; Bool
+&lt;= :: Amount a -&gt; Amount a -&gt; Bool
+$c&lt;= :: forall a. Amount a -&gt; Amount a -&gt; Bool
+&lt; :: Amount a -&gt; Amount a -&gt; Bool
+$c&lt; :: forall a. Amount a -&gt; Amount a -&gt; Bool
+compare :: Amount a -&gt; Amount a -&gt; Ordering
+$ccompare :: forall a. Amount a -&gt; Amount a -&gt; Ordering
+$cp1Ord :: forall a. Eq (Amount a)
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Haskell.Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680925816"><span id="local-6989586621680925818"><span id="local-6989586621680925820"><span id="local-6989586621680925822"><span id="local-6989586621680925824"><span id="local-6989586621680925826"><span id="local-6989586621680925828"><span class="annot"><span class="annottext">Integer -&gt; Amount a
+Amount a -&gt; Amount a
+Amount a -&gt; Amount a -&gt; Amount a
+(Amount a -&gt; Amount a -&gt; Amount a)
+-&gt; (Amount a -&gt; Amount a -&gt; Amount a)
+-&gt; (Amount a -&gt; Amount a -&gt; Amount a)
+-&gt; (Amount a -&gt; Amount a)
+-&gt; (Amount a -&gt; Amount a)
+-&gt; (Amount a -&gt; Amount a)
+-&gt; (Integer -&gt; Amount a)
+-&gt; Num (Amount a)
+forall a. Integer -&gt; Amount a
+forall a. Amount a -&gt; Amount a
+forall a. Amount a -&gt; Amount a -&gt; Amount a
+forall a.
+(a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Integer -&gt; a)
+-&gt; Num a
+fromInteger :: Integer -&gt; Amount a
+$cfromInteger :: forall a. Integer -&gt; Amount a
+signum :: Amount a -&gt; Amount a
+$csignum :: forall a. Amount a -&gt; Amount a
+abs :: Amount a -&gt; Amount a
+$cabs :: forall a. Amount a -&gt; Amount a
+negate :: Amount a -&gt; Amount a
+$cnegate :: forall a. Amount a -&gt; Amount a
+* :: Amount a -&gt; Amount a -&gt; Amount a
+$c* :: forall a. Amount a -&gt; Amount a -&gt; Amount a
+- :: Amount a -&gt; Amount a -&gt; Amount a
+$c- :: forall a. Amount a -&gt; Amount a -&gt; Amount a
++ :: Amount a -&gt; Amount a -&gt; Amount a
+$c+ :: forall a. Amount a -&gt; Amount a -&gt; Amount a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Haskell.Num</span></a></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680925812"><span class="annot"><span class="annottext">AdditiveMonoid (Amount a)
+AdditiveMonoid (Amount a)
+-&gt; (Amount a -&gt; Amount a -&gt; Amount a) -&gt; AdditiveGroup (Amount a)
+Amount a -&gt; Amount a -&gt; Amount a
+forall a. AdditiveMonoid (Amount a)
+forall a. AdditiveMonoid a -&gt; (a -&gt; a -&gt; a) -&gt; AdditiveGroup a
+forall a. Amount a -&gt; Amount a -&gt; Amount a
+- :: Amount a -&gt; Amount a -&gt; Amount a
+$c- :: forall a. Amount a -&gt; Amount a -&gt; Amount a
+$cp1AdditiveGroup :: forall a. AdditiveMonoid (Amount a)
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var">AdditiveGroup</span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680925808"><span class="annot"><span class="annottext">AdditiveSemigroup (Amount a)
+Amount a
+AdditiveSemigroup (Amount a)
+-&gt; Amount a -&gt; AdditiveMonoid (Amount a)
+forall a. AdditiveSemigroup (Amount a)
+forall a. Amount a
+forall a. AdditiveSemigroup a -&gt; a -&gt; AdditiveMonoid a
+zero :: Amount a
+$czero :: forall a. Amount a
+$cp1AdditiveMonoid :: forall a. AdditiveSemigroup (Amount a)
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var">AdditiveMonoid</span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680925805"><span class="annot"><span class="annottext">Amount a -&gt; Amount a -&gt; Amount a
+(Amount a -&gt; Amount a -&gt; Amount a) -&gt; AdditiveSemigroup (Amount a)
+forall a. Amount a -&gt; Amount a -&gt; Amount a
+forall a. (a -&gt; a -&gt; a) -&gt; AdditiveSemigroup a
++ :: Amount a -&gt; Amount a -&gt; Amount a
+$c+ :: forall a. Amount a -&gt; Amount a -&gt; Amount a
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">AdditiveSemigroup</span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680925802"><span class="annot"><span class="annottext">Amount a -&gt; Amount a -&gt; Amount a
+(Amount a -&gt; Amount a -&gt; Amount a)
+-&gt; MultiplicativeSemigroup (Amount a)
+forall a. Amount a -&gt; Amount a -&gt; Amount a
+forall a. (a -&gt; a -&gt; a) -&gt; MultiplicativeSemigroup a
+* :: Amount a -&gt; Amount a -&gt; Amount a
+$c* :: forall a. Amount a -&gt; Amount a -&gt; Amount a
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">MultiplicativeSemigroup</span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-81"></span><span id="local-6989586621680925795"><span id="local-6989586621680925797"><span id="local-6989586621680925799"><span id="local-6989586621680926332"><span class="hs-identifier">PlutusTx.makeIsDataIndexed</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">Amount</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="hs-special">'</span><span class="hs-identifier">Amount</span><span class="hs-special">,</span><span> </span><span class="hs-number">0</span><span class="hs-special">)</span><span class="hs-special">]</span></span></span></span></span><span>
+</span><span id="line-82"></span><span id="local-6989586621680925791"><span id="local-6989586621680925793"><span id="local-6989586621680926332"><span class="hs-identifier">PlutusTx.makeLift</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">Amount</span></span></span></span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span class="hs-pragma">{-# INLINABLE</span><span> </span><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#valueOf"><span class="hs-pragma hs-type">valueOf</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-85"></span><span id="local-6989586621680926330"><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#valueOf"><span class="hs-identifier hs-type">valueOf</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680926330"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#Amount"><span class="hs-identifier hs-type">Amount</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680926330"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span></span><span>
+</span><span id="line-86"></span><span id="valueOf"><span class="annot"><span class="annottext">valueOf :: Coin a -&gt; Amount a -&gt; Value
+</span><a href="Plutus.Contracts.Uniswap.Types.html#valueOf"><span class="hs-identifier hs-var hs-var">valueOf</span></a></span></span><span> </span><span id="local-6989586621680925789"><span class="annot"><span class="annottext">Coin a
+</span><a href="#local-6989586621680925789"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span id="local-6989586621680925788"><span class="annot"><span class="annottext">Amount a
+</span><a href="#local-6989586621680925788"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AssetClass -&gt; Integer -&gt; Value
+</span><span class="hs-identifier hs-var">assetClassValue</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Coin a -&gt; AssetClass
+forall a. Coin a -&gt; AssetClass
+</span><a href="Plutus.Contracts.Uniswap.Types.html#unCoin"><span class="hs-identifier hs-var hs-var">unCoin</span></a></span><span> </span><span class="annot"><span class="annottext">Coin a
+</span><a href="#local-6989586621680925789"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Amount a -&gt; Integer
+forall a. Amount a -&gt; Integer
+</span><a href="Plutus.Contracts.Uniswap.Types.html#unAmount"><span class="hs-identifier hs-var hs-var">unAmount</span></a></span><span> </span><span class="annot"><span class="annottext">Amount a
+</span><a href="#local-6989586621680925788"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span class="hs-pragma">{-# INLINABLE</span><span> </span><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#unitValue"><span class="hs-pragma hs-type">unitValue</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-89"></span><span id="local-6989586621680925786"><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#unitValue"><span class="hs-identifier hs-type">unitValue</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680925786"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span></span><span>
+</span><span id="line-90"></span><span id="unitValue"><span class="annot"><span class="annottext">unitValue :: Coin a -&gt; Value
+</span><a href="Plutus.Contracts.Uniswap.Types.html#unitValue"><span class="hs-identifier hs-var hs-var">unitValue</span></a></span></span><span> </span><span id="local-6989586621680925785"><span class="annot"><span class="annottext">Coin a
+</span><a href="#local-6989586621680925785"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Coin a -&gt; Amount a -&gt; Value
+forall a. Coin a -&gt; Amount a -&gt; Value
+</span><a href="Plutus.Contracts.Uniswap.Types.html#valueOf"><span class="hs-identifier hs-var">valueOf</span></a></span><span> </span><span class="annot"><span class="annottext">Coin a
+</span><a href="#local-6989586621680925785"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Amount a
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-91"></span><span>
+</span><span id="line-92"></span><span class="hs-pragma">{-# INLINABLE</span><span> </span><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#isUnity"><span class="hs-pragma hs-type">isUnity</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-93"></span><span id="local-6989586621680925783"><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#isUnity"><span class="hs-identifier hs-type">isUnity</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680925783"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">Bool</span></a></span></span><span>
+</span><span id="line-94"></span><span id="isUnity"><span class="annot"><span class="annottext">isUnity :: Value -&gt; Coin a -&gt; Bool
+</span><a href="Plutus.Contracts.Uniswap.Types.html#isUnity"><span class="hs-identifier hs-var hs-var">isUnity</span></a></span></span><span> </span><span id="local-6989586621680925782"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680925782"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621680925781"><span class="annot"><span class="annottext">Coin a
+</span><a href="#local-6989586621680925781"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Value -&gt; Coin a -&gt; Amount a
+forall a. Value -&gt; Coin a -&gt; Amount a
+</span><a href="Plutus.Contracts.Uniswap.Types.html#amountOf"><span class="hs-identifier hs-var">amountOf</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680925782"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Coin a
+</span><a href="#local-6989586621680925781"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Amount a -&gt; Amount a -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Amount a
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-95"></span><span>
+</span><span id="line-96"></span><span class="hs-pragma">{-# INLINABLE</span><span> </span><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#amountOf"><span class="hs-pragma hs-type">amountOf</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-97"></span><span id="local-6989586621680926328"><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#amountOf"><span class="hs-identifier hs-type">amountOf</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680926328"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#Amount"><span class="hs-identifier hs-type">Amount</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680926328"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-98"></span><span id="amountOf"><span class="annot"><span class="annottext">amountOf :: Value -&gt; Coin a -&gt; Amount a
+</span><a href="Plutus.Contracts.Uniswap.Types.html#amountOf"><span class="hs-identifier hs-var hs-var">amountOf</span></a></span></span><span> </span><span id="local-6989586621680925778"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680925778"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Amount a
+forall a. Integer -&gt; Amount a
+</span><a href="Plutus.Contracts.Uniswap.Types.html#Amount"><span class="hs-identifier hs-var">Amount</span></a></span><span> </span><span class="annot"><span class="annottext">(Integer -&gt; Amount a) -&gt; (Coin a -&gt; Integer) -&gt; Coin a -&gt; Amount a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Value -&gt; AssetClass -&gt; Integer
+</span><span class="hs-identifier hs-var">assetClassValueOf</span></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680925778"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">(AssetClass -&gt; Integer)
+-&gt; (Coin a -&gt; AssetClass) -&gt; Coin a -&gt; Integer
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Coin a -&gt; AssetClass
+forall a. Coin a -&gt; AssetClass
+</span><a href="Plutus.Contracts.Uniswap.Types.html#unCoin"><span class="hs-identifier hs-var hs-var">unCoin</span></a></span><span>
+</span><span id="line-99"></span><span>
+</span><span id="line-100"></span><span class="hs-pragma">{-# INLINABLE</span><span> </span><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#mkCoin"><span class="hs-pragma hs-type">mkCoin</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-101"></span><span id="local-6989586621680925775"><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#mkCoin"><span class="hs-identifier hs-type">mkCoin</span></a></span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">CurrencySymbol</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">TokenName</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680925775"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-102"></span><span id="mkCoin"><span class="annot"><span class="annottext">mkCoin :: CurrencySymbol -&gt; TokenName -&gt; Coin a
+</span><a href="Plutus.Contracts.Uniswap.Types.html#mkCoin"><span class="hs-identifier hs-var hs-var">mkCoin</span></a></span></span><span> </span><span id="local-6989586621680925774"><span class="annot"><span class="annottext">CurrencySymbol
+</span><a href="#local-6989586621680925774"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AssetClass -&gt; Coin a
+forall a. AssetClass -&gt; Coin a
+</span><a href="Plutus.Contracts.Uniswap.Types.html#Coin"><span class="hs-identifier hs-var">Coin</span></a></span><span> </span><span class="annot"><span class="annottext">(AssetClass -&gt; Coin a)
+-&gt; (TokenName -&gt; AssetClass) -&gt; TokenName -&gt; Coin a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">CurrencySymbol -&gt; TokenName -&gt; AssetClass
+</span><span class="hs-identifier hs-var">assetClass</span></span><span> </span><span class="annot"><span class="annottext">CurrencySymbol
+</span><a href="#local-6989586621680925774"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-103"></span><span>
+</span><span id="line-104"></span><span id="local-6989586621680925772"><span id="local-6989586621680925773"></span></span><span class="hs-keyword">newtype</span><span> </span><span id="Uniswap"><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#Uniswap"><span class="hs-identifier hs-var">Uniswap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Uniswap"><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#Uniswap"><span class="hs-identifier hs-var">Uniswap</span></a></span></span><span>
+</span><span id="line-105"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="usCoin"><span class="annot"><span class="annottext">Uniswap -&gt; Coin U
+</span><a href="Plutus.Contracts.Uniswap.Types.html#usCoin"><span class="hs-identifier hs-var hs-var">usCoin</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span> </span><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#U"><span class="hs-identifier hs-type">U</span></a></span><span>
+</span><span id="line-106"></span><span>    </span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621680925764"><span id="local-6989586621680925766"><span id="local-6989586621680925768"><span class="annot"><span class="annottext">Int -&gt; Uniswap -&gt; ShowS
+[Uniswap] -&gt; ShowS
+Uniswap -&gt; String
+(Int -&gt; Uniswap -&gt; ShowS)
+-&gt; (Uniswap -&gt; String) -&gt; ([Uniswap] -&gt; ShowS) -&gt; Show Uniswap
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [Uniswap] -&gt; ShowS
+$cshowList :: [Uniswap] -&gt; ShowS
+show :: Uniswap -&gt; String
+$cshow :: Uniswap -&gt; String
+showsPrec :: Int -&gt; Uniswap -&gt; ShowS
+$cshowsPrec :: Int -&gt; Uniswap -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Haskell.Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. Uniswap -&gt; Rep Uniswap x)
+-&gt; (forall x. Rep Uniswap x -&gt; Uniswap) -&gt; Generic Uniswap
+forall x. Rep Uniswap x -&gt; Uniswap
+forall x. Uniswap -&gt; Rep Uniswap x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep Uniswap x -&gt; Uniswap
+$cfrom :: forall x. Uniswap -&gt; Rep Uniswap x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">,</span><span> </span><span id="%24cUniswap"><span id="%24tUniswap"><span id="local-6989586621680925733"><span id="local-6989586621680925735"><span id="local-6989586621680925737"><span id="local-6989586621680925739"><span id="local-6989586621680925741"><span id="local-6989586621680925743"><span id="local-6989586621680925745"><span id="local-6989586621680925747"><span id="local-6989586621680925749"><span id="local-6989586621680925751"><span id="local-6989586621680925753"><span id="local-6989586621680925755"><span id="local-6989586621680925757"><span id="local-6989586621680925759"><span class="annot"><span class="annottext">Typeable Uniswap
+DataType
+Constr
+Typeable Uniswap
+-&gt; (forall (c :: * -&gt; *).
+    (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+    -&gt; (forall g. g -&gt; c g) -&gt; Uniswap -&gt; c Uniswap)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Uniswap)
+-&gt; (Uniswap -&gt; Constr)
+-&gt; (Uniswap -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c Uniswap))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c Uniswap))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; Uniswap -&gt; Uniswap)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Uniswap -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Uniswap -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Uniswap -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Uniswap -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Uniswap -&gt; m Uniswap)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Uniswap -&gt; m Uniswap)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Uniswap -&gt; m Uniswap)
+-&gt; Data Uniswap
+Uniswap -&gt; DataType
+Uniswap -&gt; Constr
+(forall b. Data b =&gt; b -&gt; b) -&gt; Uniswap -&gt; Uniswap
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Uniswap -&gt; c Uniswap
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Uniswap
+forall a.
+Typeable a
+-&gt; (forall (c :: * -&gt; *).
+    (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+    -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Uniswap -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Uniswap -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Uniswap -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Uniswap -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Uniswap -&gt; m Uniswap
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Uniswap -&gt; m Uniswap
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Uniswap
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Uniswap -&gt; c Uniswap
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c Uniswap)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c Uniswap)
+$cUniswap :: Constr
+$tUniswap :: DataType
+gmapMo :: (forall d. Data d =&gt; d -&gt; m d) -&gt; Uniswap -&gt; m Uniswap
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Uniswap -&gt; m Uniswap
+gmapMp :: (forall d. Data d =&gt; d -&gt; m d) -&gt; Uniswap -&gt; m Uniswap
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Uniswap -&gt; m Uniswap
+gmapM :: (forall d. Data d =&gt; d -&gt; m d) -&gt; Uniswap -&gt; m Uniswap
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Uniswap -&gt; m Uniswap
+gmapQi :: Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Uniswap -&gt; u
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Uniswap -&gt; u
+gmapQ :: (forall d. Data d =&gt; d -&gt; u) -&gt; Uniswap -&gt; [u]
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Uniswap -&gt; [u]
+gmapQr :: (r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Uniswap -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Uniswap -&gt; r
+gmapQl :: (r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Uniswap -&gt; r
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Uniswap -&gt; r
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; Uniswap -&gt; Uniswap
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; Uniswap -&gt; Uniswap
+dataCast2 :: (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c Uniswap)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c Uniswap)
+dataCast1 :: (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c Uniswap)
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c Uniswap)
+dataTypeOf :: Uniswap -&gt; DataType
+$cdataTypeOf :: Uniswap -&gt; DataType
+toConstr :: Uniswap -&gt; Constr
+$ctoConstr :: Uniswap -&gt; Constr
+gunfold :: (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Uniswap
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Uniswap
+gfoldl :: (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Uniswap -&gt; c Uniswap
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Uniswap -&gt; c Uniswap
+$cp1Data :: Typeable Uniswap
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-107"></span><span>      </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680925723"><span id="local-6989586621680925725"><span id="local-6989586621680925727"><span id="local-6989586621680925729"><span class="annot"><span class="annottext">[Uniswap] -&gt; Encoding
+[Uniswap] -&gt; Value
+Uniswap -&gt; Encoding
+Uniswap -&gt; Value
+(Uniswap -&gt; Value)
+-&gt; (Uniswap -&gt; Encoding)
+-&gt; ([Uniswap] -&gt; Value)
+-&gt; ([Uniswap] -&gt; Encoding)
+-&gt; ToJSON Uniswap
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; ToJSON a
+toEncodingList :: [Uniswap] -&gt; Encoding
+$ctoEncodingList :: [Uniswap] -&gt; Encoding
+toJSONList :: [Uniswap] -&gt; Value
+$ctoJSONList :: [Uniswap] -&gt; Value
+toEncoding :: Uniswap -&gt; Encoding
+$ctoEncoding :: Uniswap -&gt; Encoding
+toJSON :: Uniswap -&gt; Value
+$ctoJSON :: Uniswap -&gt; Value
+</span><a href="#local-6989586621680925723"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680925719"><span id="local-6989586621680925721"><span class="annot"><span class="annottext">Value -&gt; Parser [Uniswap]
+Value -&gt; Parser Uniswap
+(Value -&gt; Parser Uniswap)
+-&gt; (Value -&gt; Parser [Uniswap]) -&gt; FromJSON Uniswap
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+parseJSONList :: Value -&gt; Parser [Uniswap]
+$cparseJSONList :: Value -&gt; Parser [Uniswap]
+parseJSON :: Value -&gt; Parser Uniswap
+$cparseJSON :: Value -&gt; Parser Uniswap
+</span><a href="#local-6989586621680925719"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680925716"><span class="annot"><span class="annottext">Typeable Uniswap
+Typeable Uniswap
+-&gt; (Proxy Uniswap -&gt; Declare (Definitions Schema) NamedSchema)
+-&gt; ToSchema Uniswap
+Proxy Uniswap -&gt; Declare (Definitions Schema) NamedSchema
+forall a.
+Typeable a
+-&gt; (Proxy a -&gt; Declare (Definitions Schema) NamedSchema)
+-&gt; ToSchema a
+declareNamedSchema :: Proxy Uniswap -&gt; Declare (Definitions Schema) NamedSchema
+$cdeclareNamedSchema :: Proxy Uniswap -&gt; Declare (Definitions Schema) NamedSchema
+$cp1ToSchema :: Typeable Uniswap
+</span><a href="#local-6989586621680925716"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var">OpenApi.ToSchema</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-108"></span><span>      </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621680925712"><span id="local-6989586621680925714"><span class="annot"><span class="annottext">Uniswap -&gt; Uniswap -&gt; Bool
+(Uniswap -&gt; Uniswap -&gt; Bool)
+-&gt; (Uniswap -&gt; Uniswap -&gt; Bool) -&gt; Eq Uniswap
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: Uniswap -&gt; Uniswap -&gt; Bool
+$c/= :: Uniswap -&gt; Uniswap -&gt; Bool
+== :: Uniswap -&gt; Uniswap -&gt; Bool
+$c== :: Uniswap -&gt; Uniswap -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Haskell.Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680925697"><span id="local-6989586621680925699"><span id="local-6989586621680925701"><span id="local-6989586621680925703"><span id="local-6989586621680925705"><span id="local-6989586621680925707"><span id="local-6989586621680925709"><span class="annot"><span class="annottext">Eq Uniswap
+Eq Uniswap
+-&gt; (Uniswap -&gt; Uniswap -&gt; Ordering)
+-&gt; (Uniswap -&gt; Uniswap -&gt; Bool)
+-&gt; (Uniswap -&gt; Uniswap -&gt; Bool)
+-&gt; (Uniswap -&gt; Uniswap -&gt; Bool)
+-&gt; (Uniswap -&gt; Uniswap -&gt; Bool)
+-&gt; (Uniswap -&gt; Uniswap -&gt; Uniswap)
+-&gt; (Uniswap -&gt; Uniswap -&gt; Uniswap)
+-&gt; Ord Uniswap
+Uniswap -&gt; Uniswap -&gt; Bool
+Uniswap -&gt; Uniswap -&gt; Ordering
+Uniswap -&gt; Uniswap -&gt; Uniswap
+forall a.
+Eq a
+-&gt; (a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+min :: Uniswap -&gt; Uniswap -&gt; Uniswap
+$cmin :: Uniswap -&gt; Uniswap -&gt; Uniswap
+max :: Uniswap -&gt; Uniswap -&gt; Uniswap
+$cmax :: Uniswap -&gt; Uniswap -&gt; Uniswap
+&gt;= :: Uniswap -&gt; Uniswap -&gt; Bool
+$c&gt;= :: Uniswap -&gt; Uniswap -&gt; Bool
+&gt; :: Uniswap -&gt; Uniswap -&gt; Bool
+$c&gt; :: Uniswap -&gt; Uniswap -&gt; Bool
+&lt;= :: Uniswap -&gt; Uniswap -&gt; Bool
+$c&lt;= :: Uniswap -&gt; Uniswap -&gt; Bool
+&lt; :: Uniswap -&gt; Uniswap -&gt; Bool
+$c&lt; :: Uniswap -&gt; Uniswap -&gt; Bool
+compare :: Uniswap -&gt; Uniswap -&gt; Ordering
+$ccompare :: Uniswap -&gt; Uniswap -&gt; Ordering
+$cp1Ord :: Eq Uniswap
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Haskell.Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-109"></span><span id="local-6989586621680925691"><span id="local-6989586621680925693"><span id="local-6989586621680925695"><span class="hs-identifier">PlutusTx.makeIsDataIndexed</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">Uniswap</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="hs-special">'</span><span class="hs-identifier">Uniswap</span><span class="hs-special">,</span><span> </span><span class="hs-number">0</span><span class="hs-special">)</span><span class="hs-special">]</span></span></span></span><span>
+</span><span id="line-110"></span><span id="local-6989586621680925687"><span id="local-6989586621680925689"><span class="hs-identifier">PlutusTx.makeLift</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">Uniswap</span></span></span><span>
+</span><span id="line-111"></span><span>
+</span><span id="line-112"></span><span id="local-6989586621680925685"><span id="local-6989586621680925686"></span></span><span class="hs-keyword">data</span><span> </span><span id="LiquidityPool"><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#LiquidityPool"><span class="hs-identifier hs-var">LiquidityPool</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="LiquidityPool"><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#LiquidityPool"><span class="hs-identifier hs-var">LiquidityPool</span></a></span></span><span>
+</span><span id="line-113"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="lpCoinA"><span class="annot"><span class="annottext">LiquidityPool -&gt; Coin A
+</span><a href="Plutus.Contracts.Uniswap.Types.html#lpCoinA"><span class="hs-identifier hs-var hs-var">lpCoinA</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span> </span><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#A"><span class="hs-identifier hs-type">A</span></a></span><span>
+</span><span id="line-114"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="lpCoinB"><span class="annot"><span class="annottext">LiquidityPool -&gt; Coin B
+</span><a href="Plutus.Contracts.Uniswap.Types.html#lpCoinB"><span class="hs-identifier hs-var hs-var">lpCoinB</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span> </span><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#B"><span class="hs-identifier hs-type">B</span></a></span><span>
+</span><span id="line-115"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-116"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621680925676"><span id="local-6989586621680925678"><span id="local-6989586621680925680"><span class="annot"><span class="annottext">Int -&gt; LiquidityPool -&gt; ShowS
+[LiquidityPool] -&gt; ShowS
+LiquidityPool -&gt; String
+(Int -&gt; LiquidityPool -&gt; ShowS)
+-&gt; (LiquidityPool -&gt; String)
+-&gt; ([LiquidityPool] -&gt; ShowS)
+-&gt; Show LiquidityPool
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [LiquidityPool] -&gt; ShowS
+$cshowList :: [LiquidityPool] -&gt; ShowS
+show :: LiquidityPool -&gt; String
+$cshow :: LiquidityPool -&gt; String
+showsPrec :: Int -&gt; LiquidityPool -&gt; ShowS
+$cshowsPrec :: Int -&gt; LiquidityPool -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Haskell.Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. LiquidityPool -&gt; Rep LiquidityPool x)
+-&gt; (forall x. Rep LiquidityPool x -&gt; LiquidityPool)
+-&gt; Generic LiquidityPool
+forall x. Rep LiquidityPool x -&gt; LiquidityPool
+forall x. LiquidityPool -&gt; Rep LiquidityPool x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep LiquidityPool x -&gt; LiquidityPool
+$cfrom :: forall x. LiquidityPool -&gt; Rep LiquidityPool x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680925666"><span id="local-6989586621680925668"><span id="local-6989586621680925670"><span id="local-6989586621680925672"><span class="annot"><span class="annottext">[LiquidityPool] -&gt; Encoding
+[LiquidityPool] -&gt; Value
+LiquidityPool -&gt; Encoding
+LiquidityPool -&gt; Value
+(LiquidityPool -&gt; Value)
+-&gt; (LiquidityPool -&gt; Encoding)
+-&gt; ([LiquidityPool] -&gt; Value)
+-&gt; ([LiquidityPool] -&gt; Encoding)
+-&gt; ToJSON LiquidityPool
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; ToJSON a
+toEncodingList :: [LiquidityPool] -&gt; Encoding
+$ctoEncodingList :: [LiquidityPool] -&gt; Encoding
+toJSONList :: [LiquidityPool] -&gt; Value
+$ctoJSONList :: [LiquidityPool] -&gt; Value
+toEncoding :: LiquidityPool -&gt; Encoding
+$ctoEncoding :: LiquidityPool -&gt; Encoding
+toJSON :: LiquidityPool -&gt; Value
+$ctoJSON :: LiquidityPool -&gt; Value
+</span><a href="#local-6989586621680925666"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680925662"><span id="local-6989586621680925664"><span class="annot"><span class="annottext">Value -&gt; Parser [LiquidityPool]
+Value -&gt; Parser LiquidityPool
+(Value -&gt; Parser LiquidityPool)
+-&gt; (Value -&gt; Parser [LiquidityPool]) -&gt; FromJSON LiquidityPool
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+parseJSONList :: Value -&gt; Parser [LiquidityPool]
+$cparseJSONList :: Value -&gt; Parser [LiquidityPool]
+parseJSON :: Value -&gt; Parser LiquidityPool
+$cparseJSON :: Value -&gt; Parser LiquidityPool
+</span><a href="#local-6989586621680925662"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="%24cLiquidityPool"><span id="%24tLiquidityPool"><span id="local-6989586621680925633"><span id="local-6989586621680925635"><span id="local-6989586621680925637"><span id="local-6989586621680925639"><span id="local-6989586621680925641"><span id="local-6989586621680925643"><span id="local-6989586621680925645"><span id="local-6989586621680925647"><span id="local-6989586621680925649"><span id="local-6989586621680925651"><span id="local-6989586621680925653"><span id="local-6989586621680925655"><span id="local-6989586621680925657"><span id="local-6989586621680925659"><span class="annot"><span class="annottext">Typeable LiquidityPool
+DataType
+Constr
+Typeable LiquidityPool
+-&gt; (forall (c :: * -&gt; *).
+    (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+    -&gt; (forall g. g -&gt; c g) -&gt; LiquidityPool -&gt; c LiquidityPool)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c LiquidityPool)
+-&gt; (LiquidityPool -&gt; Constr)
+-&gt; (LiquidityPool -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c LiquidityPool))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e))
+    -&gt; Maybe (c LiquidityPool))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; LiquidityPool -&gt; LiquidityPool)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; LiquidityPool -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; LiquidityPool -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; LiquidityPool -&gt; [u])
+-&gt; (forall u.
+    Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; LiquidityPool -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; LiquidityPool -&gt; m LiquidityPool)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; LiquidityPool -&gt; m LiquidityPool)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; LiquidityPool -&gt; m LiquidityPool)
+-&gt; Data LiquidityPool
+LiquidityPool -&gt; DataType
+LiquidityPool -&gt; Constr
+(forall b. Data b =&gt; b -&gt; b) -&gt; LiquidityPool -&gt; LiquidityPool
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; LiquidityPool -&gt; c LiquidityPool
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c LiquidityPool
+forall a.
+Typeable a
+-&gt; (forall (c :: * -&gt; *).
+    (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+    -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; LiquidityPool -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; LiquidityPool -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; LiquidityPool -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; LiquidityPool -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; LiquidityPool -&gt; m LiquidityPool
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; LiquidityPool -&gt; m LiquidityPool
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c LiquidityPool
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; LiquidityPool -&gt; c LiquidityPool
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c LiquidityPool)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c LiquidityPool)
+$cLiquidityPool :: Constr
+$tLiquidityPool :: DataType
+gmapMo :: (forall d. Data d =&gt; d -&gt; m d) -&gt; LiquidityPool -&gt; m LiquidityPool
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; LiquidityPool -&gt; m LiquidityPool
+gmapMp :: (forall d. Data d =&gt; d -&gt; m d) -&gt; LiquidityPool -&gt; m LiquidityPool
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; LiquidityPool -&gt; m LiquidityPool
+gmapM :: (forall d. Data d =&gt; d -&gt; m d) -&gt; LiquidityPool -&gt; m LiquidityPool
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; LiquidityPool -&gt; m LiquidityPool
+gmapQi :: Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; LiquidityPool -&gt; u
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; LiquidityPool -&gt; u
+gmapQ :: (forall d. Data d =&gt; d -&gt; u) -&gt; LiquidityPool -&gt; [u]
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; LiquidityPool -&gt; [u]
+gmapQr :: (r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; LiquidityPool -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; LiquidityPool -&gt; r
+gmapQl :: (r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; LiquidityPool -&gt; r
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; LiquidityPool -&gt; r
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; LiquidityPool -&gt; LiquidityPool
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; LiquidityPool -&gt; LiquidityPool
+dataCast2 :: (forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c LiquidityPool)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c LiquidityPool)
+dataCast1 :: (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c LiquidityPool)
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c LiquidityPool)
+dataTypeOf :: LiquidityPool -&gt; DataType
+$cdataTypeOf :: LiquidityPool -&gt; DataType
+toConstr :: LiquidityPool -&gt; Constr
+$ctoConstr :: LiquidityPool -&gt; Constr
+gunfold :: (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c LiquidityPool
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c LiquidityPool
+gfoldl :: (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; LiquidityPool -&gt; c LiquidityPool
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; LiquidityPool -&gt; c LiquidityPool
+$cp1Data :: Typeable LiquidityPool
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-117"></span><span id="local-6989586621680925625"><span id="local-6989586621680925627"><span id="local-6989586621680925629"><span class="hs-identifier">PlutusTx.makeIsDataIndexed</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">LiquidityPool</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="hs-special">'</span><span class="hs-identifier">LiquidityPool</span><span class="hs-special">,</span><span> </span><span class="hs-number">0</span><span class="hs-special">)</span><span class="hs-special">]</span></span></span></span><span>
+</span><span id="line-118"></span><span id="local-6989586621680925621"><span id="local-6989586621680925623"><span class="hs-identifier">PlutusTx.makeLift</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">LiquidityPool</span></span></span><span>
+</span><span id="line-119"></span><span>
+</span><span id="line-120"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Eq</span></span><span> </span><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#LiquidityPool"><span class="hs-identifier hs-type">LiquidityPool</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-121"></span><span>    </span><span class="hs-pragma">{-# INLINABLE</span><span> </span><span class="hs-pragma">(</span><span class="hs-pragma">==</span><span class="hs-pragma">)</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-122"></span><span>    </span><span id="local-6989586621680925619"><span class="annot"><span class="annottext">LiquidityPool
+</span><a href="#local-6989586621680925619"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621680925618"><span class="annot"><span class="annottext">== :: LiquidityPool -&gt; LiquidityPool -&gt; Bool
+</span><a href="#local-6989586621680925618"><span class="hs-operator hs-var hs-var hs-var hs-var">==</span></a></span></span><span> </span><span id="local-6989586621680925617"><span class="annot"><span class="annottext">LiquidityPool
+</span><a href="#local-6989586621680925617"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LiquidityPool -&gt; Coin A
+</span><a href="Plutus.Contracts.Uniswap.Types.html#lpCoinA"><span class="hs-identifier hs-var hs-var">lpCoinA</span></a></span><span> </span><span class="annot"><span class="annottext">LiquidityPool
+</span><a href="#local-6989586621680925619"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Coin A -&gt; Coin A -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">LiquidityPool -&gt; Coin A
+</span><a href="Plutus.Contracts.Uniswap.Types.html#lpCoinA"><span class="hs-identifier hs-var hs-var">lpCoinA</span></a></span><span> </span><span class="annot"><span class="annottext">LiquidityPool
+</span><a href="#local-6989586621680925617"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">&amp;&amp;</span></span><span> </span><span class="annot"><span class="annottext">LiquidityPool -&gt; Coin B
+</span><a href="Plutus.Contracts.Uniswap.Types.html#lpCoinB"><span class="hs-identifier hs-var hs-var">lpCoinB</span></a></span><span> </span><span class="annot"><span class="annottext">LiquidityPool
+</span><a href="#local-6989586621680925619"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Coin B -&gt; Coin B -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">LiquidityPool -&gt; Coin B
+</span><a href="Plutus.Contracts.Uniswap.Types.html#lpCoinB"><span class="hs-identifier hs-var hs-var">lpCoinB</span></a></span><span> </span><span class="annot"><span class="annottext">LiquidityPool
+</span><a href="#local-6989586621680925617"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">||</span></span><span>
+</span><span id="line-123"></span><span>              </span><span class="hs-comment">-- Make sure the underlying coins aren't equal.</span><span>
+</span><span id="line-124"></span><span>             </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Coin A -&gt; AssetClass
+forall a. Coin a -&gt; AssetClass
+</span><a href="Plutus.Contracts.Uniswap.Types.html#unCoin"><span class="hs-identifier hs-var hs-var">unCoin</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LiquidityPool -&gt; Coin A
+</span><a href="Plutus.Contracts.Uniswap.Types.html#lpCoinA"><span class="hs-identifier hs-var hs-var">lpCoinA</span></a></span><span> </span><span class="annot"><span class="annottext">LiquidityPool
+</span><a href="#local-6989586621680925619"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">AssetClass -&gt; AssetClass -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Coin B -&gt; AssetClass
+forall a. Coin a -&gt; AssetClass
+</span><a href="Plutus.Contracts.Uniswap.Types.html#unCoin"><span class="hs-identifier hs-var hs-var">unCoin</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LiquidityPool -&gt; Coin B
+</span><a href="Plutus.Contracts.Uniswap.Types.html#lpCoinB"><span class="hs-identifier hs-var hs-var">lpCoinB</span></a></span><span> </span><span class="annot"><span class="annottext">LiquidityPool
+</span><a href="#local-6989586621680925617"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">&amp;&amp;</span></span><span> </span><span class="annot"><span class="annottext">Coin B -&gt; AssetClass
+forall a. Coin a -&gt; AssetClass
+</span><a href="Plutus.Contracts.Uniswap.Types.html#unCoin"><span class="hs-identifier hs-var hs-var">unCoin</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LiquidityPool -&gt; Coin B
+</span><a href="Plutus.Contracts.Uniswap.Types.html#lpCoinB"><span class="hs-identifier hs-var hs-var">lpCoinB</span></a></span><span> </span><span class="annot"><span class="annottext">LiquidityPool
+</span><a href="#local-6989586621680925619"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">AssetClass -&gt; AssetClass -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Coin A -&gt; AssetClass
+forall a. Coin a -&gt; AssetClass
+</span><a href="Plutus.Contracts.Uniswap.Types.html#unCoin"><span class="hs-identifier hs-var hs-var">unCoin</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LiquidityPool -&gt; Coin A
+</span><a href="Plutus.Contracts.Uniswap.Types.html#lpCoinA"><span class="hs-identifier hs-var hs-var">lpCoinA</span></a></span><span> </span><span class="annot"><span class="annottext">LiquidityPool
+</span><a href="#local-6989586621680925617"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-125"></span><span>
+</span><span id="line-126"></span><span class="hs-keyword">data</span><span> </span><span id="UniswapAction"><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#UniswapAction"><span class="hs-identifier hs-var">UniswapAction</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Create"><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#Create"><span class="hs-identifier hs-var">Create</span></a></span></span><span> </span><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#LiquidityPool"><span class="hs-identifier hs-type">LiquidityPool</span></a></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Close"><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#Close"><span class="hs-identifier hs-var">Close</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Swap"><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#Swap"><span class="hs-identifier hs-var">Swap</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Remove"><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#Remove"><span class="hs-identifier hs-var">Remove</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Add"><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#Add"><span class="hs-identifier hs-var">Add</span></a></span></span><span>
+</span><span id="line-127"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621680925604"><span id="local-6989586621680925606"><span id="local-6989586621680925608"><span class="annot"><span class="annottext">Int -&gt; UniswapAction -&gt; ShowS
+[UniswapAction] -&gt; ShowS
+UniswapAction -&gt; String
+(Int -&gt; UniswapAction -&gt; ShowS)
+-&gt; (UniswapAction -&gt; String)
+-&gt; ([UniswapAction] -&gt; ShowS)
+-&gt; Show UniswapAction
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [UniswapAction] -&gt; ShowS
+$cshowList :: [UniswapAction] -&gt; ShowS
+show :: UniswapAction -&gt; String
+$cshow :: UniswapAction -&gt; String
+showsPrec :: Int -&gt; UniswapAction -&gt; ShowS
+$cshowsPrec :: Int -&gt; UniswapAction -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Haskell.Show</span></a></span></span></span></span><span>
+</span><span id="line-128"></span><span id="local-6989586621680925598"><span id="local-6989586621680925600"><span id="local-6989586621680925602"><span class="hs-identifier">PlutusTx.makeIsDataIndexed</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">UniswapAction</span><span> </span><span class="hs-special">[</span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><span class="hs-identifier">Create</span><span> </span><span class="hs-special">,</span><span> </span><span class="hs-number">0</span><span class="hs-special">)</span><span>
+</span><span id="line-129"></span><span>                                           </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><span class="hs-identifier">Close</span><span class="hs-special">,</span><span>   </span><span class="hs-number">1</span><span class="hs-special">)</span><span>
+</span><span id="line-130"></span><span>                                           </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><span class="hs-identifier">Swap</span><span class="hs-special">,</span><span>    </span><span class="hs-number">2</span><span class="hs-special">)</span><span>
+</span><span id="line-131"></span><span>                                           </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><span class="hs-identifier">Remove</span><span class="hs-special">,</span><span>  </span><span class="hs-number">3</span><span class="hs-special">)</span><span>
+</span><span id="line-132"></span><span>                                           </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><span class="hs-identifier">Add</span><span class="hs-special">,</span><span>     </span><span class="hs-number">4</span><span class="hs-special">)</span><span>
+</span><span id="line-133"></span><span>                                           </span><span class="hs-special">]</span></span></span></span><span>
+</span><span id="line-134"></span><span id="local-6989586621680925594"><span id="local-6989586621680925596"><span class="hs-identifier">PlutusTx.makeLift</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">UniswapAction</span></span></span><span>
+</span><span id="line-135"></span><span>
+</span><span id="line-136"></span><span class="hs-keyword">data</span><span> </span><span id="UniswapDatum"><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#UniswapDatum"><span class="hs-identifier hs-var">UniswapDatum</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-137"></span><span>      </span><span id="Factory"><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#Factory"><span class="hs-identifier hs-var">Factory</span></a></span></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#LiquidityPool"><span class="hs-identifier hs-type">LiquidityPool</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-138"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="Pool"><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#Pool"><span class="hs-identifier hs-var">Pool</span></a></span></span><span> </span><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#LiquidityPool"><span class="hs-identifier hs-type">LiquidityPool</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#Amount"><span class="hs-identifier hs-type">Amount</span></a></span><span> </span><span class="annot"><a href="Plutus.Contracts.Uniswap.Types.html#Liquidity"><span class="hs-identifier hs-type">Liquidity</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-139"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680925586"><span id="local-6989586621680925588"><span id="local-6989586621680925590"><span class="annot"><span class="annottext">Int -&gt; UniswapDatum -&gt; ShowS
+[UniswapDatum] -&gt; ShowS
+UniswapDatum -&gt; String
+(Int -&gt; UniswapDatum -&gt; ShowS)
+-&gt; (UniswapDatum -&gt; String)
+-&gt; ([UniswapDatum] -&gt; ShowS)
+-&gt; Show UniswapDatum
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [UniswapDatum] -&gt; ShowS
+$cshowList :: [UniswapDatum] -&gt; ShowS
+show :: UniswapDatum -&gt; String
+$cshow :: UniswapDatum -&gt; String
+showsPrec :: Int -&gt; UniswapDatum -&gt; ShowS
+$cshowsPrec :: Int -&gt; UniswapDatum -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Haskell.Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-140"></span><span id="local-6989586621680925580"><span id="local-6989586621680925582"><span id="local-6989586621680925584"><span class="hs-identifier">PlutusTx.makeIsDataIndexed</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">UniswapDatum</span><span> </span><span class="hs-special">[</span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><span class="hs-identifier">Factory</span><span class="hs-special">,</span><span> </span><span class="hs-number">0</span><span class="hs-special">)</span><span>
+</span><span id="line-141"></span><span>                                          </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><span class="hs-identifier">Pool</span><span class="hs-special">,</span><span>    </span><span class="hs-number">1</span><span class="hs-special">)</span><span>
+</span><span id="line-142"></span><span>                                          </span><span class="hs-special">]</span></span></span></span><span>
+</span><span id="line-143"></span><span id="local-6989586621680925576"><span id="local-6989586621680925578"><span class="hs-identifier">PlutusTx.makeLift</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">UniswapDatum</span></span></span><span>
+</span><span id="line-144"></span></pre></body></html>

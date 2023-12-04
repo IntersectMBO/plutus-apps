@@ -1,0 +1,1771 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds             #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass        #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric         #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE DerivingStrategies    #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts      #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase            #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE MonoLocalBinds        #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns        #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE NoImplicitPrelude     #-}</span><span>
+</span><span id="line-11"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings     #-}</span><span>
+</span><span id="line-12"></span><span class="hs-pragma">{-# LANGUAGE TemplateHaskell       #-}</span><span>
+</span><span id="line-13"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications      #-}</span><span>
+</span><span id="line-14"></span><span class="hs-pragma">{-# LANGUAGE TypeOperators         #-}</span><span>
+</span><span id="line-15"></span><span class="hs-pragma">{-# LANGUAGE ViewPatterns          #-}</span><span>
+</span><span id="line-16"></span><span class="hs-pragma">{-# OPTIONS_GHC -fno-ignore-interface-pragmas #-}</span><span>
+</span><span id="line-17"></span><span class="hs-pragma">{-# OPTIONS_GHC -fno-omit-interface-pragmas #-}</span><span>
+</span><span id="line-18"></span><span class="hs-pragma">{-# OPTIONS_GHC -fno-specialise #-}</span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- | A multisig contract written as a state machine.</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Plutus.Contracts.MultiSigStateMachine</span><span class="hs-special">(</span><span>
+</span><span id="line-21"></span><span>    </span><span class="annot"><span class="hs-comment">-- $multisig</span></span><span>
+</span><span id="line-22"></span><span>      </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#Params"><span class="hs-identifier">Params</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#Payment"><span class="hs-identifier">Payment</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">State</span></span><span>
+</span><span id="line-25"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#mkValidator"><span class="hs-identifier">mkValidator</span></a></span><span>
+</span><span id="line-26"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#typedValidator"><span class="hs-identifier">typedValidator</span></a></span><span>
+</span><span id="line-27"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#MultiSigError"><span class="hs-identifier">MultiSigError</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#MultiSigSchema"><span class="hs-identifier">MultiSigSchema</span></a></span><span>
+</span><span id="line-29"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#contract"><span class="hs-identifier">contract</span></a></span><span>
+</span><span id="line-30"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Lens</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">makeClassyPrisms</span></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Control.Monad</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">forever</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">void</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">FromJSON</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ToJSON</span></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Ledger</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Address</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">POSIXTime</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">PaymentPubKeyHash</span></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Ledger.Interval</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Interval</span></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Ledger.Tx.Constraints</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">TxConstraints</span></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Ledger.Tx.Constraints</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Constraints</span></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Ledger.Tx.Constraints.ValidityInterval</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">ValidityInterval</span></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Ledger.Typed.Scripts</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Scripts</span></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.Script.Utils.Ada</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Ada</span></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.Script.Utils.V2.Contexts</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">V2</span></span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.Script.Utils.V2.Typed.Scripts</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">V2</span></span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.Script.Utils.Value</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Value</span></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.Script.Utils.Value</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Value</span></span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.Contract</span></span><span>
+</span><span id="line-49"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.Contract.StateMachine</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">AsSMContractError</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">State</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">StateMachine</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Void</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.Contract.StateMachine</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">SM</span></span><span>
+</span><span id="line-51"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">PlutusTx</span></span><span> </span><span class="hs-keyword">qualified</span><span>
+</span><span id="line-52"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">PlutusTx.Prelude</span></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Applicative</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Haskell</span></span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- $multisig</span><span>
+</span><span id="line-57"></span><span class="hs-comment">--   The n-out-of-m multisig contract works like a joint account of</span><span>
+</span><span id="line-58"></span><span class="hs-comment">--   m people, requiring the consent of n people for any payments.</span><span>
+</span><span id="line-59"></span><span class="hs-comment">--   In the smart contract the signatories are represented by public keys,</span><span>
+</span><span id="line-60"></span><span class="hs-comment">--   and approval takes the form of signatures on transactions.</span><span>
+</span><span id="line-61"></span><span class="hs-comment">--</span><span>
+</span><span id="line-62"></span><span class="hs-comment">--   The multisig contract in</span><span>
+</span><span id="line-63"></span><span class="hs-comment">--   'Plutus.Contracts.MultiSig' expects n signatures on</span><span>
+</span><span id="line-64"></span><span class="hs-comment">--   a single transaction. This requires an off-chain communication channel. The</span><span>
+</span><span id="line-65"></span><span class="hs-comment">--   multisig contract implemented in this module uses a proposal system that</span><span>
+</span><span id="line-66"></span><span class="hs-comment">--   allows participants to propose payments and attach their signatures to</span><span>
+</span><span id="line-67"></span><span class="hs-comment">--   proposals over a period of time, using separate transactions. All contract</span><span>
+</span><span id="line-68"></span><span class="hs-comment">--   state is kept on the chain so there is no need for off-chain communication.</span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="hs-comment">-- | A proposal for making a payment under the multisig scheme.</span><span>
+</span><span id="line-71"></span><span id="local-6989586621680917425"><span id="local-6989586621680917426"></span></span><span class="hs-keyword">data</span><span> </span><span id="Payment"><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#Payment"><span class="hs-identifier hs-var">Payment</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Payment"><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#Payment"><span class="hs-identifier hs-var">Payment</span></a></span></span><span>
+</span><span id="line-72"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="paymentAmount"><span class="annot"><span class="annottext">Payment -&gt; Value
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#paymentAmount"><span class="hs-identifier hs-var hs-var">paymentAmount</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span>
+</span><span id="line-73"></span><span>    </span><span class="hs-comment">-- ^ How much to pay out</span><span>
+</span><span id="line-74"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="paymentRecipient"><span class="annot"><span class="annottext">Payment -&gt; Address
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#paymentRecipient"><span class="hs-identifier hs-var hs-var">paymentRecipient</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Address</span></span><span>
+</span><span id="line-75"></span><span>    </span><span class="hs-comment">-- ^ Address to pay the value to</span><span>
+</span><span id="line-76"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="paymentDeadline"><span class="annot"><span class="annottext">Payment -&gt; POSIXTime
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#paymentDeadline"><span class="hs-identifier hs-var hs-var">paymentDeadline</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">POSIXTime</span></span><span>
+</span><span id="line-77"></span><span>    </span><span class="hs-comment">-- ^ Time until the required amount of signatures has to be collected.</span><span>
+</span><span id="line-78"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-79"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680917415"><span id="local-6989586621680917417"><span id="local-6989586621680917419"><span class="annot"><span class="annottext">Int -&gt; Payment -&gt; ShowS
+[Payment] -&gt; ShowS
+Payment -&gt; String
+(Int -&gt; Payment -&gt; ShowS)
+-&gt; (Payment -&gt; String) -&gt; ([Payment] -&gt; ShowS) -&gt; Show Payment
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [Payment] -&gt; ShowS
+$cshowList :: [Payment] -&gt; ShowS
+show :: Payment -&gt; String
+$cshow :: Payment -&gt; String
+showsPrec :: Int -&gt; Payment -&gt; ShowS
+$cshowsPrec :: Int -&gt; Payment -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Haskell.Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. Payment -&gt; Rep Payment x)
+-&gt; (forall x. Rep Payment x -&gt; Payment) -&gt; Generic Payment
+forall x. Rep Payment x -&gt; Payment
+forall x. Payment -&gt; Rep Payment x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep Payment x -&gt; Payment
+$cfrom :: forall x. Payment -&gt; Rep Payment x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-80"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680917403"><span id="local-6989586621680917405"><span id="local-6989586621680917407"><span id="local-6989586621680917409"><span class="annot"><span class="annottext">[Payment] -&gt; Encoding
+[Payment] -&gt; Value
+Payment -&gt; Encoding
+Payment -&gt; Value
+(Payment -&gt; Value)
+-&gt; (Payment -&gt; Encoding)
+-&gt; ([Payment] -&gt; Value)
+-&gt; ([Payment] -&gt; Encoding)
+-&gt; ToJSON Payment
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; ToJSON a
+toEncodingList :: [Payment] -&gt; Encoding
+$ctoEncodingList :: [Payment] -&gt; Encoding
+toJSONList :: [Payment] -&gt; Value
+$ctoJSONList :: [Payment] -&gt; Value
+toEncoding :: Payment -&gt; Encoding
+$ctoEncoding :: Payment -&gt; Encoding
+toJSON :: Payment -&gt; Value
+$ctoJSON :: Payment -&gt; Value
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680917398"><span id="local-6989586621680917400"><span class="annot"><span class="annottext">Value -&gt; Parser [Payment]
+Value -&gt; Parser Payment
+(Value -&gt; Parser Payment)
+-&gt; (Value -&gt; Parser [Payment]) -&gt; FromJSON Payment
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+parseJSONList :: Value -&gt; Parser [Payment]
+$cparseJSONList :: Value -&gt; Parser [Payment]
+parseJSON :: Value -&gt; Parser Payment
+$cparseJSON :: Value -&gt; Parser Payment
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-81"></span><span>
+</span><span id="line-82"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Eq</span></span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#Payment"><span class="hs-identifier hs-type">Payment</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-83"></span><span>    </span><span class="hs-pragma">{-# INLINABLE</span><span> </span><span class="hs-pragma">(</span><span class="hs-pragma">==</span><span class="hs-pragma">)</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-84"></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#Payment"><span class="hs-identifier hs-type">Payment</span></a></span><span> </span><span id="local-6989586621680917393"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680917393"><span class="hs-identifier hs-var">vl</span></a></span></span><span> </span><span id="local-6989586621680917392"><span class="annot"><span class="annottext">Address
+</span><a href="#local-6989586621680917392"><span class="hs-identifier hs-var">addr</span></a></span></span><span> </span><span id="local-6989586621680917391"><span class="annot"><span class="annottext">POSIXTime
+</span><a href="#local-6989586621680917391"><span class="hs-identifier hs-var">sl</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621680917390"><span class="annot"><span class="annottext">== :: Payment -&gt; Payment -&gt; Bool
+</span><a href="#local-6989586621680917390"><span class="hs-operator hs-var hs-var hs-var hs-var">==</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#Payment"><span class="hs-identifier hs-type">Payment</span></a></span><span> </span><span id="local-6989586621680917389"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680917389"><span class="hs-identifier hs-var">vl'</span></a></span></span><span> </span><span id="local-6989586621680917388"><span class="annot"><span class="annottext">Address
+</span><a href="#local-6989586621680917388"><span class="hs-identifier hs-var">addr'</span></a></span></span><span> </span><span id="local-6989586621680917387"><span class="annot"><span class="annottext">POSIXTime
+</span><a href="#local-6989586621680917387"><span class="hs-identifier hs-var">sl'</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680917393"><span class="hs-identifier hs-var">vl</span></a></span><span> </span><span class="annot"><span class="annottext">Value -&gt; Value -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680917389"><span class="hs-identifier hs-var">vl'</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">&amp;&amp;</span></span><span> </span><span class="annot"><span class="annottext">Address
+</span><a href="#local-6989586621680917392"><span class="hs-identifier hs-var">addr</span></a></span><span> </span><span class="annot"><span class="annottext">Address -&gt; Address -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Address
+</span><a href="#local-6989586621680917388"><span class="hs-identifier hs-var">addr'</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">&amp;&amp;</span></span><span> </span><span class="annot"><span class="annottext">POSIXTime
+</span><a href="#local-6989586621680917391"><span class="hs-identifier hs-var">sl</span></a></span><span> </span><span class="annot"><span class="annottext">POSIXTime -&gt; POSIXTime -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">POSIXTime
+</span><a href="#local-6989586621680917387"><span class="hs-identifier hs-var">sl'</span></a></span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span class="hs-keyword">data</span><span> </span><span id="Params"><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#Params"><span class="hs-identifier hs-var">Params</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Params"><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#Params"><span class="hs-identifier hs-var">Params</span></a></span></span><span>
+</span><span id="line-88"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="mspSignatories"><span class="annot"><span class="annottext">Params -&gt; [PaymentPubKeyHash]
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#mspSignatories"><span class="hs-identifier hs-var hs-var">mspSignatories</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">PaymentPubKeyHash</span></span><span class="hs-special">]</span><span>
+</span><span id="line-89"></span><span>    </span><span class="hs-comment">-- ^ Public keys that are allowed to authorise payments</span><span>
+</span><span id="line-90"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="mspRequiredSigs"><span class="annot"><span class="annottext">Params -&gt; Integer
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#mspRequiredSigs"><span class="hs-identifier hs-var hs-var">mspRequiredSigs</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/integer-gmp-1.0.3.0/src"><span class="hs-identifier hs-type">Integer</span></a></span><span>
+</span><span id="line-91"></span><span>    </span><span class="hs-comment">-- ^ How many signatures are required for a payment</span><span>
+</span><span id="line-92"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-93"></span><span>
+</span><span id="line-94"></span><span class="hs-comment">-- | State of the multisig contract.</span><span>
+</span><span id="line-95"></span><span id="local-6989586621680917381"><span id="local-6989586621680917382"></span></span><span class="hs-keyword">data</span><span> </span><span id="MSState"><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#MSState"><span class="hs-identifier hs-var">MSState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-96"></span><span>    </span><span id="Holding"><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#Holding"><span class="hs-identifier hs-var">Holding</span></a></span></span><span>
+</span><span id="line-97"></span><span>    </span><span class="hs-comment">-- ^ Money is locked, anyone can make a proposal for a payment. If there is</span><span>
+</span><span id="line-98"></span><span>    </span><span class="hs-comment">-- no value here then this is a final state and the machine will terminate.</span><span>
+</span><span id="line-99"></span><span>
+</span><span id="line-100"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="CollectingSignatures"><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#CollectingSignatures"><span class="hs-identifier hs-var">CollectingSignatures</span></a></span></span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#Payment"><span class="hs-identifier hs-type">Payment</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">PaymentPubKeyHash</span></span><span class="hs-special">]</span><span>
+</span><span id="line-101"></span><span>    </span><span class="hs-comment">-- ^ A payment has been proposed and is awaiting signatures.</span><span>
+</span><span id="line-102"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="Finished"><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#Finished"><span class="hs-identifier hs-var">Finished</span></a></span></span><span>
+</span><span id="line-103"></span><span>    </span><span class="hs-comment">-- ^ The payment was made</span><span>
+</span><span id="line-104"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680917372"><span id="local-6989586621680917374"><span id="local-6989586621680917376"><span class="annot"><span class="annottext">Int -&gt; MSState -&gt; ShowS
+[MSState] -&gt; ShowS
+MSState -&gt; String
+(Int -&gt; MSState -&gt; ShowS)
+-&gt; (MSState -&gt; String) -&gt; ([MSState] -&gt; ShowS) -&gt; Show MSState
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [MSState] -&gt; ShowS
+$cshowList :: [MSState] -&gt; ShowS
+show :: MSState -&gt; String
+$cshow :: MSState -&gt; String
+showsPrec :: Int -&gt; MSState -&gt; ShowS
+$cshowsPrec :: Int -&gt; MSState -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Haskell.Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. MSState -&gt; Rep MSState x)
+-&gt; (forall x. Rep MSState x -&gt; MSState) -&gt; Generic MSState
+forall x. Rep MSState x -&gt; MSState
+forall x. MSState -&gt; Rep MSState x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep MSState x -&gt; MSState
+$cfrom :: forall x. MSState -&gt; Rep MSState x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-105"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680917362"><span id="local-6989586621680917364"><span id="local-6989586621680917366"><span id="local-6989586621680917368"><span class="annot"><span class="annottext">[MSState] -&gt; Encoding
+[MSState] -&gt; Value
+MSState -&gt; Encoding
+MSState -&gt; Value
+(MSState -&gt; Value)
+-&gt; (MSState -&gt; Encoding)
+-&gt; ([MSState] -&gt; Value)
+-&gt; ([MSState] -&gt; Encoding)
+-&gt; ToJSON MSState
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; ToJSON a
+toEncodingList :: [MSState] -&gt; Encoding
+$ctoEncodingList :: [MSState] -&gt; Encoding
+toJSONList :: [MSState] -&gt; Value
+$ctoJSONList :: [MSState] -&gt; Value
+toEncoding :: MSState -&gt; Encoding
+$ctoEncoding :: MSState -&gt; Encoding
+toJSON :: MSState -&gt; Value
+$ctoJSON :: MSState -&gt; Value
+</span><a href="#local-6989586621680917362"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680917358"><span id="local-6989586621680917360"><span class="annot"><span class="annottext">Value -&gt; Parser [MSState]
+Value -&gt; Parser MSState
+(Value -&gt; Parser MSState)
+-&gt; (Value -&gt; Parser [MSState]) -&gt; FromJSON MSState
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+parseJSONList :: Value -&gt; Parser [MSState]
+$cparseJSONList :: Value -&gt; Parser [MSState]
+parseJSON :: Value -&gt; Parser MSState
+$cparseJSON :: Value -&gt; Parser MSState
+</span><a href="#local-6989586621680917358"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-106"></span><span>
+</span><span id="line-107"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Eq</span></span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#MSState"><span class="hs-identifier hs-type">MSState</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-108"></span><span>    </span><span class="hs-pragma">{-# INLINABLE</span><span> </span><span class="hs-pragma">(</span><span class="hs-pragma">==</span><span class="hs-pragma">)</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-109"></span><span>    </span><span class="annot"><span class="annottext">MSState
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#Holding"><span class="hs-identifier hs-var">Holding</span></a></span><span> </span><span id="local-6989586621680917356"><span class="annot"><span class="annottext">== :: MSState -&gt; MSState -&gt; Bool
+</span><a href="#local-6989586621680917356"><span class="hs-operator hs-var hs-var hs-var hs-var">==</span></a></span></span><span> </span><span class="annot"><span class="annottext">MSState
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#Holding"><span class="hs-identifier hs-var">Holding</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-110"></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#CollectingSignatures"><span class="hs-identifier hs-type">CollectingSignatures</span></a></span><span> </span><span id="local-6989586621680917355"><span class="annot"><span class="annottext">Payment
+</span><a href="#local-6989586621680917355"><span class="hs-identifier hs-var">pmt</span></a></span></span><span> </span><span id="local-6989586621680917354"><span class="annot"><span class="annottext">[PaymentPubKeyHash]
+</span><a href="#local-6989586621680917354"><span class="hs-identifier hs-var">pks</span></a></span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-operator hs-var">==</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#CollectingSignatures"><span class="hs-identifier hs-type">CollectingSignatures</span></a></span><span> </span><span id="local-6989586621680917353"><span class="annot"><span class="annottext">Payment
+</span><a href="#local-6989586621680917353"><span class="hs-identifier hs-var">pmt'</span></a></span></span><span> </span><span id="local-6989586621680917352"><span class="annot"><span class="annottext">[PaymentPubKeyHash]
+</span><a href="#local-6989586621680917352"><span class="hs-identifier hs-var">pks'</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-111"></span><span>        </span><span class="annot"><span class="annottext">Payment
+</span><a href="#local-6989586621680917355"><span class="hs-identifier hs-var">pmt</span></a></span><span> </span><span class="annot"><span class="annottext">Payment -&gt; Payment -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Payment
+</span><a href="#local-6989586621680917353"><span class="hs-identifier hs-var">pmt'</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">&amp;&amp;</span></span><span> </span><span class="annot"><span class="annottext">[PaymentPubKeyHash]
+</span><a href="#local-6989586621680917354"><span class="hs-identifier hs-var">pks</span></a></span><span> </span><span class="annot"><span class="annottext">[PaymentPubKeyHash] -&gt; [PaymentPubKeyHash] -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">[PaymentPubKeyHash]
+</span><a href="#local-6989586621680917352"><span class="hs-identifier hs-var">pks'</span></a></span><span>
+</span><span id="line-112"></span><span>    </span><span class="annot"><span class="annottext">MSState
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">MSState
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-113"></span><span>
+</span><span id="line-114"></span><span id="local-6989586621680917350"><span id="local-6989586621680917351"></span></span><span class="hs-keyword">data</span><span> </span><span id="Input"><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#Input"><span class="hs-identifier hs-var">Input</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-115"></span><span>    </span><span id="ProposePayment"><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#ProposePayment"><span class="hs-identifier hs-var">ProposePayment</span></a></span></span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#Payment"><span class="hs-identifier hs-type">Payment</span></a></span><span>
+</span><span id="line-116"></span><span>    </span><span class="hs-comment">-- ^ Propose a payment. The payment can be made as soon as enough</span><span>
+</span><span id="line-117"></span><span>    </span><span class="hs-comment">--   signatures have been collected.</span><span>
+</span><span id="line-118"></span><span>
+</span><span id="line-119"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="AddSignature"><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#AddSignature"><span class="hs-identifier hs-var">AddSignature</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">PaymentPubKeyHash</span></span><span>
+</span><span id="line-120"></span><span>    </span><span class="hs-comment">-- ^ Add a signature to the sigs. that have been collected for the</span><span>
+</span><span id="line-121"></span><span>    </span><span class="hs-comment">--   current proposal.</span><span>
+</span><span id="line-122"></span><span>
+</span><span id="line-123"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="Cancel"><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#Cancel"><span class="hs-identifier hs-var">Cancel</span></a></span></span><span>
+</span><span id="line-124"></span><span>    </span><span class="hs-comment">-- ^ Cancel the current proposal if the deadline has passed</span><span>
+</span><span id="line-125"></span><span>
+</span><span id="line-126"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="Pay"><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#Pay"><span class="hs-identifier hs-var">Pay</span></a></span></span><span>
+</span><span id="line-127"></span><span>    </span><span class="hs-comment">-- ^ Make the payment.</span><span>
+</span><span id="line-128"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680917340"><span id="local-6989586621680917342"><span id="local-6989586621680917344"><span class="annot"><span class="annottext">Int -&gt; Input -&gt; ShowS
+[Input] -&gt; ShowS
+Input -&gt; String
+(Int -&gt; Input -&gt; ShowS)
+-&gt; (Input -&gt; String) -&gt; ([Input] -&gt; ShowS) -&gt; Show Input
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [Input] -&gt; ShowS
+$cshowList :: [Input] -&gt; ShowS
+show :: Input -&gt; String
+$cshow :: Input -&gt; String
+showsPrec :: Int -&gt; Input -&gt; ShowS
+$cshowsPrec :: Int -&gt; Input -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Haskell.Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. Input -&gt; Rep Input x)
+-&gt; (forall x. Rep Input x -&gt; Input) -&gt; Generic Input
+forall x. Rep Input x -&gt; Input
+forall x. Input -&gt; Rep Input x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep Input x -&gt; Input
+$cfrom :: forall x. Input -&gt; Rep Input x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-129"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680917330"><span id="local-6989586621680917332"><span id="local-6989586621680917334"><span id="local-6989586621680917336"><span class="annot"><span class="annottext">[Input] -&gt; Encoding
+[Input] -&gt; Value
+Input -&gt; Encoding
+Input -&gt; Value
+(Input -&gt; Value)
+-&gt; (Input -&gt; Encoding)
+-&gt; ([Input] -&gt; Value)
+-&gt; ([Input] -&gt; Encoding)
+-&gt; ToJSON Input
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; ToJSON a
+toEncodingList :: [Input] -&gt; Encoding
+$ctoEncodingList :: [Input] -&gt; Encoding
+toJSONList :: [Input] -&gt; Value
+$ctoJSONList :: [Input] -&gt; Value
+toEncoding :: Input -&gt; Encoding
+$ctoEncoding :: Input -&gt; Encoding
+toJSON :: Input -&gt; Value
+$ctoJSON :: Input -&gt; Value
+</span><a href="#local-6989586621680917330"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680917326"><span id="local-6989586621680917328"><span class="annot"><span class="annottext">Value -&gt; Parser [Input]
+Value -&gt; Parser Input
+(Value -&gt; Parser Input)
+-&gt; (Value -&gt; Parser [Input]) -&gt; FromJSON Input
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+parseJSONList :: Value -&gt; Parser [Input]
+$cparseJSONList :: Value -&gt; Parser [Input]
+parseJSON :: Value -&gt; Parser Input
+$cparseJSON :: Value -&gt; Parser Input
+</span><a href="#local-6989586621680917326"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-130"></span><span>
+</span><span id="line-131"></span><span id="local-6989586621680917324"><span id="local-6989586621680917325"></span></span><span class="hs-keyword">data</span><span> </span><span id="MultiSigError"><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#MultiSigError"><span class="hs-identifier hs-var">MultiSigError</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-132"></span><span>    </span><span id="MSContractError"><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#MSContractError"><span class="hs-identifier hs-var">MSContractError</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ContractError</span></span><span>
+</span><span id="line-133"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="MSStateMachineError"><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#MSStateMachineError"><span class="hs-identifier hs-var">MSStateMachineError</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">SM.SMContractError</span></span><span>
+</span><span id="line-134"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680917316"><span id="local-6989586621680917318"><span id="local-6989586621680917320"><span class="annot"><span class="annottext">Int -&gt; MultiSigError -&gt; ShowS
+[MultiSigError] -&gt; ShowS
+MultiSigError -&gt; String
+(Int -&gt; MultiSigError -&gt; ShowS)
+-&gt; (MultiSigError -&gt; String)
+-&gt; ([MultiSigError] -&gt; ShowS)
+-&gt; Show MultiSigError
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [MultiSigError] -&gt; ShowS
+$cshowList :: [MultiSigError] -&gt; ShowS
+show :: MultiSigError -&gt; String
+$cshow :: MultiSigError -&gt; String
+showsPrec :: Int -&gt; MultiSigError -&gt; ShowS
+$cshowsPrec :: Int -&gt; MultiSigError -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Haskell.Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. MultiSigError -&gt; Rep MultiSigError x)
+-&gt; (forall x. Rep MultiSigError x -&gt; MultiSigError)
+-&gt; Generic MultiSigError
+forall x. Rep MultiSigError x -&gt; MultiSigError
+forall x. MultiSigError -&gt; Rep MultiSigError x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep MultiSigError x -&gt; MultiSigError
+$cfrom :: forall x. MultiSigError -&gt; Rep MultiSigError x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-135"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680917306"><span id="local-6989586621680917308"><span id="local-6989586621680917310"><span id="local-6989586621680917312"><span class="annot"><span class="annottext">[MultiSigError] -&gt; Encoding
+[MultiSigError] -&gt; Value
+MultiSigError -&gt; Encoding
+MultiSigError -&gt; Value
+(MultiSigError -&gt; Value)
+-&gt; (MultiSigError -&gt; Encoding)
+-&gt; ([MultiSigError] -&gt; Value)
+-&gt; ([MultiSigError] -&gt; Encoding)
+-&gt; ToJSON MultiSigError
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; ToJSON a
+toEncodingList :: [MultiSigError] -&gt; Encoding
+$ctoEncodingList :: [MultiSigError] -&gt; Encoding
+toJSONList :: [MultiSigError] -&gt; Value
+$ctoJSONList :: [MultiSigError] -&gt; Value
+toEncoding :: MultiSigError -&gt; Encoding
+$ctoEncoding :: MultiSigError -&gt; Encoding
+toJSON :: MultiSigError -&gt; Value
+$ctoJSON :: MultiSigError -&gt; Value
+</span><a href="#local-6989586621680917306"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680917302"><span id="local-6989586621680917304"><span class="annot"><span class="annottext">Value -&gt; Parser [MultiSigError]
+Value -&gt; Parser MultiSigError
+(Value -&gt; Parser MultiSigError)
+-&gt; (Value -&gt; Parser [MultiSigError]) -&gt; FromJSON MultiSigError
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+parseJSONList :: Value -&gt; Parser [MultiSigError]
+$cparseJSONList :: Value -&gt; Parser [MultiSigError]
+parseJSON :: Value -&gt; Parser MultiSigError
+$cparseJSON :: Value -&gt; Parser MultiSigError
+</span><a href="#local-6989586621680917302"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-136"></span><span id="_MSStateMachineError"><span id="_MSContractError"><span id="_MultiSigError"><span id="local-6989586621680917294"><span id="local-6989586621680917296"><span id="local-6989586621680917298"><span id="local-6989586621680917300"><span id="local-6989586621680917301"><span id="AsMultiSigError"><span id="local-6989586621680917625"><span class="hs-identifier">makeClassyPrisms</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">MultiSigError</span></span></span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-137"></span><span>
+</span><span id="line-138"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621680917273"><span id="local-6989586621680917275"><span id="local-6989586621680917277"><span id="local-6989586621680917279"><span id="local-6989586621680917281"><span id="local-6989586621680917283"><span id="local-6989586621680917285"><span id="local-6989586621680917287"><span class="annot"><span class="hs-identifier hs-type">AsContractError</span></span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#MultiSigError"><span class="hs-identifier hs-type">MultiSigError</span></a></span></span></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-139"></span><span>    </span><span id="local-6989586621680917271"><span class="annot"><span class="annottext">_ContractError :: p ContractError (f ContractError)
+-&gt; p MultiSigError (f MultiSigError)
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">_ContractError</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">p ContractError (f ContractError)
+-&gt; p MultiSigError (f MultiSigError)
+forall r. AsMultiSigError r =&gt; Prism' r ContractError
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#_MSContractError"><span class="hs-identifier hs-var">_MSContractError</span></a></span><span>
+</span><span id="line-140"></span><span>
+</span><span id="line-141"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621680917263"><span id="local-6989586621680917265"><span id="local-6989586621680917267"><span class="annot"><span class="hs-identifier hs-type">AsSMContractError</span></span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#MultiSigError"><span class="hs-identifier hs-type">MultiSigError</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-142"></span><span>    </span><span id="local-6989586621680917261"><span class="annot"><span class="annottext">_SMContractError :: p SMContractError (f SMContractError)
+-&gt; p MultiSigError (f MultiSigError)
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">_SMContractError</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">p SMContractError (f SMContractError)
+-&gt; p MultiSigError (f MultiSigError)
+forall r. AsMultiSigError r =&gt; Prism' r SMContractError
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#_MSStateMachineError"><span class="hs-identifier hs-var">_MSStateMachineError</span></a></span><span>
+</span><span id="line-143"></span><span>
+</span><span id="line-144"></span><span class="hs-keyword">type</span><span> </span><span id="MultiSigSchema"><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#MultiSigSchema"><span class="hs-identifier hs-var">MultiSigSchema</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-145"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">Endpoint</span></span><span> </span><span class="annot"><span class="hs-string">&quot;propose-payment&quot;</span></span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#Payment"><span class="hs-identifier hs-type">Payment</span></a></span><span>
+</span><span id="line-146"></span><span>        </span><span class="annot"><span class="hs-operator hs-type">.\/</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Endpoint</span></span><span> </span><span class="annot"><span class="hs-string">&quot;add-signature&quot;</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-147"></span><span>        </span><span class="annot"><span class="hs-operator hs-type">.\/</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Endpoint</span></span><span> </span><span class="annot"><span class="hs-string">&quot;cancel-payment&quot;</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-148"></span><span>        </span><span class="annot"><span class="hs-operator hs-type">.\/</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Endpoint</span></span><span> </span><span class="annot"><span class="hs-string">&quot;pay&quot;</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-149"></span><span>        </span><span class="annot"><span class="hs-operator hs-type">.\/</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Endpoint</span></span><span> </span><span class="annot"><span class="hs-string">&quot;lock&quot;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span>
+</span><span id="line-150"></span><span>
+</span><span id="line-151"></span><span class="hs-pragma">{-# INLINABLE</span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#isSignatory"><span class="hs-pragma hs-type">isSignatory</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-152"></span><span class="hs-comment">-- | Check if a public key is one of the signatories of the multisig contract.</span><span>
+</span><span id="line-153"></span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#isSignatory"><span class="hs-identifier hs-type">isSignatory</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">PaymentPubKeyHash</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#Params"><span class="hs-identifier hs-type">Params</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-154"></span><span id="isSignatory"><span class="annot"><span class="annottext">isSignatory :: PaymentPubKeyHash -&gt; Params -&gt; Bool
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#isSignatory"><span class="hs-identifier hs-var hs-var">isSignatory</span></a></span></span><span> </span><span id="local-6989586621680917256"><span class="annot"><span class="annottext">PaymentPubKeyHash
+</span><a href="#local-6989586621680917256"><span class="hs-identifier hs-var">pkh</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#Params"><span class="hs-identifier hs-type">Params</span></a></span><span> </span><span id="local-6989586621680917255"><span class="annot"><span class="annottext">[PaymentPubKeyHash]
+</span><a href="#local-6989586621680917255"><span class="hs-identifier hs-var">sigs</span></a></span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(PaymentPubKeyHash -&gt; Bool) -&gt; [PaymentPubKeyHash] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; (a -&gt; Bool) -&gt; t a -&gt; Bool
+</span><span class="hs-identifier hs-var">any</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621680917253"><span class="annot"><span class="annottext">PaymentPubKeyHash
+</span><a href="#local-6989586621680917253"><span class="hs-identifier hs-var">pkh'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">PaymentPubKeyHash
+</span><a href="#local-6989586621680917256"><span class="hs-identifier hs-var">pkh</span></a></span><span> </span><span class="annot"><span class="annottext">PaymentPubKeyHash -&gt; PaymentPubKeyHash -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">PaymentPubKeyHash
+</span><a href="#local-6989586621680917253"><span class="hs-identifier hs-var">pkh'</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[PaymentPubKeyHash]
+</span><a href="#local-6989586621680917255"><span class="hs-identifier hs-var">sigs</span></a></span><span>
+</span><span id="line-155"></span><span>
+</span><span id="line-156"></span><span class="hs-pragma">{-# INLINABLE</span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#containsPk"><span class="hs-pragma hs-type">containsPk</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-157"></span><span class="hs-comment">-- | Check whether a list of public keys contains a given key.</span><span>
+</span><span id="line-158"></span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#containsPk"><span class="hs-identifier hs-type">containsPk</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">PaymentPubKeyHash</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">PaymentPubKeyHash</span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-159"></span><span id="containsPk"><span class="annot"><span class="annottext">containsPk :: PaymentPubKeyHash -&gt; [PaymentPubKeyHash] -&gt; Bool
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#containsPk"><span class="hs-identifier hs-var hs-var">containsPk</span></a></span></span><span> </span><span id="local-6989586621680917251"><span class="annot"><span class="annottext">PaymentPubKeyHash
+</span><a href="#local-6989586621680917251"><span class="hs-identifier hs-var">pk</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(PaymentPubKeyHash -&gt; Bool) -&gt; [PaymentPubKeyHash] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; (a -&gt; Bool) -&gt; t a -&gt; Bool
+</span><span class="hs-identifier hs-var">any</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621680917250"><span class="annot"><span class="annottext">PaymentPubKeyHash
+</span><a href="#local-6989586621680917250"><span class="hs-identifier hs-var">pk'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">PaymentPubKeyHash
+</span><a href="#local-6989586621680917250"><span class="hs-identifier hs-var">pk'</span></a></span><span> </span><span class="annot"><span class="annottext">PaymentPubKeyHash -&gt; PaymentPubKeyHash -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">PaymentPubKeyHash
+</span><a href="#local-6989586621680917251"><span class="hs-identifier hs-var">pk</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-160"></span><span>
+</span><span id="line-161"></span><span class="hs-pragma">{-# INLINABLE</span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#isValidProposal"><span class="hs-pragma hs-type">isValidProposal</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-162"></span><span class="hs-comment">-- | Check whether a proposed 'Payment' is valid given the total</span><span>
+</span><span id="line-163"></span><span class="hs-comment">--   amount of funds currently locked in the contract.</span><span>
+</span><span id="line-164"></span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#isValidProposal"><span class="hs-identifier hs-type">isValidProposal</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#Payment"><span class="hs-identifier hs-type">Payment</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-165"></span><span id="isValidProposal"><span class="annot"><span class="annottext">isValidProposal :: Value -&gt; Payment -&gt; Bool
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#isValidProposal"><span class="hs-identifier hs-var hs-var">isValidProposal</span></a></span></span><span> </span><span id="local-6989586621680917248"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680917248"><span class="hs-identifier hs-var">vl</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#Payment"><span class="hs-identifier hs-type">Payment</span></a></span><span> </span><span id="local-6989586621680917247"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680917247"><span class="hs-identifier hs-var">amt</span></a></span></span><span> </span><span class="annot"><span class="annottext">Address
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">POSIXTime
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680917247"><span class="hs-identifier hs-var">amt</span></a></span><span> </span><span class="annot"><span class="annottext">Value -&gt; Value -&gt; Bool
+</span><span class="hs-operator hs-var">`Value.leq`</span></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680917248"><span class="hs-identifier hs-var">vl</span></a></span><span>
+</span><span id="line-166"></span><span>
+</span><span id="line-167"></span><span class="hs-pragma">{-# INLINABLE</span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#proposalExpired"><span class="hs-pragma hs-type">proposalExpired</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-168"></span><span class="hs-comment">-- | Check whether a proposed 'Payment' has expired.</span><span>
+</span><span id="line-169"></span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#proposalExpired"><span class="hs-identifier hs-type">proposalExpired</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">V2.TxInfo</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#Payment"><span class="hs-identifier hs-type">Payment</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-170"></span><span id="proposalExpired"><span class="annot"><span class="annottext">proposalExpired :: TxInfo -&gt; Payment -&gt; Bool
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#proposalExpired"><span class="hs-identifier hs-var hs-var">proposalExpired</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">V2.TxInfo</span></span><span class="hs-special">{</span><span id="local-6989586621680917243"><span class="annot"><span class="annottext">POSIXTimeRange
+txInfoValidRange :: TxInfo -&gt; POSIXTimeRange
+txInfoValidRange :: POSIXTimeRange
+</span><span class="hs-identifier hs-var hs-var">V2.txInfoValidRange</span></span></span><span class="hs-special">}</span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#Payment"><span class="hs-identifier hs-type">Payment</span></a></span><span class="hs-special">{</span><span id="local-6989586621680917241"><span class="annot"><span class="annottext">POSIXTime
+paymentDeadline :: POSIXTime
+paymentDeadline :: Payment -&gt; POSIXTime
+</span><a href="#local-6989586621680917241"><span class="hs-identifier hs-var hs-var">paymentDeadline</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-171"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">POSIXTime
+</span><a href="#local-6989586621680917241"><span class="hs-identifier hs-var">paymentDeadline</span></a></span><span> </span><span class="annot"><span class="annottext">POSIXTime -&gt; POSIXTime -&gt; POSIXTime
+forall a. AdditiveGroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">POSIXTime
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">POSIXTime -&gt; POSIXTimeRange -&gt; Bool
+forall a. Ord a =&gt; a -&gt; Interval a -&gt; Bool
+</span><span class="hs-operator hs-var">`Interval.before`</span></span><span> </span><span class="annot"><span class="annottext">POSIXTimeRange
+</span><a href="#local-6989586621680917243"><span class="hs-identifier hs-var">txInfoValidRange</span></a></span><span>
+</span><span id="line-172"></span><span>
+</span><span id="line-173"></span><span class="hs-pragma">{-# INLINABLE</span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#proposalAccepted"><span class="hs-pragma hs-type">proposalAccepted</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-174"></span><span class="hs-comment">-- | Check whether enough signatories (represented as a list of public keys)</span><span>
+</span><span id="line-175"></span><span class="hs-comment">--   have signed a proposed payment.</span><span>
+</span><span id="line-176"></span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#proposalAccepted"><span class="hs-identifier hs-type">proposalAccepted</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#Params"><span class="hs-identifier hs-type">Params</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">PaymentPubKeyHash</span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-177"></span><span id="proposalAccepted"><span class="annot"><span class="annottext">proposalAccepted :: Params -&gt; [PaymentPubKeyHash] -&gt; Bool
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#proposalAccepted"><span class="hs-identifier hs-var hs-var">proposalAccepted</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#Params"><span class="hs-identifier hs-type">Params</span></a></span><span> </span><span id="local-6989586621680917237"><span class="annot"><span class="annottext">[PaymentPubKeyHash]
+</span><a href="#local-6989586621680917237"><span class="hs-identifier hs-var">signatories</span></a></span></span><span> </span><span id="local-6989586621680917236"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621680917236"><span class="hs-identifier hs-var">numReq</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621680917235"><span class="annot"><span class="annottext">[PaymentPubKeyHash]
+</span><a href="#local-6989586621680917235"><span class="hs-identifier hs-var">pks</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-178"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680917234"><span class="annot"><span class="annottext">numSigned :: Integer
+</span><a href="#local-6989586621680917234"><span class="hs-identifier hs-var hs-var">numSigned</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[PaymentPubKeyHash] -&gt; Integer
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Integer
+</span><span class="hs-identifier hs-var">length</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(PaymentPubKeyHash -&gt; Bool)
+-&gt; [PaymentPubKeyHash] -&gt; [PaymentPubKeyHash]
+forall a. (a -&gt; Bool) -&gt; [a] -&gt; [a]
+</span><span class="hs-identifier hs-var">filter</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621680917231"><span class="annot"><span class="annottext">PaymentPubKeyHash
+</span><a href="#local-6989586621680917231"><span class="hs-identifier hs-var">pk</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">PaymentPubKeyHash -&gt; [PaymentPubKeyHash] -&gt; Bool
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#containsPk"><span class="hs-identifier hs-var">containsPk</span></a></span><span> </span><span class="annot"><span class="annottext">PaymentPubKeyHash
+</span><a href="#local-6989586621680917231"><span class="hs-identifier hs-var">pk</span></a></span><span> </span><span class="annot"><span class="annottext">[PaymentPubKeyHash]
+</span><a href="#local-6989586621680917235"><span class="hs-identifier hs-var">pks</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[PaymentPubKeyHash]
+</span><a href="#local-6989586621680917237"><span class="hs-identifier hs-var">signatories</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-179"></span><span>    </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621680917234"><span class="hs-identifier hs-var">numSigned</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&gt;=</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621680917236"><span class="hs-identifier hs-var">numReq</span></a></span><span>
+</span><span id="line-180"></span><span>
+</span><span id="line-181"></span><span class="hs-pragma">{-# INLINABLE</span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#valuePreserved"><span class="hs-pragma hs-type">valuePreserved</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-182"></span><span class="hs-comment">-- | @valuePreserved v p@ is true if the pending transaction @p@ pays the amount</span><span>
+</span><span id="line-183"></span><span class="hs-comment">--   @v@ to this script's address. It does not assert the number of such outputs:</span><span>
+</span><span id="line-184"></span><span class="hs-comment">--   this is handled in the generic state machine validator.</span><span>
+</span><span id="line-185"></span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#valuePreserved"><span class="hs-identifier hs-type">valuePreserved</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">V2.ScriptContext</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-186"></span><span id="valuePreserved"><span class="annot"><span class="annottext">valuePreserved :: Value -&gt; ScriptContext -&gt; Bool
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#valuePreserved"><span class="hs-identifier hs-var hs-var">valuePreserved</span></a></span></span><span> </span><span id="local-6989586621680917228"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680917228"><span class="hs-identifier hs-var">vl</span></a></span></span><span> </span><span id="local-6989586621680917227"><span class="annot"><span class="annottext">ScriptContext
+</span><a href="#local-6989586621680917227"><span class="hs-identifier hs-var">ctx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680917228"><span class="hs-identifier hs-var">vl</span></a></span><span> </span><span class="annot"><span class="annottext">Value -&gt; Value -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">TxInfo -&gt; ValidatorHash -&gt; Value
+</span><span class="hs-identifier hs-var">V2.valueLockedBy</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ScriptContext -&gt; TxInfo
+</span><span class="hs-identifier hs-var hs-var">V2.scriptContextTxInfo</span></span><span> </span><span class="annot"><span class="annottext">ScriptContext
+</span><a href="#local-6989586621680917227"><span class="hs-identifier hs-var">ctx</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ScriptContext -&gt; ValidatorHash
+</span><span class="hs-identifier hs-var">V2.ownHash</span></span><span> </span><span class="annot"><span class="annottext">ScriptContext
+</span><a href="#local-6989586621680917227"><span class="hs-identifier hs-var">ctx</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-187"></span><span>
+</span><span id="line-188"></span><span class="hs-pragma">{-# INLINABLE</span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#valuePaid"><span class="hs-pragma hs-type">valuePaid</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-189"></span><span class="hs-comment">-- | @valuePaid pm ptx@ is true if the pending transaction @ptx@ pays</span><span>
+</span><span id="line-190"></span><span class="hs-comment">--   the amount specified in @pm@ to the public key address specified in @pm@</span><span>
+</span><span id="line-191"></span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#valuePaid"><span class="hs-identifier hs-type">valuePaid</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#Payment"><span class="hs-identifier hs-type">Payment</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">V2.TxInfo</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-192"></span><span id="valuePaid"><span class="annot"><span class="annottext">valuePaid :: Payment -&gt; TxInfo -&gt; Bool
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#valuePaid"><span class="hs-identifier hs-var hs-var">valuePaid</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#Payment"><span class="hs-identifier hs-type">Payment</span></a></span><span> </span><span id="local-6989586621680917222"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680917222"><span class="hs-identifier hs-var">vl</span></a></span></span><span> </span><span id="local-6989586621680917221"><span class="annot"><span class="annottext">Address
+</span><a href="#local-6989586621680917221"><span class="hs-identifier hs-var">addr</span></a></span></span><span> </span><span class="annot"><span class="annottext">POSIXTime
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621680917220"><span class="annot"><span class="annottext">TxInfo
+</span><a href="#local-6989586621680917220"><span class="hs-identifier hs-var">txinfo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680917222"><span class="hs-identifier hs-var">vl</span></a></span><span> </span><span class="annot"><span class="annottext">Value -&gt; Value -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">TxInfo -&gt; Address -&gt; Value
+</span><span class="hs-identifier hs-var">V2.valuePaidTo</span></span><span> </span><span class="annot"><span class="annottext">TxInfo
+</span><a href="#local-6989586621680917220"><span class="hs-identifier hs-var">txinfo</span></a></span><span> </span><span class="annot"><span class="annottext">Address
+</span><a href="#local-6989586621680917221"><span class="hs-identifier hs-var">addr</span></a></span><span>
+</span><span id="line-193"></span><span>
+</span><span id="line-194"></span><span class="hs-pragma">{-# INLINABLE</span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#transition"><span class="hs-pragma hs-type">transition</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-195"></span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#transition"><span class="hs-identifier hs-type">transition</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#Params"><span class="hs-identifier hs-type">Params</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">State</span></span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#MSState"><span class="hs-identifier hs-type">MSState</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#Input"><span class="hs-identifier hs-type">Input</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">TxConstraints</span></span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Void</span></a></span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Void</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">State</span></span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#MSState"><span class="hs-identifier hs-type">MSState</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-196"></span><span id="transition"><span class="annot"><span class="annottext">transition :: Params
+-&gt; State MSState
+-&gt; Input
+-&gt; Maybe (TxConstraints Void Void, State MSState)
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#transition"><span class="hs-identifier hs-var hs-var">transition</span></a></span></span><span> </span><span id="local-6989586621680917217"><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621680917217"><span class="hs-identifier hs-var">params</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">State</span></span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">stateData :: forall s. State s -&gt; s
+</span><span class="hs-identifier hs-var">stateData</span></span><span> </span><span class="hs-glyph">=</span><span id="local-6989586621680917214"><span class="annot"><span class="annottext">MSState
+</span><a href="#local-6989586621680917214"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">stateValue :: forall s. State s -&gt; Value
+</span><span class="hs-identifier hs-var">stateValue</span></span><span class="hs-glyph">=</span><span id="local-6989586621680917212"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680917212"><span class="hs-identifier hs-var">currentValue</span></a></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621680917211"><span class="annot"><span class="annottext">Input
+</span><a href="#local-6989586621680917211"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">MSState
+</span><a href="#local-6989586621680917214"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Input
+</span><a href="#local-6989586621680917211"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-197"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">MSState
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#Holding"><span class="hs-identifier hs-var">Holding</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#ProposePayment"><span class="hs-identifier hs-type">ProposePayment</span></a></span><span> </span><span id="local-6989586621680917210"><span class="annot"><span class="annottext">Payment
+</span><a href="#local-6989586621680917210"><span class="hs-identifier hs-var">pmt</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-198"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Value -&gt; Payment -&gt; Bool
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#isValidProposal"><span class="hs-identifier hs-var">isValidProposal</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680917212"><span class="hs-identifier hs-var">currentValue</span></a></span><span> </span><span class="annot"><span class="annottext">Payment
+</span><a href="#local-6989586621680917210"><span class="hs-identifier hs-var">pmt</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-199"></span><span>            </span><span class="annot"><span class="annottext">(TxConstraints Void Void, State MSState)
+-&gt; Maybe (TxConstraints Void Void, State MSState)
+forall a. a -&gt; Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">TxConstraints Void Void
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span>
+</span><span id="line-200"></span><span>                 </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">State :: forall s. s -&gt; Value -&gt; State s
+</span><span class="hs-identifier hs-type">State</span></span><span>
+</span><span id="line-201"></span><span>                    </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">stateData :: MSState
+</span><span class="hs-identifier hs-var">stateData</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Payment -&gt; [PaymentPubKeyHash] -&gt; MSState
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#CollectingSignatures"><span class="hs-identifier hs-var">CollectingSignatures</span></a></span><span> </span><span class="annot"><span class="annottext">Payment
+</span><a href="#local-6989586621680917210"><span class="hs-identifier hs-var">pmt</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-202"></span><span>                    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">stateValue :: Value
+</span><span class="hs-identifier hs-var">stateValue</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680917212"><span class="hs-identifier hs-var">currentValue</span></a></span><span>
+</span><span id="line-203"></span><span>                    </span><span class="hs-special">}</span><span>
+</span><span id="line-204"></span><span>                 </span><span class="hs-special">)</span><span>
+</span><span id="line-205"></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#CollectingSignatures"><span class="hs-identifier hs-type">CollectingSignatures</span></a></span><span> </span><span id="local-6989586621680917208"><span class="annot"><span class="annottext">Payment
+</span><a href="#local-6989586621680917208"><span class="hs-identifier hs-var">pmt</span></a></span></span><span> </span><span id="local-6989586621680917207"><span class="annot"><span class="annottext">[PaymentPubKeyHash]
+</span><a href="#local-6989586621680917207"><span class="hs-identifier hs-var">pks</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#AddSignature"><span class="hs-identifier hs-type">AddSignature</span></a></span><span> </span><span id="local-6989586621680917206"><span class="annot"><span class="annottext">PaymentPubKeyHash
+</span><a href="#local-6989586621680917206"><span class="hs-identifier hs-var">pk</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-206"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">PaymentPubKeyHash -&gt; Params -&gt; Bool
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#isSignatory"><span class="hs-identifier hs-var">isSignatory</span></a></span><span> </span><span class="annot"><span class="annottext">PaymentPubKeyHash
+</span><a href="#local-6989586621680917206"><span class="hs-identifier hs-var">pk</span></a></span><span> </span><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621680917217"><span class="hs-identifier hs-var">params</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">&amp;&amp;</span></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><span class="hs-identifier hs-var">not</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PaymentPubKeyHash -&gt; [PaymentPubKeyHash] -&gt; Bool
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#containsPk"><span class="hs-identifier hs-var">containsPk</span></a></span><span> </span><span class="annot"><span class="annottext">PaymentPubKeyHash
+</span><a href="#local-6989586621680917206"><span class="hs-identifier hs-var">pk</span></a></span><span> </span><span class="annot"><span class="annottext">[PaymentPubKeyHash]
+</span><a href="#local-6989586621680917207"><span class="hs-identifier hs-var">pks</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-207"></span><span>            </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680917204"><span class="annot"><span class="annottext">constraints :: TxConstraints Void Void
+</span><a href="#local-6989586621680917204"><span class="hs-identifier hs-var hs-var">constraints</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PaymentPubKeyHash -&gt; TxConstraints Void Void
+forall i o. PaymentPubKeyHash -&gt; TxConstraints i o
+</span><span class="hs-identifier hs-var">Constraints.mustBeSignedBy</span></span><span> </span><span class="annot"><span class="annottext">PaymentPubKeyHash
+</span><a href="#local-6989586621680917206"><span class="hs-identifier hs-var">pk</span></a></span><span> </span><span class="hs-keyword">in</span><span>
+</span><span id="line-208"></span><span>            </span><span class="annot"><span class="annottext">(TxConstraints Void Void, State MSState)
+-&gt; Maybe (TxConstraints Void Void, State MSState)
+forall a. a -&gt; Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">TxConstraints Void Void
+</span><a href="#local-6989586621680917204"><span class="hs-identifier hs-var">constraints</span></a></span><span>
+</span><span id="line-209"></span><span>                 </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">State :: forall s. s -&gt; Value -&gt; State s
+</span><span class="hs-identifier hs-type">State</span></span><span>
+</span><span id="line-210"></span><span>                    </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">stateData :: MSState
+</span><span class="hs-identifier hs-var">stateData</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Payment -&gt; [PaymentPubKeyHash] -&gt; MSState
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#CollectingSignatures"><span class="hs-identifier hs-var">CollectingSignatures</span></a></span><span> </span><span class="annot"><span class="annottext">Payment
+</span><a href="#local-6989586621680917208"><span class="hs-identifier hs-var">pmt</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PaymentPubKeyHash
+</span><a href="#local-6989586621680917206"><span class="hs-identifier hs-var">pk</span></a></span><span class="annot"><span class="annottext">PaymentPubKeyHash -&gt; [PaymentPubKeyHash] -&gt; [PaymentPubKeyHash]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-glyph hs-var">:</span></a></span><span class="annot"><span class="annottext">[PaymentPubKeyHash]
+</span><a href="#local-6989586621680917207"><span class="hs-identifier hs-var">pks</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-211"></span><span>                    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">stateValue :: Value
+</span><span class="hs-identifier hs-var">stateValue</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680917212"><span class="hs-identifier hs-var">currentValue</span></a></span><span>
+</span><span id="line-212"></span><span>                    </span><span class="hs-special">}</span><span>
+</span><span id="line-213"></span><span>                 </span><span class="hs-special">)</span><span>
+</span><span id="line-214"></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#CollectingSignatures"><span class="hs-identifier hs-type">CollectingSignatures</span></a></span><span> </span><span id="local-6989586621680917202"><span class="annot"><span class="annottext">Payment
+</span><a href="#local-6989586621680917202"><span class="hs-identifier hs-var">payment</span></a></span></span><span> </span><span class="annot"><span class="annottext">[PaymentPubKeyHash]
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Input
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#Cancel"><span class="hs-identifier hs-var">Cancel</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-215"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680917201"><span class="annot"><span class="annottext">constraints :: TxConstraints Void Void
+</span><a href="#local-6989586621680917201"><span class="hs-identifier hs-var hs-var">constraints</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ValidityInterval POSIXTime -&gt; TxConstraints Void Void
+forall i o. ValidityInterval POSIXTime -&gt; TxConstraints i o
+</span><span class="hs-identifier hs-var">Constraints.mustValidateInTimeRange</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">POSIXTime -&gt; ValidityInterval POSIXTime
+forall a. a -&gt; ValidityInterval a
+</span><span class="hs-identifier hs-var">ValidityInterval.from</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Payment -&gt; POSIXTime
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#paymentDeadline"><span class="hs-identifier hs-var hs-var">paymentDeadline</span></a></span><span> </span><span class="annot"><span class="annottext">Payment
+</span><a href="#local-6989586621680917202"><span class="hs-identifier hs-var">payment</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">in</span><span>
+</span><span id="line-216"></span><span>        </span><span class="annot"><span class="annottext">(TxConstraints Void Void, State MSState)
+-&gt; Maybe (TxConstraints Void Void, State MSState)
+forall a. a -&gt; Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">TxConstraints Void Void
+</span><a href="#local-6989586621680917201"><span class="hs-identifier hs-var">constraints</span></a></span><span>
+</span><span id="line-217"></span><span>             </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">State :: forall s. s -&gt; Value -&gt; State s
+</span><span class="hs-identifier hs-type">State</span></span><span>
+</span><span id="line-218"></span><span>                </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">stateData :: MSState
+</span><span class="hs-identifier hs-var">stateData</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MSState
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#Holding"><span class="hs-identifier hs-var">Holding</span></a></span><span>
+</span><span id="line-219"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">stateValue :: Value
+</span><span class="hs-identifier hs-var">stateValue</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680917212"><span class="hs-identifier hs-var">currentValue</span></a></span><span>
+</span><span id="line-220"></span><span>                </span><span class="hs-special">}</span><span>
+</span><span id="line-221"></span><span>             </span><span class="hs-special">)</span><span>
+</span><span id="line-222"></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#CollectingSignatures"><span class="hs-identifier hs-type">CollectingSignatures</span></a></span><span> </span><span id="local-6989586621680917198"><span class="annot"><span class="annottext">Payment
+</span><a href="#local-6989586621680917198"><span class="hs-identifier hs-var">payment</span></a></span></span><span> </span><span id="local-6989586621680917197"><span class="annot"><span class="annottext">[PaymentPubKeyHash]
+</span><a href="#local-6989586621680917197"><span class="hs-identifier hs-var">pkh</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Input
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#Pay"><span class="hs-identifier hs-var">Pay</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-223"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Params -&gt; [PaymentPubKeyHash] -&gt; Bool
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#proposalAccepted"><span class="hs-identifier hs-var">proposalAccepted</span></a></span><span> </span><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621680917217"><span class="hs-identifier hs-var">params</span></a></span><span> </span><span class="annot"><span class="annottext">[PaymentPubKeyHash]
+</span><a href="#local-6989586621680917197"><span class="hs-identifier hs-var">pkh</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-224"></span><span>            </span><span class="hs-keyword">let</span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#Payment"><span class="hs-identifier hs-type">Payment</span></a></span><span class="hs-special">{</span><span id="local-6989586621680917196"><span class="annot"><span class="annottext">Value
+paymentAmount :: Value
+paymentAmount :: Payment -&gt; Value
+</span><a href="#local-6989586621680917196"><span class="hs-identifier hs-var hs-var">paymentAmount</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680917195"><span class="annot"><span class="annottext">Address
+paymentRecipient :: Address
+paymentRecipient :: Payment -&gt; Address
+</span><a href="#local-6989586621680917195"><span class="hs-identifier hs-var hs-var">paymentRecipient</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680917194"><span class="annot"><span class="annottext">POSIXTime
+paymentDeadline :: POSIXTime
+paymentDeadline :: Payment -&gt; POSIXTime
+</span><a href="#local-6989586621680917194"><span class="hs-identifier hs-var hs-var">paymentDeadline</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Payment
+</span><a href="#local-6989586621680917198"><span class="hs-identifier hs-var">payment</span></a></span><span>
+</span><span id="line-225"></span><span>                </span><span id="local-6989586621680917193"><span class="annot"><span class="annottext">validityTimeRange :: ValidityInterval POSIXTime
+</span><a href="#local-6989586621680917193"><span class="hs-identifier hs-var hs-var">validityTimeRange</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">POSIXTime -&gt; ValidityInterval POSIXTime
+forall a. a -&gt; ValidityInterval a
+</span><span class="hs-identifier hs-var">ValidityInterval.lessThan</span></span><span> </span><span class="annot"><span class="annottext">(POSIXTime -&gt; ValidityInterval POSIXTime)
+-&gt; POSIXTime -&gt; ValidityInterval POSIXTime
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">POSIXTime
+</span><a href="#local-6989586621680917194"><span class="hs-identifier hs-var">paymentDeadline</span></a></span><span> </span><span class="annot"><span class="annottext">POSIXTime -&gt; POSIXTime -&gt; POSIXTime
+forall a. AdditiveGroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">POSIXTime
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-226"></span><span>                </span><span id="local-6989586621680917190"><span class="annot"><span class="annottext">constraints :: TxConstraints Void Void
+</span><a href="#local-6989586621680917190"><span class="hs-identifier hs-var hs-var">constraints</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-227"></span><span>                    </span><span class="annot"><span class="annottext">ValidityInterval POSIXTime -&gt; TxConstraints Void Void
+forall i o. ValidityInterval POSIXTime -&gt; TxConstraints i o
+</span><span class="hs-identifier hs-var">Constraints.mustValidateInTimeRange</span></span><span> </span><span class="annot"><span class="annottext">ValidityInterval POSIXTime
+</span><a href="#local-6989586621680917193"><span class="hs-identifier hs-var">validityTimeRange</span></a></span><span>
+</span><span id="line-228"></span><span>                    </span><span class="annot"><span class="annottext">TxConstraints Void Void
+-&gt; TxConstraints Void Void -&gt; TxConstraints Void Void
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Address -&gt; Value -&gt; TxConstraints Void Void
+forall i o. Address -&gt; Value -&gt; TxConstraints i o
+</span><span class="hs-identifier hs-var">Constraints.mustPayToAddress</span></span><span> </span><span class="annot"><span class="annottext">Address
+</span><a href="#local-6989586621680917195"><span class="hs-identifier hs-var">paymentRecipient</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680917196"><span class="hs-identifier hs-var">paymentAmount</span></a></span><span>
+</span><span id="line-229"></span><span>                </span><span id="local-6989586621680917187"><span class="annot"><span class="annottext">newValue :: Value
+</span><a href="#local-6989586621680917187"><span class="hs-identifier hs-var hs-var">newValue</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680917212"><span class="hs-identifier hs-var">currentValue</span></a></span><span> </span><span class="annot"><span class="annottext">Value -&gt; Value -&gt; Value
+forall a. AdditiveGroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680917196"><span class="hs-identifier hs-var">paymentAmount</span></a></span><span>
+</span><span id="line-230"></span><span>            </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">(TxConstraints Void Void, State MSState)
+-&gt; Maybe (TxConstraints Void Void, State MSState)
+forall a. a -&gt; Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">TxConstraints Void Void
+</span><a href="#local-6989586621680917190"><span class="hs-identifier hs-var">constraints</span></a></span><span>
+</span><span id="line-231"></span><span>                    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">State :: forall s. s -&gt; Value -&gt; State s
+</span><span class="hs-identifier hs-type">State</span></span><span>
+</span><span id="line-232"></span><span>                        </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">stateData :: MSState
+</span><span class="hs-identifier hs-var">stateData</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Value -&gt; Bool
+</span><span class="hs-identifier hs-var">Value.isZero</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Ada -&gt; Value
+</span><span class="hs-identifier hs-var">Ada.toValue</span></span><span> </span><span class="annot"><span class="annottext">(Ada -&gt; Value) -&gt; Ada -&gt; Value
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Value -&gt; Ada
+</span><span class="hs-identifier hs-var">Ada.fromValue</span></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680917187"><span class="hs-identifier hs-var">newValue</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-233"></span><span>                                         </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">MSState
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#Finished"><span class="hs-identifier hs-var">Finished</span></a></span><span>
+</span><span id="line-234"></span><span>                                         </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">MSState
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#Holding"><span class="hs-identifier hs-var">Holding</span></a></span><span>
+</span><span id="line-235"></span><span>                        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">stateValue :: Value
+</span><span class="hs-identifier hs-var">stateValue</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680917187"><span class="hs-identifier hs-var">newValue</span></a></span><span>
+</span><span id="line-236"></span><span>                        </span><span class="hs-special">}</span><span>
+</span><span id="line-237"></span><span>                    </span><span class="hs-special">)</span><span>
+</span><span id="line-238"></span><span>    </span><span class="annot"><span class="annottext">(MSState, Input)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe (TxConstraints Void Void, State MSState)
+forall a. Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-239"></span><span>
+</span><span id="line-240"></span><span class="hs-keyword">type</span><span> </span><span id="MultiSigSym"><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#MultiSigSym"><span class="hs-identifier hs-var">MultiSigSym</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">StateMachine</span></span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#MSState"><span class="hs-identifier hs-type">MSState</span></a></span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#Input"><span class="hs-identifier hs-type">Input</span></a></span><span>
+</span><span id="line-241"></span><span>
+</span><span id="line-242"></span><span class="hs-pragma">{-# INLINABLE</span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#machine"><span class="hs-pragma hs-type">machine</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-243"></span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#machine"><span class="hs-identifier hs-type">machine</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#Params"><span class="hs-identifier hs-type">Params</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#MultiSigSym"><span class="hs-identifier hs-type">MultiSigSym</span></a></span><span>
+</span><span id="line-244"></span><span id="machine"><span class="annot"><span class="annottext">machine :: Params -&gt; MultiSigSym
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#machine"><span class="hs-identifier hs-var hs-var">machine</span></a></span></span><span> </span><span id="local-6989586621680917182"><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621680917182"><span class="hs-identifier hs-var">params</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe ThreadToken
+-&gt; (State MSState
+    -&gt; Input -&gt; Maybe (TxConstraints Void Void, State MSState))
+-&gt; (MSState -&gt; Bool)
+-&gt; MultiSigSym
+forall s i.
+Maybe ThreadToken
+-&gt; (State s -&gt; i -&gt; Maybe (TxConstraints Void Void, State s))
+-&gt; (s -&gt; Bool)
+-&gt; StateMachine s i
+</span><span class="hs-identifier hs-var">SM.mkStateMachine</span></span><span> </span><span class="annot"><span class="annottext">Maybe ThreadToken
+forall a. Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Params
+-&gt; State MSState
+-&gt; Input
+-&gt; Maybe (TxConstraints Void Void, State MSState)
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#transition"><span class="hs-identifier hs-var">transition</span></a></span><span> </span><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621680917182"><span class="hs-identifier hs-var">params</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">MSState -&gt; Bool
+</span><a href="#local-6989586621680917180"><span class="hs-identifier hs-var">isFinal</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-245"></span><span>    </span><span id="local-6989586621680917180"><span class="annot"><span class="annottext">isFinal :: MSState -&gt; Bool
+</span><a href="#local-6989586621680917180"><span class="hs-identifier hs-var hs-var">isFinal</span></a></span></span><span> </span><span class="annot"><span class="annottext">MSState
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#Finished"><span class="hs-identifier hs-var">Finished</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-246"></span><span>    </span><span class="annot"><a href="#local-6989586621680917180"><span class="hs-identifier hs-var">isFinal</span></a></span><span> </span><span class="annot"><span class="annottext">MSState
+</span><span class="hs-identifier">_</span></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-247"></span><span>
+</span><span id="line-248"></span><span class="hs-pragma">{-# INLINABLE</span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#mkValidator"><span class="hs-pragma hs-type">mkValidator</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-249"></span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#mkValidator"><span class="hs-identifier hs-type">mkValidator</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#Params"><span class="hs-identifier hs-type">Params</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">V2.ValidatorType</span></span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#MultiSigSym"><span class="hs-identifier hs-type">MultiSigSym</span></a></span><span>
+</span><span id="line-250"></span><span id="mkValidator"><span class="annot"><span class="annottext">mkValidator :: Params -&gt; ValidatorType MultiSigSym
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#mkValidator"><span class="hs-identifier hs-var hs-var">mkValidator</span></a></span></span><span> </span><span id="local-6989586621680917179"><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621680917179"><span class="hs-identifier hs-var">params</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MultiSigSym -&gt; MSState -&gt; Input -&gt; ScriptContext -&gt; Bool
+forall s i.
+ToData s =&gt;
+StateMachine s i -&gt; ValidatorType (StateMachine s i)
+</span><span class="hs-identifier hs-var">SM.mkValidator</span></span><span> </span><span class="annot"><span class="annottext">(MultiSigSym -&gt; MSState -&gt; Input -&gt; ScriptContext -&gt; Bool)
+-&gt; MultiSigSym -&gt; MSState -&gt; Input -&gt; ScriptContext -&gt; Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Params -&gt; MultiSigSym
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#machine"><span class="hs-identifier hs-var">machine</span></a></span><span> </span><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621680917179"><span class="hs-identifier hs-var">params</span></a></span><span>
+</span><span id="line-251"></span><span>
+</span><span id="line-252"></span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#typedValidator"><span class="hs-identifier hs-type">typedValidator</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#Params"><span class="hs-identifier hs-type">Params</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">V2.TypedValidator</span></span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#MultiSigSym"><span class="hs-identifier hs-type">MultiSigSym</span></a></span><span>
+</span><span id="line-253"></span><span id="typedValidator"><span class="annot"><span class="annottext">typedValidator :: Params -&gt; TypedValidator MultiSigSym
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#typedValidator"><span class="hs-identifier hs-var hs-var">typedValidator</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CompiledCode (Params -&gt; ValidatorType MultiSigSym)
+-&gt; CompiledCode (ValidatorType MultiSigSym -&gt; UntypedValidator)
+-&gt; Params
+-&gt; TypedValidator MultiSigSym
+forall a param.
+Lift DefaultUni param =&gt;
+CompiledCode (param -&gt; ValidatorType a)
+-&gt; CompiledCode (ValidatorType a -&gt; UntypedValidator)
+-&gt; param
+-&gt; TypedValidator a
+</span><span class="hs-identifier hs-var">V2.mkTypedValidatorParam</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#MultiSigSym"><span class="hs-identifier hs-type">MultiSigSym</span></a></span><span>
+</span><span id="line-254"></span><span>    </span><span class="hs-special">$$(</span><span class="annot"><span class="hs-identifier hs-type">PlutusTx.compile</span></span><span> </span><span class="hs-special">[||</span><span> </span><span class="hs-identifier">mkValidator</span><span> </span><span class="hs-special">||]</span><span class="hs-special">)</span><span>
+</span><span id="line-255"></span><span>    </span><span class="hs-special">$$(</span><span class="annot"><span class="hs-identifier hs-type">PlutusTx.compile</span></span><span> </span><span class="hs-special">[||</span><span> </span><span class="hs-identifier">wrap</span><span> </span><span class="hs-special">||]</span><span class="hs-special">)</span><span>
+</span><span id="line-256"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-257"></span><span>        </span><span id="local-6989586621680917173"><span class="annot"><span class="annottext">wrap :: (MSState -&gt; Input -&gt; ScriptContext -&gt; Bool) -&gt; UntypedValidator
+</span><a href="#local-6989586621680917173"><span class="hs-identifier hs-var hs-var">wrap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(MSState -&gt; Input -&gt; ScriptContext -&gt; Bool) -&gt; UntypedValidator
+forall sc d r.
+(IsScriptContext sc, UnsafeFromData d, UnsafeFromData r) =&gt;
+(d -&gt; r -&gt; sc -&gt; Bool) -&gt; UntypedValidator
+</span><span class="hs-identifier hs-var">Scripts.mkUntypedValidator</span></span><span>
+</span><span id="line-258"></span><span>
+</span><span id="line-259"></span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#client"><span class="hs-identifier hs-type">client</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#Params"><span class="hs-identifier hs-type">Params</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">SM.StateMachineClient</span></span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#MSState"><span class="hs-identifier hs-type">MSState</span></a></span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#Input"><span class="hs-identifier hs-type">Input</span></a></span><span>
+</span><span id="line-260"></span><span id="client"><span class="annot"><span class="annottext">client :: Params -&gt; StateMachineClient MSState Input
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#client"><span class="hs-identifier hs-var hs-var">client</span></a></span></span><span> </span><span id="local-6989586621680917170"><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621680917170"><span class="hs-identifier hs-var">params</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StateMachineInstance MSState Input
+-&gt; StateMachineClient MSState Input
+forall state input.
+StateMachineInstance state input -&gt; StateMachineClient state input
+</span><span class="hs-identifier hs-var">SM.mkStateMachineClient</span></span><span> </span><span class="annot"><span class="annottext">(StateMachineInstance MSState Input
+ -&gt; StateMachineClient MSState Input)
+-&gt; StateMachineInstance MSState Input
+-&gt; StateMachineClient MSState Input
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">MultiSigSym
+-&gt; TypedValidator MultiSigSym -&gt; StateMachineInstance MSState Input
+forall s i.
+StateMachine s i
+-&gt; TypedValidator (StateMachine s i) -&gt; StateMachineInstance s i
+</span><span class="hs-identifier hs-var">SM.StateMachineInstance</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Params -&gt; MultiSigSym
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#machine"><span class="hs-identifier hs-var">machine</span></a></span><span> </span><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621680917170"><span class="hs-identifier hs-var">params</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Params -&gt; TypedValidator MultiSigSym
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#typedValidator"><span class="hs-identifier hs-var">typedValidator</span></a></span><span> </span><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621680917170"><span class="hs-identifier hs-var">params</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-261"></span><span>
+</span><span id="line-262"></span><span id="local-6989586621680917167"><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#contract"><span class="hs-identifier hs-type">contract</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-263"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier hs-type">AsContractError</span></span><span> </span><span class="annot"><a href="#local-6989586621680917167"><span class="hs-identifier hs-type">e</span></a></span><span>
+</span><span id="line-264"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">AsSMContractError</span></span><span> </span><span class="annot"><a href="#local-6989586621680917167"><span class="hs-identifier hs-type">e</span></a></span><span>
+</span><span id="line-265"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-266"></span><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#Params"><span class="hs-identifier hs-type">Params</span></a></span><span>
+</span><span id="line-267"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Contract</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="annot"><a href="Plutus.Contracts.MultiSigStateMachine.html#MultiSigSchema"><span class="hs-identifier hs-type">MultiSigSchema</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680917167"><span class="hs-identifier hs-type">e</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-268"></span><span id="contract"><span class="annot"><span class="annottext">contract :: Params -&gt; Contract () MultiSigSchema e ()
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#contract"><span class="hs-identifier hs-var hs-var">contract</span></a></span></span><span> </span><span id="local-6989586621680917166"><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621680917166"><span class="hs-identifier hs-var">params</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Contract
+  ()
+  ('R
+     '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+        &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+  e
+  ()
+-&gt; Contract
+     ()
+     ('R
+        '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+           &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+     e
+     ()
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">forever</span></a></span><span> </span><span class="annot"><span class="annottext">Contract
+  ()
+  ('R
+     '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+        &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+  e
+  ()
+</span><a href="#local-6989586621680917165"><span class="hs-identifier hs-var">endpoints</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-269"></span><span>    </span><span id="local-6989586621680917164"><span class="annot"><span class="annottext">theClient :: StateMachineClient MSState Input
+</span><a href="#local-6989586621680917164"><span class="hs-identifier hs-var hs-var">theClient</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Params -&gt; StateMachineClient MSState Input
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#client"><span class="hs-identifier hs-var">client</span></a></span><span> </span><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621680917166"><span class="hs-identifier hs-var">params</span></a></span><span>
+</span><span id="line-270"></span><span>    </span><span id="local-6989586621680917165"><span class="annot"><span class="annottext">endpoints :: Contract
+  ()
+  ('R
+     '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+        &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+  e
+  ()
+</span><a href="#local-6989586621680917165"><span class="hs-identifier hs-var hs-var">endpoints</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Promise
+   ()
+   ('R
+      '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+         &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+         &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+         &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+         &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+   e
+   ()]
+-&gt; Contract
+     ()
+     ('R
+        '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+           &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+     e
+     ()
+forall w (s :: Row *) e a. [Promise w s e a] -&gt; Contract w s e a
+</span><span class="hs-identifier hs-var">selectList</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Promise
+  ()
+  ('R
+     '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+        &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+  e
+  ()
+</span><a href="#local-6989586621680917162"><span class="hs-identifier hs-var">lock</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Promise
+  ()
+  ('R
+     '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+        &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+  e
+  ()
+</span><a href="#local-6989586621680917161"><span class="hs-identifier hs-var">propose</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Promise
+  ()
+  ('R
+     '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+        &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+  e
+  ()
+</span><a href="#local-6989586621680917160"><span class="hs-identifier hs-var">cancel</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Promise
+  ()
+  ('R
+     '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+        &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+  e
+  ()
+</span><a href="#local-6989586621680917159"><span class="hs-identifier hs-var">addSignature</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Promise
+  ()
+  ('R
+     '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+        &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+  e
+  ()
+</span><a href="#local-6989586621680917158"><span class="hs-identifier hs-var">pay</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-271"></span><span>    </span><span id="local-6989586621680917161"><span class="annot"><span class="annottext">propose :: Promise
+  ()
+  ('R
+     '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+        &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+  e
+  ()
+</span><a href="#local-6989586621680917161"><span class="hs-identifier hs-var hs-var">propose</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a w (s :: Row *) e b.
+(HasEndpoint &quot;propose-payment&quot; a s, AsContractError e,
+ FromJSON a) =&gt;
+(a -&gt; Contract w s e b) -&gt; Promise w s e b
+forall (l :: Symbol) a w (s :: Row *) e b.
+(HasEndpoint l a s, AsContractError e, FromJSON a) =&gt;
+(a -&gt; Contract w s e b) -&gt; Promise w s e b
+</span><span class="hs-identifier hs-var">endpoint</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-string">&quot;propose-payment&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Payment
+  -&gt; Contract
+       ()
+       ('R
+          '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+             &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+             &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+             &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+             &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+       e
+       ())
+ -&gt; Promise
+      ()
+      ('R
+         '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+            &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+            &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+            &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+            &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+      e
+      ())
+-&gt; (Payment
+    -&gt; Contract
+         ()
+         ('R
+            '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+               &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+               &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+               &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+               &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+         e
+         ())
+-&gt; Promise
+     ()
+     ('R
+        '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+           &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+     e
+     ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Contract
+  ()
+  ('R
+     '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+        &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+  e
+  (TransitionResult MSState Input)
+-&gt; Contract
+     ()
+     ('R
+        '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+           &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+     e
+     ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(Contract
+   ()
+   ('R
+      '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+         &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+         &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+         &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+         &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+   e
+   (TransitionResult MSState Input)
+ -&gt; Contract
+      ()
+      ('R
+         '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+            &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+            &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+            &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+            &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+      e
+      ())
+-&gt; (Payment
+    -&gt; Contract
+         ()
+         ('R
+            '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+               &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+               &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+               &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+               &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+         e
+         (TransitionResult MSState Input))
+-&gt; Payment
+-&gt; Contract
+     ()
+     ('R
+        '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+           &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+     e
+     ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">StateMachineClient MSState Input
+-&gt; Input
+-&gt; Contract
+     ()
+     ('R
+        '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+           &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+     e
+     (TransitionResult MSState Input)
+forall w e state (schema :: Row *) input.
+(AsSMContractError e, FromData state, ToData state,
+ ToData input) =&gt;
+StateMachineClient state input
+-&gt; input -&gt; Contract w schema e (TransitionResult state input)
+</span><span class="hs-identifier hs-var">SM.runStep</span></span><span> </span><span class="annot"><span class="annottext">StateMachineClient MSState Input
+</span><a href="#local-6989586621680917164"><span class="hs-identifier hs-var">theClient</span></a></span><span> </span><span class="annot"><span class="annottext">(Input
+ -&gt; Contract
+      ()
+      ('R
+         '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+            &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+            &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+            &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+            &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+      e
+      (TransitionResult MSState Input))
+-&gt; (Payment -&gt; Input)
+-&gt; Payment
+-&gt; Contract
+     ()
+     ('R
+        '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+           &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+     e
+     (TransitionResult MSState Input)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Payment -&gt; Input
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#ProposePayment"><span class="hs-identifier hs-var">ProposePayment</span></a></span><span>
+</span><span id="line-272"></span><span>    </span><span id="local-6989586621680917160"><span class="annot"><span class="annottext">cancel :: Promise
+  ()
+  ('R
+     '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+        &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+  e
+  ()
+</span><a href="#local-6989586621680917160"><span class="hs-identifier hs-var hs-var">cancel</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a w (s :: Row *) e b.
+(HasEndpoint &quot;cancel-payment&quot; a s, AsContractError e,
+ FromJSON a) =&gt;
+(a -&gt; Contract w s e b) -&gt; Promise w s e b
+forall (l :: Symbol) a w (s :: Row *) e b.
+(HasEndpoint l a s, AsContractError e, FromJSON a) =&gt;
+(a -&gt; Contract w s e b) -&gt; Promise w s e b
+</span><span class="hs-identifier hs-var">endpoint</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-string">&quot;cancel-payment&quot;</span></span><span> </span><span class="annot"><span class="annottext">((()
+  -&gt; Contract
+       ()
+       ('R
+          '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+             &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+             &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+             &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+             &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+       e
+       ())
+ -&gt; Promise
+      ()
+      ('R
+         '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+            &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+            &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+            &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+            &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+      e
+      ())
+-&gt; (()
+    -&gt; Contract
+         ()
+         ('R
+            '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+               &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+               &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+               &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+               &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+         e
+         ())
+-&gt; Promise
+     ()
+     ('R
+        '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+           &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+     e
+     ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Contract
+  ()
+  ('R
+     '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+        &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+  e
+  (TransitionResult MSState Input)
+-&gt; Contract
+     ()
+     ('R
+        '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+           &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+     e
+     ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(Contract
+   ()
+   ('R
+      '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+         &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+         &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+         &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+         &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+   e
+   (TransitionResult MSState Input)
+ -&gt; Contract
+      ()
+      ('R
+         '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+            &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+            &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+            &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+            &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+      e
+      ())
+-&gt; Contract
+     ()
+     ('R
+        '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+           &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+     e
+     (TransitionResult MSState Input)
+-&gt; Contract
+     ()
+     ('R
+        '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+           &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+     e
+     ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">StateMachineClient MSState Input
+-&gt; Input
+-&gt; Contract
+     ()
+     ('R
+        '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+           &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+     e
+     (TransitionResult MSState Input)
+forall w e state (schema :: Row *) input.
+(AsSMContractError e, FromData state, ToData state,
+ ToData input) =&gt;
+StateMachineClient state input
+-&gt; input -&gt; Contract w schema e (TransitionResult state input)
+</span><span class="hs-identifier hs-var">SM.runStep</span></span><span> </span><span class="annot"><span class="annottext">StateMachineClient MSState Input
+</span><a href="#local-6989586621680917164"><span class="hs-identifier hs-var">theClient</span></a></span><span> </span><span class="annot"><span class="annottext">Input
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#Cancel"><span class="hs-identifier hs-var">Cancel</span></a></span><span>
+</span><span id="line-273"></span><span>    </span><span id="local-6989586621680917159"><span class="annot"><span class="annottext">addSignature :: Promise
+  ()
+  ('R
+     '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+        &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+  e
+  ()
+</span><a href="#local-6989586621680917159"><span class="hs-identifier hs-var hs-var">addSignature</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a w (s :: Row *) e b.
+(HasEndpoint &quot;add-signature&quot; a s, AsContractError e, FromJSON a) =&gt;
+(a -&gt; Contract w s e b) -&gt; Promise w s e b
+forall (l :: Symbol) a w (s :: Row *) e b.
+(HasEndpoint l a s, AsContractError e, FromJSON a) =&gt;
+(a -&gt; Contract w s e b) -&gt; Promise w s e b
+</span><span class="hs-identifier hs-var">endpoint</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-string">&quot;add-signature&quot;</span></span><span> </span><span class="annot"><span class="annottext">((()
+  -&gt; Contract
+       ()
+       ('R
+          '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+             &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+             &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+             &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+             &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+       e
+       ())
+ -&gt; Promise
+      ()
+      ('R
+         '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+            &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+            &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+            &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+            &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+      e
+      ())
+-&gt; (()
+    -&gt; Contract
+         ()
+         ('R
+            '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+               &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+               &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+               &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+               &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+         e
+         ())
+-&gt; Promise
+     ()
+     ('R
+        '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+           &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+     e
+     ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Contract
+  ()
+  ('R
+     '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+        &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+  e
+  PaymentPubKeyHash
+forall w (s :: Row *) e.
+AsContractError e =&gt;
+Contract w s e PaymentPubKeyHash
+</span><span class="hs-identifier hs-var">ownFirstPaymentPubKeyHash</span></span><span> </span><span class="annot"><span class="annottext">Contract
+  ()
+  ('R
+     '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+        &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+  e
+  PaymentPubKeyHash
+-&gt; (PaymentPubKeyHash
+    -&gt; Contract
+         ()
+         ('R
+            '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+               &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+               &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+               &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+               &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+         e
+         ())
+-&gt; Contract
+     ()
+     ('R
+        '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+           &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+     e
+     ()
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Contract
+  ()
+  ('R
+     '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+        &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+  e
+  (TransitionResult MSState Input)
+-&gt; Contract
+     ()
+     ('R
+        '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+           &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+     e
+     ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(Contract
+   ()
+   ('R
+      '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+         &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+         &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+         &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+         &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+   e
+   (TransitionResult MSState Input)
+ -&gt; Contract
+      ()
+      ('R
+         '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+            &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+            &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+            &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+            &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+      e
+      ())
+-&gt; (PaymentPubKeyHash
+    -&gt; Contract
+         ()
+         ('R
+            '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+               &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+               &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+               &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+               &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+         e
+         (TransitionResult MSState Input))
+-&gt; PaymentPubKeyHash
+-&gt; Contract
+     ()
+     ('R
+        '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+           &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+     e
+     ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">StateMachineClient MSState Input
+-&gt; Input
+-&gt; Contract
+     ()
+     ('R
+        '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+           &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+     e
+     (TransitionResult MSState Input)
+forall w e state (schema :: Row *) input.
+(AsSMContractError e, FromData state, ToData state,
+ ToData input) =&gt;
+StateMachineClient state input
+-&gt; input -&gt; Contract w schema e (TransitionResult state input)
+</span><span class="hs-identifier hs-var">SM.runStep</span></span><span> </span><span class="annot"><span class="annottext">StateMachineClient MSState Input
+</span><a href="#local-6989586621680917164"><span class="hs-identifier hs-var">theClient</span></a></span><span> </span><span class="annot"><span class="annottext">(Input
+ -&gt; Contract
+      ()
+      ('R
+         '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+            &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+            &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+            &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+            &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+      e
+      (TransitionResult MSState Input))
+-&gt; (PaymentPubKeyHash -&gt; Input)
+-&gt; PaymentPubKeyHash
+-&gt; Contract
+     ()
+     ('R
+        '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+           &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+     e
+     (TransitionResult MSState Input)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">PaymentPubKeyHash -&gt; Input
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#AddSignature"><span class="hs-identifier hs-var">AddSignature</span></a></span><span>
+</span><span id="line-274"></span><span>    </span><span id="local-6989586621680917162"><span class="annot"><span class="annottext">lock :: Promise
+  ()
+  ('R
+     '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+        &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+  e
+  ()
+</span><a href="#local-6989586621680917162"><span class="hs-identifier hs-var hs-var">lock</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a w (s :: Row *) e b.
+(HasEndpoint &quot;lock&quot; a s, AsContractError e, FromJSON a) =&gt;
+(a -&gt; Contract w s e b) -&gt; Promise w s e b
+forall (l :: Symbol) a w (s :: Row *) e b.
+(HasEndpoint l a s, AsContractError e, FromJSON a) =&gt;
+(a -&gt; Contract w s e b) -&gt; Promise w s e b
+</span><span class="hs-identifier hs-var">endpoint</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-string">&quot;lock&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Value
+  -&gt; Contract
+       ()
+       ('R
+          '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+             &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+             &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+             &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+             &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+       e
+       ())
+ -&gt; Promise
+      ()
+      ('R
+         '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+            &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+            &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+            &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+            &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+      e
+      ())
+-&gt; (Value
+    -&gt; Contract
+         ()
+         ('R
+            '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+               &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+               &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+               &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+               &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+         e
+         ())
+-&gt; Promise
+     ()
+     ('R
+        '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+           &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+     e
+     ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Contract
+  ()
+  ('R
+     '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+        &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+  e
+  MSState
+-&gt; Contract
+     ()
+     ('R
+        '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+           &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+     e
+     ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(Contract
+   ()
+   ('R
+      '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+         &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+         &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+         &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+         &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+   e
+   MSState
+ -&gt; Contract
+      ()
+      ('R
+         '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+            &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+            &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+            &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+            &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+      e
+      ())
+-&gt; (Value
+    -&gt; Contract
+         ()
+         ('R
+            '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+               &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+               &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+               &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+               &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+         e
+         MSState)
+-&gt; Value
+-&gt; Contract
+     ()
+     ('R
+        '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+           &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+     e
+     ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">StateMachineClient MSState Input
+-&gt; MSState
+-&gt; Value
+-&gt; Contract
+     ()
+     ('R
+        '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+           &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+     e
+     MSState
+forall w e state (schema :: Row *) input.
+(FromData state, ToData state, ToData input,
+ AsSMContractError e) =&gt;
+StateMachineClient state input
+-&gt; state -&gt; Value -&gt; Contract w schema e state
+</span><span class="hs-identifier hs-var">SM.runInitialise</span></span><span> </span><span class="annot"><span class="annottext">StateMachineClient MSState Input
+</span><a href="#local-6989586621680917164"><span class="hs-identifier hs-var">theClient</span></a></span><span> </span><span class="annot"><span class="annottext">MSState
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#Holding"><span class="hs-identifier hs-var">Holding</span></a></span><span>
+</span><span id="line-275"></span><span>    </span><span id="local-6989586621680917158"><span class="annot"><span class="annottext">pay :: Promise
+  ()
+  ('R
+     '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+        &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+  e
+  ()
+</span><a href="#local-6989586621680917158"><span class="hs-identifier hs-var hs-var">pay</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a w (s :: Row *) e b.
+(HasEndpoint &quot;pay&quot; a s, AsContractError e, FromJSON a) =&gt;
+(a -&gt; Contract w s e b) -&gt; Promise w s e b
+forall (l :: Symbol) a w (s :: Row *) e b.
+(HasEndpoint l a s, AsContractError e, FromJSON a) =&gt;
+(a -&gt; Contract w s e b) -&gt; Promise w s e b
+</span><span class="hs-identifier hs-var">endpoint</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-string">&quot;pay&quot;</span></span><span> </span><span class="annot"><span class="annottext">((()
+  -&gt; Contract
+       ()
+       ('R
+          '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+             &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+             &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+             &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+             &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+       e
+       ())
+ -&gt; Promise
+      ()
+      ('R
+         '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+            &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+            &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+            &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+            &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+      e
+      ())
+-&gt; (()
+    -&gt; Contract
+         ()
+         ('R
+            '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+               &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+               &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+               &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+               &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+         e
+         ())
+-&gt; Promise
+     ()
+     ('R
+        '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+           &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+     e
+     ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Contract
+  ()
+  ('R
+     '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+        &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+        &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+  e
+  (TransitionResult MSState Input)
+-&gt; Contract
+     ()
+     ('R
+        '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+           &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+     e
+     ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(Contract
+   ()
+   ('R
+      '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+         &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+         &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+         &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+         &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+   e
+   (TransitionResult MSState Input)
+ -&gt; Contract
+      ()
+      ('R
+         '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+            &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+            &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+            &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+            &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+      e
+      ())
+-&gt; Contract
+     ()
+     ('R
+        '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+           &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+     e
+     (TransitionResult MSState Input)
+-&gt; Contract
+     ()
+     ('R
+        '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+           &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+     e
+     ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">StateMachineClient MSState Input
+-&gt; Input
+-&gt; Contract
+     ()
+     ('R
+        '[ &quot;add-signature&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;cancel-payment&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;lock&quot; ':-&gt; (EndpointValue Value, ActiveEndpoint),
+           &quot;pay&quot; ':-&gt; (EndpointValue (), ActiveEndpoint),
+           &quot;propose-payment&quot; ':-&gt; (EndpointValue Payment, ActiveEndpoint)])
+     e
+     (TransitionResult MSState Input)
+forall w e state (schema :: Row *) input.
+(AsSMContractError e, FromData state, ToData state,
+ ToData input) =&gt;
+StateMachineClient state input
+-&gt; input -&gt; Contract w schema e (TransitionResult state input)
+</span><span class="hs-identifier hs-var">SM.runStep</span></span><span> </span><span class="annot"><span class="annottext">StateMachineClient MSState Input
+</span><a href="#local-6989586621680917164"><span class="hs-identifier hs-var">theClient</span></a></span><span> </span><span class="annot"><span class="annottext">Input
+</span><a href="Plutus.Contracts.MultiSigStateMachine.html#Pay"><span class="hs-identifier hs-var">Pay</span></a></span><span>
+</span><span id="line-276"></span><span>
+</span><span id="line-277"></span><span id="local-6989586621680917147"><span id="local-6989586621680917149"><span id="local-6989586621680917151"><span class="hs-identifier">PlutusTx.unstableMakeIsData</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">Payment</span></span></span></span><span>
+</span><span id="line-278"></span><span id="local-6989586621680917137"><span id="local-6989586621680917139"><span class="hs-identifier">PlutusTx.makeLift</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">Payment</span></span></span><span>
+</span><span id="line-279"></span><span id="local-6989586621680917127"><span id="local-6989586621680917129"><span id="local-6989586621680917131"><span class="hs-identifier">PlutusTx.unstableMakeIsData</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">MSState</span></span></span></span><span>
+</span><span id="line-280"></span><span id="local-6989586621680917123"><span id="local-6989586621680917125"><span class="hs-identifier">PlutusTx.makeLift</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">MSState</span></span></span><span>
+</span><span id="line-281"></span><span id="local-6989586621680917119"><span id="local-6989586621680917121"><span class="hs-identifier">PlutusTx.makeLift</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">Params</span></span></span><span>
+</span><span id="line-282"></span><span id="local-6989586621680917113"><span id="local-6989586621680917115"><span id="local-6989586621680917117"><span class="hs-identifier">PlutusTx.unstableMakeIsData</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">Input</span></span></span></span><span>
+</span><span id="line-283"></span><span id="local-6989586621680917109"><span id="local-6989586621680917111"><span class="hs-identifier">PlutusTx.makeLift</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">Input</span></span></span><span>
+</span><span id="line-284"></span></pre></body></html>

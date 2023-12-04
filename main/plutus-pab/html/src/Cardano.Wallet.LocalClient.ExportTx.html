@@ -1,0 +1,1023 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE BlockArguments     #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DataKinds          #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DerivingStrategies #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts   #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances  #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase         #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE MonoLocalBinds     #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns     #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings  #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes         #-}</span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- | Turn 'UnbalancedTx' values into transactions using the</span><span>
+</span><span id="line-12"></span><span class="hs-comment">--   wallet API.</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Wallet.LocalClient.ExportTx</span><span class="hs-special">(</span><span>
+</span><span id="line-14"></span><span>      </span><span class="annot"><span class="hs-identifier">balanceTx</span></span><span>
+</span><span id="line-15"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#handleTx"><span class="hs-identifier">handleTx</span></a></span><span>
+</span><span id="line-16"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">yieldUnbalancedTx</span></span><span>
+</span><span id="line-17"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">WAPI.signTxAndSubmit</span></span><span>
+</span><span id="line-18"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Exporting transactions</span></span><span>
+</span><span id="line-19"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#ExportTx"><span class="hs-identifier">ExportTx</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#ExportTxInput"><span class="hs-identifier">ExportTxInput</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#ExportTxRedeemer"><span class="hs-identifier">ExportTxRedeemer</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#export"><span class="hs-keyword">export</span></a></span><span>
+</span><span id="line-23"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.Api</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">C</span></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.Node.Emulator.Internal.Node.Params</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Params</span></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.Node.Emulator.Internal.Node.Validation</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">CardanoLedgerError</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">makeTransactionBody</span></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Control.Applicative</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator">(&lt;|&gt;)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Control.Monad</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator">(&gt;=&gt;)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Freer</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Eff</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Member</span></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Freer.Error</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Error</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">throwError</span></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">FromJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">parseJSON</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Object</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ToJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">toJSON</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Value</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">String</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">object</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">withObject</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-operator">(.:)</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-operator">(.=)</span></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson.Extras</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">JSON</span></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson.Types</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Parser</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">parseFail</span></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Data.Bifunctor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">first</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Data.Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">mapMaybe</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Data.Typeable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Typeable</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Ledger</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">DCert</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">StakingCredential</span></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Ledger</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">P</span></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Ledger.Tx</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">CardanoTx</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">TxOutRef</span></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Ledger.Tx.CardanoAPI</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">fromPlutusIndex</span></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Ledger.Tx.Constraints</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">UnbalancedTx</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">UnbalancedCardanoTx</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.V1.Ledger.Api</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Plutus</span></span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.V1.Ledger.Scripts</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">MintingPolicyHash</span></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">PlutusTx</span></span><span> </span><span class="hs-keyword">qualified</span><span>
+</span><span id="line-48"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Wallet.API</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">WAPI</span></span><span>
+</span><span id="line-49"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Wallet.Effects</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">WalletEffect</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">balanceTx</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">yieldUnbalancedTx</span></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Wallet.Emulator.Error</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">WalletAPIError</span></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span class="hs-comment">{- Note [Submitting transactions from Plutus contracts]
+
+'UnbalancedTx' is the type of transactions that meet some set of constraints
+(produced by 'Ledger.Constraints.OffChain.mkTx'), but can't be submitted to
+the ledger yet because they may not be balanced and they lack signatures and
+fee payments. To turn an 'UnbalancedTx' value into a valid transaction that can
+be submitted to the network, the contract backend needs to
+
+* Balance it.
+  If the total value of 'txInputs' + the 'txMint' field is
+  greater than the total value of 'txOutputs', then one or more public key
+  outputs need to be added. How many and what addresses they are is up
+  to the wallet (probably configurable).
+  If the total balance 'txInputs' + the 'txMint' field is less than
+  the total value of 'txOutputs', then one or more public key inputs need
+  to be added (and potentially some outputs for the change).
+
+* Compute fees.
+  Once the final size of the transaction is known, the fees for the transaction
+  can be computed. The transaction fee needs to be paid for with additional
+  inputs so I assume that this step and the previous step will be combined.
+
+  Also note that even if the 'UnbalancedTx' that we get from the contract
+  endpoint happens to be balanced already, we still need to add fees to it. So
+  we can't skip the balancing &amp; fee computation step.
+
+  Balancing and coin selection will eventually be performed by the wallet
+  backend.
+
+* Sign it.
+  The signing process needs to provide signatures for all public key
+  inputs in the balanced transaction.
+
+-}</span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span class="hs-comment">-- | Balance an unabalanced transaction, sign it, and submit</span><span>
+</span><span id="line-88"></span><span class="hs-comment">--   it to the chain in the context of a wallet.</span><span>
+</span><span id="line-89"></span><span id="local-6989586621680267105"><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#handleTx"><span class="hs-identifier hs-type">handleTx</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-90"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Member</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">WalletEffect</span></span><span> </span><span class="annot"><a href="#local-6989586621680267105"><span class="hs-identifier hs-type">effs</span></a></span><span>
+</span><span id="line-91"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Member</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Error</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">WalletAPIError</span></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621680267105"><span class="hs-identifier hs-type">effs</span></a></span><span>
+</span><span id="line-92"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-93"></span><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">UnbalancedTx</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Eff</span></span><span> </span><span class="annot"><a href="#local-6989586621680267105"><span class="hs-identifier hs-type">effs</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">CardanoTx</span></span></span><span>
+</span><span id="line-94"></span><span id="handleTx"><span class="annot"><span class="annottext">handleTx :: UnbalancedTx -&gt; Eff effs CardanoTx
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#handleTx"><span class="hs-identifier hs-var hs-var">handleTx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UnbalancedTx -&gt; Eff effs (Either WalletAPIError CardanoTx)
+forall (effs :: [* -&gt; *]).
+Member WalletEffect effs =&gt;
+UnbalancedTx -&gt; Eff effs (Either WalletAPIError CardanoTx)
+</span><span class="hs-identifier hs-var">balanceTx</span></span><span> </span><span class="annot"><span class="annottext">(UnbalancedTx -&gt; Eff effs (Either WalletAPIError CardanoTx))
+-&gt; (Either WalletAPIError CardanoTx -&gt; Eff effs CardanoTx)
+-&gt; UnbalancedTx
+-&gt; Eff effs CardanoTx
+forall (m :: * -&gt; *) a b c.
+Monad m =&gt;
+(a -&gt; m b) -&gt; (b -&gt; m c) -&gt; a -&gt; m c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&gt;=&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(WalletAPIError -&gt; Eff effs CardanoTx)
+-&gt; (CardanoTx -&gt; Eff effs CardanoTx)
+-&gt; Either WalletAPIError CardanoTx
+-&gt; Eff effs CardanoTx
+forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">either</span></a></span><span> </span><span class="annot"><span class="annottext">WalletAPIError -&gt; Eff effs CardanoTx
+forall e (effs :: [* -&gt; *]) a.
+Member (Error e) effs =&gt;
+e -&gt; Eff effs a
+</span><span class="hs-identifier hs-var">throwError</span></span><span> </span><span class="annot"><span class="annottext">CardanoTx -&gt; Eff effs CardanoTx
+forall (effs :: [* -&gt; *]).
+Member WalletEffect effs =&gt;
+CardanoTx -&gt; Eff effs CardanoTx
+</span><span class="hs-identifier hs-var">WAPI.signTxAndSubmit</span></span><span>
+</span><span id="line-95"></span><span>
+</span><span id="line-96"></span><span class="hs-keyword">data</span><span> </span><span id="ExportTxRedeemerPurpose"><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#ExportTxRedeemerPurpose"><span class="hs-identifier hs-var">ExportTxRedeemerPurpose</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Spending"><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#Spending"><span class="hs-identifier hs-var">Spending</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Minting"><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#Minting"><span class="hs-identifier hs-var">Minting</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Rewarding"><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#Rewarding"><span class="hs-identifier hs-var">Rewarding</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Certifying"><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#Certifying"><span class="hs-identifier hs-var">Certifying</span></a></span></span><span>
+</span><span id="line-97"></span><span>
+</span><span id="line-98"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621680267093"><span id="local-6989586621680267095"><span id="local-6989586621680267097"><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#ExportTxRedeemerPurpose"><span class="hs-identifier hs-type">ExportTxRedeemerPurpose</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-99"></span><span>    </span><span id="local-6989586621680267091"><span class="annot"><span class="annottext">toJSON :: ExportTxRedeemerPurpose -&gt; Value
+</span><a href="#local-6989586621680267091"><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-100"></span><span>        </span><span class="annot"><span class="annottext">ExportTxRedeemerPurpose
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#Spending"><span class="hs-identifier hs-var">Spending</span></a></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">String</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;spending&quot;</span></span><span>
+</span><span id="line-101"></span><span>        </span><span class="annot"><span class="annottext">ExportTxRedeemerPurpose
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#Minting"><span class="hs-identifier hs-var">Minting</span></a></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">String</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;minting&quot;</span></span><span>
+</span><span id="line-102"></span><span>        </span><span class="annot"><span class="annottext">ExportTxRedeemerPurpose
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#Rewarding"><span class="hs-identifier hs-var">Rewarding</span></a></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">String</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;rewarding&quot;</span></span><span>
+</span><span id="line-103"></span><span>        </span><span class="annot"><span class="annottext">ExportTxRedeemerPurpose
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#Certifying"><span class="hs-identifier hs-var">Certifying</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">String</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;certifying&quot;</span></span><span>
+</span><span id="line-104"></span><span>
+</span><span id="line-105"></span><span id="local-6989586621680267089"><span id="local-6989586621680267090"></span></span><span class="hs-keyword">data</span><span> </span><span id="ExportTxRedeemer"><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#ExportTxRedeemer"><span class="hs-identifier hs-var">ExportTxRedeemer</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-106"></span><span>    </span><span id="SpendingRedeemer"><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#SpendingRedeemer"><span class="hs-identifier hs-var">SpendingRedeemer</span></a></span></span><span class="hs-special">{</span><span> </span><span id="redeemer"><span class="annot"><span class="annottext">ExportTxRedeemer -&gt; Redeemer
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#redeemer"><span class="hs-identifier hs-var hs-var">redeemer</span></a></span></span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Plutus.Redeemer</span></span><span class="hs-special">,</span><span> </span><span id="redeemerOutRef"><span class="annot"><span class="annottext">ExportTxRedeemer -&gt; TxOutRef
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#redeemerOutRef"><span class="hs-identifier hs-var hs-var">redeemerOutRef</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">TxOutRef</span></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-107"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="MintingRedeemer"><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#MintingRedeemer"><span class="hs-identifier hs-var">MintingRedeemer</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="redeemer"><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#redeemer"><span class="hs-identifier hs-var">redeemer</span></a></span></span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Plutus.Redeemer</span></span><span class="hs-special">,</span><span> </span><span id="redeemerPolicyId"><span class="annot"><span class="annottext">ExportTxRedeemer -&gt; MintingPolicyHash
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#redeemerPolicyId"><span class="hs-identifier hs-var hs-var">redeemerPolicyId</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MintingPolicyHash</span></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-108"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="RewardingRedeemer"><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#RewardingRedeemer"><span class="hs-identifier hs-var">RewardingRedeemer</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="redeemer"><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#redeemer"><span class="hs-identifier hs-var">redeemer</span></a></span></span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Plutus.Redeemer</span></span><span class="hs-special">,</span><span> </span><span id="redeemerStakingCredential"><span class="annot"><span class="annottext">ExportTxRedeemer -&gt; StakingCredential
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#redeemerStakingCredential"><span class="hs-identifier hs-var hs-var">redeemerStakingCredential</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">StakingCredential</span></span><span class="hs-special">}</span><span>
+</span><span id="line-109"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="CertifyingRedeemer"><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#CertifyingRedeemer"><span class="hs-identifier hs-var">CertifyingRedeemer</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="redeemer"><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#redeemer"><span class="hs-identifier hs-var">redeemer</span></a></span></span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Plutus.Redeemer</span></span><span class="hs-special">,</span><span> </span><span id="redeemerDCert"><span class="annot"><span class="annottext">ExportTxRedeemer -&gt; DCert
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#redeemerDCert"><span class="hs-identifier hs-var hs-var">redeemerDCert</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">DCert</span></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-110"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680267076"><span id="local-6989586621680267078"><span class="annot"><span class="annottext">ExportTxRedeemer -&gt; ExportTxRedeemer -&gt; Bool
+(ExportTxRedeemer -&gt; ExportTxRedeemer -&gt; Bool)
+-&gt; (ExportTxRedeemer -&gt; ExportTxRedeemer -&gt; Bool)
+-&gt; Eq ExportTxRedeemer
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: ExportTxRedeemer -&gt; ExportTxRedeemer -&gt; Bool
+$c/= :: ExportTxRedeemer -&gt; ExportTxRedeemer -&gt; Bool
+== :: ExportTxRedeemer -&gt; ExportTxRedeemer -&gt; Bool
+$c== :: ExportTxRedeemer -&gt; ExportTxRedeemer -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680267069"><span id="local-6989586621680267071"><span id="local-6989586621680267073"><span class="annot"><span class="annottext">Int -&gt; ExportTxRedeemer -&gt; ShowS
+[ExportTxRedeemer] -&gt; ShowS
+ExportTxRedeemer -&gt; String
+(Int -&gt; ExportTxRedeemer -&gt; ShowS)
+-&gt; (ExportTxRedeemer -&gt; String)
+-&gt; ([ExportTxRedeemer] -&gt; ShowS)
+-&gt; Show ExportTxRedeemer
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [ExportTxRedeemer] -&gt; ShowS
+$cshowList :: [ExportTxRedeemer] -&gt; ShowS
+show :: ExportTxRedeemer -&gt; String
+$cshow :: ExportTxRedeemer -&gt; String
+showsPrec :: Int -&gt; ExportTxRedeemer -&gt; ShowS
+$cshowsPrec :: Int -&gt; ExportTxRedeemer -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. ExportTxRedeemer -&gt; Rep ExportTxRedeemer x)
+-&gt; (forall x. Rep ExportTxRedeemer x -&gt; ExportTxRedeemer)
+-&gt; Generic ExportTxRedeemer
+forall x. Rep ExportTxRedeemer x -&gt; ExportTxRedeemer
+forall x. ExportTxRedeemer -&gt; Rep ExportTxRedeemer x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep ExportTxRedeemer x -&gt; ExportTxRedeemer
+$cfrom :: forall x. ExportTxRedeemer -&gt; Rep ExportTxRedeemer x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-111"></span><span>
+</span><span id="line-112"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621680267062"><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#ExportTxRedeemer"><span class="hs-identifier hs-type">ExportTxRedeemer</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-113"></span><span>    </span><span id="local-6989586621680267060"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser ExportTxRedeemer
+</span><a href="#local-6989586621680267060"><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></a></span></span><span> </span><span id="local-6989586621680267059"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680267059"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Value -&gt; Parser ExportTxRedeemer
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#parseSpendingRedeemer"><span class="hs-identifier hs-var">parseSpendingRedeemer</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680267059"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Parser ExportTxRedeemer
+-&gt; Parser ExportTxRedeemer -&gt; Parser ExportTxRedeemer
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Value -&gt; Parser ExportTxRedeemer
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#parseMintingRedeemer"><span class="hs-identifier hs-var">parseMintingRedeemer</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680267059"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Parser ExportTxRedeemer
+-&gt; Parser ExportTxRedeemer -&gt; Parser ExportTxRedeemer
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Value -&gt; Parser ExportTxRedeemer
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#parseRewardingRedeemer"><span class="hs-identifier hs-var">parseRewardingRedeemer</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680267059"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Parser ExportTxRedeemer
+-&gt; Parser ExportTxRedeemer -&gt; Parser ExportTxRedeemer
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Value -&gt; Parser ExportTxRedeemer
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#parseCertifyingRedeemer"><span class="hs-identifier hs-var">parseCertifyingRedeemer</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680267059"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-114"></span><span>
+</span><span id="line-115"></span><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#parseSpendingRedeemer"><span class="hs-identifier hs-type">parseSpendingRedeemer</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#ExportTxRedeemer"><span class="hs-identifier hs-type">ExportTxRedeemer</span></a></span><span>
+</span><span id="line-116"></span><span id="parseSpendingRedeemer"><span class="annot"><span class="annottext">parseSpendingRedeemer :: Value -&gt; Parser ExportTxRedeemer
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#parseSpendingRedeemer"><span class="hs-identifier hs-var hs-var">parseSpendingRedeemer</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-117"></span><span>    </span><span class="annot"><span class="annottext">String
+-&gt; (Object -&gt; Parser ExportTxRedeemer)
+-&gt; Value
+-&gt; Parser ExportTxRedeemer
+forall a. String -&gt; (Object -&gt; Parser a) -&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">withObject</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Redeemer&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Object -&gt; Parser ExportTxRedeemer)
+ -&gt; Value -&gt; Parser ExportTxRedeemer)
+-&gt; (Object -&gt; Parser ExportTxRedeemer)
+-&gt; Value
+-&gt; Parser ExportTxRedeemer
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621680267054"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621680267054"><span class="hs-identifier hs-var">o</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-118"></span><span>        </span><span id="local-6989586621680267053"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621680267053"><span class="hs-identifier hs-var">inputObj</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621680267054"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Object
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;input&quot;</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Object</span></span><span>
+</span><span id="line-119"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680267052"><span class="annot"><span class="annottext">txOutRefParse :: Parser TxOutRef
+</span><a href="#local-6989586621680267052"><span class="hs-identifier hs-var hs-var">txOutRefParse</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxId -&gt; Integer -&gt; TxOutRef
+</span><span class="hs-identifier hs-var">Plutus.TxOutRef</span></span><span> </span><span class="annot"><span class="annottext">(TxId -&gt; Integer -&gt; TxOutRef)
+-&gt; Parser TxId -&gt; Parser (Integer -&gt; TxOutRef)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">BuiltinByteString -&gt; TxId
+</span><span class="hs-identifier hs-var">Plutus.TxId</span></span><span> </span><span class="annot"><span class="annottext">(BuiltinByteString -&gt; TxId)
+-&gt; Parser BuiltinByteString -&gt; Parser TxId
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621680267053"><span class="hs-identifier hs-var">inputObj</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser BuiltinByteString
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;id&quot;</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-120"></span><span>                                            </span><span class="annot"><span class="annottext">Parser (Integer -&gt; TxOutRef) -&gt; Parser Integer -&gt; Parser TxOutRef
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621680267053"><span class="hs-identifier hs-var">inputObj</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Integer
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;index&quot;</span></span><span>
+</span><span id="line-121"></span><span>        </span><span class="annot"><span class="annottext">Redeemer -&gt; TxOutRef -&gt; ExportTxRedeemer
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#SpendingRedeemer"><span class="hs-identifier hs-var">SpendingRedeemer</span></a></span><span> </span><span class="annot"><span class="annottext">(Redeemer -&gt; TxOutRef -&gt; ExportTxRedeemer)
+-&gt; Parser Redeemer -&gt; Parser (TxOutRef -&gt; ExportTxRedeemer)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Parser Redeemer
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#parseRedeemerData"><span class="hs-identifier hs-var">parseRedeemerData</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621680267054"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Parser (TxOutRef -&gt; ExportTxRedeemer)
+-&gt; Parser TxOutRef -&gt; Parser ExportTxRedeemer
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser TxOutRef
+</span><a href="#local-6989586621680267052"><span class="hs-identifier hs-var">txOutRefParse</span></a></span><span>
+</span><span id="line-122"></span><span>
+</span><span id="line-123"></span><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#parseMintingRedeemer"><span class="hs-identifier hs-type">parseMintingRedeemer</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#ExportTxRedeemer"><span class="hs-identifier hs-type">ExportTxRedeemer</span></a></span><span>
+</span><span id="line-124"></span><span id="parseMintingRedeemer"><span class="annot"><span class="annottext">parseMintingRedeemer :: Value -&gt; Parser ExportTxRedeemer
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#parseMintingRedeemer"><span class="hs-identifier hs-var hs-var">parseMintingRedeemer</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-125"></span><span>    </span><span class="annot"><span class="annottext">String
+-&gt; (Object -&gt; Parser ExportTxRedeemer)
+-&gt; Value
+-&gt; Parser ExportTxRedeemer
+forall a. String -&gt; (Object -&gt; Parser a) -&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">withObject</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Redeemer&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Object -&gt; Parser ExportTxRedeemer)
+ -&gt; Value -&gt; Parser ExportTxRedeemer)
+-&gt; (Object -&gt; Parser ExportTxRedeemer)
+-&gt; Value
+-&gt; Parser ExportTxRedeemer
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621680267047"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621680267047"><span class="hs-identifier hs-var">o</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Redeemer -&gt; MintingPolicyHash -&gt; ExportTxRedeemer
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#MintingRedeemer"><span class="hs-identifier hs-var">MintingRedeemer</span></a></span><span>
+</span><span id="line-126"></span><span>        </span><span class="annot"><span class="annottext">(Redeemer -&gt; MintingPolicyHash -&gt; ExportTxRedeemer)
+-&gt; Parser Redeemer
+-&gt; Parser (MintingPolicyHash -&gt; ExportTxRedeemer)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Parser Redeemer
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#parseRedeemerData"><span class="hs-identifier hs-var">parseRedeemerData</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621680267047"><span class="hs-identifier hs-var">o</span></a></span><span>
+</span><span id="line-127"></span><span>        </span><span class="annot"><span class="annottext">Parser (MintingPolicyHash -&gt; ExportTxRedeemer)
+-&gt; Parser MintingPolicyHash -&gt; Parser ExportTxRedeemer
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621680267047"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser MintingPolicyHash
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;policy_id&quot;</span></span><span>
+</span><span id="line-128"></span><span>
+</span><span id="line-129"></span><span class="hs-comment">-- TODO</span><span>
+</span><span id="line-130"></span><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#parseRewardingRedeemer"><span class="hs-identifier hs-type">parseRewardingRedeemer</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#ExportTxRedeemer"><span class="hs-identifier hs-type">ExportTxRedeemer</span></a></span><span>
+</span><span id="line-131"></span><span id="parseRewardingRedeemer"><span class="annot"><span class="annottext">parseRewardingRedeemer :: Value -&gt; Parser ExportTxRedeemer
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#parseRewardingRedeemer"><span class="hs-identifier hs-var hs-var">parseRewardingRedeemer</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Value -&gt; Parser ExportTxRedeemer
+forall a. HasCallStack =&gt; String -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Unimplemented rewarding redeemer parsing.&quot;</span></span><span>
+</span><span id="line-132"></span><span>
+</span><span id="line-133"></span><span class="hs-comment">-- TODO</span><span>
+</span><span id="line-134"></span><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#parseCertifyingRedeemer"><span class="hs-identifier hs-type">parseCertifyingRedeemer</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#ExportTxRedeemer"><span class="hs-identifier hs-type">ExportTxRedeemer</span></a></span><span>
+</span><span id="line-135"></span><span id="parseCertifyingRedeemer"><span class="annot"><span class="annottext">parseCertifyingRedeemer :: Value -&gt; Parser ExportTxRedeemer
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#parseCertifyingRedeemer"><span class="hs-identifier hs-var hs-var">parseCertifyingRedeemer</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Value -&gt; Parser ExportTxRedeemer
+forall a. HasCallStack =&gt; String -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Unimplemented certifying redeemer parsing.&quot;</span></span><span>
+</span><span id="line-136"></span><span>
+</span><span id="line-137"></span><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#parseRedeemerData"><span class="hs-identifier hs-type">parseRedeemerData</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Object</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Plutus.Redeemer</span></span><span>
+</span><span id="line-138"></span><span id="parseRedeemerData"><span class="annot"><span class="annottext">parseRedeemerData :: Object -&gt; Parser Redeemer
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#parseRedeemerData"><span class="hs-identifier hs-var hs-var">parseRedeemerData</span></a></span></span><span> </span><span id="local-6989586621680267045"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621680267045"><span class="hs-identifier hs-var">o</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-139"></span><span>    </span><span class="annot"><span class="annottext">(JSONViaSerialise Data -&gt; Redeemer)
+-&gt; Parser (JSONViaSerialise Data) -&gt; Parser Redeemer
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">JSON.JSONViaSerialise</span></span><span> </span><span id="local-6989586621680267043"><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621680267043"><span class="hs-identifier hs-var">d</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">BuiltinData -&gt; Redeemer
+</span><span class="hs-identifier hs-var">Plutus.Redeemer</span></span><span> </span><span class="annot"><span class="annottext">(BuiltinData -&gt; Redeemer) -&gt; BuiltinData -&gt; Redeemer
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Data -&gt; BuiltinData
+</span><span class="hs-identifier hs-var">PlutusTx.dataToBuiltinData</span></span><span> </span><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621680267043"><span class="hs-identifier hs-var">d</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-140"></span><span>         </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621680267045"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (JSONViaSerialise Data)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;data&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-141"></span><span>
+</span><span id="line-142"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621680267034"><span id="local-6989586621680267036"><span id="local-6989586621680267038"><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#ExportTxRedeemer"><span class="hs-identifier hs-type">ExportTxRedeemer</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-143"></span><span>    </span><span id="local-6989586621680267033"><span class="annot"><span class="annottext">toJSON :: ExportTxRedeemer -&gt; Value
+</span><a href="#local-6989586621680267033"><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#SpendingRedeemer"><span class="hs-identifier hs-type">SpendingRedeemer</span></a></span><span class="hs-special">{</span><span class="annot"><span class="annottext">redeemer :: ExportTxRedeemer -&gt; Redeemer
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#redeemer"><span class="hs-identifier hs-var">redeemer</span></a></span><span class="hs-glyph">=</span><span class="annot"><span class="hs-identifier hs-type">Plutus.Redeemer</span></span><span> </span><span id="local-6989586621680267032"><span class="annot"><span class="annottext">BuiltinData
+</span><a href="#local-6989586621680267032"><span class="hs-identifier hs-var">dt</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">redeemerOutRef :: ExportTxRedeemer -&gt; TxOutRef
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#redeemerOutRef"><span class="hs-identifier hs-var">redeemerOutRef</span></a></span><span class="hs-glyph">=</span><span class="annot"><span class="hs-identifier hs-type">Plutus.TxOutRef</span></span><span class="hs-special">{</span><span id="local-6989586621680267031"><span class="annot"><span class="annottext">TxId
+txOutRefId :: TxOutRef -&gt; TxId
+txOutRefId :: TxId
+</span><span class="hs-identifier hs-var hs-var">Plutus.txOutRefId</span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680267029"><span class="annot"><span class="annottext">Integer
+txOutRefIdx :: TxOutRef -&gt; Integer
+txOutRefIdx :: Integer
+</span><span class="hs-identifier hs-var hs-var">Plutus.txOutRefIdx</span></span></span><span class="hs-special">}</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-144"></span><span>        </span><span class="annot"><span class="annottext">[Pair] -&gt; Value
+</span><span class="hs-identifier hs-var">object</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;purpose&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; ExportTxRedeemerPurpose -&gt; Pair
+forall kv v. (KeyValue kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">ExportTxRedeemerPurpose
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#Spending"><span class="hs-identifier hs-var">Spending</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;data&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; JSONViaSerialise Data -&gt; Pair
+forall kv v. (KeyValue kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Data -&gt; JSONViaSerialise Data
+forall a. a -&gt; JSONViaSerialise a
+</span><span class="hs-identifier hs-var">JSON.JSONViaSerialise</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">BuiltinData -&gt; Data
+</span><span class="hs-identifier hs-var">PlutusTx.builtinDataToData</span></span><span> </span><span class="annot"><span class="annottext">BuiltinData
+</span><a href="#local-6989586621680267032"><span class="hs-identifier hs-var">dt</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;input&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Pair
+forall kv v. (KeyValue kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">[Pair] -&gt; Value
+</span><span class="hs-identifier hs-var">object</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;id&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; BuiltinByteString -&gt; Pair
+forall kv v. (KeyValue kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">TxId -&gt; BuiltinByteString
+</span><span class="hs-identifier hs-var hs-var">Plutus.getTxId</span></span><span> </span><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621680267031"><span class="hs-identifier hs-var">txOutRefId</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;index&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Integer -&gt; Pair
+forall kv v. (KeyValue kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621680267029"><span class="hs-identifier hs-var">txOutRefIdx</span></a></span><span class="hs-special">]</span><span class="hs-special">]</span><span>
+</span><span id="line-145"></span><span>    </span><span class="annot"><span class="hs-identifier hs-var">toJSON</span></span><span> </span><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#MintingRedeemer"><span class="hs-identifier hs-type">MintingRedeemer</span></a></span><span class="hs-special">{</span><span class="annot"><span class="annottext">redeemer :: ExportTxRedeemer -&gt; Redeemer
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#redeemer"><span class="hs-identifier hs-var">redeemer</span></a></span><span class="hs-glyph">=</span><span class="annot"><span class="hs-identifier hs-type">Plutus.Redeemer</span></span><span> </span><span id="local-6989586621680267025"><span class="annot"><span class="annottext">BuiltinData
+</span><a href="#local-6989586621680267025"><span class="hs-identifier hs-var">dt</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680267024"><span class="annot"><span class="annottext">MintingPolicyHash
+redeemerPolicyId :: MintingPolicyHash
+redeemerPolicyId :: ExportTxRedeemer -&gt; MintingPolicyHash
+</span><a href="#local-6989586621680267024"><span class="hs-identifier hs-var hs-var">redeemerPolicyId</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-146"></span><span>        </span><span class="annot"><span class="annottext">[Pair] -&gt; Value
+</span><span class="hs-identifier hs-var">object</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;purpose&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; ExportTxRedeemerPurpose -&gt; Pair
+forall kv v. (KeyValue kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">ExportTxRedeemerPurpose
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#Minting"><span class="hs-identifier hs-var">Minting</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;data&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; JSONViaSerialise Data -&gt; Pair
+forall kv v. (KeyValue kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Data -&gt; JSONViaSerialise Data
+forall a. a -&gt; JSONViaSerialise a
+</span><span class="hs-identifier hs-var">JSON.JSONViaSerialise</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">BuiltinData -&gt; Data
+</span><span class="hs-identifier hs-var">PlutusTx.builtinDataToData</span></span><span> </span><span class="annot"><span class="annottext">BuiltinData
+</span><a href="#local-6989586621680267025"><span class="hs-identifier hs-var">dt</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;policy_id&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; MintingPolicyHash -&gt; Pair
+forall kv v. (KeyValue kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">MintingPolicyHash
+</span><a href="#local-6989586621680267024"><span class="hs-identifier hs-var">redeemerPolicyId</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-147"></span><span>    </span><span class="hs-comment">-- TODO</span><span>
+</span><span id="line-148"></span><span>    </span><span class="annot"><span class="hs-identifier hs-var">toJSON</span></span><span> </span><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#RewardingRedeemer"><span class="hs-identifier hs-type">RewardingRedeemer</span></a></span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Value
+forall a. HasCallStack =&gt; String -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Unimplemented rewarding redeemer encoding.&quot;</span></span><span>
+</span><span id="line-149"></span><span>    </span><span class="annot"><span class="hs-identifier hs-var">toJSON</span></span><span> </span><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#CertifyingRedeemer"><span class="hs-identifier hs-type">CertifyingRedeemer</span></a></span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Value
+forall a. HasCallStack =&gt; String -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Unimplemented certifying redeemer encoding.&quot;</span></span><span>
+</span><span id="line-150"></span><span>
+</span><span id="line-151"></span><span class="hs-comment">-- | Partial transaction that can be balanced by the wallet backend.</span><span>
+</span><span id="line-152"></span><span id="local-6989586621680267022"><span id="local-6989586621680267023"></span></span><span class="hs-keyword">data</span><span> </span><span id="ExportTx"><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#ExportTx"><span class="hs-identifier hs-var">ExportTx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-153"></span><span>        </span><span id="ExportTx"><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#ExportTx"><span class="hs-identifier hs-var">ExportTx</span></a></span></span><span>
+</span><span id="line-154"></span><span>            </span><span class="hs-special">{</span><span> </span><span id="partialTx"><span class="annot"><span class="annottext">ExportTx -&gt; Tx BabbageEra
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#partialTx"><span class="hs-identifier hs-var hs-var">partialTx</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.Tx</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.BabbageEra</span></span><span> </span><span class="hs-comment">-- ^ The transaction itself</span><span>
+</span><span id="line-155"></span><span>            </span><span class="hs-special">,</span><span> </span><span id="lookups"><span class="annot"><span class="annottext">ExportTx -&gt; [ExportTxInput]
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#lookups"><span class="hs-identifier hs-var hs-var">lookups</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#ExportTxInput"><span class="hs-identifier hs-type">ExportTxInput</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-comment">-- ^ The tx outputs for all inputs spent by the partial tx</span><span>
+</span><span id="line-156"></span><span>            </span><span class="hs-special">,</span><span> </span><span id="redeemers"><span class="annot"><span class="annottext">ExportTx -&gt; [ExportTxRedeemer]
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#redeemers"><span class="hs-identifier hs-var hs-var">redeemers</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#ExportTxRedeemer"><span class="hs-identifier hs-type">ExportTxRedeemer</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-157"></span><span>            </span><span class="hs-special">}</span><span>
+</span><span id="line-158"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680267014"><span id="local-6989586621680267016"><span class="annot"><span class="annottext">ExportTx -&gt; ExportTx -&gt; Bool
+(ExportTx -&gt; ExportTx -&gt; Bool)
+-&gt; (ExportTx -&gt; ExportTx -&gt; Bool) -&gt; Eq ExportTx
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: ExportTx -&gt; ExportTx -&gt; Bool
+$c/= :: ExportTx -&gt; ExportTx -&gt; Bool
+== :: ExportTx -&gt; ExportTx -&gt; Bool
+$c== :: ExportTx -&gt; ExportTx -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680267008"><span id="local-6989586621680267010"><span id="local-6989586621680267012"><span class="annot"><span class="annottext">Int -&gt; ExportTx -&gt; ShowS
+[ExportTx] -&gt; ShowS
+ExportTx -&gt; String
+(Int -&gt; ExportTx -&gt; ShowS)
+-&gt; (ExportTx -&gt; String) -&gt; ([ExportTx] -&gt; ShowS) -&gt; Show ExportTx
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [ExportTx] -&gt; ShowS
+$cshowList :: [ExportTx] -&gt; ShowS
+show :: ExportTx -&gt; String
+$cshow :: ExportTx -&gt; String
+showsPrec :: Int -&gt; ExportTx -&gt; ShowS
+$cshowsPrec :: Int -&gt; ExportTx -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. ExportTx -&gt; Rep ExportTx x)
+-&gt; (forall x. Rep ExportTx x -&gt; ExportTx) -&gt; Generic ExportTx
+forall x. Rep ExportTx x -&gt; ExportTx
+forall x. ExportTx -&gt; Rep ExportTx x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep ExportTx x -&gt; ExportTx
+$cfrom :: forall x. ExportTx -&gt; Rep ExportTx x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-159"></span><span>
+</span><span id="line-160"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621680267003"><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#ExportTx"><span class="hs-identifier hs-type">ExportTx</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-161"></span><span>  </span><span id="local-6989586621680267002"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser ExportTx
+</span><a href="#local-6989586621680267002"><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; (Object -&gt; Parser ExportTx) -&gt; Value -&gt; Parser ExportTx
+forall a. String -&gt; (Object -&gt; Parser a) -&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">withObject</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;ExportTx&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Object -&gt; Parser ExportTx) -&gt; Value -&gt; Parser ExportTx)
+-&gt; (Object -&gt; Parser ExportTx) -&gt; Value -&gt; Parser ExportTx
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621680267001"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621680267001"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Tx BabbageEra -&gt; [ExportTxInput] -&gt; [ExportTxRedeemer] -&gt; ExportTx
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#ExportTx"><span class="hs-identifier hs-var">ExportTx</span></a></span><span>
+</span><span id="line-162"></span><span>      </span><span class="annot"><span class="annottext">(Tx BabbageEra
+ -&gt; [ExportTxInput] -&gt; [ExportTxRedeemer] -&gt; ExportTx)
+-&gt; Parser (Tx BabbageEra)
+-&gt; Parser ([ExportTxInput] -&gt; [ExportTxRedeemer] -&gt; ExportTx)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Parser (Tx BabbageEra)
+</span><a href="#local-6989586621680267000"><span class="hs-identifier hs-var">parsePartialTx</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621680267001"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-163"></span><span>      </span><span class="annot"><span class="annottext">Parser ([ExportTxInput] -&gt; [ExportTxRedeemer] -&gt; ExportTx)
+-&gt; Parser [ExportTxInput]
+-&gt; Parser ([ExportTxRedeemer] -&gt; ExportTx)
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621680267001"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser [ExportTxInput]
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;inputs&quot;</span></span><span>
+</span><span id="line-164"></span><span>      </span><span class="annot"><span class="annottext">Parser ([ExportTxRedeemer] -&gt; ExportTx)
+-&gt; Parser [ExportTxRedeemer] -&gt; Parser ExportTx
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621680267001"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser [ExportTxRedeemer]
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;redeemers&quot;</span></span><span>
+</span><span id="line-165"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-166"></span><span>      </span><span id="local-6989586621680267000"><span class="annot"><span class="annottext">parsePartialTx :: Object -&gt; Parser (Tx BabbageEra)
+</span><a href="#local-6989586621680267000"><span class="hs-identifier hs-var hs-var">parsePartialTx</span></a></span></span><span> </span><span id="local-6989586621680266999"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621680266999"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-167"></span><span>        </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621680266999"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Text
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;transaction&quot;</span></span><span> </span><span class="annot"><span class="annottext">Parser Text
+-&gt; (Text -&gt; Parser (Tx BabbageEra)) -&gt; Parser (Tx BabbageEra)
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621680266998"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621680266998"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-168"></span><span>          </span><span class="annot"><span class="annottext">(String -&gt; Parser (Tx BabbageEra))
+-&gt; (Tx BabbageEra -&gt; Parser (Tx BabbageEra))
+-&gt; Either String (Tx BabbageEra)
+-&gt; Parser (Tx BabbageEra)
+forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">either</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Parser (Tx BabbageEra)
+forall a. String -&gt; Parser a
+</span><span class="hs-identifier hs-var">parseFail</span></span><span> </span><span class="annot"><span class="annottext">Tx BabbageEra -&gt; Parser (Tx BabbageEra)
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(Either String (Tx BabbageEra) -&gt; Parser (Tx BabbageEra))
+-&gt; Either String (Tx BabbageEra) -&gt; Parser (Tx BabbageEra)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Either String ByteString
+</span><span class="hs-identifier hs-var">JSON.tryDecode</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621680266998"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-169"></span><span>                              </span><span class="annot"><span class="annottext">Either String ByteString
+-&gt; (ByteString -&gt; Either String (Tx BabbageEra))
+-&gt; Either String (Tx BabbageEra)
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(DecoderError -&gt; String)
+-&gt; Either DecoderError (Tx BabbageEra)
+-&gt; Either String (Tx BabbageEra)
+forall (p :: * -&gt; * -&gt; *) a b c.
+Bifunctor p =&gt;
+(a -&gt; b) -&gt; p a c -&gt; p b c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">first</span></a></span><span> </span><span class="annot"><span class="annottext">DecoderError -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">(Either DecoderError (Tx BabbageEra)
+ -&gt; Either String (Tx BabbageEra))
+-&gt; (ByteString -&gt; Either DecoderError (Tx BabbageEra))
+-&gt; ByteString
+-&gt; Either String (Tx BabbageEra)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">AsType (Tx BabbageEra)
+-&gt; ByteString -&gt; Either DecoderError (Tx BabbageEra)
+forall a.
+SerialiseAsCBOR a =&gt;
+AsType a -&gt; ByteString -&gt; Either DecoderError a
+</span><span class="hs-identifier hs-var">C.deserialiseFromCBOR</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AsType BabbageEra -&gt; AsType (Tx BabbageEra)
+forall era. AsType era -&gt; AsType (Tx era)
+</span><span class="hs-identifier hs-var">C.AsTx</span></span><span> </span><span class="annot"><span class="annottext">AsType BabbageEra
+</span><span class="hs-identifier hs-var">C.AsBabbageEra</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-170"></span><span>
+</span><span id="line-171"></span><span class="hs-comment">-- IMPORTANT: The JSON produced here needs to match the schema expected by</span><span>
+</span><span id="line-172"></span><span class="hs-comment">-- https://input-output-hk.github.io/cardano-wallet/api/edge/#operation/balanceTransaction</span><span>
+</span><span id="line-173"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621680266985"><span id="local-6989586621680266987"><span id="local-6989586621680266989"><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#ExportTx"><span class="hs-identifier hs-type">ExportTx</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-174"></span><span>    </span><span id="local-6989586621680266984"><span class="annot"><span class="annottext">toJSON :: ExportTx -&gt; Value
+</span><a href="#local-6989586621680266984"><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#ExportTx"><span class="hs-identifier hs-type">ExportTx</span></a></span><span class="hs-special">{</span><span id="local-6989586621680266983"><span class="annot"><span class="annottext">Tx BabbageEra
+partialTx :: Tx BabbageEra
+partialTx :: ExportTx -&gt; Tx BabbageEra
+</span><a href="#local-6989586621680266983"><span class="hs-identifier hs-var hs-var">partialTx</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680266982"><span class="annot"><span class="annottext">[ExportTxInput]
+lookups :: [ExportTxInput]
+lookups :: ExportTx -&gt; [ExportTxInput]
+</span><a href="#local-6989586621680266982"><span class="hs-identifier hs-var hs-var">lookups</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680266981"><span class="annot"><span class="annottext">[ExportTxRedeemer]
+redeemers :: [ExportTxRedeemer]
+redeemers :: ExportTx -&gt; [ExportTxRedeemer]
+</span><a href="#local-6989586621680266981"><span class="hs-identifier hs-var hs-var">redeemers</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-175"></span><span>        </span><span class="annot"><span class="annottext">[Pair] -&gt; Value
+</span><span class="hs-identifier hs-var">object</span></span><span>
+</span><span id="line-176"></span><span>            </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;transaction&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Text -&gt; Pair
+forall kv v. (KeyValue kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Text
+</span><span class="hs-identifier hs-var">JSON.encodeByteString</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Tx BabbageEra -&gt; ByteString
+forall a. SerialiseAsCBOR a =&gt; a -&gt; ByteString
+</span><span class="hs-identifier hs-var">C.serialiseToCBOR</span></span><span> </span><span class="annot"><span class="annottext">Tx BabbageEra
+</span><a href="#local-6989586621680266983"><span class="hs-identifier hs-var">partialTx</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-177"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;inputs&quot;</span></span><span>      </span><span class="annot"><span class="annottext">Key -&gt; [ExportTxInput] -&gt; Pair
+forall kv v. (KeyValue kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">[ExportTxInput]
+</span><a href="#local-6989586621680266982"><span class="hs-identifier hs-var">lookups</span></a></span><span>
+</span><span id="line-178"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;redeemers&quot;</span></span><span>   </span><span class="annot"><span class="annottext">Key -&gt; [ExportTxRedeemer] -&gt; Pair
+forall kv v. (KeyValue kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">[ExportTxRedeemer]
+</span><a href="#local-6989586621680266981"><span class="hs-identifier hs-var">redeemers</span></a></span><span>
+</span><span id="line-179"></span><span>            </span><span class="hs-special">]</span><span>
+</span><span id="line-180"></span><span>
+</span><span id="line-181"></span><span id="local-6989586621680266977"><span id="local-6989586621680266978"></span></span><span class="hs-keyword">data</span><span> </span><span id="ExportTxInput"><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#ExportTxInput"><span class="hs-identifier hs-var">ExportTxInput</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-182"></span><span>    </span><span id="ExportTxInput"><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#ExportTxInput"><span class="hs-identifier hs-var">ExportTxInput</span></a></span></span><span>
+</span><span id="line-183"></span><span>        </span><span class="hs-special">{</span><span> </span><span id="etxiId"><span class="annot"><span class="annottext">ExportTxInput -&gt; TxId
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#etxiId"><span class="hs-identifier hs-var hs-var">etxiId</span></a></span></span><span>               </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.TxId</span></span><span>
+</span><span id="line-184"></span><span>        </span><span class="hs-special">,</span><span> </span><span id="etxiTxIx"><span class="annot"><span class="annottext">ExportTxInput -&gt; TxIx
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#etxiTxIx"><span class="hs-identifier hs-var hs-var">etxiTxIx</span></a></span></span><span>             </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.TxIx</span></span><span>
+</span><span id="line-185"></span><span>        </span><span class="hs-special">,</span><span> </span><span id="etxiAddress"><span class="annot"><span class="annottext">ExportTxInput -&gt; AddressInEra BabbageEra
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#etxiAddress"><span class="hs-identifier hs-var hs-var">etxiAddress</span></a></span></span><span>          </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.AddressInEra</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.BabbageEra</span></span><span>
+</span><span id="line-186"></span><span>        </span><span class="hs-special">,</span><span> </span><span id="etxiLovelaceQuantity"><span class="annot"><span class="annottext">ExportTxInput -&gt; Lovelace
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#etxiLovelaceQuantity"><span class="hs-identifier hs-var hs-var">etxiLovelaceQuantity</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.Lovelace</span></span><span>
+</span><span id="line-187"></span><span>        </span><span class="hs-special">,</span><span> </span><span id="etxiDatumHash"><span class="annot"><span class="annottext">ExportTxInput -&gt; Maybe (Hash ScriptData)
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#etxiDatumHash"><span class="hs-identifier hs-var hs-var">etxiDatumHash</span></a></span></span><span>        </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">C.Hash</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.ScriptData</span></span><span class="hs-special">)</span><span>
+</span><span id="line-188"></span><span>        </span><span class="hs-special">,</span><span> </span><span id="etxiAssets"><span class="annot"><span class="annottext">ExportTxInput -&gt; [(PolicyId, AssetName, Quantity)]
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#etxiAssets"><span class="hs-identifier hs-var hs-var">etxiAssets</span></a></span></span><span>           </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">C.PolicyId</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.AssetName</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.Quantity</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-189"></span><span>        </span><span class="hs-special">}</span><span>
+</span><span id="line-190"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680266966"><span id="local-6989586621680266968"><span class="annot"><span class="annottext">ExportTxInput -&gt; ExportTxInput -&gt; Bool
+(ExportTxInput -&gt; ExportTxInput -&gt; Bool)
+-&gt; (ExportTxInput -&gt; ExportTxInput -&gt; Bool) -&gt; Eq ExportTxInput
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: ExportTxInput -&gt; ExportTxInput -&gt; Bool
+$c/= :: ExportTxInput -&gt; ExportTxInput -&gt; Bool
+== :: ExportTxInput -&gt; ExportTxInput -&gt; Bool
+$c== :: ExportTxInput -&gt; ExportTxInput -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680266960"><span id="local-6989586621680266962"><span id="local-6989586621680266964"><span class="annot"><span class="annottext">Int -&gt; ExportTxInput -&gt; ShowS
+[ExportTxInput] -&gt; ShowS
+ExportTxInput -&gt; String
+(Int -&gt; ExportTxInput -&gt; ShowS)
+-&gt; (ExportTxInput -&gt; String)
+-&gt; ([ExportTxInput] -&gt; ShowS)
+-&gt; Show ExportTxInput
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [ExportTxInput] -&gt; ShowS
+$cshowList :: [ExportTxInput] -&gt; ShowS
+show :: ExportTxInput -&gt; String
+$cshow :: ExportTxInput -&gt; String
+showsPrec :: Int -&gt; ExportTxInput -&gt; ShowS
+$cshowsPrec :: Int -&gt; ExportTxInput -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. ExportTxInput -&gt; Rep ExportTxInput x)
+-&gt; (forall x. Rep ExportTxInput x -&gt; ExportTxInput)
+-&gt; Generic ExportTxInput
+forall x. Rep ExportTxInput x -&gt; ExportTxInput
+forall x. ExportTxInput -&gt; Rep ExportTxInput x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep ExportTxInput x -&gt; ExportTxInput
+$cfrom :: forall x. ExportTxInput -&gt; Rep ExportTxInput x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-191"></span><span>
+</span><span id="line-192"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621680266955"><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#ExportTxInput"><span class="hs-identifier hs-type">ExportTxInput</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-193"></span><span>    </span><span id="local-6989586621680266954"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser ExportTxInput
+</span><a href="#local-6989586621680266954"><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+-&gt; (Object -&gt; Parser ExportTxInput)
+-&gt; Value
+-&gt; Parser ExportTxInput
+forall a. String -&gt; (Object -&gt; Parser a) -&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">withObject</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;ExportTxInput&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Object -&gt; Parser ExportTxInput) -&gt; Value -&gt; Parser ExportTxInput)
+-&gt; (Object -&gt; Parser ExportTxInput)
+-&gt; Value
+-&gt; Parser ExportTxInput
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621680266953"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621680266953"><span class="hs-identifier hs-var">o</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TxId
+-&gt; TxIx
+-&gt; AddressInEra BabbageEra
+-&gt; Lovelace
+-&gt; Maybe (Hash ScriptData)
+-&gt; [(PolicyId, AssetName, Quantity)]
+-&gt; ExportTxInput
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#ExportTxInput"><span class="hs-identifier hs-var">ExportTxInput</span></a></span><span>
+</span><span id="line-194"></span><span>        </span><span class="annot"><span class="annottext">(TxId
+ -&gt; TxIx
+ -&gt; AddressInEra BabbageEra
+ -&gt; Lovelace
+ -&gt; Maybe (Hash ScriptData)
+ -&gt; [(PolicyId, AssetName, Quantity)]
+ -&gt; ExportTxInput)
+-&gt; Parser TxId
+-&gt; Parser
+     (TxIx
+      -&gt; AddressInEra BabbageEra
+      -&gt; Lovelace
+      -&gt; Maybe (Hash ScriptData)
+      -&gt; [(PolicyId, AssetName, Quantity)]
+      -&gt; ExportTxInput)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621680266953"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser TxId
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;id&quot;</span></span><span>
+</span><span id="line-195"></span><span>        </span><span class="annot"><span class="annottext">Parser
+  (TxIx
+   -&gt; AddressInEra BabbageEra
+   -&gt; Lovelace
+   -&gt; Maybe (Hash ScriptData)
+   -&gt; [(PolicyId, AssetName, Quantity)]
+   -&gt; ExportTxInput)
+-&gt; Parser TxIx
+-&gt; Parser
+     (AddressInEra BabbageEra
+      -&gt; Lovelace
+      -&gt; Maybe (Hash ScriptData)
+      -&gt; [(PolicyId, AssetName, Quantity)]
+      -&gt; ExportTxInput)
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621680266953"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser TxIx
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;index&quot;</span></span><span>
+</span><span id="line-196"></span><span>        </span><span class="annot"><span class="annottext">Parser
+  (AddressInEra BabbageEra
+   -&gt; Lovelace
+   -&gt; Maybe (Hash ScriptData)
+   -&gt; [(PolicyId, AssetName, Quantity)]
+   -&gt; ExportTxInput)
+-&gt; Parser (AddressInEra BabbageEra)
+-&gt; Parser
+     (Lovelace
+      -&gt; Maybe (Hash ScriptData)
+      -&gt; [(PolicyId, AssetName, Quantity)]
+      -&gt; ExportTxInput)
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Parser (AddressInEra BabbageEra)
+</span><a href="#local-6989586621680266952"><span class="hs-identifier hs-var">parseAddress</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621680266953"><span class="hs-identifier hs-var">o</span></a></span><span>
+</span><span id="line-197"></span><span>        </span><span class="annot"><span class="annottext">Parser
+  (Lovelace
+   -&gt; Maybe (Hash ScriptData)
+   -&gt; [(PolicyId, AssetName, Quantity)]
+   -&gt; ExportTxInput)
+-&gt; Parser Lovelace
+-&gt; Parser
+     (Maybe (Hash ScriptData)
+      -&gt; [(PolicyId, AssetName, Quantity)] -&gt; ExportTxInput)
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621680266953"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Object
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;amount&quot;</span></span><span> </span><span class="annot"><span class="annottext">Parser Object -&gt; (Object -&gt; Parser Lovelace) -&gt; Parser Lovelace
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621680266951"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621680266951"><span class="hs-identifier hs-var">amountField</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621680266951"><span class="hs-identifier hs-var">amountField</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Lovelace
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;quantity&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-198"></span><span>        </span><span class="annot"><span class="annottext">Parser
+  (Maybe (Hash ScriptData)
+   -&gt; [(PolicyId, AssetName, Quantity)] -&gt; ExportTxInput)
+-&gt; Parser (Maybe (Hash ScriptData))
+-&gt; Parser ([(PolicyId, AssetName, Quantity)] -&gt; ExportTxInput)
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621680266953"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Maybe (Hash ScriptData))
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;datum&quot;</span></span><span>
+</span><span id="line-199"></span><span>        </span><span class="annot"><span class="annottext">Parser ([(PolicyId, AssetName, Quantity)] -&gt; ExportTxInput)
+-&gt; Parser [(PolicyId, AssetName, Quantity)] -&gt; Parser ExportTxInput
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621680266953"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser [Object]
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;assets&quot;</span></span><span> </span><span class="annot"><span class="annottext">Parser [Object]
+-&gt; ([Object] -&gt; Parser [(PolicyId, AssetName, Quantity)])
+-&gt; Parser [(PolicyId, AssetName, Quantity)]
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">(Object -&gt; Parser (PolicyId, AssetName, Quantity))
+-&gt; [Object] -&gt; Parser [(PolicyId, AssetName, Quantity)]
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Traversable t, Monad m) =&gt;
+(a -&gt; m b) -&gt; t a -&gt; m (t b)
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">mapM</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Parser (PolicyId, AssetName, Quantity)
+</span><a href="#local-6989586621680266949"><span class="hs-identifier hs-var">parseAsset</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-200"></span><span>      </span><span class="hs-keyword">where</span><span>
+</span><span id="line-201"></span><span>          </span><span id="local-6989586621680266952"><span class="annot"><span class="annottext">parseAddress :: Object -&gt; Parser (AddressInEra BabbageEra)
+</span><a href="#local-6989586621680266952"><span class="hs-identifier hs-var hs-var">parseAddress</span></a></span></span><span> </span><span id="local-6989586621680266948"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621680266948"><span class="hs-identifier hs-var">o</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-202"></span><span>              </span><span id="local-6989586621680266947"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621680266947"><span class="hs-identifier hs-var">addressField</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621680266948"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Text
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;address&quot;</span></span><span>
+</span><span id="line-203"></span><span>              </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680266946"><span class="annot"><span class="annottext">deserialisedAddr :: Maybe (AddressInEra BabbageEra)
+</span><a href="#local-6989586621680266946"><span class="hs-identifier hs-var hs-var">deserialisedAddr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AsType (AddressInEra BabbageEra)
+-&gt; Text -&gt; Maybe (AddressInEra BabbageEra)
+forall addr.
+SerialiseAddress addr =&gt;
+AsType addr -&gt; Text -&gt; Maybe addr
+</span><span class="hs-identifier hs-var">C.deserialiseAddress</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AsType BabbageEra -&gt; AsType (AddressInEra BabbageEra)
+forall era. AsType era -&gt; AsType (AddressInEra era)
+</span><span class="hs-identifier hs-var">C.AsAddressInEra</span></span><span> </span><span class="annot"><span class="annottext">AsType BabbageEra
+</span><span class="hs-identifier hs-var">C.AsBabbageEra</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621680266947"><span class="hs-identifier hs-var">addressField</span></a></span><span>
+</span><span id="line-204"></span><span>              </span><span class="annot"><span class="annottext">Parser (AddressInEra BabbageEra)
+-&gt; (AddressInEra BabbageEra -&gt; Parser (AddressInEra BabbageEra))
+-&gt; Maybe (AddressInEra BabbageEra)
+-&gt; Parser (AddressInEra BabbageEra)
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Parser (AddressInEra BabbageEra)
+forall a. String -&gt; Parser a
+</span><span class="hs-identifier hs-var">parseFail</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Failed to deserialise address field&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">AddressInEra BabbageEra -&gt; Parser (AddressInEra BabbageEra)
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (AddressInEra BabbageEra)
+</span><a href="#local-6989586621680266946"><span class="hs-identifier hs-var">deserialisedAddr</span></a></span><span>
+</span><span id="line-205"></span><span>          </span><span class="annot"><a href="#local-6989586621680266949"><span class="hs-identifier hs-type">parseAsset</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Object</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">C.PolicyId</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.AssetName</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.Quantity</span></span><span class="hs-special">)</span><span>
+</span><span id="line-206"></span><span>          </span><span id="local-6989586621680266949"><span class="annot"><span class="annottext">parseAsset :: Object -&gt; Parser (PolicyId, AssetName, Quantity)
+</span><a href="#local-6989586621680266949"><span class="hs-identifier hs-var hs-var">parseAsset</span></a></span></span><span> </span><span id="local-6989586621680266942"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621680266942"><span class="hs-identifier hs-var">o</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-207"></span><span>              </span><span id="local-6989586621680266941"><span class="annot"><span class="annottext">PolicyId
+</span><a href="#local-6989586621680266941"><span class="hs-identifier hs-var">policyId</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621680266942"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser PolicyId
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;policy_id&quot;</span></span><span>
+</span><span id="line-208"></span><span>              </span><span id="local-6989586621680266940"><span class="annot"><span class="annottext">AssetName
+</span><a href="#local-6989586621680266940"><span class="hs-identifier hs-var">assetName</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621680266942"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser AssetName
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;asset_name&quot;</span></span><span>
+</span><span id="line-209"></span><span>              </span><span id="local-6989586621680266939"><span class="annot"><span class="annottext">Quantity
+</span><a href="#local-6989586621680266939"><span class="hs-identifier hs-var">qty</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621680266942"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Quantity
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;quantity&quot;</span></span><span>
+</span><span id="line-210"></span><span>              </span><span class="annot"><span class="annottext">(PolicyId, AssetName, Quantity)
+-&gt; Parser (PolicyId, AssetName, Quantity)
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PolicyId
+</span><a href="#local-6989586621680266941"><span class="hs-identifier hs-var">policyId</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">AssetName
+</span><a href="#local-6989586621680266940"><span class="hs-identifier hs-var">assetName</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Quantity
+</span><a href="#local-6989586621680266939"><span class="hs-identifier hs-var">qty</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-211"></span><span>
+</span><span id="line-212"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621680266932"><span id="local-6989586621680266934"><span id="local-6989586621680266936"><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#ExportTxInput"><span class="hs-identifier hs-type">ExportTxInput</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-213"></span><span>    </span><span id="local-6989586621680266931"><span class="annot"><span class="annottext">toJSON :: ExportTxInput -&gt; Value
+</span><a href="#local-6989586621680266931"><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#ExportTxInput"><span class="hs-identifier hs-type">ExportTxInput</span></a></span><span class="hs-special">{</span><span id="local-6989586621680266930"><span class="annot"><span class="annottext">TxId
+etxiId :: TxId
+etxiId :: ExportTxInput -&gt; TxId
+</span><a href="#local-6989586621680266930"><span class="hs-identifier hs-var hs-var">etxiId</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680266929"><span class="annot"><span class="annottext">TxIx
+etxiTxIx :: TxIx
+etxiTxIx :: ExportTxInput -&gt; TxIx
+</span><a href="#local-6989586621680266929"><span class="hs-identifier hs-var hs-var">etxiTxIx</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680266928"><span class="annot"><span class="annottext">Lovelace
+etxiLovelaceQuantity :: Lovelace
+etxiLovelaceQuantity :: ExportTxInput -&gt; Lovelace
+</span><a href="#local-6989586621680266928"><span class="hs-identifier hs-var hs-var">etxiLovelaceQuantity</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680266927"><span class="annot"><span class="annottext">Maybe (Hash ScriptData)
+etxiDatumHash :: Maybe (Hash ScriptData)
+etxiDatumHash :: ExportTxInput -&gt; Maybe (Hash ScriptData)
+</span><a href="#local-6989586621680266927"><span class="hs-identifier hs-var hs-var">etxiDatumHash</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680266926"><span class="annot"><span class="annottext">[(PolicyId, AssetName, Quantity)]
+etxiAssets :: [(PolicyId, AssetName, Quantity)]
+etxiAssets :: ExportTxInput -&gt; [(PolicyId, AssetName, Quantity)]
+</span><a href="#local-6989586621680266926"><span class="hs-identifier hs-var hs-var">etxiAssets</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680266925"><span class="annot"><span class="annottext">AddressInEra BabbageEra
+etxiAddress :: AddressInEra BabbageEra
+etxiAddress :: ExportTxInput -&gt; AddressInEra BabbageEra
+</span><a href="#local-6989586621680266925"><span class="hs-identifier hs-var hs-var">etxiAddress</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-214"></span><span>        </span><span class="annot"><span class="annottext">[Pair] -&gt; Value
+</span><span class="hs-identifier hs-var">object</span></span><span>
+</span><span id="line-215"></span><span>            </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;id&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; TxId -&gt; Pair
+forall kv v. (KeyValue kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621680266930"><span class="hs-identifier hs-var">etxiId</span></a></span><span>
+</span><span id="line-216"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;index&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; TxIx -&gt; Pair
+forall kv v. (KeyValue kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">TxIx
+</span><a href="#local-6989586621680266929"><span class="hs-identifier hs-var">etxiTxIx</span></a></span><span>
+</span><span id="line-217"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;address&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Text -&gt; Pair
+forall kv v. (KeyValue kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">AddressInEra BabbageEra -&gt; Text
+forall addr. SerialiseAddress addr =&gt; addr -&gt; Text
+</span><span class="hs-identifier hs-var">C.serialiseAddress</span></span><span> </span><span class="annot"><span class="annottext">AddressInEra BabbageEra
+</span><a href="#local-6989586621680266925"><span class="hs-identifier hs-var">etxiAddress</span></a></span><span>
+</span><span id="line-218"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;amount&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Pair
+forall kv v. (KeyValue kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">[Pair] -&gt; Value
+</span><span class="hs-identifier hs-var">object</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;quantity&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Lovelace -&gt; Pair
+forall kv v. (KeyValue kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Lovelace
+</span><a href="#local-6989586621680266928"><span class="hs-identifier hs-var">etxiLovelaceQuantity</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;unit&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; String -&gt; Pair
+forall kv v. (KeyValue kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;lovelace&quot;</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-219"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;datum&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Maybe (Hash ScriptData) -&gt; Pair
+forall kv v. (KeyValue kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Maybe (Hash ScriptData)
+</span><a href="#local-6989586621680266927"><span class="hs-identifier hs-var">etxiDatumHash</span></a></span><span>
+</span><span id="line-220"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;assets&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; [Value] -&gt; Pair
+forall kv v. (KeyValue kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">((PolicyId, AssetName, Quantity) -&gt; Value)
+-&gt; [(PolicyId, AssetName, Quantity)] -&gt; [Value]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621680266923"><span class="annot"><span class="annottext">PolicyId
+</span><a href="#local-6989586621680266923"><span class="hs-identifier hs-var">p</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680266922"><span class="annot"><span class="annottext">AssetName
+</span><a href="#local-6989586621680266922"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680266921"><span class="annot"><span class="annottext">Quantity
+</span><a href="#local-6989586621680266921"><span class="hs-identifier hs-var">q</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[Pair] -&gt; Value
+</span><span class="hs-identifier hs-var">object</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;policy_id&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; PolicyId -&gt; Pair
+forall kv v. (KeyValue kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">PolicyId
+</span><a href="#local-6989586621680266923"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;asset_name&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; AssetName -&gt; Pair
+forall kv v. (KeyValue kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">AssetName
+</span><a href="#local-6989586621680266922"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;quantity&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Quantity -&gt; Pair
+forall kv v. (KeyValue kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Quantity
+</span><a href="#local-6989586621680266921"><span class="hs-identifier hs-var">q</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[(PolicyId, AssetName, Quantity)]
+</span><a href="#local-6989586621680266926"><span class="hs-identifier hs-var">etxiAssets</span></a></span><span>
+</span><span id="line-221"></span><span>            </span><span class="hs-special">]</span><span>
+</span><span id="line-222"></span><span>
+</span><span id="line-223"></span><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#export"><span class="hs-keyword hs-type">export</span></a></span><span>
+</span><span id="line-224"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Params</span></span><span>
+</span><span id="line-225"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">UnbalancedTx</span></span><span>
+</span><span id="line-226"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">CardanoLedgerError</span></span><span> </span><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#ExportTx"><span class="hs-identifier hs-type">ExportTx</span></a></span><span>
+</span><span id="line-227"></span><span id="export"><span class="annot"><span class="annottext">export :: Params -&gt; UnbalancedTx -&gt; Either CardanoLedgerError ExportTx
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#export"><span class="hs-keyword hs-var hs-var">export</span></a></span></span><span> </span><span id="local-6989586621680266920"><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621680266920"><span class="hs-identifier hs-var">params</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">UnbalancedCardanoTx</span></span><span> </span><span id="local-6989586621680266919"><span class="annot"><span class="annottext">CardanoBuildTx
+</span><a href="#local-6989586621680266919"><span class="hs-identifier hs-var">tx</span></a></span></span><span> </span><span id="local-6989586621680266918"><span class="annot"><span class="annottext">UtxoIndex
+</span><a href="#local-6989586621680266918"><span class="hs-identifier hs-var">utxos</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-228"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680266917"><span class="annot"><span class="annottext">fromCardanoTx :: CardanoBuildTx -&gt; Either CardanoLedgerError (TxBody BabbageEra)
+</span><a href="#local-6989586621680266917"><span class="hs-identifier hs-var hs-var">fromCardanoTx</span></a></span></span><span> </span><span id="local-6989586621680266916"><span class="annot"><span class="annottext">CardanoBuildTx
+</span><a href="#local-6989586621680266916"><span class="hs-identifier hs-var">ctx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-229"></span><span>            </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680266915"><span class="annot"><span class="annottext">utxo :: UTxO (BabbageEra StandardCrypto)
+</span><a href="#local-6989586621680266915"><span class="hs-identifier hs-var hs-var">utxo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UtxoIndex -&gt; UTxO (BabbageEra StandardCrypto)
+</span><span class="hs-identifier hs-var">fromPlutusIndex</span></span><span> </span><span class="annot"><span class="annottext">UtxoIndex
+</span><a href="#local-6989586621680266918"><span class="hs-identifier hs-var">utxos</span></a></span><span>
+</span><span id="line-230"></span><span>            </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">Params
+-&gt; UTxO (BabbageEra StandardCrypto)
+-&gt; CardanoBuildTx
+-&gt; Either CardanoLedgerError (TxBody BabbageEra)
+</span><span class="hs-identifier hs-var">makeTransactionBody</span></span><span> </span><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621680266920"><span class="hs-identifier hs-var">params</span></a></span><span> </span><span class="annot"><span class="annottext">UTxO (BabbageEra StandardCrypto)
+</span><a href="#local-6989586621680266915"><span class="hs-identifier hs-var">utxo</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoBuildTx
+</span><a href="#local-6989586621680266916"><span class="hs-identifier hs-var">ctx</span></a></span><span>
+</span><span id="line-231"></span><span>    </span><span class="hs-keyword">in</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-232"></span><span>        </span><span id="local-6989586621680266914"><span class="annot"><span class="annottext">TxBody BabbageEra
+</span><a href="#local-6989586621680266914"><span class="hs-identifier hs-var">tx'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">CardanoBuildTx -&gt; Either CardanoLedgerError (TxBody BabbageEra)
+</span><a href="#local-6989586621680266917"><span class="hs-identifier hs-var">fromCardanoTx</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoBuildTx
+</span><a href="#local-6989586621680266919"><span class="hs-identifier hs-var">tx</span></a></span><span>
+</span><span id="line-233"></span><span>        </span><span class="annot"><span class="annottext">ExportTx -&gt; Either CardanoLedgerError ExportTx
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(ExportTx -&gt; Either CardanoLedgerError ExportTx)
+-&gt; ExportTx -&gt; Either CardanoLedgerError ExportTx
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Tx BabbageEra -&gt; [ExportTxInput] -&gt; [ExportTxRedeemer] -&gt; ExportTx
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#ExportTx"><span class="hs-identifier hs-var">ExportTx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[KeyWitness BabbageEra] -&gt; TxBody BabbageEra -&gt; Tx BabbageEra
+forall era. [KeyWitness era] -&gt; TxBody era -&gt; Tx era
+</span><span class="hs-identifier hs-var">C.makeSignedTransaction</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">TxBody BabbageEra
+</span><a href="#local-6989586621680266914"><span class="hs-identifier hs-var">tx'</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">UtxoIndex -&gt; [ExportTxInput]
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#mkInputs"><span class="hs-identifier hs-var">mkInputs</span></a></span><span> </span><span class="annot"><span class="annottext">UtxoIndex
+</span><a href="#local-6989586621680266918"><span class="hs-identifier hs-var">utxos</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-234"></span><span>
+</span><span id="line-235"></span><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#mkInputs"><span class="hs-identifier hs-type">mkInputs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">P.UtxoIndex</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#ExportTxInput"><span class="hs-identifier hs-type">ExportTxInput</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-236"></span><span id="mkInputs"><span class="annot"><span class="annottext">mkInputs :: UtxoIndex -&gt; [ExportTxInput]
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#mkInputs"><span class="hs-identifier hs-var hs-var">mkInputs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">((TxIn, TxOut CtxUTxO BabbageEra) -&gt; ExportTxInput)
+-&gt; [(TxIn, TxOut CtxUTxO BabbageEra)] -&gt; [ExportTxInput]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(TxIn -&gt; TxOut CtxUTxO BabbageEra -&gt; ExportTxInput)
+-&gt; (TxIn, TxOut CtxUTxO BabbageEra) -&gt; ExportTxInput
+forall a b c. (a -&gt; b -&gt; c) -&gt; (a, b) -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">uncurry</span></a></span><span> </span><span class="annot"><span class="annottext">TxIn -&gt; TxOut CtxUTxO BabbageEra -&gt; ExportTxInput
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#toExportTxInput"><span class="hs-identifier hs-var">toExportTxInput</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([(TxIn, TxOut CtxUTxO BabbageEra)] -&gt; [ExportTxInput])
+-&gt; (UtxoIndex -&gt; [(TxIn, TxOut CtxUTxO BabbageEra)])
+-&gt; UtxoIndex
+-&gt; [ExportTxInput]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Map TxIn (TxOut CtxUTxO BabbageEra)
+-&gt; [(TxIn, TxOut CtxUTxO BabbageEra)]
+forall k a. Map k a -&gt; [(k, a)]
+</span><span class="hs-identifier hs-var">Map.toList</span></span><span> </span><span class="annot"><span class="annottext">(Map TxIn (TxOut CtxUTxO BabbageEra)
+ -&gt; [(TxIn, TxOut CtxUTxO BabbageEra)])
+-&gt; (UtxoIndex -&gt; Map TxIn (TxOut CtxUTxO BabbageEra))
+-&gt; UtxoIndex
+-&gt; [(TxIn, TxOut CtxUTxO BabbageEra)]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">UtxoIndex -&gt; Map TxIn (TxOut CtxUTxO BabbageEra)
+forall era. UTxO era -&gt; Map TxIn (TxOut CtxUTxO era)
+</span><span class="hs-identifier hs-var hs-var">C.unUTxO</span></span><span>
+</span><span id="line-237"></span><span>
+</span><span id="line-238"></span><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#toExportTxInput"><span class="hs-identifier hs-type">toExportTxInput</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.TxIn</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.TxOut</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.CtxUTxO</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.BabbageEra</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Wallet.LocalClient.ExportTx.html#ExportTxInput"><span class="hs-identifier hs-type">ExportTxInput</span></a></span><span>
+</span><span id="line-239"></span><span id="toExportTxInput"><span class="annot"><span class="annottext">toExportTxInput :: TxIn -&gt; TxOut CtxUTxO BabbageEra -&gt; ExportTxInput
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#toExportTxInput"><span class="hs-identifier hs-var hs-var">toExportTxInput</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">C.TxIn</span></span><span> </span><span id="local-6989586621680266906"><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621680266906"><span class="hs-identifier hs-var">txId</span></a></span></span><span> </span><span id="local-6989586621680266905"><span class="annot"><span class="annottext">TxIx
+</span><a href="#local-6989586621680266905"><span class="hs-identifier hs-var">txIx</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">C.TxOut</span></span><span> </span><span id="local-6989586621680266903"><span class="annot"><span class="annottext">AddressInEra BabbageEra
+</span><a href="#local-6989586621680266903"><span class="hs-identifier hs-var">aie</span></a></span></span><span> </span><span id="local-6989586621680266902"><span class="annot"><span class="annottext">TxOutValue BabbageEra
+</span><a href="#local-6989586621680266902"><span class="hs-identifier hs-var">tov</span></a></span></span><span> </span><span id="local-6989586621680266901"><span class="annot"><span class="annottext">TxOutDatum CtxUTxO BabbageEra
+</span><a href="#local-6989586621680266901"><span class="hs-identifier hs-var">tod</span></a></span></span><span> </span><span class="annot"><span class="annottext">ReferenceScript BabbageEra
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-240"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680266900"><span class="annot"><span class="annottext">value :: Value
+</span><a href="#local-6989586621680266900"><span class="hs-identifier hs-var hs-var">value</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxOutValue BabbageEra -&gt; Value
+forall era. TxOutValue era -&gt; Value
+</span><span class="hs-identifier hs-var">C.txOutValueToValue</span></span><span> </span><span class="annot"><span class="annottext">TxOutValue BabbageEra
+</span><a href="#local-6989586621680266902"><span class="hs-identifier hs-var">tov</span></a></span><span>
+</span><span id="line-241"></span><span>        </span><span id="local-6989586621680266898"><span class="annot"><span class="annottext">otherQuantities :: [(PolicyId, AssetName, Quantity)]
+</span><a href="#local-6989586621680266898"><span class="hs-identifier hs-var hs-var">otherQuantities</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">((AssetId, Quantity) -&gt; Maybe (PolicyId, AssetName, Quantity))
+-&gt; [(AssetId, Quantity)] -&gt; [(PolicyId, AssetName, Quantity)]
+forall a b. (a -&gt; Maybe b) -&gt; [a] -&gt; [b]
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">mapMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span> </span><span class="hs-special">{</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">C.AssetId</span></span><span> </span><span id="local-6989586621680266896"><span class="annot"><span class="annottext">PolicyId
+</span><a href="#local-6989586621680266896"><span class="hs-identifier hs-var">policyId</span></a></span></span><span> </span><span id="local-6989586621680266895"><span class="annot"><span class="annottext">AssetName
+</span><a href="#local-6989586621680266895"><span class="hs-identifier hs-var">assetName</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680266894"><span class="annot"><span class="annottext">Quantity
+</span><a href="#local-6989586621680266894"><span class="hs-identifier hs-var">quantity</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(PolicyId, AssetName, Quantity)
+-&gt; Maybe (PolicyId, AssetName, Quantity)
+forall a. a -&gt; Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PolicyId
+</span><a href="#local-6989586621680266896"><span class="hs-identifier hs-var">policyId</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">AssetName
+</span><a href="#local-6989586621680266895"><span class="hs-identifier hs-var">assetName</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Quantity
+</span><a href="#local-6989586621680266894"><span class="hs-identifier hs-var">quantity</span></a></span><span class="hs-special">)</span><span class="hs-special">;</span><span> </span><span class="annot"><span class="annottext">(AssetId, Quantity)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe (PolicyId, AssetName, Quantity)
+forall a. Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-special">}</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([(AssetId, Quantity)] -&gt; [(PolicyId, AssetName, Quantity)])
+-&gt; [(AssetId, Quantity)] -&gt; [(PolicyId, AssetName, Quantity)]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Value -&gt; [(AssetId, Quantity)]
+</span><span class="hs-identifier hs-var">C.valueToList</span></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680266900"><span class="hs-identifier hs-var">value</span></a></span><span>
+</span><span id="line-242"></span><span>    </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">TxId
+-&gt; TxIx
+-&gt; AddressInEra BabbageEra
+-&gt; Lovelace
+-&gt; Maybe (Hash ScriptData)
+-&gt; [(PolicyId, AssetName, Quantity)]
+-&gt; ExportTxInput
+</span><a href="Cardano.Wallet.LocalClient.ExportTx.html#ExportTxInput"><span class="hs-identifier hs-var">ExportTxInput</span></a></span><span> </span><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621680266906"><span class="hs-identifier hs-var">txId</span></a></span><span> </span><span class="annot"><span class="annottext">TxIx
+</span><a href="#local-6989586621680266905"><span class="hs-identifier hs-var">txIx</span></a></span><span> </span><span class="annot"><span class="annottext">AddressInEra BabbageEra
+</span><a href="#local-6989586621680266903"><span class="hs-identifier hs-var">aie</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Value -&gt; Lovelace
+</span><span class="hs-identifier hs-var">C.selectLovelace</span></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621680266900"><span class="hs-identifier hs-var">value</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxOutDatum CtxUTxO BabbageEra -&gt; Maybe (Hash ScriptData)
+</span><span class="hs-identifier hs-var">P.cardanoTxOutDatumHash</span></span><span> </span><span class="annot"><span class="annottext">TxOutDatum CtxUTxO BabbageEra
+</span><a href="#local-6989586621680266901"><span class="hs-identifier hs-var">tod</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[(PolicyId, AssetName, Quantity)]
+</span><a href="#local-6989586621680266898"><span class="hs-identifier hs-var">otherQuantities</span></a></span><span>
+</span><span id="line-243"></span></pre></body></html>

@@ -1,0 +1,709 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DerivingVia   #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE Rank2Types    #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies  #-}</span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- | 'AddressMap's and functions for working on them.</span><span>
+</span><span id="line-6"></span><span class="hs-comment">--</span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- 'AddressMap's are used to represent the limited knowledge about the state of the ledger that</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- the wallet retains. Rather than keeping the entire ledger (which can be very large) the wallet</span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- only tracks the UTxOs at particular addresses.</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Ledger.AddressMap</span><span class="hs-special">(</span><span>
+</span><span id="line-11"></span><span>    </span><span class="annot"><a href="Ledger.AddressMap.html#AddressMap"><span class="hs-identifier">AddressMap</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>    </span><span class="annot"><a href="Ledger.AddressMap.html#UtxoMap"><span class="hs-identifier">UtxoMap</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>    </span><span class="annot"><a href="Ledger.AddressMap.html#addAddress"><span class="hs-identifier">addAddress</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>    </span><span class="annot"><a href="Ledger.AddressMap.html#addAddresses"><span class="hs-identifier">addAddresses</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>    </span><span class="annot"><a href="Ledger.AddressMap.html#fundsAt"><span class="hs-identifier">fundsAt</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>    </span><span class="annot"><a href="Ledger.AddressMap.html#values"><span class="hs-identifier">values</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>    </span><span class="annot"><a href="Ledger.AddressMap.html#traverseWithKey"><span class="hs-identifier">traverseWithKey</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>    </span><span class="annot"><a href="Ledger.AddressMap.html#singleton"><span class="hs-identifier">singleton</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>    </span><span class="annot"><a href="Ledger.AddressMap.html#updateAddresses"><span class="hs-identifier">updateAddresses</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>    </span><span class="annot"><a href="Ledger.AddressMap.html#updateAllAddresses"><span class="hs-identifier">updateAllAddresses</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>    </span><span class="annot"><a href="Ledger.AddressMap.html#lookupOutRef"><span class="hs-identifier">lookupOutRef</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>    </span><span class="annot"><a href="Ledger.AddressMap.html#fromChain"><span class="hs-identifier">fromChain</span></a></span><span>
+</span><span id="line-23"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Codec.Serialise.Class</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Serialise</span></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Lens</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">At</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Index</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">IxValue</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Ixed</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Lens'</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">alaf</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">at</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">lens</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">non</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator">(&amp;)</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-operator">(.~)</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-operator">(^.)</span></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Control.Monad</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">join</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">FromJSON</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ToJSON</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Data.Foldable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">fold</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Map</span></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Data.Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">mapMaybe</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Data.Monoid</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">First</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Set</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Set</span></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.Api</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">C</span></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Ledger.Address.html"><span class="hs-identifier">Ledger.Address</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Address.html#CardanoAddress"><span class="hs-identifier">CardanoAddress</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Ledger.Blockchain.html"><span class="hs-identifier">Ledger.Blockchain</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Blockchain.html#Blockchain"><span class="hs-identifier">Blockchain</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Index.Internal.html#OnChainTx"><span class="hs-identifier">OnChainTx</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Blockchain.html#consumableInputs"><span class="hs-identifier">consumableInputs</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Blockchain.html#outputsProduced"><span class="hs-identifier">outputsProduced</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Index.Internal.html#unOnChain"><span class="hs-identifier">unOnChain</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Ledger.Tx.html"><span class="hs-identifier">Ledger.Tx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Tx.CardanoAPI.Internal.html#CardanoTx"><span class="hs-identifier">CardanoTx</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier">TxOut</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Tx.Internal.html#txOutAddress"><span class="hs-identifier">txOutAddress</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Tx.Internal.html#txOutValue"><span class="hs-identifier">txOutValue</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">type</span><span> </span><span id="UtxoMap"><span class="annot"><a href="Ledger.AddressMap.html#UtxoMap"><span class="hs-identifier hs-var">UtxoMap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.TxIn</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Tx.CardanoAPI.Internal.html#CardanoTx"><span class="hs-identifier hs-type">CardanoTx</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- | A map of 'Address'es and their unspent outputs.</span><span>
+</span><span id="line-45"></span><span id="local-6989586621679744564"><span id="local-6989586621679744565"></span></span><span class="hs-keyword">newtype</span><span> </span><span id="AddressMap"><span class="annot"><a href="Ledger.AddressMap.html#AddressMap"><span class="hs-identifier hs-var">AddressMap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="AddressMap"><span class="annot"><a href="Ledger.AddressMap.html#AddressMap"><span class="hs-identifier hs-var">AddressMap</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="getAddressMap"><span class="annot"><span class="annottext">AddressMap -&gt; Map CardanoAddress UtxoMap
+</span><a href="Ledger.AddressMap.html#getAddressMap"><span class="hs-identifier hs-var hs-var">getAddressMap</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="Ledger.Address.html#CardanoAddress"><span class="hs-identifier hs-type">CardanoAddress</span></a></span><span> </span><span class="annot"><a href="Ledger.AddressMap.html#UtxoMap"><span class="hs-identifier hs-type">UtxoMap</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-46"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679744556"><span id="local-6989586621679744558"><span id="local-6989586621679744560"><span class="annot"><span class="annottext">Int -&gt; AddressMap -&gt; ShowS
+[AddressMap] -&gt; ShowS
+AddressMap -&gt; String
+(Int -&gt; AddressMap -&gt; ShowS)
+-&gt; (AddressMap -&gt; String)
+-&gt; ([AddressMap] -&gt; ShowS)
+-&gt; Show AddressMap
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [AddressMap] -&gt; ShowS
+$cshowList :: [AddressMap] -&gt; ShowS
+show :: AddressMap -&gt; String
+$cshow :: AddressMap -&gt; String
+showsPrec :: Int -&gt; AddressMap -&gt; ShowS
+$cshowsPrec :: Int -&gt; AddressMap -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679744551"><span id="local-6989586621679744553"><span class="annot"><span class="annottext">AddressMap -&gt; AddressMap -&gt; Bool
+(AddressMap -&gt; AddressMap -&gt; Bool)
+-&gt; (AddressMap -&gt; AddressMap -&gt; Bool) -&gt; Eq AddressMap
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: AddressMap -&gt; AddressMap -&gt; Bool
+$c/= :: AddressMap -&gt; AddressMap -&gt; Bool
+== :: AddressMap -&gt; AddressMap -&gt; Bool
+$c== :: AddressMap -&gt; AddressMap -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. AddressMap -&gt; Rep AddressMap x)
+-&gt; (forall x. Rep AddressMap x -&gt; AddressMap) -&gt; Generic AddressMap
+forall x. Rep AddressMap x -&gt; AddressMap
+forall x. AddressMap -&gt; Rep AddressMap x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep AddressMap x -&gt; AddressMap
+$cfrom :: forall x. AddressMap -&gt; Rep AddressMap x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679744539"><span id="local-6989586621679744541"><span id="local-6989586621679744543"><span id="local-6989586621679744545"><span class="annot"><span class="annottext">Decoder s AddressMap
+Decoder s [AddressMap]
+[AddressMap] -&gt; Encoding
+AddressMap -&gt; Encoding
+(AddressMap -&gt; Encoding)
+-&gt; (forall s. Decoder s AddressMap)
+-&gt; ([AddressMap] -&gt; Encoding)
+-&gt; (forall s. Decoder s [AddressMap])
+-&gt; Serialise AddressMap
+forall s. Decoder s [AddressMap]
+forall s. Decoder s AddressMap
+forall a.
+(a -&gt; Encoding)
+-&gt; (forall s. Decoder s a)
+-&gt; ([a] -&gt; Encoding)
+-&gt; (forall s. Decoder s [a])
+-&gt; Serialise a
+decodeList :: Decoder s [AddressMap]
+$cdecodeList :: forall s. Decoder s [AddressMap]
+encodeList :: [AddressMap] -&gt; Encoding
+$cencodeList :: [AddressMap] -&gt; Encoding
+decode :: Decoder s AddressMap
+$cdecode :: forall s. Decoder s AddressMap
+encode :: AddressMap -&gt; Encoding
+$cencode :: AddressMap -&gt; Encoding
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Serialise</span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679744530"><span id="local-6989586621679744532"><span id="local-6989586621679744534"><span id="local-6989586621679744536"><span class="annot"><span class="annottext">[AddressMap] -&gt; Encoding
+[AddressMap] -&gt; Value
+AddressMap -&gt; Encoding
+AddressMap -&gt; Value
+(AddressMap -&gt; Value)
+-&gt; (AddressMap -&gt; Encoding)
+-&gt; ([AddressMap] -&gt; Value)
+-&gt; ([AddressMap] -&gt; Encoding)
+-&gt; ToJSON AddressMap
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; ToJSON a
+toEncodingList :: [AddressMap] -&gt; Encoding
+$ctoEncodingList :: [AddressMap] -&gt; Encoding
+toJSONList :: [AddressMap] -&gt; Value
+$ctoJSONList :: [AddressMap] -&gt; Value
+toEncoding :: AddressMap -&gt; Encoding
+$ctoEncoding :: AddressMap -&gt; Encoding
+toJSON :: AddressMap -&gt; Value
+$ctoJSON :: AddressMap -&gt; Value
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679744525"><span id="local-6989586621679744527"><span class="annot"><span class="annottext">Value -&gt; Parser [AddressMap]
+Value -&gt; Parser AddressMap
+(Value -&gt; Parser AddressMap)
+-&gt; (Value -&gt; Parser [AddressMap]) -&gt; FromJSON AddressMap
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+parseJSONList :: Value -&gt; Parser [AddressMap]
+$cparseJSONList :: Value -&gt; Parser [AddressMap]
+parseJSON :: Value -&gt; Parser AddressMap
+$cparseJSON :: Value -&gt; Parser AddressMap
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span class="hs-comment">-- | An address map with a single unspent transaction output.</span><span>
+</span><span id="line-51"></span><span class="annot"><a href="Ledger.AddressMap.html#singleton"><span class="hs-identifier hs-type">singleton</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Address.html#CardanoAddress"><span class="hs-identifier hs-type">CardanoAddress</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.TxIn</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Tx.CardanoAPI.Internal.html#CardanoTx"><span class="hs-identifier hs-type">CardanoTx</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Ledger.AddressMap.html#AddressMap"><span class="hs-identifier hs-type">AddressMap</span></a></span><span>
+</span><span id="line-52"></span><span id="singleton"><span class="annot"><span class="annottext">singleton :: (CardanoAddress, TxIn, CardanoTx, TxOut) -&gt; AddressMap
+</span><a href="Ledger.AddressMap.html#singleton"><span class="hs-identifier hs-var hs-var">singleton</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679744523"><span class="annot"><span class="annottext">CardanoAddress
+</span><a href="#local-6989586621679744523"><span class="hs-identifier hs-var">addr</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679744522"><span class="annot"><span class="annottext">TxIn
+</span><a href="#local-6989586621679744522"><span class="hs-identifier hs-var">ref</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679744521"><span class="annot"><span class="annottext">CardanoTx
+</span><a href="#local-6989586621679744521"><span class="hs-identifier hs-var">tx</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679744520"><span class="annot"><span class="annottext">TxOut
+</span><a href="#local-6989586621679744520"><span class="hs-identifier hs-var">ot</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map CardanoAddress UtxoMap -&gt; AddressMap
+</span><a href="Ledger.AddressMap.html#AddressMap"><span class="hs-identifier hs-var">AddressMap</span></a></span><span> </span><span class="annot"><span class="annottext">(Map CardanoAddress UtxoMap -&gt; AddressMap)
+-&gt; Map CardanoAddress UtxoMap -&gt; AddressMap
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoAddress -&gt; UtxoMap -&gt; Map CardanoAddress UtxoMap
+forall k a. k -&gt; a -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.singleton</span></span><span> </span><span class="annot"><span class="annottext">CardanoAddress
+</span><a href="#local-6989586621679744523"><span class="hs-identifier hs-var">addr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxIn -&gt; (CardanoTx, TxOut) -&gt; UtxoMap
+forall k a. k -&gt; a -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.singleton</span></span><span> </span><span class="annot"><span class="annottext">TxIn
+</span><a href="#local-6989586621679744522"><span class="hs-identifier hs-var">ref</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CardanoTx
+</span><a href="#local-6989586621679744521"><span class="hs-identifier hs-var">tx</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TxOut
+</span><a href="#local-6989586621679744520"><span class="hs-identifier hs-var">ot</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- | Determine the unspent output that an input refers to</span><span>
+</span><span id="line-55"></span><span class="annot"><a href="Ledger.AddressMap.html#lookupOutRef"><span class="hs-identifier hs-type">lookupOutRef</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.TxIn</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Ledger.AddressMap.html#AddressMap"><span class="hs-identifier hs-type">AddressMap</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span>
+</span><span id="line-56"></span><span id="lookupOutRef"><span class="annot"><span class="annottext">lookupOutRef :: TxIn -&gt; AddressMap -&gt; Maybe TxOut
+</span><a href="Ledger.AddressMap.html#lookupOutRef"><span class="hs-identifier hs-var hs-var">lookupOutRef</span></a></span></span><span> </span><span id="local-6989586621679744518"><span class="annot"><span class="annottext">TxIn
+</span><a href="#local-6989586621679744518"><span class="hs-identifier hs-var">outRef</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">((CardanoTx, TxOut) -&gt; TxOut)
+-&gt; Maybe (CardanoTx, TxOut) -&gt; Maybe TxOut
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">(CardanoTx, TxOut) -&gt; TxOut
+forall a b. (a, b) -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">snd</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe (CardanoTx, TxOut) -&gt; Maybe TxOut)
+-&gt; (AddressMap -&gt; Maybe (CardanoTx, TxOut))
+-&gt; AddressMap
+-&gt; Maybe TxOut
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Unwrapped (First (CardanoTx, TxOut)) -&gt; First (CardanoTx, TxOut))
+-&gt; ((UtxoMap -&gt; First (CardanoTx, TxOut))
+    -&gt; Map CardanoAddress UtxoMap -&gt; First (CardanoTx, TxOut))
+-&gt; (UtxoMap -&gt; Unwrapped (First (CardanoTx, TxOut)))
+-&gt; Map CardanoAddress UtxoMap
+-&gt; Unwrapped (First (CardanoTx, TxOut))
+forall (f :: * -&gt; *) (g :: * -&gt; *) s t.
+(Functor f, Functor g, Rewrapping s t) =&gt;
+(Unwrapped s -&gt; s)
+-&gt; (f t -&gt; g s) -&gt; f (Unwrapped t) -&gt; g (Unwrapped s)
+</span><span class="hs-identifier hs-var">alaf</span></span><span> </span><span class="annot"><span class="annottext">Unwrapped (First (CardanoTx, TxOut)) -&gt; First (CardanoTx, TxOut)
+forall a. Maybe a -&gt; First a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">First</span></a></span><span> </span><span class="annot"><span class="annottext">(UtxoMap -&gt; First (CardanoTx, TxOut))
+-&gt; Map CardanoAddress UtxoMap -&gt; First (CardanoTx, TxOut)
+forall (t :: * -&gt; *) m a.
+(Foldable t, Monoid m) =&gt;
+(a -&gt; m) -&gt; t a -&gt; m
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">foldMap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxIn -&gt; UtxoMap -&gt; Maybe (CardanoTx, TxOut)
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Map.lookup</span></span><span> </span><span class="annot"><span class="annottext">TxIn
+</span><a href="#local-6989586621679744518"><span class="hs-identifier hs-var">outRef</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Map CardanoAddress UtxoMap -&gt; Maybe (CardanoTx, TxOut))
+-&gt; (AddressMap -&gt; Map CardanoAddress UtxoMap)
+-&gt; AddressMap
+-&gt; Maybe (CardanoTx, TxOut)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">AddressMap -&gt; Map CardanoAddress UtxoMap
+</span><a href="Ledger.AddressMap.html#getAddressMap"><span class="hs-identifier hs-var hs-var">getAddressMap</span></a></span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679744509"><span id="local-6989586621679744511"><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Semigroup</span></a></span><span> </span><span class="annot"><a href="Ledger.AddressMap.html#AddressMap"><span class="hs-identifier hs-type">AddressMap</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-59"></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.AddressMap.html#AddressMap"><span class="hs-identifier hs-type">AddressMap</span></a></span><span> </span><span id="local-6989586621679744507"><span class="annot"><span class="annottext">Map CardanoAddress UtxoMap
+</span><a href="#local-6989586621679744507"><span class="hs-identifier hs-var">l</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679744506"><span class="annot"><span class="annottext">&lt;&gt; :: AddressMap -&gt; AddressMap -&gt; AddressMap
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var hs-var hs-var hs-var">&lt;&gt;</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.AddressMap.html#AddressMap"><span class="hs-identifier hs-type">AddressMap</span></a></span><span> </span><span id="local-6989586621679744505"><span class="annot"><span class="annottext">Map CardanoAddress UtxoMap
+</span><a href="#local-6989586621679744505"><span class="hs-identifier hs-var">r</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map CardanoAddress UtxoMap -&gt; AddressMap
+</span><a href="Ledger.AddressMap.html#AddressMap"><span class="hs-identifier hs-var">AddressMap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(UtxoMap -&gt; UtxoMap -&gt; UtxoMap)
+-&gt; Map CardanoAddress UtxoMap
+-&gt; Map CardanoAddress UtxoMap
+-&gt; Map CardanoAddress UtxoMap
+forall k a. Ord k =&gt; (a -&gt; a -&gt; a) -&gt; Map k a -&gt; Map k a -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.unionWith</span></span><span> </span><span class="annot"><span class="annottext">UtxoMap -&gt; UtxoMap -&gt; UtxoMap
+forall a. Map TxIn a -&gt; Map TxIn a -&gt; Map TxIn a
+</span><a href="#local-6989586621679744503"><span class="hs-identifier hs-var">add</span></a></span><span> </span><span class="annot"><span class="annottext">Map CardanoAddress UtxoMap
+</span><a href="#local-6989586621679744507"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">Map CardanoAddress UtxoMap
+</span><a href="#local-6989586621679744505"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-60"></span><span>        </span><span id="local-6989586621679744503"><span class="annot"><span class="annottext">add :: Map TxIn a -&gt; Map TxIn a -&gt; Map TxIn a
+</span><a href="#local-6989586621679744503"><span class="hs-identifier hs-var hs-var">add</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map TxIn a -&gt; Map TxIn a -&gt; Map TxIn a
+forall k a. Ord k =&gt; Map k a -&gt; Map k a -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.union</span></span><span>
+</span><span id="line-61"></span><span>
+</span><span id="line-62"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679744497"><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="annot"><a href="Ledger.AddressMap.html#AddressMap"><span class="hs-identifier hs-type">AddressMap</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-63"></span><span>    </span><span id="local-6989586621679744495"><span class="annot"><span class="annottext">mappend :: AddressMap -&gt; AddressMap -&gt; AddressMap
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">mappend</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AddressMap -&gt; AddressMap -&gt; AddressMap
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">(&lt;&gt;)</span></a></span><span>
+</span><span id="line-64"></span><span>    </span><span id="local-6989586621679744494"><span class="annot"><span class="annottext">mempty :: AddressMap
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">mempty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map CardanoAddress UtxoMap -&gt; AddressMap
+</span><a href="Ledger.AddressMap.html#AddressMap"><span class="hs-identifier hs-var">AddressMap</span></a></span><span> </span><span class="annot"><span class="annottext">Map CardanoAddress UtxoMap
+forall k a. Map k a
+</span><span class="hs-identifier hs-var">Map.empty</span></span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span class="hs-keyword">type</span><span> </span><span class="hs-keyword">instance</span><span> </span><span id="Index"><span class="annot"><span class="hs-identifier hs-var">Index</span></span></span><span> </span><span class="annot"><a href="Ledger.AddressMap.html#AddressMap"><span class="hs-identifier hs-type">AddressMap</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Ledger.Address.html#CardanoAddress"><span class="hs-identifier hs-type">CardanoAddress</span></a></span><span>
+</span><span id="line-67"></span><span class="hs-keyword">type</span><span> </span><span class="hs-keyword">instance</span><span> </span><span id="IxValue"><span class="annot"><span class="hs-identifier hs-var">IxValue</span></span></span><span> </span><span class="annot"><a href="Ledger.AddressMap.html#AddressMap"><span class="hs-identifier hs-type">AddressMap</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.TxIn</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Tx.CardanoAPI.Internal.html#CardanoTx"><span class="hs-identifier hs-type">CardanoTx</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ixed</span></span><span> </span><span class="annot"><a href="Ledger.AddressMap.html#AddressMap"><span class="hs-identifier hs-type">AddressMap</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-70"></span><span>    </span><span id="local-6989586621679744490"><span class="annot"><span class="annottext">ix :: Index AddressMap -&gt; Traversal' AddressMap (IxValue AddressMap)
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">ix</span></span></span><span> </span><span id="local-6989586621679744488"><span class="annot"><span class="annottext">Index AddressMap
+</span><a href="#local-6989586621679744488"><span class="hs-identifier hs-var">adr</span></a></span></span><span> </span><span id="local-6989586621679744487"><span class="annot"><span class="annottext">IxValue AddressMap -&gt; f (IxValue AddressMap)
+</span><a href="#local-6989586621679744487"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.AddressMap.html#AddressMap"><span class="hs-identifier hs-type">AddressMap</span></a></span><span> </span><span id="local-6989586621679744486"><span class="annot"><span class="annottext">Map CardanoAddress UtxoMap
+</span><a href="#local-6989586621679744486"><span class="hs-identifier hs-var">mp</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map CardanoAddress UtxoMap -&gt; AddressMap
+</span><a href="Ledger.AddressMap.html#AddressMap"><span class="hs-identifier hs-var">AddressMap</span></a></span><span> </span><span class="annot"><span class="annottext">(Map CardanoAddress UtxoMap -&gt; AddressMap)
+-&gt; f (Map CardanoAddress UtxoMap) -&gt; f AddressMap
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Index (Map CardanoAddress UtxoMap)
+-&gt; (IxValue (Map CardanoAddress UtxoMap)
+    -&gt; f (IxValue (Map CardanoAddress UtxoMap)))
+-&gt; Map CardanoAddress UtxoMap
+-&gt; f (Map CardanoAddress UtxoMap)
+forall m. Ixed m =&gt; Index m -&gt; Traversal' m (IxValue m)
+</span><span class="hs-identifier hs-var">ix</span></span><span> </span><span class="annot"><span class="annottext">Index (Map CardanoAddress UtxoMap)
+Index AddressMap
+</span><a href="#local-6989586621679744488"><span class="hs-identifier hs-var">adr</span></a></span><span> </span><span class="annot"><span class="annottext">IxValue (Map CardanoAddress UtxoMap)
+-&gt; f (IxValue (Map CardanoAddress UtxoMap))
+IxValue AddressMap -&gt; f (IxValue AddressMap)
+</span><a href="#local-6989586621679744487"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Map CardanoAddress UtxoMap
+</span><a href="#local-6989586621679744486"><span class="hs-identifier hs-var">mp</span></a></span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">At</span></span><span> </span><span class="annot"><a href="Ledger.AddressMap.html#AddressMap"><span class="hs-identifier hs-type">AddressMap</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-73"></span><span>    </span><span id="local-6989586621679744481"><span class="annot"><span class="annottext">at :: Index AddressMap -&gt; Lens' AddressMap (Maybe (IxValue AddressMap))
+</span><a href="#local-6989586621679744481"><span class="hs-identifier hs-var hs-var hs-var hs-var">at</span></a></span></span><span> </span><span id="local-6989586621679744480"><span class="annot"><span class="annottext">Index AddressMap
+</span><a href="#local-6989586621679744480"><span class="hs-identifier hs-var">idx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(AddressMap -&gt; Maybe UtxoMap)
+-&gt; (AddressMap -&gt; Maybe UtxoMap -&gt; AddressMap)
+-&gt; Lens AddressMap AddressMap (Maybe UtxoMap) (Maybe UtxoMap)
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><span class="hs-identifier hs-var">lens</span></span><span> </span><span class="annot"><span class="annottext">AddressMap -&gt; Maybe UtxoMap
+</span><a href="#local-6989586621679744479"><span class="hs-identifier hs-var">g</span></a></span><span> </span><span class="annot"><span class="annottext">AddressMap -&gt; Maybe UtxoMap -&gt; AddressMap
+</span><a href="#local-6989586621679744478"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-74"></span><span>        </span><span id="local-6989586621679744479"><span class="annot"><span class="annottext">g :: AddressMap -&gt; Maybe UtxoMap
+</span><a href="#local-6989586621679744479"><span class="hs-identifier hs-var hs-var">g</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.AddressMap.html#AddressMap"><span class="hs-identifier hs-type">AddressMap</span></a></span><span> </span><span id="local-6989586621679744477"><span class="annot"><span class="annottext">Map CardanoAddress UtxoMap
+</span><a href="#local-6989586621679744477"><span class="hs-identifier hs-var">mp</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map CardanoAddress UtxoMap
+</span><a href="#local-6989586621679744477"><span class="hs-identifier hs-var">mp</span></a></span><span> </span><span class="annot"><span class="annottext">Map CardanoAddress UtxoMap
+-&gt; Getting
+     (Maybe UtxoMap) (Map CardanoAddress UtxoMap) (Maybe UtxoMap)
+-&gt; Maybe UtxoMap
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Index (Map CardanoAddress UtxoMap)
+-&gt; Lens'
+     (Map CardanoAddress UtxoMap)
+     (Maybe (IxValue (Map CardanoAddress UtxoMap)))
+forall m. At m =&gt; Index m -&gt; Lens' m (Maybe (IxValue m))
+</span><span class="hs-identifier hs-var">at</span></span><span> </span><span class="annot"><span class="annottext">Index (Map CardanoAddress UtxoMap)
+Index AddressMap
+</span><a href="#local-6989586621679744480"><span class="hs-identifier hs-var">idx</span></a></span><span>
+</span><span id="line-75"></span><span>        </span><span id="local-6989586621679744478"><span class="annot"><span class="annottext">s :: AddressMap -&gt; Maybe UtxoMap -&gt; AddressMap
+</span><a href="#local-6989586621679744478"><span class="hs-identifier hs-var hs-var">s</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.AddressMap.html#AddressMap"><span class="hs-identifier hs-type">AddressMap</span></a></span><span> </span><span id="local-6989586621679744476"><span class="annot"><span class="annottext">Map CardanoAddress UtxoMap
+</span><a href="#local-6989586621679744476"><span class="hs-identifier hs-var">mp</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679744475"><span class="annot"><span class="annottext">Maybe UtxoMap
+</span><a href="#local-6989586621679744475"><span class="hs-identifier hs-var">utxo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map CardanoAddress UtxoMap -&gt; AddressMap
+</span><a href="Ledger.AddressMap.html#AddressMap"><span class="hs-identifier hs-var">AddressMap</span></a></span><span> </span><span class="annot"><span class="annottext">(Map CardanoAddress UtxoMap -&gt; AddressMap)
+-&gt; Map CardanoAddress UtxoMap -&gt; AddressMap
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Map CardanoAddress UtxoMap
+</span><a href="#local-6989586621679744476"><span class="hs-identifier hs-var">mp</span></a></span><span> </span><span class="annot"><span class="annottext">Map CardanoAddress UtxoMap
+-&gt; (Map CardanoAddress UtxoMap -&gt; Map CardanoAddress UtxoMap)
+-&gt; Map CardanoAddress UtxoMap
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Index (Map CardanoAddress UtxoMap)
+-&gt; Lens'
+     (Map CardanoAddress UtxoMap)
+     (Maybe (IxValue (Map CardanoAddress UtxoMap)))
+forall m. At m =&gt; Index m -&gt; Lens' m (Maybe (IxValue m))
+</span><span class="hs-identifier hs-var">at</span></span><span> </span><span class="annot"><span class="annottext">Index (Map CardanoAddress UtxoMap)
+Index AddressMap
+</span><a href="#local-6989586621679744480"><span class="hs-identifier hs-var">idx</span></a></span><span> </span><span class="annot"><span class="annottext">((Maybe UtxoMap -&gt; Identity (Maybe UtxoMap))
+ -&gt; Map CardanoAddress UtxoMap
+ -&gt; Identity (Map CardanoAddress UtxoMap))
+-&gt; Maybe UtxoMap
+-&gt; Map CardanoAddress UtxoMap
+-&gt; Map CardanoAddress UtxoMap
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Maybe UtxoMap
+</span><a href="#local-6989586621679744475"><span class="hs-identifier hs-var">utxo</span></a></span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span class="hs-comment">-- | Get the funds available at a particular address.</span><span>
+</span><span id="line-78"></span><span class="annot"><a href="Ledger.AddressMap.html#fundsAt"><span class="hs-identifier hs-type">fundsAt</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Ledger.Address.html#CardanoAddress"><span class="hs-identifier hs-type">CardanoAddress</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Lens'</span></span><span> </span><span class="annot"><a href="Ledger.AddressMap.html#AddressMap"><span class="hs-identifier hs-type">AddressMap</span></a></span><span> </span><span class="annot"><a href="Ledger.AddressMap.html#UtxoMap"><span class="hs-identifier hs-type">UtxoMap</span></a></span><span>
+</span><span id="line-79"></span><span id="fundsAt"><span class="annot"><span class="annottext">fundsAt :: CardanoAddress -&gt; Lens' AddressMap UtxoMap
+</span><a href="Ledger.AddressMap.html#fundsAt"><span class="hs-identifier hs-var hs-var">fundsAt</span></a></span></span><span> </span><span id="local-6989586621679744474"><span class="annot"><span class="annottext">CardanoAddress
+</span><a href="#local-6989586621679744474"><span class="hs-identifier hs-var">addr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Index AddressMap -&gt; Lens' AddressMap (Maybe (IxValue AddressMap))
+forall m. At m =&gt; Index m -&gt; Lens' m (Maybe (IxValue m))
+</span><span class="hs-identifier hs-var">at</span></span><span> </span><span class="annot"><span class="annottext">Index AddressMap
+CardanoAddress
+</span><a href="#local-6989586621679744474"><span class="hs-identifier hs-var">addr</span></a></span><span> </span><span class="annot"><span class="annottext">((Maybe UtxoMap -&gt; f (Maybe UtxoMap))
+ -&gt; AddressMap -&gt; f AddressMap)
+-&gt; ((UtxoMap -&gt; f UtxoMap) -&gt; Maybe UtxoMap -&gt; f (Maybe UtxoMap))
+-&gt; (UtxoMap -&gt; f UtxoMap)
+-&gt; AddressMap
+-&gt; f AddressMap
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">UtxoMap -&gt; Iso' (Maybe UtxoMap) UtxoMap
+forall a. Eq a =&gt; a -&gt; Iso' (Maybe a) a
+</span><span class="hs-identifier hs-var">non</span></span><span> </span><span class="annot"><span class="annottext">UtxoMap
+forall a. Monoid a =&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-80"></span><span>
+</span><span id="line-81"></span><span class="hs-comment">-- | Add an address with no unspent outputs to a map. If the address already</span><span>
+</span><span id="line-82"></span><span class="hs-comment">--   exists, do nothing.</span><span>
+</span><span id="line-83"></span><span class="annot"><a href="Ledger.AddressMap.html#addAddress"><span class="hs-identifier hs-type">addAddress</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Ledger.Address.html#CardanoAddress"><span class="hs-identifier hs-type">CardanoAddress</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Ledger.AddressMap.html#AddressMap"><span class="hs-identifier hs-type">AddressMap</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Ledger.AddressMap.html#AddressMap"><span class="hs-identifier hs-type">AddressMap</span></a></span><span>
+</span><span id="line-84"></span><span id="addAddress"><span class="annot"><span class="annottext">addAddress :: CardanoAddress -&gt; AddressMap -&gt; AddressMap
+</span><a href="Ledger.AddressMap.html#addAddress"><span class="hs-identifier hs-var hs-var">addAddress</span></a></span></span><span> </span><span id="local-6989586621679744473"><span class="annot"><span class="annottext">CardanoAddress
+</span><a href="#local-6989586621679744473"><span class="hs-identifier hs-var">adr</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.AddressMap.html#AddressMap"><span class="hs-identifier hs-type">AddressMap</span></a></span><span> </span><span id="local-6989586621679744472"><span class="annot"><span class="annottext">Map CardanoAddress UtxoMap
+</span><a href="#local-6989586621679744472"><span class="hs-identifier hs-var">mp</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map CardanoAddress UtxoMap -&gt; AddressMap
+</span><a href="Ledger.AddressMap.html#AddressMap"><span class="hs-identifier hs-var">AddressMap</span></a></span><span> </span><span class="annot"><span class="annottext">(Map CardanoAddress UtxoMap -&gt; AddressMap)
+-&gt; Map CardanoAddress UtxoMap -&gt; AddressMap
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe UtxoMap -&gt; Maybe UtxoMap)
+-&gt; CardanoAddress
+-&gt; Map CardanoAddress UtxoMap
+-&gt; Map CardanoAddress UtxoMap
+forall k a.
+Ord k =&gt;
+(Maybe a -&gt; Maybe a) -&gt; k -&gt; Map k a -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.alter</span></span><span> </span><span class="annot"><span class="annottext">Maybe UtxoMap -&gt; Maybe UtxoMap
+</span><a href="#local-6989586621679744470"><span class="hs-identifier hs-var">upd</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoAddress
+</span><a href="#local-6989586621679744473"><span class="hs-identifier hs-var">adr</span></a></span><span> </span><span class="annot"><span class="annottext">Map CardanoAddress UtxoMap
+</span><a href="#local-6989586621679744472"><span class="hs-identifier hs-var">mp</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-85"></span><span>    </span><span class="annot"><a href="#local-6989586621679744470"><span class="hs-identifier hs-type">upd</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Ledger.AddressMap.html#UtxoMap"><span class="hs-identifier hs-type">UtxoMap</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Ledger.AddressMap.html#UtxoMap"><span class="hs-identifier hs-type">UtxoMap</span></a></span><span>
+</span><span id="line-86"></span><span>    </span><span id="local-6989586621679744470"><span class="annot"><span class="annottext">upd :: Maybe UtxoMap -&gt; Maybe UtxoMap
+</span><a href="#local-6989586621679744470"><span class="hs-identifier hs-var hs-var">upd</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe UtxoMap
+-&gt; (UtxoMap -&gt; Maybe UtxoMap) -&gt; Maybe UtxoMap -&gt; Maybe UtxoMap
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">UtxoMap -&gt; Maybe UtxoMap
+forall a. a -&gt; Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">UtxoMap
+forall k a. Map k a
+</span><span class="hs-identifier hs-var">Map.empty</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">UtxoMap -&gt; Maybe UtxoMap
+forall a. a -&gt; Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span class="hs-comment">-- | Add a list of 'Address'es with no unspent outputs to the map.</span><span>
+</span><span id="line-89"></span><span class="annot"><a href="Ledger.AddressMap.html#addAddresses"><span class="hs-identifier hs-type">addAddresses</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Ledger.Address.html#CardanoAddress"><span class="hs-identifier hs-type">CardanoAddress</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Ledger.AddressMap.html#AddressMap"><span class="hs-identifier hs-type">AddressMap</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Ledger.AddressMap.html#AddressMap"><span class="hs-identifier hs-type">AddressMap</span></a></span><span>
+</span><span id="line-90"></span><span id="addAddresses"><span class="annot"><span class="annottext">addAddresses :: [CardanoAddress] -&gt; AddressMap -&gt; AddressMap
+</span><a href="Ledger.AddressMap.html#addAddresses"><span class="hs-identifier hs-var hs-var">addAddresses</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(AddressMap -&gt; [CardanoAddress] -&gt; AddressMap)
+-&gt; [CardanoAddress] -&gt; AddressMap -&gt; AddressMap
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(CardanoAddress -&gt; AddressMap -&gt; AddressMap)
+-&gt; AddressMap -&gt; [CardanoAddress] -&gt; AddressMap
+forall (t :: * -&gt; *) a b.
+Foldable t =&gt;
+(a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">foldr</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoAddress -&gt; AddressMap -&gt; AddressMap
+</span><a href="Ledger.AddressMap.html#addAddress"><span class="hs-identifier hs-var">addAddress</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-91"></span><span>
+</span><span id="line-92"></span><span class="hs-comment">-- | The total value of unspent outputs (which the map knows about) at an address.</span><span>
+</span><span id="line-93"></span><span class="annot"><a href="Ledger.AddressMap.html#values"><span class="hs-identifier hs-type">values</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Ledger.AddressMap.html#AddressMap"><span class="hs-identifier hs-type">AddressMap</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="Ledger.Address.html#CardanoAddress"><span class="hs-identifier hs-type">CardanoAddress</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.Value</span></span><span>
+</span><span id="line-94"></span><span id="values"><span class="annot"><span class="annottext">values :: AddressMap -&gt; Map CardanoAddress Value
+</span><a href="Ledger.AddressMap.html#values"><span class="hs-identifier hs-var hs-var">values</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(UtxoMap -&gt; Value)
+-&gt; Map CardanoAddress UtxoMap -&gt; Map CardanoAddress Value
+forall a b k. (a -&gt; b) -&gt; Map k a -&gt; Map k b
+</span><span class="hs-identifier hs-var">Map.map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map TxIn Value -&gt; Value
+forall (t :: * -&gt; *) m. (Foldable t, Monoid m) =&gt; t m -&gt; m
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fold</span></a></span><span> </span><span class="annot"><span class="annottext">(Map TxIn Value -&gt; Value)
+-&gt; (UtxoMap -&gt; Map TxIn Value) -&gt; UtxoMap -&gt; Value
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">((CardanoTx, TxOut) -&gt; Value) -&gt; UtxoMap -&gt; Map TxIn Value
+forall a b k. (a -&gt; b) -&gt; Map k a -&gt; Map k b
+</span><span class="hs-identifier hs-var">Map.map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxOut -&gt; Value
+</span><a href="Ledger.Tx.Internal.html#txOutValue"><span class="hs-identifier hs-var">txOutValue</span></a></span><span> </span><span class="annot"><span class="annottext">(TxOut -&gt; Value)
+-&gt; ((CardanoTx, TxOut) -&gt; TxOut) -&gt; (CardanoTx, TxOut) -&gt; Value
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(CardanoTx, TxOut) -&gt; TxOut
+forall a b. (a, b) -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">snd</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Map CardanoAddress UtxoMap -&gt; Map CardanoAddress Value)
+-&gt; (AddressMap -&gt; Map CardanoAddress UtxoMap)
+-&gt; AddressMap
+-&gt; Map CardanoAddress Value
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">AddressMap -&gt; Map CardanoAddress UtxoMap
+</span><a href="Ledger.AddressMap.html#getAddressMap"><span class="hs-identifier hs-var hs-var">getAddressMap</span></a></span><span>
+</span><span id="line-95"></span><span>
+</span><span id="line-96"></span><span class="hs-comment">-- | Walk through the address map, applying an effectful function to each entry.</span><span>
+</span><span id="line-97"></span><span id="local-6989586621679744465"><span class="annot"><a href="Ledger.AddressMap.html#traverseWithKey"><span class="hs-identifier hs-type">traverseWithKey</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-98"></span><span>     </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Applicative</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679744465"><span class="hs-identifier hs-type">f</span></a></span><span>
+</span><span id="line-99"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Address.html#CardanoAddress"><span class="hs-identifier hs-type">CardanoAddress</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.TxIn</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Tx.CardanoAPI.Internal.html#CardanoTx"><span class="hs-identifier hs-type">CardanoTx</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679744465"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.TxIn</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Tx.CardanoAPI.Internal.html#CardanoTx"><span class="hs-identifier hs-type">CardanoTx</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-100"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Ledger.AddressMap.html#AddressMap"><span class="hs-identifier hs-type">AddressMap</span></a></span><span>
+</span><span id="line-101"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679744465"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="Ledger.AddressMap.html#AddressMap"><span class="hs-identifier hs-type">AddressMap</span></a></span></span><span>
+</span><span id="line-102"></span><span id="traverseWithKey"><span class="annot"><span class="annottext">traverseWithKey :: (CardanoAddress -&gt; UtxoMap -&gt; f UtxoMap)
+-&gt; AddressMap -&gt; f AddressMap
+</span><a href="Ledger.AddressMap.html#traverseWithKey"><span class="hs-identifier hs-var hs-var">traverseWithKey</span></a></span></span><span> </span><span id="local-6989586621679744464"><span class="annot"><span class="annottext">CardanoAddress -&gt; UtxoMap -&gt; f UtxoMap
+</span><a href="#local-6989586621679744464"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.AddressMap.html#AddressMap"><span class="hs-identifier hs-type">AddressMap</span></a></span><span> </span><span id="local-6989586621679744463"><span class="annot"><span class="annottext">Map CardanoAddress UtxoMap
+</span><a href="#local-6989586621679744463"><span class="hs-identifier hs-var">m</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map CardanoAddress UtxoMap -&gt; AddressMap
+</span><a href="Ledger.AddressMap.html#AddressMap"><span class="hs-identifier hs-var">AddressMap</span></a></span><span> </span><span class="annot"><span class="annottext">(Map CardanoAddress UtxoMap -&gt; AddressMap)
+-&gt; f (Map CardanoAddress UtxoMap) -&gt; f AddressMap
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(CardanoAddress -&gt; UtxoMap -&gt; f UtxoMap)
+-&gt; Map CardanoAddress UtxoMap -&gt; f (Map CardanoAddress UtxoMap)
+forall (t :: * -&gt; *) k a b.
+Applicative t =&gt;
+(k -&gt; a -&gt; t b) -&gt; Map k a -&gt; t (Map k b)
+</span><span class="hs-identifier hs-var">Map.traverseWithKey</span></span><span> </span><span class="annot"><span class="annottext">CardanoAddress -&gt; UtxoMap -&gt; f UtxoMap
+</span><a href="#local-6989586621679744464"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Map CardanoAddress UtxoMap
+</span><a href="#local-6989586621679744463"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-103"></span><span>
+</span><span id="line-104"></span><span class="hs-comment">-- | Create an 'AddressMap' with the unspent outputs of a single transaction.</span><span>
+</span><span id="line-105"></span><span class="annot"><a href="Ledger.AddressMap.html#fromTxOutputs"><span class="hs-identifier hs-type">fromTxOutputs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Ledger.Index.Internal.html#OnChainTx"><span class="hs-identifier hs-type">OnChainTx</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Ledger.AddressMap.html#AddressMap"><span class="hs-identifier hs-type">AddressMap</span></a></span><span>
+</span><span id="line-106"></span><span id="fromTxOutputs"><span class="annot"><span class="annottext">fromTxOutputs :: OnChainTx -&gt; AddressMap
+</span><a href="Ledger.AddressMap.html#fromTxOutputs"><span class="hs-identifier hs-var hs-var">fromTxOutputs</span></a></span></span><span> </span><span id="local-6989586621679744460"><span class="annot"><span class="annottext">OnChainTx
+</span><a href="#local-6989586621679744460"><span class="hs-identifier hs-var">tx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-107"></span><span>    </span><span class="annot"><span class="annottext">Map CardanoAddress UtxoMap -&gt; AddressMap
+</span><a href="Ledger.AddressMap.html#AddressMap"><span class="hs-identifier hs-var">AddressMap</span></a></span><span> </span><span class="annot"><span class="annottext">(Map CardanoAddress UtxoMap -&gt; AddressMap)
+-&gt; (OnChainTx -&gt; Map CardanoAddress UtxoMap)
+-&gt; OnChainTx
+-&gt; AddressMap
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(UtxoMap -&gt; UtxoMap -&gt; UtxoMap)
+-&gt; [(CardanoAddress, UtxoMap)] -&gt; Map CardanoAddress UtxoMap
+forall k a. Ord k =&gt; (a -&gt; a -&gt; a) -&gt; [(k, a)] -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.fromListWith</span></span><span> </span><span class="annot"><span class="annottext">UtxoMap -&gt; UtxoMap -&gt; UtxoMap
+forall k a. Ord k =&gt; Map k a -&gt; Map k a -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.union</span></span><span> </span><span class="annot"><span class="annottext">([(CardanoAddress, UtxoMap)] -&gt; Map CardanoAddress UtxoMap)
+-&gt; (OnChainTx -&gt; [(CardanoAddress, UtxoMap)])
+-&gt; OnChainTx
+-&gt; Map CardanoAddress UtxoMap
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">((TxIn, TxOut) -&gt; (CardanoAddress, UtxoMap))
+-&gt; [(TxIn, TxOut)] -&gt; [(CardanoAddress, UtxoMap)]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">(TxIn, TxOut) -&gt; (CardanoAddress, UtxoMap)
+</span><a href="#local-6989586621679744458"><span class="hs-identifier hs-var">mkUtxo</span></a></span><span> </span><span class="annot"><span class="annottext">([(TxIn, TxOut)] -&gt; [(CardanoAddress, UtxoMap)])
+-&gt; (OnChainTx -&gt; [(TxIn, TxOut)])
+-&gt; OnChainTx
+-&gt; [(CardanoAddress, UtxoMap)]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Map TxIn TxOut -&gt; [(TxIn, TxOut)]
+forall k a. Map k a -&gt; [(k, a)]
+</span><span class="hs-identifier hs-var">Map.toList</span></span><span> </span><span class="annot"><span class="annottext">(Map TxIn TxOut -&gt; [(TxIn, TxOut)])
+-&gt; (OnChainTx -&gt; Map TxIn TxOut) -&gt; OnChainTx -&gt; [(TxIn, TxOut)]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">OnChainTx -&gt; Map TxIn TxOut
+</span><a href="Ledger.Blockchain.html#outputsProduced"><span class="hs-identifier hs-var">outputsProduced</span></a></span><span> </span><span class="annot"><span class="annottext">(OnChainTx -&gt; AddressMap) -&gt; OnChainTx -&gt; AddressMap
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">OnChainTx
+</span><a href="#local-6989586621679744460"><span class="hs-identifier hs-var">tx</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-108"></span><span>    </span><span id="local-6989586621679744458"><span class="annot"><span class="annottext">mkUtxo :: (TxIn, TxOut) -&gt; (CardanoAddress, UtxoMap)
+</span><a href="#local-6989586621679744458"><span class="hs-identifier hs-var hs-var">mkUtxo</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679744456"><span class="annot"><span class="annottext">TxIn
+</span><a href="#local-6989586621679744456"><span class="hs-identifier hs-var">ref</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679744455"><span class="annot"><span class="annottext">TxOut
+</span><a href="#local-6989586621679744455"><span class="hs-identifier hs-var">txo</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxOut -&gt; CardanoAddress
+</span><a href="Ledger.Tx.Internal.html#txOutAddress"><span class="hs-identifier hs-var">txOutAddress</span></a></span><span> </span><span class="annot"><span class="annottext">TxOut
+</span><a href="#local-6989586621679744455"><span class="hs-identifier hs-var">txo</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TxIn -&gt; (CardanoTx, TxOut) -&gt; UtxoMap
+forall k a. k -&gt; a -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.singleton</span></span><span> </span><span class="annot"><span class="annottext">TxIn
+</span><a href="#local-6989586621679744456"><span class="hs-identifier hs-var">ref</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">OnChainTx -&gt; CardanoTx
+</span><a href="Ledger.Index.Internal.html#unOnChain"><span class="hs-identifier hs-var">unOnChain</span></a></span><span> </span><span class="annot"><span class="annottext">OnChainTx
+</span><a href="#local-6989586621679744460"><span class="hs-identifier hs-var">tx</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TxOut
+</span><a href="#local-6989586621679744455"><span class="hs-identifier hs-var">txo</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-109"></span><span>
+</span><span id="line-110"></span><span class="hs-comment">-- | Create a map of unspent transaction outputs to their addresses (the</span><span>
+</span><span id="line-111"></span><span class="hs-comment">-- &quot;inverse&quot; of an 'AddressMap', without the values)</span><span>
+</span><span id="line-112"></span><span class="annot"><a href="Ledger.AddressMap.html#knownAddresses"><span class="hs-identifier hs-type">knownAddresses</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Ledger.AddressMap.html#AddressMap"><span class="hs-identifier hs-type">AddressMap</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.TxIn</span></span><span> </span><span class="annot"><a href="Ledger.Address.html#CardanoAddress"><span class="hs-identifier hs-type">CardanoAddress</span></a></span><span>
+</span><span id="line-113"></span><span id="knownAddresses"><span class="annot"><span class="annottext">knownAddresses :: AddressMap -&gt; Map TxIn CardanoAddress
+</span><a href="Ledger.AddressMap.html#knownAddresses"><span class="hs-identifier hs-var hs-var">knownAddresses</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(TxIn, CardanoAddress)] -&gt; Map TxIn CardanoAddress
+forall k a. Ord k =&gt; [(k, a)] -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.fromList</span></span><span> </span><span class="annot"><span class="annottext">([(TxIn, CardanoAddress)] -&gt; Map TxIn CardanoAddress)
+-&gt; (AddressMap -&gt; [(TxIn, CardanoAddress)])
+-&gt; AddressMap
+-&gt; Map TxIn CardanoAddress
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[(CardanoAddress, UtxoMap)] -&gt; [(TxIn, CardanoAddress)]
+</span><a href="#local-6989586621679744452"><span class="hs-identifier hs-var">unRef</span></a></span><span> </span><span class="annot"><span class="annottext">([(CardanoAddress, UtxoMap)] -&gt; [(TxIn, CardanoAddress)])
+-&gt; (AddressMap -&gt; [(CardanoAddress, UtxoMap)])
+-&gt; AddressMap
+-&gt; [(TxIn, CardanoAddress)]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Map CardanoAddress UtxoMap -&gt; [(CardanoAddress, UtxoMap)]
+forall k a. Map k a -&gt; [(k, a)]
+</span><span class="hs-identifier hs-var">Map.toList</span></span><span> </span><span class="annot"><span class="annottext">(Map CardanoAddress UtxoMap -&gt; [(CardanoAddress, UtxoMap)])
+-&gt; (AddressMap -&gt; Map CardanoAddress UtxoMap)
+-&gt; AddressMap
+-&gt; [(CardanoAddress, UtxoMap)]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">AddressMap -&gt; Map CardanoAddress UtxoMap
+</span><a href="Ledger.AddressMap.html#getAddressMap"><span class="hs-identifier hs-var hs-var">getAddressMap</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-114"></span><span>    </span><span class="annot"><a href="#local-6989586621679744452"><span class="hs-identifier hs-type">unRef</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Address.html#CardanoAddress"><span class="hs-identifier hs-type">CardanoAddress</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.TxIn</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Tx.CardanoAPI.Internal.html#CardanoTx"><span class="hs-identifier hs-type">CardanoTx</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">C.TxIn</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Address.html#CardanoAddress"><span class="hs-identifier hs-type">CardanoAddress</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-115"></span><span>    </span><span id="local-6989586621679744452"><span class="annot"><span class="annottext">unRef :: [(CardanoAddress, UtxoMap)] -&gt; [(TxIn, CardanoAddress)]
+</span><a href="#local-6989586621679744452"><span class="hs-identifier hs-var hs-var">unRef</span></a></span></span><span> </span><span id="local-6989586621679744451"><span class="annot"><span class="annottext">[(CardanoAddress, UtxoMap)]
+</span><a href="#local-6989586621679744451"><span class="hs-identifier hs-var">lst</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-116"></span><span>        </span><span class="hs-special">(</span><span id="local-6989586621679744450"><span class="annot"><span class="annottext">CardanoAddress
+</span><a href="#local-6989586621679744450"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679744449"><span class="annot"><span class="annottext">UtxoMap
+</span><a href="#local-6989586621679744449"><span class="hs-identifier hs-var">outRefs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[(CardanoAddress, UtxoMap)]
+</span><a href="#local-6989586621679744451"><span class="hs-identifier hs-var">lst</span></a></span><span>
+</span><span id="line-117"></span><span>        </span><span class="hs-special">(</span><span id="local-6989586621679744448"><span class="annot"><span class="annottext">TxIn
+</span><a href="#local-6989586621679744448"><span class="hs-identifier hs-var">rf</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(CardanoTx, TxOut)
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">UtxoMap -&gt; [(TxIn, (CardanoTx, TxOut))]
+forall k a. Map k a -&gt; [(k, a)]
+</span><span class="hs-identifier hs-var">Map.toList</span></span><span> </span><span class="annot"><span class="annottext">UtxoMap
+</span><a href="#local-6989586621679744449"><span class="hs-identifier hs-var">outRefs</span></a></span><span>
+</span><span id="line-118"></span><span>        </span><span class="annot"><span class="annottext">(TxIn, CardanoAddress) -&gt; [(TxIn, CardanoAddress)]
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxIn
+</span><a href="#local-6989586621679744448"><span class="hs-identifier hs-var">rf</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">CardanoAddress
+</span><a href="#local-6989586621679744450"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-119"></span><span>
+</span><span id="line-120"></span><span class="hs-comment">-- | Update an 'AddressMap' with the inputs and outputs of a new</span><span>
+</span><span id="line-121"></span><span class="hs-comment">-- transaction. @updateAddresses@ does /not/ add or remove any keys from the map.</span><span>
+</span><span id="line-122"></span><span class="annot"><a href="Ledger.AddressMap.html#updateAddresses"><span class="hs-identifier hs-type">updateAddresses</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Ledger.Index.Internal.html#OnChainTx"><span class="hs-identifier hs-type">OnChainTx</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Ledger.AddressMap.html#AddressMap"><span class="hs-identifier hs-type">AddressMap</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Ledger.AddressMap.html#AddressMap"><span class="hs-identifier hs-type">AddressMap</span></a></span><span>
+</span><span id="line-123"></span><span id="updateAddresses"><span class="annot"><span class="annottext">updateAddresses :: OnChainTx -&gt; AddressMap -&gt; AddressMap
+</span><a href="Ledger.AddressMap.html#updateAddresses"><span class="hs-identifier hs-var hs-var">updateAddresses</span></a></span></span><span> </span><span id="local-6989586621679744447"><span class="annot"><span class="annottext">OnChainTx
+</span><a href="#local-6989586621679744447"><span class="hs-identifier hs-var">tx</span></a></span></span><span> </span><span id="local-6989586621679744446"><span class="annot"><span class="annottext">AddressMap
+</span><a href="#local-6989586621679744446"><span class="hs-identifier hs-var">utxo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map CardanoAddress UtxoMap -&gt; AddressMap
+</span><a href="Ledger.AddressMap.html#AddressMap"><span class="hs-identifier hs-var">AddressMap</span></a></span><span> </span><span class="annot"><span class="annottext">(Map CardanoAddress UtxoMap -&gt; AddressMap)
+-&gt; Map CardanoAddress UtxoMap -&gt; AddressMap
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(CardanoAddress -&gt; UtxoMap -&gt; UtxoMap)
+-&gt; Map CardanoAddress UtxoMap -&gt; Map CardanoAddress UtxoMap
+forall k a b. (k -&gt; a -&gt; b) -&gt; Map k a -&gt; Map k b
+</span><span class="hs-identifier hs-var">Map.mapWithKey</span></span><span> </span><span class="annot"><span class="annottext">CardanoAddress -&gt; UtxoMap -&gt; UtxoMap
+</span><a href="#local-6989586621679744444"><span class="hs-identifier hs-var">upd</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AddressMap -&gt; Map CardanoAddress UtxoMap
+</span><a href="Ledger.AddressMap.html#getAddressMap"><span class="hs-identifier hs-var hs-var">getAddressMap</span></a></span><span> </span><span class="annot"><span class="annottext">AddressMap
+</span><a href="#local-6989586621679744446"><span class="hs-identifier hs-var">utxo</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-124"></span><span>    </span><span class="hs-comment">-- adds the newly produced outputs, and removes the consumed outputs, for</span><span>
+</span><span id="line-125"></span><span>    </span><span class="hs-comment">-- an address `adr`</span><span>
+</span><span id="line-126"></span><span>    </span><span class="annot"><a href="#local-6989586621679744444"><span class="hs-identifier hs-type">upd</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Ledger.Address.html#CardanoAddress"><span class="hs-identifier hs-type">CardanoAddress</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.TxIn</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Tx.CardanoAPI.Internal.html#CardanoTx"><span class="hs-identifier hs-type">CardanoTx</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.TxIn</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Tx.CardanoAPI.Internal.html#CardanoTx"><span class="hs-identifier hs-type">CardanoTx</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-127"></span><span>    </span><span id="local-6989586621679744444"><span class="annot"><span class="annottext">upd :: CardanoAddress -&gt; UtxoMap -&gt; UtxoMap
+</span><a href="#local-6989586621679744444"><span class="hs-identifier hs-var hs-var">upd</span></a></span></span><span> </span><span id="local-6989586621679744443"><span class="annot"><span class="annottext">CardanoAddress
+</span><a href="#local-6989586621679744443"><span class="hs-identifier hs-var">adr</span></a></span></span><span> </span><span id="local-6989586621679744442"><span class="annot"><span class="annottext">UtxoMap
+</span><a href="#local-6989586621679744442"><span class="hs-identifier hs-var">mp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UtxoMap -&gt; UtxoMap -&gt; UtxoMap
+forall k a. Ord k =&gt; Map k a -&gt; Map k a -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.union</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CardanoAddress -&gt; UtxoMap
+</span><a href="#local-6989586621679744441"><span class="hs-identifier hs-var">producedAt</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoAddress
+</span><a href="#local-6989586621679744443"><span class="hs-identifier hs-var">adr</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">UtxoMap
+</span><a href="#local-6989586621679744442"><span class="hs-identifier hs-var">mp</span></a></span><span> </span><span class="annot"><span class="annottext">UtxoMap -&gt; Set TxIn -&gt; UtxoMap
+forall k a. Ord k =&gt; Map k a -&gt; Set k -&gt; Map k a
+</span><span class="hs-operator hs-var">`Map.withoutKeys`</span></span><span> </span><span class="annot"><span class="annottext">CardanoAddress -&gt; Set TxIn
+</span><a href="#local-6989586621679744439"><span class="hs-identifier hs-var">consumedFrom</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoAddress
+</span><a href="#local-6989586621679744443"><span class="hs-identifier hs-var">adr</span></a></span><span>
+</span><span id="line-128"></span><span>
+</span><span id="line-129"></span><span>    </span><span class="hs-comment">-- The TxOutRefs produced by the transaction, for a given address</span><span>
+</span><span id="line-130"></span><span>    </span><span class="annot"><a href="#local-6989586621679744441"><span class="hs-identifier hs-type">producedAt</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Ledger.Address.html#CardanoAddress"><span class="hs-identifier hs-type">CardanoAddress</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.TxIn</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Tx.CardanoAPI.Internal.html#CardanoTx"><span class="hs-identifier hs-type">CardanoTx</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Tx.Internal.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-131"></span><span>    </span><span id="local-6989586621679744441"><span class="annot"><span class="annottext">producedAt :: CardanoAddress -&gt; UtxoMap
+</span><a href="#local-6989586621679744441"><span class="hs-identifier hs-var hs-var">producedAt</span></a></span></span><span> </span><span id="local-6989586621679744438"><span class="annot"><span class="annottext">CardanoAddress
+</span><a href="#local-6989586621679744438"><span class="hs-identifier hs-var">adr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UtxoMap -&gt; CardanoAddress -&gt; Map CardanoAddress UtxoMap -&gt; UtxoMap
+forall k a. Ord k =&gt; a -&gt; k -&gt; Map k a -&gt; a
+</span><span class="hs-identifier hs-var">Map.findWithDefault</span></span><span> </span><span class="annot"><span class="annottext">UtxoMap
+forall a. Monoid a =&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoAddress
+</span><a href="#local-6989586621679744438"><span class="hs-identifier hs-var">adr</span></a></span><span> </span><span class="annot"><span class="annottext">Map CardanoAddress UtxoMap
+</span><a href="#local-6989586621679744436"><span class="hs-identifier hs-var">outputs</span></a></span><span>
+</span><span id="line-132"></span><span>
+</span><span id="line-133"></span><span>    </span><span class="hs-comment">-- The TxOutRefs consumed by the transaction, for a given address</span><span>
+</span><span id="line-134"></span><span>    </span><span class="annot"><a href="#local-6989586621679744439"><span class="hs-identifier hs-type">consumedFrom</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Ledger.Address.html#CardanoAddress"><span class="hs-identifier hs-type">CardanoAddress</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Set.Set</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.TxIn</span></span><span>
+</span><span id="line-135"></span><span>    </span><span id="local-6989586621679744439"><span class="annot"><span class="annottext">consumedFrom :: CardanoAddress -&gt; Set TxIn
+</span><a href="#local-6989586621679744439"><span class="hs-identifier hs-var hs-var">consumedFrom</span></a></span></span><span> </span><span id="local-6989586621679744435"><span class="annot"><span class="annottext">CardanoAddress
+</span><a href="#local-6989586621679744435"><span class="hs-identifier hs-var">adr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Set TxIn
+-&gt; CardanoAddress -&gt; Map CardanoAddress (Set TxIn) -&gt; Set TxIn
+forall k a. Ord k =&gt; a -&gt; k -&gt; Map k a -&gt; a
+</span><span class="hs-identifier hs-var">Map.findWithDefault</span></span><span> </span><span class="annot"><span class="annottext">Set TxIn
+forall a. Monoid a =&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoAddress
+</span><a href="#local-6989586621679744435"><span class="hs-identifier hs-var">adr</span></a></span><span> </span><span class="annot"><span class="annottext">Map CardanoAddress (Set TxIn)
+</span><a href="#local-6989586621679744434"><span class="hs-identifier hs-var">consumedInputs</span></a></span><span>
+</span><span id="line-136"></span><span>
+</span><span id="line-137"></span><span>    </span><span class="annot"><a href="Ledger.AddressMap.html#AddressMap"><span class="hs-identifier hs-type">AddressMap</span></a></span><span> </span><span id="local-6989586621679744436"><span class="annot"><span class="annottext">Map CardanoAddress UtxoMap
+</span><a href="#local-6989586621679744436"><span class="hs-identifier hs-var">outputs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OnChainTx -&gt; AddressMap
+</span><a href="Ledger.AddressMap.html#fromTxOutputs"><span class="hs-identifier hs-var">fromTxOutputs</span></a></span><span> </span><span class="annot"><span class="annottext">OnChainTx
+</span><a href="#local-6989586621679744447"><span class="hs-identifier hs-var">tx</span></a></span><span>
+</span><span id="line-138"></span><span>
+</span><span id="line-139"></span><span>    </span><span id="local-6989586621679744434"><span class="annot"><span class="annottext">consumedInputs :: Map CardanoAddress (Set TxIn)
+</span><a href="#local-6989586621679744434"><span class="hs-identifier hs-var hs-var">consumedInputs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map TxIn CardanoAddress
+-&gt; OnChainTx -&gt; Map CardanoAddress (Set TxIn)
+</span><a href="Ledger.AddressMap.html#inputs"><span class="hs-identifier hs-var">inputs</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AddressMap -&gt; Map TxIn CardanoAddress
+</span><a href="Ledger.AddressMap.html#knownAddresses"><span class="hs-identifier hs-var">knownAddresses</span></a></span><span> </span><span class="annot"><span class="annottext">AddressMap
+</span><a href="#local-6989586621679744446"><span class="hs-identifier hs-var">utxo</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">OnChainTx
+</span><a href="#local-6989586621679744447"><span class="hs-identifier hs-var">tx</span></a></span><span>
+</span><span id="line-140"></span><span>
+</span><span id="line-141"></span><span class="hs-comment">-- | Update an 'AddressMap' with the inputs and outputs of a new</span><span>
+</span><span id="line-142"></span><span class="hs-comment">-- transaction, including all addresses in the transaction.</span><span>
+</span><span id="line-143"></span><span class="annot"><a href="Ledger.AddressMap.html#updateAllAddresses"><span class="hs-identifier hs-type">updateAllAddresses</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Ledger.Index.Internal.html#OnChainTx"><span class="hs-identifier hs-type">OnChainTx</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Ledger.AddressMap.html#AddressMap"><span class="hs-identifier hs-type">AddressMap</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Ledger.AddressMap.html#AddressMap"><span class="hs-identifier hs-type">AddressMap</span></a></span><span>
+</span><span id="line-144"></span><span class="hs-comment">-- updateAddresses handles getting rid of spent outputs, so all we have to do is add in the</span><span>
+</span><span id="line-145"></span><span class="hs-comment">-- new things. We can do this by just merging in `fromTxOutputs`, which will have many of the</span><span>
+</span><span id="line-146"></span><span class="hs-comment">-- things that are already there, but also the new things.</span><span>
+</span><span id="line-147"></span><span id="updateAllAddresses"><span class="annot"><span class="annottext">updateAllAddresses :: OnChainTx -&gt; AddressMap -&gt; AddressMap
+</span><a href="Ledger.AddressMap.html#updateAllAddresses"><span class="hs-identifier hs-var hs-var">updateAllAddresses</span></a></span></span><span> </span><span id="local-6989586621679744432"><span class="annot"><span class="annottext">OnChainTx
+</span><a href="#local-6989586621679744432"><span class="hs-identifier hs-var">tx</span></a></span></span><span> </span><span id="local-6989586621679744431"><span class="annot"><span class="annottext">AddressMap
+</span><a href="#local-6989586621679744431"><span class="hs-identifier hs-var">utxo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OnChainTx -&gt; AddressMap -&gt; AddressMap
+</span><a href="Ledger.AddressMap.html#updateAddresses"><span class="hs-identifier hs-var">updateAddresses</span></a></span><span> </span><span class="annot"><span class="annottext">OnChainTx
+</span><a href="#local-6989586621679744432"><span class="hs-identifier hs-var">tx</span></a></span><span> </span><span class="annot"><span class="annottext">AddressMap
+</span><a href="#local-6989586621679744431"><span class="hs-identifier hs-var">utxo</span></a></span><span> </span><span class="annot"><span class="annottext">AddressMap -&gt; AddressMap -&gt; AddressMap
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">OnChainTx -&gt; AddressMap
+</span><a href="Ledger.AddressMap.html#fromTxOutputs"><span class="hs-identifier hs-var">fromTxOutputs</span></a></span><span> </span><span class="annot"><span class="annottext">OnChainTx
+</span><a href="#local-6989586621679744432"><span class="hs-identifier hs-var">tx</span></a></span><span>
+</span><span id="line-148"></span><span>
+</span><span id="line-149"></span><span class="hs-comment">-- | The inputs consumed by a transaction, indexed by address.</span><span>
+</span><span id="line-150"></span><span class="annot"><a href="Ledger.AddressMap.html#inputs"><span class="hs-identifier hs-type">inputs</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-151"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.TxIn</span></span><span> </span><span class="annot"><a href="Ledger.Address.html#CardanoAddress"><span class="hs-identifier hs-type">CardanoAddress</span></a></span><span>
+</span><span id="line-152"></span><span>    </span><span class="hs-comment">-- ^ A map of 'TxOutRef's to their 'Address'es</span><span>
+</span><span id="line-153"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Ledger.Index.Internal.html#OnChainTx"><span class="hs-identifier hs-type">OnChainTx</span></a></span><span>
+</span><span id="line-154"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="Ledger.Address.html#CardanoAddress"><span class="hs-identifier hs-type">CardanoAddress</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Set.Set</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.TxIn</span></span><span class="hs-special">)</span><span>
+</span><span id="line-155"></span><span id="inputs"><span class="annot"><span class="annottext">inputs :: Map TxIn CardanoAddress
+-&gt; OnChainTx -&gt; Map CardanoAddress (Set TxIn)
+</span><a href="Ledger.AddressMap.html#inputs"><span class="hs-identifier hs-var hs-var">inputs</span></a></span></span><span> </span><span id="local-6989586621679744430"><span class="annot"><span class="annottext">Map TxIn CardanoAddress
+</span><a href="#local-6989586621679744430"><span class="hs-identifier hs-var">addrs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Set TxIn -&gt; Set TxIn -&gt; Set TxIn)
+-&gt; [(CardanoAddress, Set TxIn)] -&gt; Map CardanoAddress (Set TxIn)
+forall k a. Ord k =&gt; (a -&gt; a -&gt; a) -&gt; [(k, a)] -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.fromListWith</span></span><span> </span><span class="annot"><span class="annottext">Set TxIn -&gt; Set TxIn -&gt; Set TxIn
+forall a. Ord a =&gt; Set a -&gt; Set a -&gt; Set a
+</span><span class="hs-identifier hs-var">Set.union</span></span><span>
+</span><span id="line-156"></span><span>    </span><span class="annot"><span class="annottext">([(CardanoAddress, Set TxIn)] -&gt; Map CardanoAddress (Set TxIn))
+-&gt; (OnChainTx -&gt; [(CardanoAddress, Set TxIn)])
+-&gt; OnChainTx
+-&gt; Map CardanoAddress (Set TxIn)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">((TxIn, CardanoAddress) -&gt; (CardanoAddress, Set TxIn))
+-&gt; [(TxIn, CardanoAddress)] -&gt; [(CardanoAddress, Set TxIn)]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(TxIn -&gt; Set TxIn)
+-&gt; (CardanoAddress, TxIn) -&gt; (CardanoAddress, Set TxIn)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">TxIn -&gt; Set TxIn
+forall a. a -&gt; Set a
+</span><span class="hs-identifier hs-var">Set.singleton</span></span><span> </span><span class="annot"><span class="annottext">((CardanoAddress, TxIn) -&gt; (CardanoAddress, Set TxIn))
+-&gt; ((TxIn, CardanoAddress) -&gt; (CardanoAddress, TxIn))
+-&gt; (TxIn, CardanoAddress)
+-&gt; (CardanoAddress, Set TxIn)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(TxIn, CardanoAddress) -&gt; (CardanoAddress, TxIn)
+forall a b. (a, b) -&gt; (b, a)
+</span><a href="Ledger.AddressMap.html#swap"><span class="hs-identifier hs-var">swap</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-157"></span><span>    </span><span class="annot"><span class="annottext">([(TxIn, CardanoAddress)] -&gt; [(CardanoAddress, Set TxIn)])
+-&gt; (OnChainTx -&gt; [(TxIn, CardanoAddress)])
+-&gt; OnChainTx
+-&gt; [(CardanoAddress, Set TxIn)]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(TxIn -&gt; Maybe (TxIn, CardanoAddress))
+-&gt; [TxIn] -&gt; [(TxIn, CardanoAddress)]
+forall a b. (a -&gt; Maybe b) -&gt; [a] -&gt; [b]
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">mapMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679744426"><span class="annot"><span class="annottext">TxIn
+</span><a href="#local-6989586621679744426"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(TxIn, Maybe CardanoAddress) -&gt; Maybe (TxIn, CardanoAddress)
+forall (t :: * -&gt; *) (m :: * -&gt; *) a.
+(Traversable t, Monad m) =&gt;
+t (m a) -&gt; m (t a)
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">sequence</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxIn
+</span><a href="#local-6989586621679744426"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TxIn -&gt; Map TxIn CardanoAddress -&gt; Maybe CardanoAddress
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Map.lookup</span></span><span> </span><span class="annot"><span class="annottext">TxIn
+</span><a href="#local-6989586621679744426"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">Map TxIn CardanoAddress
+</span><a href="#local-6989586621679744430"><span class="hs-identifier hs-var">addrs</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-158"></span><span>    </span><span class="annot"><span class="annottext">([TxIn] -&gt; [(TxIn, CardanoAddress)])
+-&gt; (OnChainTx -&gt; [TxIn]) -&gt; OnChainTx -&gt; [(TxIn, CardanoAddress)]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">OnChainTx -&gt; [TxIn]
+</span><a href="Ledger.Blockchain.html#consumableInputs"><span class="hs-identifier hs-var">consumableInputs</span></a></span><span>
+</span><span id="line-159"></span><span>
+</span><span id="line-160"></span><span id="local-6989586621679744600"><span id="local-6989586621679744601"><span class="annot"><a href="Ledger.AddressMap.html#swap"><span class="hs-identifier hs-type">swap</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679744601"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679744600"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679744600"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679744601"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-161"></span><span id="swap"><span class="annot"><span class="annottext">swap :: (a, b) -&gt; (b, a)
+</span><a href="Ledger.AddressMap.html#swap"><span class="hs-identifier hs-var hs-var">swap</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679744424"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679744424"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679744423"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679744423"><span class="hs-identifier hs-var">y</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679744423"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679744424"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-162"></span><span>
+</span><span id="line-163"></span><span class="hs-comment">-- | The unspent transaction outputs of the ledger as a whole.</span><span>
+</span><span id="line-164"></span><span class="annot"><a href="Ledger.AddressMap.html#fromChain"><span class="hs-identifier hs-type">fromChain</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Ledger.Blockchain.html#Blockchain"><span class="hs-identifier hs-type">Blockchain</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Ledger.AddressMap.html#AddressMap"><span class="hs-identifier hs-type">AddressMap</span></a></span><span>
+</span><span id="line-165"></span><span id="fromChain"><span class="annot"><span class="annottext">fromChain :: Blockchain -&gt; AddressMap
+</span><a href="Ledger.AddressMap.html#fromChain"><span class="hs-identifier hs-var hs-var">fromChain</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(OnChainTx -&gt; AddressMap -&gt; AddressMap)
+-&gt; AddressMap -&gt; [OnChainTx] -&gt; AddressMap
+forall (t :: * -&gt; *) a b.
+Foldable t =&gt;
+(a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">foldr</span></a></span><span> </span><span class="annot"><span class="annottext">OnChainTx -&gt; AddressMap -&gt; AddressMap
+</span><a href="Ledger.AddressMap.html#updateAllAddresses"><span class="hs-identifier hs-var">updateAllAddresses</span></a></span><span> </span><span class="annot"><span class="annottext">AddressMap
+forall a. Monoid a =&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="annot"><span class="annottext">([OnChainTx] -&gt; AddressMap)
+-&gt; (Blockchain -&gt; [OnChainTx]) -&gt; Blockchain -&gt; AddressMap
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Blockchain -&gt; [OnChainTx]
+forall (m :: * -&gt; *) a. Monad m =&gt; m (m a) -&gt; m a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">join</span></a></span><span>
+</span><span id="line-166"></span></pre></body></html>

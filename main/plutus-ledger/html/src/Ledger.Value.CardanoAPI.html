@@ -1,0 +1,391 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE NumericUnderscores #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# OPTIONS_GHC -fno-warn-orphans #-}</span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Ledger.Value.CardanoAPI</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-4"></span><span>    </span><span class="annot"><span class="hs-identifier">C.Value</span></span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">C.Lovelace</span></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">C.AssetId</span></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">C.PolicyId</span></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">C.AssetName</span></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">C.selectAsset</span></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">C.valueToList</span></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">C.valueFromList</span></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">C.selectLovelace</span></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">C.filterValue</span></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">C.negateValue</span></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Value.CardanoAPI.html#lovelaceToValue"><span class="hs-identifier">lovelaceToValue</span></a></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Value.CardanoAPI.html#lovelaceValueOf"><span class="hs-identifier">lovelaceValueOf</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Value.CardanoAPI.html#adaValueOf"><span class="hs-identifier">adaValueOf</span></a></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Value.CardanoAPI.html#isZero"><span class="hs-identifier">isZero</span></a></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Value.CardanoAPI.html#isAdaOnlyValue"><span class="hs-identifier">isAdaOnlyValue</span></a></span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Value.CardanoAPI.html#noAdaValue"><span class="hs-identifier">noAdaValue</span></a></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Value.CardanoAPI.html#adaOnlyValue"><span class="hs-identifier">adaOnlyValue</span></a></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Tx.CardanoAPI.Internal.html#adaToCardanoValue"><span class="hs-identifier">adaToCardanoValue</span></a></span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Value.CardanoAPI.html#singleton"><span class="hs-identifier">singleton</span></a></span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Value.CardanoAPI.html#assetIdValue"><span class="hs-identifier">assetIdValue</span></a></span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Value.CardanoAPI.html#scale"><span class="hs-identifier">scale</span></a></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Value.CardanoAPI.html#split"><span class="hs-identifier">split</span></a></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Value.CardanoAPI.html#policyId"><span class="hs-identifier">policyId</span></a></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Tx.CardanoAPI.Internal.html#toCardanoValue"><span class="hs-identifier">toCardanoValue</span></a></span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Tx.CardanoAPI.Internal.html#fromCardanoValue"><span class="hs-identifier">fromCardanoValue</span></a></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Tx.CardanoAPI.Internal.html#toCardanoAssetId"><span class="hs-identifier">toCardanoAssetId</span></a></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Tx.CardanoAPI.Internal.html#fromCardanoAssetId"><span class="hs-identifier">fromCardanoAssetId</span></a></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Value.CardanoAPI.html#combine"><span class="hs-identifier">combine</span></a></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Value.CardanoAPI.html#valueGeq"><span class="hs-identifier">valueGeq</span></a></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Value.CardanoAPI.html#valueLeq"><span class="hs-identifier">valueLeq</span></a></span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.Api</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">C</span></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Data.Bifunctor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">bimap</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Data.List</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">partition</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Data.Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">isJust</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Data.Monoid</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">All</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">All</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">getAll</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Data.Ratio</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">denominator</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">numerator</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Ledger.Scripts.html"><span class="hs-identifier">Ledger.Scripts</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Language</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">MintingPolicy</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">MintingPolicy</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Versioned</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Ledger.Tx.CardanoAPI.Internal.html"><span class="hs-identifier">Ledger.Tx.CardanoAPI.Internal</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Ledger.Tx.CardanoAPI.Internal.html#adaToCardanoValue"><span class="hs-identifier">adaToCardanoValue</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Tx.CardanoAPI.Internal.html#fromCardanoAssetId"><span class="hs-identifier">fromCardanoAssetId</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Tx.CardanoAPI.Internal.html#fromCardanoValue"><span class="hs-identifier">fromCardanoValue</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Ledger.Tx.CardanoAPI.Internal.html#toCardanoAssetId"><span class="hs-identifier">toCardanoAssetId</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-45"></span><span>                                      </span><span class="annot"><a href="Ledger.Tx.CardanoAPI.Internal.html#toCardanoValue"><span class="hs-identifier">toCardanoValue</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.Script.Utils.V1.Scripts</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">PV1</span></span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Plutus.Script.Utils.V2.Scripts</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">PV2</span></span><span>
+</span><span id="line-48"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">PlutusTx.Lattice</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">JoinSemiLattice</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span class="annot"><a href="Ledger.Value.CardanoAPI.html#lovelaceToValue"><span class="hs-identifier hs-type">lovelaceToValue</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.Lovelace</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.Value</span></span><span>
+</span><span id="line-51"></span><span id="lovelaceToValue"><span class="annot"><span class="annottext">lovelaceToValue :: Lovelace -&gt; Value
+</span><a href="Ledger.Value.CardanoAPI.html#lovelaceToValue"><span class="hs-identifier hs-var hs-var">lovelaceToValue</span></a></span></span><span> </span><span class="annot"><span class="annottext">Lovelace
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Value
+forall a. Monoid a =&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-52"></span><span class="annot"><a href="Ledger.Value.CardanoAPI.html#lovelaceToValue"><span class="hs-identifier hs-var">lovelaceToValue</span></a></span><span> </span><span id="local-6989586621679741388"><span class="annot"><span class="annottext">Lovelace
+</span><a href="#local-6989586621679741388"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Lovelace -&gt; Value
+</span><span class="hs-identifier hs-var">C.lovelaceToValue</span></span><span> </span><span class="annot"><span class="annottext">Lovelace
+</span><a href="#local-6989586621679741388"><span class="hs-identifier hs-var">l</span></a></span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="annot"><a href="Ledger.Value.CardanoAPI.html#lovelaceValueOf"><span class="hs-identifier hs-type">lovelaceValueOf</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/integer-gmp-1.0.3.0/src"><span class="hs-identifier hs-type">Integer</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.Value</span></span><span>
+</span><span id="line-55"></span><span id="lovelaceValueOf"><span class="annot"><span class="annottext">lovelaceValueOf :: Integer -&gt; Value
+</span><a href="Ledger.Value.CardanoAPI.html#lovelaceValueOf"><span class="hs-identifier hs-var hs-var">lovelaceValueOf</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Lovelace -&gt; Value
+</span><span class="hs-identifier hs-var">C.lovelaceToValue</span></span><span> </span><span class="annot"><span class="annottext">(Lovelace -&gt; Value) -&gt; (Integer -&gt; Lovelace) -&gt; Integer -&gt; Value
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Lovelace
+</span><span class="hs-identifier hs-var">C.Lovelace</span></span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span class="annot"><a href="Ledger.Value.CardanoAPI.html#adaValueOf"><span class="hs-identifier hs-type">adaValueOf</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Rational</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.Value</span></span><span>
+</span><span id="line-58"></span><span id="adaValueOf"><span class="annot"><span class="annottext">adaValueOf :: Rational -&gt; Value
+</span><a href="Ledger.Value.CardanoAPI.html#adaValueOf"><span class="hs-identifier hs-var hs-var">adaValueOf</span></a></span></span><span> </span><span id="local-6989586621679741384"><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679741384"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Integer
+forall a. Ratio a -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">denominator</span></a></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679741383"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">1</span></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Value
+</span><a href="Ledger.Value.CardanoAPI.html#lovelaceValueOf"><span class="hs-identifier hs-var">lovelaceValueOf</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Rational -&gt; Integer
+forall a. Ratio a -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">numerator</span></a></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679741383"><span class="hs-identifier hs-var">l</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; Value
+forall a. HasCallStack =&gt; [Char] -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;Ledger.Value.CardanoAPI: value is not a whole number of lovelace&quot;</span></span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679741383"><span class="annot"><span class="annottext">l :: Rational
+</span><a href="#local-6989586621679741383"><span class="hs-identifier hs-var hs-var">l</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679741384"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Rational -&gt; Rational
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><span class="hs-number">1_000_000</span></span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="annot"><a href="Ledger.Value.CardanoAPI.html#isZero"><span class="hs-identifier hs-type">isZero</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-62"></span><span id="isZero"><span class="annot"><span class="annottext">isZero :: Value -&gt; Bool
+</span><a href="Ledger.Value.CardanoAPI.html#isZero"><span class="hs-identifier hs-var hs-var">isZero</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">((AssetId, Quantity) -&gt; Bool) -&gt; [(AssetId, Quantity)] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; (a -&gt; Bool) -&gt; t a -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">all</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><span class="annottext">AssetId
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679741379"><span class="annot"><span class="annottext">Quantity
+</span><a href="#local-6989586621679741379"><span class="hs-identifier hs-var">q</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Quantity
+</span><a href="#local-6989586621679741379"><span class="hs-identifier hs-var">q</span></a></span><span> </span><span class="annot"><span class="annottext">Quantity -&gt; Quantity -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Quantity
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([(AssetId, Quantity)] -&gt; Bool)
+-&gt; (Value -&gt; [(AssetId, Quantity)]) -&gt; Value -&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Value -&gt; [(AssetId, Quantity)]
+</span><span class="hs-identifier hs-var">C.valueToList</span></span><span>
+</span><span id="line-63"></span><span>
+</span><span id="line-64"></span><span class="annot"><a href="Ledger.Value.CardanoAPI.html#isAdaOnlyValue"><span class="hs-identifier hs-type">isAdaOnlyValue</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-65"></span><span id="isAdaOnlyValue"><span class="annot"><span class="annottext">isAdaOnlyValue :: Value -&gt; Bool
+</span><a href="Ledger.Value.CardanoAPI.html#isAdaOnlyValue"><span class="hs-identifier hs-var hs-var">isAdaOnlyValue</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Lovelace -&gt; Bool
+forall a. Maybe a -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">isJust</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe Lovelace -&gt; Bool)
+-&gt; (Value -&gt; Maybe Lovelace) -&gt; Value -&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Value -&gt; Maybe Lovelace
+</span><span class="hs-identifier hs-var">C.valueToLovelace</span></span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span class="annot"><a href="Ledger.Value.CardanoAPI.html#noAdaValue"><span class="hs-identifier hs-type">noAdaValue</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.Value</span></span><span>
+</span><span id="line-68"></span><span id="noAdaValue"><span class="annot"><span class="annottext">noAdaValue :: Value -&gt; Value
+</span><a href="Ledger.Value.CardanoAPI.html#noAdaValue"><span class="hs-identifier hs-var hs-var">noAdaValue</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(AssetId -&gt; Bool) -&gt; Value -&gt; Value
+</span><span class="hs-identifier hs-var">C.filterValue</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AssetId -&gt; AssetId -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-operator hs-var">/=</span></a></span><span> </span><span class="annot"><span class="annottext">AssetId
+</span><span class="hs-identifier hs-var">C.AdaAssetId</span></span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="annot"><a href="Ledger.Value.CardanoAPI.html#adaOnlyValue"><span class="hs-identifier hs-type">adaOnlyValue</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.Value</span></span><span>
+</span><span id="line-71"></span><span id="adaOnlyValue"><span class="annot"><span class="annottext">adaOnlyValue :: Value -&gt; Value
+</span><a href="Ledger.Value.CardanoAPI.html#adaOnlyValue"><span class="hs-identifier hs-var hs-var">adaOnlyValue</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(AssetId -&gt; Bool) -&gt; Value -&gt; Value
+</span><span class="hs-identifier hs-var">C.filterValue</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AssetId -&gt; AssetId -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">AssetId
+</span><span class="hs-identifier hs-var">C.AdaAssetId</span></span><span class="hs-special">)</span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="annot"><a href="Ledger.Value.CardanoAPI.html#singleton"><span class="hs-identifier hs-type">singleton</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.PolicyId</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.AssetName</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/integer-gmp-1.0.3.0/src"><span class="hs-identifier hs-type">Integer</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.Value</span></span><span>
+</span><span id="line-74"></span><span id="singleton"><span class="annot"><span class="annottext">singleton :: PolicyId -&gt; AssetName -&gt; Integer -&gt; Value
+</span><a href="Ledger.Value.CardanoAPI.html#singleton"><span class="hs-identifier hs-var hs-var">singleton</span></a></span></span><span> </span><span id="local-6989586621679741375"><span class="annot"><span class="annottext">PolicyId
+</span><a href="#local-6989586621679741375"><span class="hs-identifier hs-var">pid</span></a></span></span><span> </span><span id="local-6989586621679741374"><span class="annot"><span class="annottext">AssetName
+</span><a href="#local-6989586621679741374"><span class="hs-identifier hs-var">an</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AssetId -&gt; Integer -&gt; Value
+</span><a href="Ledger.Value.CardanoAPI.html#assetIdValue"><span class="hs-identifier hs-var">assetIdValue</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PolicyId -&gt; AssetName -&gt; AssetId
+</span><span class="hs-identifier hs-var">C.AssetId</span></span><span> </span><span class="annot"><span class="annottext">PolicyId
+</span><a href="#local-6989586621679741375"><span class="hs-identifier hs-var">pid</span></a></span><span> </span><span class="annot"><span class="annottext">AssetName
+</span><a href="#local-6989586621679741374"><span class="hs-identifier hs-var">an</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span class="annot"><a href="Ledger.Value.CardanoAPI.html#assetIdValue"><span class="hs-identifier hs-type">assetIdValue</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.AssetId</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/integer-gmp-1.0.3.0/src"><span class="hs-identifier hs-type">Integer</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.Value</span></span><span>
+</span><span id="line-77"></span><span id="assetIdValue"><span class="annot"><span class="annottext">assetIdValue :: AssetId -&gt; Integer -&gt; Value
+</span><a href="Ledger.Value.CardanoAPI.html#assetIdValue"><span class="hs-identifier hs-var hs-var">assetIdValue</span></a></span></span><span> </span><span id="local-6989586621679741372"><span class="annot"><span class="annottext">AssetId
+</span><a href="#local-6989586621679741372"><span class="hs-identifier hs-var">aid</span></a></span></span><span> </span><span id="local-6989586621679741371"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679741371"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(AssetId, Quantity)] -&gt; Value
+</span><span class="hs-identifier hs-var">C.valueFromList</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">AssetId
+</span><a href="#local-6989586621679741372"><span class="hs-identifier hs-var">aid</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Quantity
+</span><span class="hs-identifier hs-var">C.Quantity</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679741371"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span class="annot"><a href="Ledger.Value.CardanoAPI.html#scale"><span class="hs-identifier hs-type">scale</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/integer-gmp-1.0.3.0/src"><span class="hs-identifier hs-type">Integer</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.Value</span></span><span>
+</span><span id="line-80"></span><span id="scale"><span class="annot"><span class="annottext">scale :: Integer -&gt; Value -&gt; Value
+</span><a href="Ledger.Value.CardanoAPI.html#scale"><span class="hs-identifier hs-var hs-var">scale</span></a></span></span><span> </span><span id="local-6989586621679741369"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679741369"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(AssetId, Quantity)] -&gt; Value
+</span><span class="hs-identifier hs-var">C.valueFromList</span></span><span> </span><span class="annot"><span class="annottext">([(AssetId, Quantity)] -&gt; Value)
+-&gt; (Value -&gt; [(AssetId, Quantity)]) -&gt; Value -&gt; Value
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">((AssetId, Quantity) -&gt; (AssetId, Quantity))
+-&gt; [(AssetId, Quantity)] -&gt; [(AssetId, Quantity)]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Quantity -&gt; Quantity)
+-&gt; (AssetId, Quantity) -&gt; (AssetId, Quantity)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Quantity -&gt; Quantity -&gt; Quantity
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Quantity
+</span><span class="hs-identifier hs-var">C.Quantity</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679741369"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([(AssetId, Quantity)] -&gt; [(AssetId, Quantity)])
+-&gt; (Value -&gt; [(AssetId, Quantity)])
+-&gt; Value
+-&gt; [(AssetId, Quantity)]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Value -&gt; [(AssetId, Quantity)]
+</span><span class="hs-identifier hs-var">C.valueToList</span></span><span>
+</span><span id="line-81"></span><span>
+</span><span id="line-82"></span><span class="annot"><a href="Ledger.Value.CardanoAPI.html#split"><span class="hs-identifier hs-type">split</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">C.Value</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.Value</span></span><span class="hs-special">)</span><span>
+</span><span id="line-83"></span><span id="split"><span class="annot"><span class="annottext">split :: Value -&gt; (Value, Value)
+</span><a href="Ledger.Value.CardanoAPI.html#split"><span class="hs-identifier hs-var hs-var">split</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">([(AssetId, Quantity)] -&gt; Value)
+-&gt; ([(AssetId, Quantity)] -&gt; Value)
+-&gt; ([(AssetId, Quantity)], [(AssetId, Quantity)])
+-&gt; (Value, Value)
+forall (p :: * -&gt; * -&gt; *) a b c d.
+Bifunctor p =&gt;
+(a -&gt; b) -&gt; (c -&gt; d) -&gt; p a c -&gt; p b d
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">bimap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Value -&gt; Value
+</span><span class="hs-identifier hs-var">C.negateValue</span></span><span> </span><span class="annot"><span class="annottext">(Value -&gt; Value)
+-&gt; ([(AssetId, Quantity)] -&gt; Value)
+-&gt; [(AssetId, Quantity)]
+-&gt; Value
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[(AssetId, Quantity)] -&gt; Value
+</span><span class="hs-identifier hs-var">C.valueFromList</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[(AssetId, Quantity)] -&gt; Value
+</span><span class="hs-identifier hs-var">C.valueFromList</span></span><span> </span><span class="annot"><span class="annottext">(([(AssetId, Quantity)], [(AssetId, Quantity)]) -&gt; (Value, Value))
+-&gt; (Value -&gt; ([(AssetId, Quantity)], [(AssetId, Quantity)]))
+-&gt; Value
+-&gt; (Value, Value)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">((AssetId, Quantity) -&gt; Bool)
+-&gt; [(AssetId, Quantity)]
+-&gt; ([(AssetId, Quantity)], [(AssetId, Quantity)])
+forall a. (a -&gt; Bool) -&gt; [a] -&gt; ([a], [a])
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">partition</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Quantity -&gt; Quantity -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-operator hs-var">&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">Quantity
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Quantity -&gt; Bool)
+-&gt; ((AssetId, Quantity) -&gt; Quantity) -&gt; (AssetId, Quantity) -&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(AssetId, Quantity) -&gt; Quantity
+forall a b. (a, b) -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">snd</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([(AssetId, Quantity)]
+ -&gt; ([(AssetId, Quantity)], [(AssetId, Quantity)]))
+-&gt; (Value -&gt; [(AssetId, Quantity)])
+-&gt; Value
+-&gt; ([(AssetId, Quantity)], [(AssetId, Quantity)])
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Value -&gt; [(AssetId, Quantity)]
+</span><span class="hs-identifier hs-var">C.valueToList</span></span><span>
+</span><span id="line-84"></span><span>
+</span><span id="line-85"></span><span class="annot"><a href="Ledger.Value.CardanoAPI.html#policyId"><span class="hs-identifier hs-type">policyId</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Versioned</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">MintingPolicy</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.PolicyId</span></span><span>
+</span><span id="line-86"></span><span id="policyId"><span class="annot"><span class="annottext">policyId :: Versioned MintingPolicy -&gt; PolicyId
+</span><a href="Ledger.Value.CardanoAPI.html#policyId"><span class="hs-identifier hs-var hs-var">policyId</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Versioned</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">MintingPolicy</span></span><span> </span><span id="local-6989586621679741366"><span class="annot"><span class="annottext">Script
+</span><a href="#local-6989586621679741366"><span class="hs-identifier hs-var">mp</span></a></span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Language
+</span><span class="hs-identifier hs-var">PlutusV1</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Script PlutusScriptV1 -&gt; PolicyId
+forall lang. Script lang -&gt; PolicyId
+</span><span class="hs-identifier hs-var">C.scriptPolicyId</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Script -&gt; Script PlutusScriptV1
+</span><span class="hs-identifier hs-var">PV1.toCardanoApiScript</span></span><span> </span><span class="annot"><span class="annottext">Script
+</span><a href="#local-6989586621679741366"><span class="hs-identifier hs-var">mp</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-87"></span><span class="annot"><a href="Ledger.Value.CardanoAPI.html#policyId"><span class="hs-identifier hs-var">policyId</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Versioned</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">MintingPolicy</span></span><span> </span><span id="local-6989586621679741362"><span class="annot"><span class="annottext">Script
+</span><a href="#local-6989586621679741362"><span class="hs-identifier hs-var">mp</span></a></span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Language
+</span><span class="hs-identifier hs-var">PlutusV2</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Script PlutusScriptV2 -&gt; PolicyId
+forall lang. Script lang -&gt; PolicyId
+</span><span class="hs-identifier hs-var">C.scriptPolicyId</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Script -&gt; Script PlutusScriptV2
+</span><span class="hs-identifier hs-var">PV2.toCardanoApiScript</span></span><span> </span><span class="annot"><span class="annottext">Script
+</span><a href="#local-6989586621679741362"><span class="hs-identifier hs-var">mp</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span>
+</span><span id="line-89"></span><span id="local-6989586621679741425"><span class="annot"><a href="Ledger.Value.CardanoAPI.html#combine"><span class="hs-identifier hs-type">combine</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679741425"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">C.AssetId</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.Quantity</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.Quantity</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679741425"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679741425"><span class="hs-identifier hs-type">m</span></a></span></span><span>
+</span><span id="line-90"></span><span id="combine"><span class="annot"><span class="annottext">combine :: (AssetId -&gt; Quantity -&gt; Quantity -&gt; m) -&gt; Value -&gt; Value -&gt; m
+</span><a href="Ledger.Value.CardanoAPI.html#combine"><span class="hs-identifier hs-var hs-var">combine</span></a></span></span><span> </span><span id="local-6989586621679741359"><span class="annot"><span class="annottext">AssetId -&gt; Quantity -&gt; Quantity -&gt; m
+</span><a href="#local-6989586621679741359"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679741358"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679741358"><span class="hs-identifier hs-var">v1</span></a></span></span><span> </span><span id="local-6989586621679741357"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679741357"><span class="hs-identifier hs-var">v2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(AssetId, Quantity)] -&gt; [(AssetId, Quantity)] -&gt; m
+</span><a href="#local-6989586621679741356"><span class="hs-identifier hs-var">merge</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Value -&gt; [(AssetId, Quantity)]
+</span><span class="hs-identifier hs-var">C.valueToList</span></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679741358"><span class="hs-identifier hs-var">v1</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Value -&gt; [(AssetId, Quantity)]
+</span><span class="hs-identifier hs-var">C.valueToList</span></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679741357"><span class="hs-identifier hs-var">v2</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-91"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-92"></span><span>        </span><span class="hs-comment">-- Merge assuming the lists are ascending (thanks to Map.toList)</span><span>
+</span><span id="line-93"></span><span>        </span><span id="local-6989586621679741356"><span class="annot"><span class="annottext">merge :: [(AssetId, Quantity)] -&gt; [(AssetId, Quantity)] -&gt; m
+</span><a href="#local-6989586621679741356"><span class="hs-identifier hs-var hs-var">merge</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m
+forall a. Monoid a =&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-94"></span><span>        </span><span class="annot"><a href="#local-6989586621679741356"><span class="hs-identifier hs-var">merge</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span id="local-6989586621679741355"><span class="annot"><span class="annottext">AssetId
+</span><a href="#local-6989586621679741355"><span class="hs-identifier hs-var">ar</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679741354"><span class="annot"><span class="annottext">Quantity
+</span><a href="#local-6989586621679741354"><span class="hs-identifier hs-var">qr</span></a></span></span><span class="hs-special">)</span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-glyph hs-type">:</span></a></span><span id="local-6989586621679741353"><span class="annot"><span class="annottext">[(AssetId, Quantity)]
+</span><a href="#local-6989586621679741353"><span class="hs-identifier hs-var">rs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AssetId -&gt; Quantity -&gt; Quantity -&gt; m
+</span><a href="#local-6989586621679741359"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">AssetId
+</span><a href="#local-6989586621679741355"><span class="hs-identifier hs-var">ar</span></a></span><span> </span><span class="annot"><span class="annottext">Quantity
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Quantity
+</span><a href="#local-6989586621679741354"><span class="hs-identifier hs-var">qr</span></a></span><span> </span><span class="annot"><span class="annottext">m -&gt; m -&gt; m
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[(AssetId, Quantity)] -&gt; [(AssetId, Quantity)] -&gt; m
+</span><a href="#local-6989586621679741356"><span class="hs-identifier hs-var">merge</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">[(AssetId, Quantity)]
+</span><a href="#local-6989586621679741353"><span class="hs-identifier hs-var">rs</span></a></span><span>
+</span><span id="line-95"></span><span>        </span><span class="annot"><a href="#local-6989586621679741356"><span class="hs-identifier hs-var">merge</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span id="local-6989586621679741352"><span class="annot"><span class="annottext">AssetId
+</span><a href="#local-6989586621679741352"><span class="hs-identifier hs-var">al</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679741351"><span class="annot"><span class="annottext">Quantity
+</span><a href="#local-6989586621679741351"><span class="hs-identifier hs-var">ql</span></a></span></span><span class="hs-special">)</span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-glyph hs-type">:</span></a></span><span id="local-6989586621679741350"><span class="annot"><span class="annottext">[(AssetId, Quantity)]
+</span><a href="#local-6989586621679741350"><span class="hs-identifier hs-var">ls</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AssetId -&gt; Quantity -&gt; Quantity -&gt; m
+</span><a href="#local-6989586621679741359"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">AssetId
+</span><a href="#local-6989586621679741352"><span class="hs-identifier hs-var">al</span></a></span><span> </span><span class="annot"><span class="annottext">Quantity
+</span><a href="#local-6989586621679741351"><span class="hs-identifier hs-var">ql</span></a></span><span> </span><span class="annot"><span class="annottext">Quantity
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">m -&gt; m -&gt; m
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[(AssetId, Quantity)] -&gt; [(AssetId, Quantity)] -&gt; m
+</span><a href="#local-6989586621679741356"><span class="hs-identifier hs-var">merge</span></a></span><span> </span><span class="annot"><span class="annottext">[(AssetId, Quantity)]
+</span><a href="#local-6989586621679741350"><span class="hs-identifier hs-var">ls</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-96"></span><span>        </span><span class="annot"><a href="#local-6989586621679741356"><span class="hs-identifier hs-var">merge</span></a></span><span> </span><span id="local-6989586621679741349"><span class="annot"><span class="annottext">ls' :: [(AssetId, Quantity)]
+</span><a href="#local-6989586621679741349"><span class="hs-identifier hs-var">ls'</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="hs-special">(</span><span id="local-6989586621679741348"><span class="annot"><span class="annottext">AssetId
+</span><a href="#local-6989586621679741348"><span class="hs-identifier hs-var">al</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679741347"><span class="annot"><span class="annottext">Quantity
+</span><a href="#local-6989586621679741347"><span class="hs-identifier hs-var">ql</span></a></span></span><span class="hs-special">)</span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-glyph hs-type">:</span></a></span><span id="local-6989586621679741346"><span class="annot"><span class="annottext">[(AssetId, Quantity)]
+</span><a href="#local-6989586621679741346"><span class="hs-identifier hs-var">ls</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679741345"><span class="annot"><span class="annottext">rs' :: [(AssetId, Quantity)]
+</span><a href="#local-6989586621679741345"><span class="hs-identifier hs-var">rs'</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="hs-special">(</span><span id="local-6989586621679741344"><span class="annot"><span class="annottext">AssetId
+</span><a href="#local-6989586621679741344"><span class="hs-identifier hs-var">ar</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679741343"><span class="annot"><span class="annottext">Quantity
+</span><a href="#local-6989586621679741343"><span class="hs-identifier hs-var">qr</span></a></span></span><span class="hs-special">)</span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-glyph hs-type">:</span></a></span><span id="local-6989586621679741342"><span class="annot"><span class="annottext">[(AssetId, Quantity)]
+</span><a href="#local-6989586621679741342"><span class="hs-identifier hs-var">rs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">AssetId -&gt; AssetId -&gt; Ordering
+forall a. Ord a =&gt; a -&gt; a -&gt; Ordering
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var">compare</span></a></span><span> </span><span class="annot"><span class="annottext">AssetId
+</span><a href="#local-6989586621679741348"><span class="hs-identifier hs-var">al</span></a></span><span> </span><span class="annot"><span class="annottext">AssetId
+</span><a href="#local-6989586621679741344"><span class="hs-identifier hs-var">ar</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-97"></span><span>            </span><span class="annot"><span class="annottext">Ordering
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var">EQ</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AssetId -&gt; Quantity -&gt; Quantity -&gt; m
+</span><a href="#local-6989586621679741359"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">AssetId
+</span><a href="#local-6989586621679741348"><span class="hs-identifier hs-var">al</span></a></span><span> </span><span class="annot"><span class="annottext">Quantity
+</span><a href="#local-6989586621679741347"><span class="hs-identifier hs-var">ql</span></a></span><span> </span><span class="annot"><span class="annottext">Quantity
+</span><a href="#local-6989586621679741343"><span class="hs-identifier hs-var">qr</span></a></span><span> </span><span class="annot"><span class="annottext">m -&gt; m -&gt; m
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[(AssetId, Quantity)] -&gt; [(AssetId, Quantity)] -&gt; m
+</span><a href="#local-6989586621679741356"><span class="hs-identifier hs-var">merge</span></a></span><span> </span><span class="annot"><span class="annottext">[(AssetId, Quantity)]
+</span><a href="#local-6989586621679741346"><span class="hs-identifier hs-var">ls</span></a></span><span> </span><span class="annot"><span class="annottext">[(AssetId, Quantity)]
+</span><a href="#local-6989586621679741342"><span class="hs-identifier hs-var">rs</span></a></span><span>
+</span><span id="line-98"></span><span>            </span><span class="annot"><span class="annottext">Ordering
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var">LT</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AssetId -&gt; Quantity -&gt; Quantity -&gt; m
+</span><a href="#local-6989586621679741359"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">AssetId
+</span><a href="#local-6989586621679741348"><span class="hs-identifier hs-var">al</span></a></span><span> </span><span class="annot"><span class="annottext">Quantity
+</span><a href="#local-6989586621679741347"><span class="hs-identifier hs-var">ql</span></a></span><span> </span><span class="annot"><span class="annottext">Quantity
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">m -&gt; m -&gt; m
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[(AssetId, Quantity)] -&gt; [(AssetId, Quantity)] -&gt; m
+</span><a href="#local-6989586621679741356"><span class="hs-identifier hs-var">merge</span></a></span><span> </span><span class="annot"><span class="annottext">[(AssetId, Quantity)]
+</span><a href="#local-6989586621679741346"><span class="hs-identifier hs-var">ls</span></a></span><span> </span><span class="annot"><span class="annottext">[(AssetId, Quantity)]
+</span><a href="#local-6989586621679741345"><span class="hs-identifier hs-var">rs'</span></a></span><span>
+</span><span id="line-99"></span><span>            </span><span class="annot"><span class="annottext">Ordering
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var">GT</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AssetId -&gt; Quantity -&gt; Quantity -&gt; m
+</span><a href="#local-6989586621679741359"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">AssetId
+</span><a href="#local-6989586621679741344"><span class="hs-identifier hs-var">ar</span></a></span><span> </span><span class="annot"><span class="annottext">Quantity
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Quantity
+</span><a href="#local-6989586621679741343"><span class="hs-identifier hs-var">qr</span></a></span><span> </span><span class="annot"><span class="annottext">m -&gt; m -&gt; m
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[(AssetId, Quantity)] -&gt; [(AssetId, Quantity)] -&gt; m
+</span><a href="#local-6989586621679741356"><span class="hs-identifier hs-var">merge</span></a></span><span> </span><span class="annot"><span class="annottext">[(AssetId, Quantity)]
+</span><a href="#local-6989586621679741349"><span class="hs-identifier hs-var">ls'</span></a></span><span> </span><span class="annot"><span class="annottext">[(AssetId, Quantity)]
+</span><a href="#local-6989586621679741342"><span class="hs-identifier hs-var">rs</span></a></span><span>
+</span><span id="line-100"></span><span>
+</span><span id="line-101"></span><span class="annot"><a href="Ledger.Value.CardanoAPI.html#valueGeq"><span class="hs-identifier hs-type">valueGeq</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-102"></span><span id="valueGeq"><span class="annot"><span class="annottext">valueGeq :: Value -&gt; Value -&gt; Bool
+</span><a href="Ledger.Value.CardanoAPI.html#valueGeq"><span class="hs-identifier hs-var hs-var">valueGeq</span></a></span></span><span> </span><span id="local-6989586621679741340"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679741340"><span class="hs-identifier hs-var">lv</span></a></span></span><span> </span><span id="local-6989586621679741339"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679741339"><span class="hs-identifier hs-var">rv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">All -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var">getAll</span></a></span><span> </span><span class="annot"><span class="annottext">(All -&gt; Bool) -&gt; All -&gt; Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(AssetId -&gt; Quantity -&gt; Quantity -&gt; All) -&gt; Value -&gt; Value -&gt; All
+forall m.
+Monoid m =&gt;
+(AssetId -&gt; Quantity -&gt; Quantity -&gt; m) -&gt; Value -&gt; Value -&gt; m
+</span><a href="Ledger.Value.CardanoAPI.html#combine"><span class="hs-identifier hs-var">combine</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">AssetId
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679741338"><span class="annot"><span class="annottext">Quantity
+</span><a href="#local-6989586621679741338"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span id="local-6989586621679741337"><span class="annot"><span class="annottext">Quantity
+</span><a href="#local-6989586621679741337"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; All
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">All</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Quantity
+</span><a href="#local-6989586621679741338"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">Quantity -&gt; Quantity -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-operator hs-var">&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Quantity
+</span><a href="#local-6989586621679741337"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679741340"><span class="hs-identifier hs-var">lv</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679741339"><span class="hs-identifier hs-var">rv</span></a></span><span>
+</span><span id="line-103"></span><span>
+</span><span id="line-104"></span><span class="annot"><a href="Ledger.Value.CardanoAPI.html#valueLeq"><span class="hs-identifier hs-type">valueLeq</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-105"></span><span id="valueLeq"><span class="annot"><span class="annottext">valueLeq :: Value -&gt; Value -&gt; Bool
+</span><a href="Ledger.Value.CardanoAPI.html#valueLeq"><span class="hs-identifier hs-var hs-var">valueLeq</span></a></span></span><span> </span><span id="local-6989586621679741336"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679741336"><span class="hs-identifier hs-var">lv</span></a></span></span><span> </span><span id="local-6989586621679741335"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679741335"><span class="hs-identifier hs-var">rv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">All -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var">getAll</span></a></span><span> </span><span class="annot"><span class="annottext">(All -&gt; Bool) -&gt; All -&gt; Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(AssetId -&gt; Quantity -&gt; Quantity -&gt; All) -&gt; Value -&gt; Value -&gt; All
+forall m.
+Monoid m =&gt;
+(AssetId -&gt; Quantity -&gt; Quantity -&gt; m) -&gt; Value -&gt; Value -&gt; m
+</span><a href="Ledger.Value.CardanoAPI.html#combine"><span class="hs-identifier hs-var">combine</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">AssetId
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679741334"><span class="annot"><span class="annottext">Quantity
+</span><a href="#local-6989586621679741334"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span id="local-6989586621679741333"><span class="annot"><span class="annottext">Quantity
+</span><a href="#local-6989586621679741333"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; All
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">All</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Quantity
+</span><a href="#local-6989586621679741334"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">Quantity -&gt; Quantity -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-operator hs-var">&lt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Quantity
+</span><a href="#local-6989586621679741333"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679741336"><span class="hs-identifier hs-var">lv</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679741335"><span class="hs-identifier hs-var">rv</span></a></span><span>
+</span><span id="line-106"></span><span>
+</span><span id="line-107"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">JoinSemiLattice</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">C.Value</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-108"></span><span>  </span><span id="local-6989586621679741329"><span class="annot"><span class="annottext">\/ :: Value -&gt; Value -&gt; Value
+</span><span class="hs-operator hs-var hs-var hs-var hs-var">(\/)</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(AssetId -&gt; Quantity -&gt; Quantity -&gt; Value)
+-&gt; Value -&gt; Value -&gt; Value
+forall m.
+Monoid m =&gt;
+(AssetId -&gt; Quantity -&gt; Quantity -&gt; m) -&gt; Value -&gt; Value -&gt; m
+</span><a href="Ledger.Value.CardanoAPI.html#combine"><span class="hs-identifier hs-var">combine</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679741327"><span class="annot"><span class="annottext">AssetId
+</span><a href="#local-6989586621679741327"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679741326"><span class="annot"><span class="annottext">Quantity
+</span><a href="#local-6989586621679741326"><span class="hs-identifier hs-var">ql</span></a></span></span><span> </span><span id="local-6989586621679741325"><span class="annot"><span class="annottext">Quantity
+</span><a href="#local-6989586621679741325"><span class="hs-identifier hs-var">qr</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[(AssetId, Quantity)] -&gt; Value
+</span><span class="hs-identifier hs-var">C.valueFromList</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">AssetId
+</span><a href="#local-6989586621679741327"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Quantity
+</span><a href="#local-6989586621679741326"><span class="hs-identifier hs-var">ql</span></a></span><span> </span><span class="annot"><span class="annottext">Quantity -&gt; Quantity -&gt; Quantity
+forall a. Ord a =&gt; a -&gt; a -&gt; a
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-operator hs-var">`max`</span></a></span><span> </span><span class="annot"><span class="annottext">Quantity
+</span><a href="#local-6989586621679741325"><span class="hs-identifier hs-var">qr</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-109"></span></pre></body></html>

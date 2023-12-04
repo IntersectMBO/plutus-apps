@@ -1,0 +1,425 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.QuickCheck.ContractModel.DL</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Control.Monad</span></a></span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Data.Typeable</span></a></span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Model.html"><span class="hs-identifier">Test.QuickCheck.ContractModel.Internal.Model</span></a></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html"><span class="hs-identifier">Test.QuickCheck.ContractModel.Internal.Spec</span></a></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html"><span class="hs-identifier">Test.QuickCheck.ContractModel.Internal.ChainIndex</span></a></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Symbolics.html"><span class="hs-identifier">Test.QuickCheck.ContractModel.Internal.Symbolics</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Test.QuickCheck.DynamicLogic</span></span><span>          </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">DL</span></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Test.QuickCheck.StateModel</span></span><span>            </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">StateModel</span></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Test.QuickCheck</span></span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.Api</span></span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-comment">-- $dynamicLogic</span><span>
+</span><span id="line-18"></span><span class="hs-comment">--</span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- Test scenarios are described in the `DL` monad (based on dynamic logic) which lets you freely mix</span><span>
+</span><span id="line-20"></span><span class="hs-comment">-- random sequences of actions (`anyAction`, `anyActions_`, `anyActions`) with specific</span><span>
+</span><span id="line-21"></span><span class="hs-comment">-- actions (`action`). It also supports checking properties of the model state (`DL.assert`,</span><span>
+</span><span id="line-22"></span><span class="hs-comment">-- `assertModel`), and random generation (`DL.forAllQ`).</span><span>
+</span><span id="line-23"></span><span class="hs-comment">--</span><span>
+</span><span id="line-24"></span><span class="hs-comment">-- For instance, a unit test for a simple auction contract might look something like this:</span><span>
+</span><span id="line-25"></span><span class="hs-comment">--</span><span>
+</span><span id="line-26"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-27"></span><span class="hs-comment">--  unitTest :: `DL` AuctionState ()</span><span>
+</span><span id="line-28"></span><span class="hs-comment">--  unitTest = do</span><span>
+</span><span id="line-29"></span><span class="hs-comment">--      `action` $ Bid w1 100</span><span>
+</span><span id="line-30"></span><span class="hs-comment">--      `action` $ Bid w2 150</span><span>
+</span><span id="line-31"></span><span class="hs-comment">--      `action` $ Wait endSlot</span><span>
+</span><span id="line-32"></span><span class="hs-comment">--      `action` $ Collect</span><span>
+</span><span id="line-33"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-34"></span><span class="hs-comment">--</span><span>
+</span><span id="line-35"></span><span class="hs-comment">--  and could easily be extended with some randomly generated values</span><span>
+</span><span id="line-36"></span><span class="hs-comment">--</span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-38"></span><span class="hs-comment">--  unitTest :: `DL` AuctionState ()</span><span>
+</span><span id="line-39"></span><span class="hs-comment">--  unitTest = do</span><span>
+</span><span id="line-40"></span><span class="hs-comment">--      bid &lt;- `forAllQ` $ `chooseQ` (1, 100)</span><span>
+</span><span id="line-41"></span><span class="hs-comment">--      `action` $ Bid w1 bid</span><span>
+</span><span id="line-42"></span><span class="hs-comment">--      `action` $ Bid w2 (bid + 50)</span><span>
+</span><span id="line-43"></span><span class="hs-comment">--      `action` $ Wait endSlot</span><span>
+</span><span id="line-44"></span><span class="hs-comment">--      `action` $ Collect</span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-46"></span><span class="hs-comment">--</span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- More interesting scenarios can be constructed by mixing random and fixed sequences. The following</span><span>
+</span><span id="line-48"></span><span class="hs-comment">-- checks that you can always finish an auction after which point there are no funds locked by the</span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- contract:</span><span>
+</span><span id="line-50"></span><span class="hs-comment">--</span><span>
+</span><span id="line-51"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-52"></span><span class="hs-comment">-- finishAuction :: `DL` AuctionState ()</span><span>
+</span><span id="line-53"></span><span class="hs-comment">-- finishAuction = do</span><span>
+</span><span id="line-54"></span><span class="hs-comment">--   `anyActions_`</span><span>
+</span><span id="line-55"></span><span class="hs-comment">--   `action` $ Wait endSlot</span><span>
+</span><span id="line-56"></span><span class="hs-comment">--   `action` $ Collect</span><span>
+</span><span id="line-57"></span><span class="hs-comment">--   `assertModel` &quot;Funds are locked!&quot; (`Ledger.Value.isZero` . `lockedValue`)</span><span>
+</span><span id="line-58"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-59"></span><span class="hs-comment">--</span><span>
+</span><span id="line-60"></span><span class="hs-comment">-- `DL` scenarios are turned into QuickCheck properties using `forAllDL`.</span><span>
+</span><span id="line-61"></span><span>
+</span><span id="line-62"></span><span class="hs-comment">-- $dynamicLogic_errors</span><span>
+</span><span id="line-63"></span><span class="hs-comment">--</span><span>
+</span><span id="line-64"></span><span class="hs-comment">-- In addition to failing the check that the emulator run matches the model, there are a few other</span><span>
+</span><span id="line-65"></span><span class="hs-comment">-- ways that test scenarios can fail:</span><span>
+</span><span id="line-66"></span><span class="hs-comment">--</span><span>
+</span><span id="line-67"></span><span class="hs-comment">-- * an explicit `action` does not satisfy its `precondition`</span><span>
+</span><span id="line-68"></span><span class="hs-comment">-- * a failed `DL.assert` or `assertModel`, or a monad `fail`</span><span>
+</span><span id="line-69"></span><span class="hs-comment">-- * an `Control.Applicative.empty` set of `Control.Applicative.Alternative`s</span><span>
+</span><span id="line-70"></span><span class="hs-comment">-- * the scenario fails to terminate (see `stopping`)</span><span>
+</span><span id="line-71"></span><span class="hs-comment">--</span><span>
+</span><span id="line-72"></span><span class="hs-comment">-- All of these occur at test case generation time, and thus do not directly say anything about the</span><span>
+</span><span id="line-73"></span><span class="hs-comment">-- contract implementation. However, together with the check that the model agrees with the emulator</span><span>
+</span><span id="line-74"></span><span class="hs-comment">-- they indirectly imply properties of the implementation. An advantage of this is that `DL` test</span><span>
+</span><span id="line-75"></span><span class="hs-comment">-- scenarios can be checked without running the contract through the emulator, which is much much</span><span>
+</span><span id="line-76"></span><span class="hs-comment">-- faster. For instance,</span><span>
+</span><span id="line-77"></span><span class="hs-comment">--</span><span>
+</span><span id="line-78"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-79"></span><span class="hs-comment">-- prop_FinishModel = `forAllDL` finishAuction $ const True</span><span>
+</span><span id="line-80"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-81"></span><span class="hs-comment">--</span><span>
+</span><span id="line-82"></span><span class="hs-comment">-- would check that the model does not think there will be any locked funds after the auction is</span><span>
+</span><span id="line-83"></span><span class="hs-comment">-- finished. Once this property passes, one can run the slower property that also checks that the</span><span>
+</span><span id="line-84"></span><span class="hs-comment">-- emulator agrees.</span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span class="hs-comment">-- | The monad for writing test scenarios. It supports non-deterministic choice through</span><span>
+</span><span id="line-87"></span><span class="hs-comment">--   `Control.Applicative.Alternative`, failure with `MonadFail`, and access to the model state</span><span>
+</span><span id="line-88"></span><span class="hs-comment">--   through `GetModelState`. It is lazy, so scenarios can be potentially infinite, although the</span><span>
+</span><span id="line-89"></span><span class="hs-comment">--   probability of termination needs to be high enough that concrete test cases are always finite.</span><span>
+</span><span id="line-90"></span><span class="hs-comment">--   See `stopping` for more information on termination.</span><span>
+</span><span id="line-91"></span><span class="hs-keyword">type</span><span> </span><span id="DL"><span class="annot"><a href="Test.QuickCheck.ContractModel.DL.html#DL"><span class="hs-identifier hs-var">DL</span></a></span></span><span> </span><span id="local-6989586621679448692"><span class="annot"><a href="#local-6989586621679448692"><span class="hs-identifier hs-type">state</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">DL.DL</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#ModelState"><span class="hs-identifier hs-type">ModelState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679448692"><span class="hs-identifier hs-type">state</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-92"></span><span>
+</span><span id="line-93"></span><span class="hs-comment">-- This is a trick to let you write `action $ WaitUntil n` in your DL test.</span><span>
+</span><span id="line-94"></span><span class="hs-comment">-- It helps you get around the fact that the DL test is printed in the qc-d world</span><span>
+</span><span id="line-95"></span><span class="hs-comment">-- where actions are `StateModel.Action`s not `ContractModel.Action`s.</span><span>
+</span><span id="line-96"></span><span class="hs-comment">-- So a DL counterexample will print like</span><span>
+</span><span id="line-97"></span><span class="hs-comment">-- ```</span><span>
+</span><span id="line-98"></span><span class="hs-comment">-- do action $ Offer</span><span>
+</span><span id="line-99"></span><span class="hs-comment">--    action $ Bid 1 10</span><span>
+</span><span id="line-100"></span><span class="hs-comment">--    action $ WaitUntil 10</span><span>
+</span><span id="line-101"></span><span class="hs-comment">--    ...</span><span>
+</span><span id="line-102"></span><span class="hs-comment">-- ```</span><span>
+</span><span id="line-103"></span><span class="hs-comment">-- Which wouldn't be copy-pastable unless we had this trick.</span><span>
+</span><span id="line-104"></span><span class="hs-keyword">class</span><span> </span><span id="ActionLike"><span class="annot"><a href="Test.QuickCheck.ContractModel.DL.html#ActionLike"><span class="hs-identifier hs-var">ActionLike</span></a></span></span><span> </span><span id="local-6989586621679448765"><span class="annot"><a href="#local-6989586621679448765"><span class="hs-identifier hs-type">state</span></a></span></span><span> </span><span id="local-6989586621679448766"><span class="annot"><a href="#local-6989586621679448766"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="#local-6989586621679448766"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679448765"><span class="hs-identifier hs-type">state</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-105"></span><span>  </span><span class="hs-comment">-- | Generate a specific action. Fails if the action's `precondition` is not satisfied.</span><span>
+</span><span id="line-106"></span><span>  </span><span id="action"><span class="annot"><a href="Test.QuickCheck.ContractModel.DL.html#action"><span class="hs-identifier hs-type">action</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679448766"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.DL.html#DL"><span class="hs-identifier hs-type">DL</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679448765"><span class="hs-identifier hs-type">state</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-107"></span><span>
+</span><span id="line-108"></span><span id="local-6989586621679448690"><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Model.html#ContractModel"><span class="hs-identifier hs-type">ContractModel</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679448690"><span class="hs-identifier hs-type">state</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.DL.html#ActionLike"><span class="hs-identifier hs-type">ActionLike</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679448690"><span class="hs-identifier hs-type">state</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Model.html#Action"><span class="hs-identifier hs-type">Action</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679448690"><span class="hs-identifier hs-type">state</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-109"></span><span>  </span><span id="local-6989586621679448687"><span class="annot"><span class="annottext">action :: Action state -&gt; DL state ()
+</span><a href="#local-6989586621679448687"><span class="hs-identifier hs-var hs-var hs-var hs-var">action</span></a></span></span><span> </span><span id="local-6989586621679448686"><span class="annot"><span class="annottext">Action state
+</span><a href="#local-6989586621679448686"><span class="hs-identifier hs-var">cmd</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-110"></span><span>    </span><span id="local-6989586621679448685"><span class="annot"><span class="annottext">ModelState state
+</span><a href="#local-6989586621679448685"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">DL (ModelState state) (ModelState state)
+forall (m :: * -&gt; *).
+GetModelState m =&gt;
+m (ModelState (StateType m))
+</span><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#getModelState"><span class="hs-identifier hs-var">getModelState</span></a></span><span>
+</span><span id="line-111"></span><span>    </span><span class="annot"><span class="annottext">DL (ModelState state) (Var SymIndex) -&gt; DL state ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(DL (ModelState state) (Var SymIndex) -&gt; DL state ())
+-&gt; DL (ModelState state) (Var SymIndex) -&gt; DL state ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Action (ModelState state) SymIndex
+-&gt; DL (ModelState state) (Var SymIndex)
+forall a s.
+(Typeable a, Eq (Action s a), Show (Action s a)) =&gt;
+Action s a -&gt; DL s (Var a)
+</span><span class="hs-identifier hs-var">DL.action</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ModelState state
+-&gt; Action state -&gt; Action (ModelState state) SymIndex
+forall state.
+ContractModel state =&gt;
+ModelState state
+-&gt; Action state -&gt; Action (ModelState state) SymIndex
+</span><a href="Test.QuickCheck.ContractModel.Internal.Model.html#contractAction"><span class="hs-identifier hs-var">contractAction</span></a></span><span> </span><span class="annot"><span class="annottext">ModelState state
+</span><a href="#local-6989586621679448685"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Action state
+</span><a href="#local-6989586621679448686"><span class="hs-identifier hs-var">cmd</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-112"></span><span>
+</span><span id="line-113"></span><span id="local-6989586621679448679"><span id="local-6989586621679448680"><span class="hs-keyword">instance</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Model.html#ContractModel"><span class="hs-identifier hs-type">ContractModel</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679448680"><span class="hs-identifier hs-type">state</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Typeable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679448679"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.DL.html#ActionLike"><span class="hs-identifier hs-type">ActionLike</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679448680"><span class="hs-identifier hs-type">state</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">StateModel.Action</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#ModelState"><span class="hs-identifier hs-type">ModelState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679448680"><span class="hs-identifier hs-type">state</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679448679"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-114"></span><span>  </span><span id="local-6989586621679448677"><span class="annot"><span class="annottext">action :: Action (ModelState state) a -&gt; DL state ()
+</span><a href="#local-6989586621679448677"><span class="hs-identifier hs-var hs-var hs-var hs-var">action</span></a></span></span><span> </span><span id="local-6989586621679448676"><span class="annot"><span class="annottext">Action (ModelState state) a
+</span><a href="#local-6989586621679448676"><span class="hs-identifier hs-var">cmd</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DL (ModelState state) (Var a) -&gt; DL state ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(DL (ModelState state) (Var a) -&gt; DL state ())
+-&gt; DL (ModelState state) (Var a) -&gt; DL state ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Action (ModelState state) a -&gt; DL (ModelState state) (Var a)
+forall a s.
+(Typeable a, Eq (Action s a), Show (Action s a)) =&gt;
+Action s a -&gt; DL s (Var a)
+</span><span class="hs-identifier hs-var">DL.action</span></span><span> </span><span class="annot"><span class="annottext">Action (ModelState state) a
+</span><a href="#local-6989586621679448676"><span class="hs-identifier hs-var">cmd</span></a></span></span></span><span>
+</span><span id="line-115"></span><span>
+</span><span id="line-116"></span><span id="local-6989586621679448675"><span class="annot"><a href="Test.QuickCheck.ContractModel.DL.html#observe"><span class="hs-identifier hs-type">observe</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Model.html#ContractModel"><span class="hs-identifier hs-type">ContractModel</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679448675"><span class="hs-identifier hs-type">state</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679448745"><span class="annot"><a href="#local-6989586621679448745"><span class="hs-identifier hs-type">t</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Symbolics.html#HasSymbolicRep"><span class="hs-identifier hs-type">HasSymbolicRep</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679448745"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Symbolics.html#Symbolic"><span class="hs-identifier hs-type">Symbolic</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679448745"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679448745"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.ChainIndex.html#ChainState"><span class="hs-identifier hs-type">ChainState</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">Bool</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.DL.html#DL"><span class="hs-identifier hs-type">DL</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679448675"><span class="hs-identifier hs-type">state</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-117"></span><span id="observe"><span class="annot"><span class="annottext">observe :: String
+-&gt; ((forall t. HasSymbolicRep t =&gt; Symbolic t -&gt; t)
+    -&gt; ChainState -&gt; Bool)
+-&gt; DL state ()
+</span><a href="Test.QuickCheck.ContractModel.DL.html#observe"><span class="hs-identifier hs-var hs-var">observe</span></a></span></span><span> </span><span id="local-6989586621679448673"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679448673"><span class="hs-identifier hs-var">o</span></a></span></span><span> </span><span id="local-6989586621679448672"><span class="annot"><span class="annottext">(forall t. HasSymbolicRep t =&gt; Symbolic t -&gt; t)
+-&gt; ChainState -&gt; Bool
+</span><a href="#local-6989586621679448672"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Action (ModelState state) () -&gt; DL state ()
+forall state a. ActionLike state a =&gt; a -&gt; DL state ()
+</span><a href="Test.QuickCheck.ContractModel.DL.html#action"><span class="hs-identifier hs-var">action</span></a></span><span> </span><span class="annot"><span class="annottext">(Action (ModelState state) () -&gt; DL state ())
+-&gt; Action (ModelState state) () -&gt; DL state ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String
+-&gt; ((forall t. HasSymbolicRep t =&gt; Symbolic t -&gt; t)
+    -&gt; ChainState -&gt; Bool)
+-&gt; Action (ModelState state) ()
+forall state.
+String
+-&gt; ((forall t. HasSymbolicRep t =&gt; Symbolic t -&gt; t)
+    -&gt; ChainState -&gt; Bool)
+-&gt; Action (ModelState state) ()
+</span><a href="Test.QuickCheck.ContractModel.Internal.Model.html#Observation"><span class="hs-identifier hs-var">Observation</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679448673"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">(forall t. HasSymbolicRep t =&gt; Symbolic t -&gt; t)
+-&gt; ChainState -&gt; Bool
+</span><a href="#local-6989586621679448672"><span class="hs-identifier hs-var">p</span></a></span><span>
+</span><span id="line-118"></span><span>
+</span><span id="line-119"></span><span class="annot"><a href="Test.QuickCheck.ContractModel.DL.html#waitUntilDL"><span class="hs-identifier hs-type">waitUntilDL</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679448669"><span class="annot"><a href="#local-6989586621679448669"><span class="hs-identifier hs-type">state</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Model.html#ContractModel"><span class="hs-identifier hs-type">ContractModel</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679448669"><span class="hs-identifier hs-type">state</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">SlotNo</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.DL.html#DL"><span class="hs-identifier hs-type">DL</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679448669"><span class="hs-identifier hs-type">state</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-120"></span><span id="waitUntilDL"><span class="annot"><span class="annottext">waitUntilDL :: SlotNo -&gt; DL state ()
+</span><a href="Test.QuickCheck.ContractModel.DL.html#waitUntilDL"><span class="hs-identifier hs-var hs-var">waitUntilDL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Action (ModelState state) () -&gt; DL state ()
+forall state a. ActionLike state a =&gt; a -&gt; DL state ()
+</span><a href="Test.QuickCheck.ContractModel.DL.html#action"><span class="hs-identifier hs-var">action</span></a></span><span> </span><span class="annot"><span class="annottext">(Action (ModelState state) () -&gt; DL state ())
+-&gt; (SlotNo -&gt; Action (ModelState state) ())
+-&gt; SlotNo
+-&gt; DL state ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">SlotNo -&gt; Action (ModelState state) ()
+forall state. SlotNo -&gt; Action (ModelState state) ()
+</span><a href="Test.QuickCheck.ContractModel.Internal.Model.html#WaitUntil"><span class="hs-identifier hs-var">WaitUntil</span></a></span><span>
+</span><span id="line-121"></span><span>
+</span><span id="line-122"></span><span class="hs-comment">-- | Generate a random action using `arbitraryAction`. The generated action is guaranteed to satisfy</span><span>
+</span><span id="line-123"></span><span class="hs-comment">--   its `precondition`. Fails with `Stuck` if no action satisfying the precondition can be found</span><span>
+</span><span id="line-124"></span><span class="hs-comment">--   after 100 attempts.</span><span>
+</span><span id="line-125"></span><span id="local-6989586621679448666"><span class="annot"><a href="Test.QuickCheck.ContractModel.DL.html#anyAction"><span class="hs-identifier hs-type">anyAction</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.DL.html#DL"><span class="hs-identifier hs-type">DL</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679448666"><span class="hs-identifier hs-type">state</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-126"></span><span id="anyAction"><span class="annot"><span class="annottext">anyAction :: DL state ()
+</span><a href="Test.QuickCheck.ContractModel.DL.html#anyAction"><span class="hs-identifier hs-var hs-var">anyAction</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DL state ()
+forall s. DL s ()
+</span><span class="hs-identifier hs-var">DL.anyAction</span></span><span>
+</span><span id="line-127"></span><span>
+</span><span id="line-128"></span><span class="hs-comment">-- | Generate a sequence of random actions using `arbitraryAction`. All actions satisfy their</span><span>
+</span><span id="line-129"></span><span class="hs-comment">--   `precondition`s. The argument is the expected number of actions in the sequence chosen from a</span><span>
+</span><span id="line-130"></span><span class="hs-comment">--   geometric distribution, unless in the `stopping` stage, in which case as few actions as</span><span>
+</span><span id="line-131"></span><span class="hs-comment">--   possible are generated.</span><span>
+</span><span id="line-132"></span><span id="local-6989586621679448663"><span class="annot"><a href="Test.QuickCheck.ContractModel.DL.html#anyActions"><span class="hs-identifier hs-type">anyActions</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.DL.html#DL"><span class="hs-identifier hs-type">DL</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679448663"><span class="hs-identifier hs-type">state</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-133"></span><span id="anyActions"><span class="annot"><span class="annottext">anyActions :: Int -&gt; DL state ()
+</span><a href="Test.QuickCheck.ContractModel.DL.html#anyActions"><span class="hs-identifier hs-var hs-var">anyActions</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; DL state ()
+forall s. Int -&gt; DL s ()
+</span><span class="hs-identifier hs-var">DL.anyActions</span></span><span>
+</span><span id="line-134"></span><span>
+</span><span id="line-135"></span><span class="hs-comment">-- | Generate a sequence of random actions using `arbitraryAction`. All actions satisfy their</span><span>
+</span><span id="line-136"></span><span class="hs-comment">--   `precondition`s. Actions may be generated until the `stopping` stage is reached; the expected length is size/2.</span><span>
+</span><span id="line-137"></span><span id="local-6989586621679448660"><span class="annot"><a href="Test.QuickCheck.ContractModel.DL.html#anyActions_"><span class="hs-identifier hs-type">anyActions_</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.DL.html#DL"><span class="hs-identifier hs-type">DL</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679448660"><span class="hs-identifier hs-type">state</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-138"></span><span id="anyActions_"><span class="annot"><span class="annottext">anyActions_ :: DL state ()
+</span><a href="Test.QuickCheck.ContractModel.DL.html#anyActions_"><span class="hs-identifier hs-var hs-var">anyActions_</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DL state ()
+forall s. DL s ()
+</span><span class="hs-identifier hs-var">DL.anyActions_</span></span><span>
+</span><span id="line-139"></span><span>
+</span><span id="line-140"></span><span class="hs-comment">-- | Test case generation from `DL` scenarios have a target length of the action sequence to be</span><span>
+</span><span id="line-141"></span><span class="hs-comment">--   generated that is based on the QuickCheck size parameter (see `sized`). However, given that</span><span>
+</span><span id="line-142"></span><span class="hs-comment">--   scenarios can contain explicit `action`s it might not be possible to stop the scenario once the</span><span>
+</span><span id="line-143"></span><span class="hs-comment">--   target length has been reached.</span><span>
+</span><span id="line-144"></span><span class="hs-comment">--</span><span>
+</span><span id="line-145"></span><span class="hs-comment">--   Instead, once the target number of actions have been reached, generation goes into the</span><span>
+</span><span id="line-146"></span><span class="hs-comment">--   /stopping/ phase. In this phase branches starting with `stopping` are preferred, if possible.</span><span>
+</span><span id="line-147"></span><span class="hs-comment">--   Conversely, before the stopping phase, branches starting with `stopping`</span><span>
+</span><span id="line-148"></span><span class="hs-comment">--   are avoided unless there are no other possible choices.</span><span>
+</span><span id="line-149"></span><span class="hs-comment">--</span><span>
+</span><span id="line-150"></span><span class="hs-comment">--   For example, here is the definition of `anyActions`:</span><span>
+</span><span id="line-151"></span><span class="hs-comment">--</span><span>
+</span><span id="line-152"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-153"></span><span class="hs-comment">-- `anyActions` n = `stopping` `Control.Applicative.&lt;|&gt;` pure ()</span><span>
+</span><span id="line-154"></span><span class="hs-comment">--                        `Control.Applicative.&lt;|&gt;` (`weight` (fromIntegral n) &gt;&gt; `anyAction` &gt;&gt; `anyActions` n)</span><span>
+</span><span id="line-155"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-156"></span><span class="hs-comment">--</span><span>
+</span><span id="line-157"></span><span class="hs-comment">--   The effect of this definition is that the second or third branch will be taken until the desired number</span><span>
+</span><span id="line-158"></span><span class="hs-comment">--   of actions have been generated, at which point the `stopping` branch will be taken and</span><span>
+</span><span id="line-159"></span><span class="hs-comment">--   generation stops (or continues with whatever comes after the `anyActions` call).</span><span>
+</span><span id="line-160"></span><span class="hs-comment">--</span><span>
+</span><span id="line-161"></span><span class="hs-comment">--   Now, it might not be possible, or too hard, to find a way to terminate a scenario. For</span><span>
+</span><span id="line-162"></span><span class="hs-comment">--   instance, this scenario has no finite test cases:</span><span>
+</span><span id="line-163"></span><span class="hs-comment">--</span><span>
+</span><span id="line-164"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-165"></span><span class="hs-comment">-- looping = `anyAction` &gt;&gt; looping</span><span>
+</span><span id="line-166"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-167"></span><span class="hs-comment">--</span><span>
+</span><span id="line-168"></span><span class="hs-comment">--   To prevent test case generation from looping, if a scenario has not terminated after generating</span><span>
+</span><span id="line-169"></span><span class="hs-comment">--   @2 * n + 20@ actions, where @n@ is when the stopping phase kicks in, generation fails with a</span><span>
+</span><span id="line-170"></span><span class="hs-comment">--   `Looping` error.</span><span>
+</span><span id="line-171"></span><span id="local-6989586621679448657"><span class="annot"><a href="Test.QuickCheck.ContractModel.DL.html#stopping"><span class="hs-identifier hs-type">stopping</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.DL.html#DL"><span class="hs-identifier hs-type">DL</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679448657"><span class="hs-identifier hs-type">state</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-172"></span><span id="stopping"><span class="annot"><span class="annottext">stopping :: DL state ()
+</span><a href="Test.QuickCheck.ContractModel.DL.html#stopping"><span class="hs-identifier hs-var hs-var">stopping</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DL state ()
+forall s. DL s ()
+</span><span class="hs-identifier hs-var">DL.stopping</span></span><span>
+</span><span id="line-173"></span><span>
+</span><span id="line-174"></span><span class="hs-comment">-- | By default, `Control.Applicative.Alternative` choice (`Control.Applicative.&lt;|&gt;`) picks among</span><span>
+</span><span id="line-175"></span><span class="hs-comment">--   the next actions with equal probability. So, for instance, this code chooses between the actions</span><span>
+</span><span id="line-176"></span><span class="hs-comment">--   @a@, @b@ and @c@, with a probability @1/3@ of choosing each:</span><span>
+</span><span id="line-177"></span><span class="hs-comment">--</span><span>
+</span><span id="line-178"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-179"></span><span class="hs-comment">-- unbiasedChoice a b c = `action` a `Control.Applicative.&lt;|&gt;` `action` b `Control.Applicative.&lt;|&gt;` `action` c</span><span>
+</span><span id="line-180"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-181"></span><span class="hs-comment">--</span><span>
+</span><span id="line-182"></span><span class="hs-comment">--   To change this you can use `weight`, which multiplies the</span><span>
+</span><span id="line-183"></span><span class="hs-comment">--   relative probability of picking a branch by the given number.</span><span>
+</span><span id="line-184"></span><span class="hs-comment">--</span><span>
+</span><span id="line-185"></span><span class="hs-comment">--   For instance, the following scenario picks the action @a@ with probability @2/3@ and the action</span><span>
+</span><span id="line-186"></span><span class="hs-comment">--   @b@ with probability @1/3@:</span><span>
+</span><span id="line-187"></span><span class="hs-comment">--</span><span>
+</span><span id="line-188"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-189"></span><span class="hs-comment">-- biasedChoice a b = `weight` 2 (`action` a) `Control.Applicative.&lt;|&gt;` `weight` (`action` b)</span><span>
+</span><span id="line-190"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-191"></span><span class="hs-comment">--</span><span>
+</span><span id="line-192"></span><span class="hs-comment">--   Calls to `weight` need to appear at the top-level after a choice, preceding any actions</span><span>
+</span><span id="line-193"></span><span class="hs-comment">--   (`action`/`anyAction`) or random generation (`forAllQ`), or they will have no effect.</span><span>
+</span><span id="line-194"></span><span id="local-6989586621679448654"><span class="annot"><a href="Test.QuickCheck.ContractModel.DL.html#weight"><span class="hs-identifier hs-type">weight</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">Double</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.DL.html#DL"><span class="hs-identifier hs-type">DL</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679448654"><span class="hs-identifier hs-type">state</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-195"></span><span id="weight"><span class="annot"><span class="annottext">weight :: Double -&gt; DL state ()
+</span><a href="Test.QuickCheck.ContractModel.DL.html#weight"><span class="hs-identifier hs-var hs-var">weight</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Double -&gt; DL state ()
+forall s. Double -&gt; DL s ()
+</span><span class="hs-identifier hs-var">DL.weight</span></span><span>
+</span><span id="line-196"></span><span>
+</span><span id="line-197"></span><span class="hs-comment">-- | Sometimes test case generation should depend on QuickCheck's size</span><span>
+</span><span id="line-198"></span><span class="hs-comment">--   parameter. This can be accessed using @getSize@. For example, @anyActions_@ is defined by</span><span>
+</span><span id="line-199"></span><span class="hs-comment">--</span><span>
+</span><span id="line-200"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-201"></span><span class="hs-comment">-- anyActions_ = do n &lt;- getSize</span><span>
+</span><span id="line-202"></span><span class="hs-comment">--                  anyActions (n `div` 2 + 1)</span><span>
+</span><span id="line-203"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-204"></span><span class="hs-comment">--</span><span>
+</span><span id="line-205"></span><span class="hs-comment">-- so that we generate a random number of actions, but on average half the size (which is about the same as</span><span>
+</span><span id="line-206"></span><span class="hs-comment">-- the average random positive integer, or length of a list).</span><span>
+</span><span id="line-207"></span><span>
+</span><span id="line-208"></span><span id="local-6989586621679448651"><span class="annot"><a href="Test.QuickCheck.ContractModel.DL.html#getSize"><span class="hs-identifier hs-type">getSize</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.DL.html#DL"><span class="hs-identifier hs-type">DL</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679448651"><span class="hs-identifier hs-type">state</span></a></span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">Int</span></a></span></span><span>
+</span><span id="line-209"></span><span id="getSize"><span class="annot"><span class="annottext">getSize :: DL state Int
+</span><a href="Test.QuickCheck.ContractModel.DL.html#getSize"><span class="hs-identifier hs-var hs-var">getSize</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DL state Int
+forall s. DL s Int
+</span><span class="hs-identifier hs-var">DL.getSize</span></span><span>
+</span><span id="line-210"></span><span>
+</span><span id="line-211"></span><span class="hs-comment">-- | The `monitor` function allows you to collect statistics of your testing using QuickCheck</span><span>
+</span><span id="line-212"></span><span class="hs-comment">--   functions like `Test.QuickCheck.label`, `Test.QuickCheck.collect`, `Test.QuickCheck.classify`,</span><span>
+</span><span id="line-213"></span><span class="hs-comment">--   and `Test.QuickCheck.tabulate`. See also the `monitoring` method of `ContractModel` which is</span><span>
+</span><span id="line-214"></span><span class="hs-comment">--   called for all actions in a test case (regardless of whether they are generated by an explicit</span><span>
+</span><span id="line-215"></span><span class="hs-comment">--   `action` or an `anyAction`).</span><span>
+</span><span id="line-216"></span><span id="local-6989586621679448648"><span class="annot"><a href="Test.QuickCheck.ContractModel.DL.html#monitor"><span class="hs-identifier hs-type">monitor</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Property</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Property</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.DL.html#DL"><span class="hs-identifier hs-type">DL</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679448648"><span class="hs-identifier hs-type">state</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-217"></span><span id="monitor"><span class="annot"><span class="annottext">monitor :: (Property -&gt; Property) -&gt; DL state ()
+</span><a href="Test.QuickCheck.ContractModel.DL.html#monitor"><span class="hs-identifier hs-var hs-var">monitor</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Property -&gt; Property) -&gt; DL state ()
+forall s. (Property -&gt; Property) -&gt; DL s ()
+</span><span class="hs-identifier hs-var">DL.monitorDL</span></span><span>
+</span><span id="line-218"></span><span>
+</span><span id="line-219"></span><span class="hs-comment">-- | Fail unless the given predicate holds of the model state.</span><span>
+</span><span id="line-220"></span><span class="hs-comment">--</span><span>
+</span><span id="line-221"></span><span class="hs-comment">--   Equivalent to</span><span>
+</span><span id="line-222"></span><span class="hs-comment">--</span><span>
+</span><span id="line-223"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-224"></span><span class="hs-comment">-- assertModel msg p = do</span><span>
+</span><span id="line-225"></span><span class="hs-comment">--   s &lt;- `getModelState`</span><span>
+</span><span id="line-226"></span><span class="hs-comment">--   `DL.assert` msg (p s)</span><span>
+</span><span id="line-227"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-228"></span><span id="local-6989586621679448645"><span class="annot"><a href="Test.QuickCheck.ContractModel.DL.html#assertModel"><span class="hs-identifier hs-type">assertModel</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#ModelState"><span class="hs-identifier hs-type">ModelState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679448645"><span class="hs-identifier hs-type">state</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-type">Bool</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.DL.html#DL"><span class="hs-identifier hs-type">DL</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679448645"><span class="hs-identifier hs-type">state</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-229"></span><span id="assertModel"><span class="annot"><span class="annottext">assertModel :: String -&gt; (ModelState state -&gt; Bool) -&gt; DL state ()
+</span><a href="Test.QuickCheck.ContractModel.DL.html#assertModel"><span class="hs-identifier hs-var hs-var">assertModel</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; (ModelState state -&gt; Bool) -&gt; DL state ()
+forall s. String -&gt; (s -&gt; Bool) -&gt; DL s ()
+</span><span class="hs-identifier hs-var">DL.assertModel</span></span><span>
+</span><span id="line-230"></span><span>
+</span><span id="line-231"></span><span class="hs-comment">-- | Turn a `DL` scenario into a QuickCheck property. Generates a random `Actions` matching the</span><span>
+</span><span id="line-232"></span><span class="hs-comment">--   scenario and feeds it to the given property. The property can be a full property running the</span><span>
+</span><span id="line-233"></span><span class="hs-comment">--   emulator and checking the results, defined using `propRunActions_`, `propRunActions`, or</span><span>
+</span><span id="line-234"></span><span class="hs-comment">--   `propRunActionsWithOptions`. Assuming a model for an auction contract and `DL` scenario that</span><span>
+</span><span id="line-235"></span><span class="hs-comment">--   checks that you can always complete the auction, you can write:</span><span>
+</span><span id="line-236"></span><span class="hs-comment">--</span><span>
+</span><span id="line-237"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-238"></span><span class="hs-comment">-- finishAuction :: `DL` AuctionState ()</span><span>
+</span><span id="line-239"></span><span class="hs-comment">-- prop_Auction  = `propRunActions_` handles</span><span>
+</span><span id="line-240"></span><span class="hs-comment">--   where handles = ...</span><span>
+</span><span id="line-241"></span><span class="hs-comment">-- prop_Finish = `forAllDL` finishAuction prop_Auction</span><span>
+</span><span id="line-242"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-243"></span><span class="hs-comment">--</span><span>
+</span><span id="line-244"></span><span class="hs-comment">--   However, there is also value in a property that does not run the emulator at all:</span><span>
+</span><span id="line-245"></span><span class="hs-comment">--</span><span>
+</span><span id="line-246"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-247"></span><span class="hs-comment">-- prop_FinishModel = `forAllDL` finishAuction $ const True</span><span>
+</span><span id="line-248"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-249"></span><span class="hs-comment">--</span><span>
+</span><span id="line-250"></span><span class="hs-comment">--   This will check all the assertions and other failure conditions of the `DL` scenario very</span><span>
+</span><span id="line-251"></span><span class="hs-comment">--   quickly. Once this property passes a large number of tests, you can run the full property</span><span>
+</span><span id="line-252"></span><span class="hs-comment">--   checking that the model agrees with reality.</span><span>
+</span><span id="line-253"></span><span id="local-6989586621679448641"><span id="local-6989586621679448642"><span class="annot"><a href="Test.QuickCheck.ContractModel.DL.html#forAllDL"><span class="hs-identifier hs-type">forAllDL</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Model.html#ContractModel"><span class="hs-identifier hs-type">ContractModel</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679448642"><span class="hs-identifier hs-type">state</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Testable</span></span><span> </span><span class="annot"><a href="#local-6989586621679448641"><span class="hs-identifier hs-type">p</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-254"></span><span>         </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.DL.html#DL"><span class="hs-identifier hs-type">DL</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679448642"><span class="hs-identifier hs-type">state</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-255"></span><span>         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Model.html#Actions"><span class="hs-identifier hs-type">Actions</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679448642"><span class="hs-identifier hs-type">state</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679448641"><span class="hs-identifier hs-type">p</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-256"></span><span>         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Property</span></span></span></span><span>
+</span><span id="line-257"></span><span id="forAllDL"><span class="annot"><span class="annottext">forAllDL :: DL state () -&gt; (Actions state -&gt; p) -&gt; Property
+</span><a href="Test.QuickCheck.ContractModel.DL.html#forAllDL"><span class="hs-identifier hs-var hs-var">forAllDL</span></a></span></span><span> </span><span id="local-6989586621679448639"><span class="annot"><span class="annottext">DL state ()
+</span><a href="#local-6989586621679448639"><span class="hs-identifier hs-var">dl</span></a></span></span><span> </span><span id="local-6989586621679448638"><span class="annot"><span class="annottext">Actions state -&gt; p
+</span><a href="#local-6989586621679448638"><span class="hs-identifier hs-var">prop</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(DynLogicTest (ModelState state)
+ -&gt; DynLogicTest (ModelState state))
+-&gt; (DynLogicTest (ModelState state)
+    -&gt; DynLogicTest (ModelState state))
+-&gt; (Actions (ModelState state) -&gt; Actions state)
+-&gt; DL state ()
+-&gt; (Actions state -&gt; p)
+-&gt; Property
+forall s a rep srep.
+(DynLogicModel s, Testable a) =&gt;
+(rep -&gt; DynLogicTest s)
+-&gt; (DynLogicTest s -&gt; rep)
+-&gt; (Actions s -&gt; srep)
+-&gt; DL s ()
+-&gt; (srep -&gt; a)
+-&gt; Property
+</span><span class="hs-identifier hs-var">DL.forAllMappedDL</span></span><span> </span><span class="annot"><span class="annottext">DynLogicTest (ModelState state) -&gt; DynLogicTest (ModelState state)
+forall a. a -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">id</span></a></span><span> </span><span class="annot"><span class="annottext">DynLogicTest (ModelState state) -&gt; DynLogicTest (ModelState state)
+forall a. a -&gt; a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">id</span></a></span><span> </span><span class="annot"><span class="annottext">Actions (ModelState state) -&gt; Actions state
+forall s. Actions (ModelState s) -&gt; Actions s
+</span><a href="Test.QuickCheck.ContractModel.Internal.Model.html#fromStateModelActions"><span class="hs-identifier hs-var">fromStateModelActions</span></a></span><span> </span><span class="annot"><span class="annottext">DL state ()
+</span><a href="#local-6989586621679448639"><span class="hs-identifier hs-var">dl</span></a></span><span> </span><span class="annot"><span class="annottext">Actions state -&gt; p
+</span><a href="#local-6989586621679448638"><span class="hs-identifier hs-var">prop</span></a></span><span>
+</span><span id="line-258"></span><span>
+</span><span id="line-259"></span><span class="annot"><a href="Test.QuickCheck.ContractModel.DL.html#forAllUniqueDL"><span class="hs-identifier hs-type">forAllUniqueDL</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679448633"><span class="annot"><a href="#local-6989586621679448633"><span class="hs-identifier hs-type">state</span></a></span></span><span> </span><span id="local-6989586621679448632"><span class="annot"><a href="#local-6989586621679448632"><span class="hs-identifier hs-type">p</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Model.html#ContractModel"><span class="hs-identifier hs-type">ContractModel</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679448633"><span class="hs-identifier hs-type">state</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Testable</span></span><span> </span><span class="annot"><a href="#local-6989586621679448632"><span class="hs-identifier hs-type">p</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-260"></span><span>               </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">StateModel.Annotated</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#ModelState"><span class="hs-identifier hs-type">ModelState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679448633"><span class="hs-identifier hs-type">state</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-261"></span><span>               </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.DL.html#DL"><span class="hs-identifier hs-type">DL</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679448633"><span class="hs-identifier hs-type">state</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-262"></span><span>               </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Model.html#Actions"><span class="hs-identifier hs-type">Actions</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679448633"><span class="hs-identifier hs-type">state</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679448632"><span class="hs-identifier hs-type">p</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-263"></span><span>               </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Property</span></span><span>
+</span><span id="line-264"></span><span id="forAllUniqueDL"><span class="annot"><span class="annottext">forAllUniqueDL :: Annotated (ModelState state)
+-&gt; DL state () -&gt; (Actions state -&gt; p) -&gt; Property
+</span><a href="Test.QuickCheck.ContractModel.DL.html#forAllUniqueDL"><span class="hs-identifier hs-var hs-var">forAllUniqueDL</span></a></span></span><span> </span><span id="local-6989586621679448631"><span class="annot"><span class="annottext">Annotated (ModelState state)
+</span><a href="#local-6989586621679448631"><span class="hs-identifier hs-var">state</span></a></span></span><span> </span><span id="local-6989586621679448630"><span class="annot"><span class="annottext">DL state ()
+</span><a href="#local-6989586621679448630"><span class="hs-identifier hs-var">dl</span></a></span></span><span> </span><span id="local-6989586621679448629"><span class="annot"><span class="annottext">Actions state -&gt; p
+</span><a href="#local-6989586621679448629"><span class="hs-identifier hs-var">prop</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Annotated (ModelState state)
+-&gt; DL state () -&gt; (Actions (ModelState state) -&gt; p) -&gt; Property
+forall s a.
+(DynLogicModel s, Testable a) =&gt;
+Annotated s -&gt; DL s () -&gt; (Actions s -&gt; a) -&gt; Property
+</span><span class="hs-identifier hs-var">DL.forAllUniqueDL</span></span><span> </span><span class="annot"><span class="annottext">Annotated (ModelState state)
+</span><a href="#local-6989586621679448631"><span class="hs-identifier hs-var">state</span></a></span><span> </span><span class="annot"><span class="annottext">DL state ()
+</span><a href="#local-6989586621679448630"><span class="hs-identifier hs-var">dl</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Actions state -&gt; p
+</span><a href="#local-6989586621679448629"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">(Actions state -&gt; p)
+-&gt; (Actions (ModelState state) -&gt; Actions state)
+-&gt; Actions (ModelState state)
+-&gt; p
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Actions (ModelState state) -&gt; Actions state
+forall s. Actions (ModelState s) -&gt; Actions s
+</span><a href="Test.QuickCheck.ContractModel.Internal.Model.html#fromStateModelActions"><span class="hs-identifier hs-var">fromStateModelActions</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-265"></span><span>
+</span><span id="line-266"></span><span id="local-6989586621679448627"><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Model.html#ContractModel"><span class="hs-identifier hs-type">ContractModel</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679448627"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">DL.DynLogicModel</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#ModelState"><span class="hs-identifier hs-type">ModelState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679448627"><span class="hs-identifier hs-type">s</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-267"></span><span>    </span><span id="local-6989586621679448623"><span class="annot"><span class="annottext">restricted :: Action (ModelState s) a -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">restricted</span></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Model.html#ContractAction"><span class="hs-identifier hs-type">ContractAction</span></a></span><span> </span><span class="annot"><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679448620"><span class="annot"><a href="#local-6989586621679448620"><span class="hs-identifier hs-var">act</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Action s -&gt; Bool
+forall state. ContractModel state =&gt; Action state -&gt; Bool
+</span><a href="Test.QuickCheck.ContractModel.Internal.Model.html#restricted"><span class="hs-identifier hs-var">restricted</span></a></span><span> </span><span class="annot"><span class="annottext">Action s
+</span><a href="#local-6989586621679448620"><span class="hs-identifier hs-var">act</span></a></span><span>
+</span><span id="line-268"></span><span>    </span><span class="annot"><span class="hs-identifier hs-var">restricted</span></span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Model.html#WaitUntil"><span class="hs-identifier hs-type">WaitUntil</span></a></span><span class="hs-special">{</span><span class="hs-special">}</span><span>            </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-269"></span><span>    </span><span class="annot"><span class="hs-identifier hs-var">restricted</span></span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Model.html#Observation"><span class="hs-identifier hs-type">Observation</span></a></span><span class="hs-special">{</span><span class="hs-special">}</span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var">True</span></a></span></span><span>
+</span><span id="line-270"></span><span>
+</span><span id="line-271"></span><span id="local-6989586621679448618"><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#GetModelState"><span class="hs-identifier hs-type">GetModelState</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.QuickCheck.ContractModel.DL.html#DL"><span class="hs-identifier hs-type">DL</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679448618"><span class="hs-identifier hs-type">state</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-272"></span><span>    </span><span class="hs-keyword">type</span><span> </span><span id="StateType"><span class="annot"><a href="Test.QuickCheck.ContractModel.Internal.Spec.html#StateType"><span class="hs-identifier hs-var">StateType</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.QuickCheck.ContractModel.DL.html#DL"><span class="hs-identifier hs-type">DL</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679448618"><span class="hs-identifier hs-type">state</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679448618"><span class="hs-identifier hs-type">state</span></a></span><span>
+</span><span id="line-273"></span><span>    </span><span id="local-6989586621679448614"><span class="annot"><span class="annottext">getModelState :: DL state (ModelState (StateType (DL state)))
+</span><a href="#local-6989586621679448614"><span class="hs-identifier hs-var hs-var hs-var hs-var">getModelState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DL state (ModelState (StateType (DL state)))
+forall s. DL s s
+</span><span class="hs-identifier hs-var">DL.getModelStateDL</span></span></span><span>
+</span><span id="line-274"></span></pre></body></html>

@@ -1,0 +1,253 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds         #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass    #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric     #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE DerivingVia       #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts  #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE GADTs             #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase        #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns    #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-11"></span><span class="hs-pragma">{-# LANGUAGE StrictData        #-}</span><span>
+</span><span id="line-12"></span><span class="hs-pragma">{-# LANGUAGE TemplateHaskell   #-}</span><span>
+</span><span id="line-13"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications  #-}</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-comment">{-| This module exports data types for logging, events and configuration
+-}</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Node.Types</span><span>
+</span><span id="line-20"></span><span>    </span><span class="hs-special">(</span><span>
+</span><span id="line-21"></span><span>     </span><span class="annot"><span class="hs-comment">-- * Effects</span></span><span>
+</span><span id="line-22"></span><span>    </span><span class="annot"><a href="Cardano.Node.Types.html#ChainSyncHandle"><span class="hs-identifier">ChainSyncHandle</span></a></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Config types</span></span><span>
+</span><span id="line-25"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Types.html#PABServerConfig"><span class="hs-identifier">PABServerConfig</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Types.html#NodeMode"><span class="hs-identifier">NodeMode</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Types.html#_MockNode"><span class="hs-identifier">_MockNode</span></a></span><span>
+</span><span id="line-28"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Types.html#_AlonzoNode"><span class="hs-identifier">_AlonzoNode</span></a></span><span>
+</span><span id="line-29"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span>        </span><span class="hs-keyword">where</span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.Node.Socket.Emulator.Types</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">NodeServerConfig</span></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.Protocol.Socket.Client</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Client</span></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Lens</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">makePrisms</span></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">FromJSON</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ToJSON</span></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Default</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Default</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">def</span></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Text</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Text</span></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Time.Units.Extra</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Ledger</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Block</span></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Prettyprinter</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Pretty</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">pretty</span></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- Configuration ------------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="hs-comment">{- Note [Slot numbers in mock node]
+
+The mock node has an internal clock that generates new slots in a regular
+interval. Slots are identified by consecutive integers. What should the
+initial slot number be? We can either set it to 0, so that the slot number
+is the number of intervals that have passed since the process was started.
+Or we can define an initial timestamp, so that the slot number is the number
+of intervals since that timestamp.
+
+The first option of counting from 0 is useful for integration tests where we
+want the test outcome to be independent of when the test was run. This approach
+is used in the PAB simulator.
+The second option, counting from a timestamp, is more realistic and it is
+useful for frontends that need to convert the slot number back to a timestamp.
+We use this approach for the &quot;proper&quot; pab executable.
+
+-}</span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span class="hs-comment">-- | Which node we're connecting to</span><span>
+</span><span id="line-64"></span><span id="local-6989586621680266606"><span id="local-6989586621680266607"></span></span><span class="hs-keyword">data</span><span> </span><span id="NodeMode"><span class="annot"><a href="Cardano.Node.Types.html#NodeMode"><span class="hs-identifier hs-var">NodeMode</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-65"></span><span>    </span><span id="MockNode"><span class="annot"><a href="Cardano.Node.Types.html#MockNode"><span class="hs-identifier hs-var">MockNode</span></a></span></span><span> </span><span class="hs-comment">-- ^ Connect to the PAB mock node.</span><span>
+</span><span id="line-66"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="AlonzoNode"><span class="annot"><a href="Cardano.Node.Types.html#AlonzoNode"><span class="hs-identifier hs-var">AlonzoNode</span></a></span></span><span> </span><span class="hs-comment">-- ^ Connect to an Alonzo node</span><span>
+</span><span id="line-67"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="NoChainSyncEvents"><span class="annot"><a href="Cardano.Node.Types.html#NoChainSyncEvents"><span class="hs-identifier hs-var">NoChainSyncEvents</span></a></span></span><span> </span><span class="hs-comment">-- ^ Do not connect to any node for chain sync events. Connect to Alonzo node for slot notifications.</span><span>
+</span><span id="line-68"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680266597"><span id="local-6989586621680266599"><span id="local-6989586621680266601"><span class="annot"><span class="annottext">Int -&gt; NodeMode -&gt; ShowS
+[NodeMode] -&gt; ShowS
+NodeMode -&gt; String
+(Int -&gt; NodeMode -&gt; ShowS)
+-&gt; (NodeMode -&gt; String) -&gt; ([NodeMode] -&gt; ShowS) -&gt; Show NodeMode
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [NodeMode] -&gt; ShowS
+$cshowList :: [NodeMode] -&gt; ShowS
+show :: NodeMode -&gt; String
+$cshow :: NodeMode -&gt; String
+showsPrec :: Int -&gt; NodeMode -&gt; ShowS
+$cshowsPrec :: Int -&gt; NodeMode -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680266592"><span id="local-6989586621680266594"><span class="annot"><span class="annottext">NodeMode -&gt; NodeMode -&gt; Bool
+(NodeMode -&gt; NodeMode -&gt; Bool)
+-&gt; (NodeMode -&gt; NodeMode -&gt; Bool) -&gt; Eq NodeMode
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: NodeMode -&gt; NodeMode -&gt; Bool
+$c/= :: NodeMode -&gt; NodeMode -&gt; Bool
+== :: NodeMode -&gt; NodeMode -&gt; Bool
+$c== :: NodeMode -&gt; NodeMode -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. NodeMode -&gt; Rep NodeMode x)
+-&gt; (forall x. Rep NodeMode x -&gt; NodeMode) -&gt; Generic NodeMode
+forall x. Rep NodeMode x -&gt; NodeMode
+forall x. NodeMode -&gt; Rep NodeMode x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep NodeMode x -&gt; NodeMode
+$cfrom :: forall x. NodeMode -&gt; Rep NodeMode x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680266584"><span id="local-6989586621680266586"><span class="annot"><span class="annottext">Value -&gt; Parser [NodeMode]
+Value -&gt; Parser NodeMode
+(Value -&gt; Parser NodeMode)
+-&gt; (Value -&gt; Parser [NodeMode]) -&gt; FromJSON NodeMode
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+parseJSONList :: Value -&gt; Parser [NodeMode]
+$cparseJSONList :: Value -&gt; Parser [NodeMode]
+parseJSON :: Value -&gt; Parser NodeMode
+$cparseJSON :: Value -&gt; Parser NodeMode
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680266575"><span id="local-6989586621680266577"><span id="local-6989586621680266579"><span id="local-6989586621680266581"><span class="annot"><span class="annottext">[NodeMode] -&gt; Value
+[NodeMode] -&gt; Encoding
+NodeMode -&gt; Value
+NodeMode -&gt; Encoding
+(NodeMode -&gt; Value)
+-&gt; (NodeMode -&gt; Encoding)
+-&gt; ([NodeMode] -&gt; Value)
+-&gt; ([NodeMode] -&gt; Encoding)
+-&gt; ToJSON NodeMode
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; ToJSON a
+toEncodingList :: [NodeMode] -&gt; Encoding
+$ctoEncodingList :: [NodeMode] -&gt; Encoding
+toJSONList :: [NodeMode] -&gt; Value
+$ctoJSONList :: [NodeMode] -&gt; Value
+toEncoding :: NodeMode -&gt; Encoding
+$ctoEncoding :: NodeMode -&gt; Encoding
+toJSON :: NodeMode -&gt; Value
+$ctoJSON :: NodeMode -&gt; Value
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span>
+</span><span id="line-71"></span><span id="_NoChainSyncEvents"><span id="_AlonzoNode"><span id="_MockNode"><span class="hs-identifier">makePrisms</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">NodeMode</span></span></span></span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="hs-comment">-- | Node server configuration</span><span>
+</span><span id="line-74"></span><span id="local-6989586621680266571"><span id="local-6989586621680266572"></span></span><span class="hs-keyword">data</span><span> </span><span id="PABServerConfig"><span class="annot"><a href="Cardano.Node.Types.html#PABServerConfig"><span class="hs-identifier hs-var">PABServerConfig</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-75"></span><span>    </span><span id="PABServerConfig"><span class="annot"><a href="Cardano.Node.Types.html#PABServerConfig"><span class="hs-identifier hs-var">PABServerConfig</span></a></span></span><span>
+</span><span id="line-76"></span><span>        </span><span class="hs-special">{</span><span> </span><span id="pscNodeServerConfig"><span class="annot"><span class="annottext">PABServerConfig -&gt; NodeServerConfig
+</span><a href="Cardano.Node.Types.html#pscNodeServerConfig"><span class="hs-identifier hs-var hs-var">pscNodeServerConfig</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">NodeServerConfig</span></span><span>
+</span><span id="line-77"></span><span>        </span><span class="hs-comment">-- ^ Path to a JSON file containing the protocol parameters</span><span>
+</span><span id="line-78"></span><span>        </span><span class="hs-special">,</span><span> </span><span id="pscPassphrase"><span class="annot"><span class="annottext">PABServerConfig -&gt; Maybe Text
+</span><a href="Cardano.Node.Types.html#pscPassphrase"><span class="hs-identifier hs-var hs-var">pscPassphrase</span></a></span></span><span>       </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span>
+</span><span id="line-79"></span><span>        </span><span class="hs-comment">-- ^ Wallet passphrase</span><span>
+</span><span id="line-80"></span><span>        </span><span class="hs-special">,</span><span> </span><span id="pscNodeMode"><span class="annot"><span class="annottext">PABServerConfig -&gt; NodeMode
+</span><a href="Cardano.Node.Types.html#pscNodeMode"><span class="hs-identifier hs-var hs-var">pscNodeMode</span></a></span></span><span>         </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Node.Types.html#NodeMode"><span class="hs-identifier hs-type">NodeMode</span></a></span><span>
+</span><span id="line-81"></span><span>        </span><span class="hs-comment">-- ^ Whether to connect to an Alonzo node or a mock node</span><span>
+</span><span id="line-82"></span><span>        </span><span class="hs-special">}</span><span>
+</span><span id="line-83"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680266561"><span id="local-6989586621680266563"><span id="local-6989586621680266565"><span class="annot"><span class="annottext">Int -&gt; PABServerConfig -&gt; ShowS
+[PABServerConfig] -&gt; ShowS
+PABServerConfig -&gt; String
+(Int -&gt; PABServerConfig -&gt; ShowS)
+-&gt; (PABServerConfig -&gt; String)
+-&gt; ([PABServerConfig] -&gt; ShowS)
+-&gt; Show PABServerConfig
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [PABServerConfig] -&gt; ShowS
+$cshowList :: [PABServerConfig] -&gt; ShowS
+show :: PABServerConfig -&gt; String
+$cshow :: PABServerConfig -&gt; String
+showsPrec :: Int -&gt; PABServerConfig -&gt; ShowS
+$cshowsPrec :: Int -&gt; PABServerConfig -&gt; ShowS
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680266557"><span id="local-6989586621680266559"><span class="annot"><span class="annottext">PABServerConfig -&gt; PABServerConfig -&gt; Bool
+(PABServerConfig -&gt; PABServerConfig -&gt; Bool)
+-&gt; (PABServerConfig -&gt; PABServerConfig -&gt; Bool)
+-&gt; Eq PABServerConfig
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: PABServerConfig -&gt; PABServerConfig -&gt; Bool
+$c/= :: PABServerConfig -&gt; PABServerConfig -&gt; Bool
+== :: PABServerConfig -&gt; PABServerConfig -&gt; Bool
+$c== :: PABServerConfig -&gt; PABServerConfig -&gt; Bool
+</span><a href="../../../../ghc/html/libraries/ghc-prim-0.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. PABServerConfig -&gt; Rep PABServerConfig x)
+-&gt; (forall x. Rep PABServerConfig x -&gt; PABServerConfig)
+-&gt; Generic PABServerConfig
+forall x. Rep PABServerConfig x -&gt; PABServerConfig
+forall x. PABServerConfig -&gt; Rep PABServerConfig x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep PABServerConfig x -&gt; PABServerConfig
+$cfrom :: forall x. PABServerConfig -&gt; Rep PABServerConfig x
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-84"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680266551"><span id="local-6989586621680266553"><span class="annot"><span class="annottext">Value -&gt; Parser [PABServerConfig]
+Value -&gt; Parser PABServerConfig
+(Value -&gt; Parser PABServerConfig)
+-&gt; (Value -&gt; Parser [PABServerConfig]) -&gt; FromJSON PABServerConfig
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+parseJSONList :: Value -&gt; Parser [PABServerConfig]
+$cparseJSONList :: Value -&gt; Parser [PABServerConfig]
+parseJSON :: Value -&gt; Parser PABServerConfig
+$cparseJSON :: Value -&gt; Parser PABServerConfig
+</span><a href="#local-6989586621680266551"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680266543"><span id="local-6989586621680266545"><span id="local-6989586621680266547"><span id="local-6989586621680266549"><span class="annot"><span class="annottext">[PABServerConfig] -&gt; Value
+[PABServerConfig] -&gt; Encoding
+PABServerConfig -&gt; Value
+PABServerConfig -&gt; Encoding
+(PABServerConfig -&gt; Value)
+-&gt; (PABServerConfig -&gt; Encoding)
+-&gt; ([PABServerConfig] -&gt; Value)
+-&gt; ([PABServerConfig] -&gt; Encoding)
+-&gt; ToJSON PABServerConfig
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; ToJSON a
+toEncodingList :: [PABServerConfig] -&gt; Encoding
+$ctoEncodingList :: [PABServerConfig] -&gt; Encoding
+toJSONList :: [PABServerConfig] -&gt; Value
+$ctoJSONList :: [PABServerConfig] -&gt; Value
+toEncoding :: PABServerConfig -&gt; Encoding
+$ctoEncoding :: PABServerConfig -&gt; Encoding
+toJSON :: PABServerConfig -&gt; Value
+$ctoJSON :: PABServerConfig -&gt; Value
+</span><a href="#local-6989586621680266543"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></a></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span class="annot"><a href="Cardano.Node.Types.html#defaultPABServerConfig"><span class="hs-identifier hs-type">defaultPABServerConfig</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Node.Types.html#PABServerConfig"><span class="hs-identifier hs-type">PABServerConfig</span></a></span><span>
+</span><span id="line-87"></span><span id="defaultPABServerConfig"><span class="annot"><span class="annottext">defaultPABServerConfig :: PABServerConfig
+</span><a href="Cardano.Node.Types.html#defaultPABServerConfig"><span class="hs-identifier hs-var hs-var">defaultPABServerConfig</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-88"></span><span>    </span><span class="annot"><span class="annottext">PABServerConfig :: NodeServerConfig -&gt; Maybe Text -&gt; NodeMode -&gt; PABServerConfig
+</span><a href="Cardano.Node.Types.html#PABServerConfig"><span class="hs-identifier hs-type">PABServerConfig</span></a></span><span>
+</span><span id="line-89"></span><span>      </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">pscNodeServerConfig :: NodeServerConfig
+</span><a href="Cardano.Node.Types.html#pscNodeServerConfig"><span class="hs-identifier hs-var">pscNodeServerConfig</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NodeServerConfig
+forall a. Default a =&gt; a
+</span><span class="hs-identifier hs-var">def</span></span><span>
+</span><span id="line-90"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pscPassphrase :: Maybe Text
+</span><a href="Cardano.Node.Types.html#pscPassphrase"><span class="hs-identifier hs-var">pscPassphrase</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Text
+forall a. Maybe a
+</span><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-91"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pscNodeMode :: NodeMode
+</span><a href="Cardano.Node.Types.html#pscNodeMode"><span class="hs-identifier hs-var">pscNodeMode</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NodeMode
+</span><a href="Cardano.Node.Types.html#MockNode"><span class="hs-identifier hs-var">MockNode</span></a></span><span>
+</span><span id="line-92"></span><span>      </span><span class="hs-special">}</span><span>
+</span><span id="line-93"></span><span>
+</span><span id="line-94"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Default</span></span><span> </span><span class="annot"><a href="Cardano.Node.Types.html#PABServerConfig"><span class="hs-identifier hs-type">PABServerConfig</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-95"></span><span>  </span><span id="local-6989586621680266539"><span class="annot"><span class="annottext">def :: PABServerConfig
+</span><a href="#local-6989586621680266539"><span class="hs-identifier hs-var hs-var hs-var hs-var">def</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PABServerConfig
+</span><a href="Cardano.Node.Types.html#defaultPABServerConfig"><span class="hs-identifier hs-var">defaultPABServerConfig</span></a></span><span>
+</span><span id="line-96"></span><span>
+</span><span id="line-97"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621680266536"><span class="annot"><span class="hs-identifier hs-type">Pretty</span></span><span> </span><span class="annot"><a href="Cardano.Node.Types.html#PABServerConfig"><span class="hs-identifier hs-type">PABServerConfig</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-98"></span><span>  </span><span id="local-6989586621680266534"><span class="annot"><span class="annottext">pretty :: PABServerConfig -&gt; Doc ann
+</span><a href="#local-6989586621680266534"><span class="hs-identifier hs-var hs-var hs-var hs-var">pretty</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Node.Types.html#PABServerConfig"><span class="hs-identifier hs-type">PABServerConfig</span></a></span><span class="hs-special">{</span><span> </span><span id="local-6989586621680266533"><span class="annot"><span class="annottext">NodeServerConfig
+pscNodeServerConfig :: NodeServerConfig
+pscNodeServerConfig :: PABServerConfig -&gt; NodeServerConfig
+</span><a href="#local-6989586621680266533"><span class="hs-identifier hs-var hs-var">pscNodeServerConfig</span></a></span></span><span> </span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NodeServerConfig -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">NodeServerConfig
+</span><a href="#local-6989586621680266533"><span class="hs-identifier hs-var">pscNodeServerConfig</span></a></span><span>
+</span><span id="line-99"></span><span>
+</span><span id="line-100"></span><span class="hs-comment">-- | The types of handles varies based on the type of clients (mocked or</span><span>
+</span><span id="line-101"></span><span class="hs-comment">-- real nodes) and we need a generic way of handling either type of response.</span><span>
+</span><span id="line-102"></span><span class="hs-keyword">type</span><span> </span><span id="ChainSyncHandle"><span class="annot"><a href="Cardano.Node.Types.html#ChainSyncHandle"><span class="hs-identifier hs-var">ChainSyncHandle</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="../../../../ghc/html/libraries/base-4.14.3.0/src"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Client.ChainSyncHandle</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Block</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Client.ChainSyncHandle</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Client.ChainSyncEvent</span></span><span class="hs-special">)</span><span>
+</span><span id="line-103"></span></pre></body></html>
