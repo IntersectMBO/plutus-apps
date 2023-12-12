@@ -106,7 +106,9 @@ testWallets :: [Wallet]
 testWallets = [w1, w2, w3, w4, w5]
 
 prop_Escrow :: Actions EscrowModel -> Property
-prop_Escrow = propRunActions_
+prop_Escrow = propRunActionsWithOptions options defaultCoverageOptions (\ _ -> pure True)
+  where
+    options = defaultCheckOptionsContractModel & increaseTransactionLimits
 
 escrowParams :: EscrowParams d
 escrowParams =
