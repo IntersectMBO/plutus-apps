@@ -6,7 +6,7 @@
 
 = Maintenance mode
 
-As our team is focused on other projects and the monorepo approach of this
+As our team is focused on other projects and the monorepo approach of this 
 repository made it hard to maintain, we have decided to stop upgrading the
 content of this directory and to pass it in maintenance mode.
 
