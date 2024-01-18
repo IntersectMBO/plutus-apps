@@ -3,7 +3,7 @@
 
   inputs = {
     iogx = {
-      url = "github:input-output-hk/iogx?ref=custom-precommit-hooks";
+      url = "github:input-output-hk/iogx";
       inputs.hackage.follows = "hackage";
       inputs.CHaP.follows = "CHaP";
       inputs.haskell-nix.follows = "haskell-nix";
